@@ -1,0 +1,207 @@
+import { describe, expect, it } from 'vitest';
+import { applyStatus, basicAttack, dodge, statSum, useSkill } from '../src/server/sim/combat.js';
+import { Instance, type Seat } from '../src/server/sim/instance.js';
+import { startAbility } from '../src/server/sim/mechanics.js';
+import type { Monster } from '../src/server/sim/types.js';
+import { hotbarFor, ROLES, SKILLS, WEAPONS } from '../src/shared/content/classes.js';
+import { STATUSES } from '../src/shared/content/statuses.js';
+
+const seats: Seat[] = [
+  { ownerId: 'h1', name: 'Tank', role: 'tank', weapon: 'sword_shield' },
+  { ownerId: 'h2', name: 'Mage', role: 'mage', weapon: 'staff' },
+  { ownerId: 'h3', name: 'Ranger', role: 'ranger', weapon: 'bow' },
+  { ownerId: 'h4', name: 'Melee', role: 'melee', weapon: 'greatsword' },
+];
+
+function setup() {
+  const inst = new Instance('t', seats, { seed: 7, countdown: 0 });
+  inst.tick();
+  const [tank, mage, ranger, melee] = inst.players;
+  const dummy = inst.spawnMob('brute', tank!.x + 2, tank!.y, 0, 0);
+  dummy.hp = dummy.maxHp = 1e9;
+  dummy.speed = 0;
+  dummy.autoInterval = 1e9;
+  dummy.mob = { ...dummy.mob!, abilities: [] };
+  inst.engage(dummy);
+  dummy.autoNext = 1e9;
+  return { inst, tank: tank!, mage: mage!, ranger: ranger!, melee: melee!, dummy };
+}
+const run = (inst: Instance, seconds: number) => {
+  for (let i = 0; i < seconds * 20; i++) inst.tick();
+};
+
+describe('content', () => {
+  it('matches the role and weapon design', () => {
+    expect(ROLES.tank.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Greatsword', 'Battleaxe', 'Sword & Shield']);
+    expect(ROLES.mage.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Staff', 'Mystic Sword']);
+    expect(ROLES.ranger.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Bow', 'Crossbow']);
+    expect(ROLES.melee.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Spear', 'Lance', 'Greatsword']);
+    // Tanks are the sturdiest; rangers and melee are glass cannons, melee hitting hardest.
+    expect(ROLES.tank.hp).toBeGreaterThan(ROLES.melee.hp);
+    expect(ROLES.tank.stamina).toBeGreaterThan(ROLES.melee.stamina);
+    expect(ROLES.melee.power).toBeGreaterThan(ROLES.ranger.power);
+    expect(ROLES.ranger.power).toBeGreaterThan(ROLES.mage.power);
+    expect(ROLES.melee.defense).toBeGreaterThan(1);
+    expect(ROLES.ranger.defense).toBeGreaterThan(1);
+    // The tank has a party defence buff.
+    expect(ROLES.tank.roleSkills).toContain('rallyingBulwark');
+  });
+
+  it('every weapon has a three-hit chain and five skills, and every reference resolves', () => {
+    for (const role of Object.values(ROLES)) {
+      for (const w of role.weapons) {
+        const weapon = WEAPONS[w]!;
+        expect(weapon.basic.hits).toHaveLength(3);
+        expect(weapon.skills).toHaveLength(5);
+        expect(weapon.skills.map((id) => SKILLS[id]!.slot)).toEqual(['special', 'q', 'e', 'r', 'ult']);
+        expect(hotbarFor(role.id, w)).toHaveLength(10);
+      }
+    }
+    for (const s of Object.values(SKILLS)) for (const e of s.effects) if (e.kind === 'status') expect(STATUSES[e.status], `${s.id} -> ${e.status}`).toBeDefined();
+  });
+});
+
+describe('action combat', () => {
+  it('basic attacks swing toward the aim and only hit what is in front', () => {
+    const { inst, melee, dummy } = setup();
+    melee.x = dummy.x - 2;
+    melee.y = dummy.y;
+    melee.aim = { x: dummy.x, y: dummy.y };
+    basicAttack(inst, melee);
+    const hit = melee.stats.damage;
+    expect(hit).toBeGreaterThan(0);
+    melee.aim = { x: melee.x - 5, y: melee.y }; // facing away
+    melee.basicReadyAt = 0;
+    basicAttack(inst, melee);
+    expect(melee.stats.damage).toBe(hit);
+  });
+
+  it('holding attack runs the three-hit chain at the weapon’s pace', () => {
+    const { inst, melee, dummy } = setup();
+    melee.x = dummy.x - 2;
+    melee.y = dummy.y;
+    melee.aim = { x: dummy.x, y: dummy.y };
+    melee.attacking = true;
+    const hits: string[] = [];
+    for (let i = 0; i < 60; i++) {
+      inst.tick();
+      for (const ev of inst.drainEvents()) if (ev.e === 'dmg' && ev.s === melee.id && ev.n) hits.push(ev.n);
+    }
+    // 3 seconds at 0.8s per swing.
+    expect(hits.length).toBeGreaterThanOrEqual(3);
+    expect(hits.slice(0, 3)).toEqual(['Reaver Slash I', 'Reaver Slash II', 'Reaver Slash III']);
+  });
+
+  it('projectiles fly to the target, and walls stop them', () => {
+    const { inst, ranger, dummy } = setup();
+    ranger.x = dummy.x - 4;
+    ranger.y = dummy.y;
+    ranger.aim = { x: dummy.x, y: dummy.y };
+    basicAttack(inst, ranger);
+    expect(inst.projectiles.size).toBe(1);
+    expect(ranger.stats.damage).toBe(0);
+    run(inst, 0.5);
+    expect(ranger.stats.damage).toBeGreaterThan(0);
+    expect(inst.projectiles.size).toBe(0);
+  });
+
+  it('a dodge roll costs stamina and makes you untouchable for a moment', () => {
+    const { inst, ranger, dummy } = setup();
+    const st = ranger.stamina;
+    expect(dodge(inst, ranger, 1, 0)).toBeNull();
+    expect(ranger.stamina).toBe(st - 30);
+    const hp = ranger.hp;
+    startAbility(inst, dummy, { id: 'x', name: 'Test Slam', cast: 0.1, potency: 2000, pattern: { kind: 'puddles', radius: 3 } });
+    run(inst, 0.15);
+    expect(ranger.hp).toBe(hp);
+    // Out of stamina, no more rolls.
+    ranger.stamina = 10;
+    expect(dodge(inst, ranger, 1, 0)).toBe('Not enough stamina');
+  });
+
+  it('skills respect cooldowns, and wind-ups break when you move', () => {
+    const { inst, melee, dummy } = setup();
+    melee.x = dummy.x - 2;
+    melee.y = dummy.y;
+    const aim = { x: dummy.x, y: dummy.y };
+    expect(useSkill(inst, melee, 'whirlwind', aim)).toBeNull();
+    run(inst, 0.3);
+    expect(useSkill(inst, melee, 'whirlwind', aim)).toBe('Not ready yet');
+    expect(useSkill(inst, melee, 'executioner', aim)).toBeNull();
+    expect(melee.cast).not.toBeNull();
+    melee.x -= 1;
+    inst.tick();
+    expect(melee.cast).toBeNull();
+  });
+
+  it('the Staff heals allies inside the circle it is aimed at, and raises the fallen', () => {
+    const { inst, mage, tank, melee } = setup();
+    tank.hp = 3000;
+    melee.x = tank.x + 1;
+    melee.y = tank.y;
+    inst.kill(melee, null);
+    expect(useSkill(inst, mage, 'mendingLight', { x: tank.x, y: tank.y })).toBeNull();
+    run(inst, 0.5);
+    expect(tank.hp).toBeGreaterThan(4000);
+    mage.lockUntil = 0;
+    expect(useSkill(inst, mage, 'resurrection', { x: melee.x, y: melee.y })).toBeNull();
+    run(inst, 1.6);
+    expect(melee.dead).toBe(false);
+  });
+
+  it('Challenge taunts every enemy nearby, and Rallying Bulwark shields the party', () => {
+    const { inst, tank, ranger, mage, dummy } = setup();
+    dummy.enmity.set(ranger.id, 50000);
+    useSkill(inst, tank, 'challenge', { x: dummy.x, y: dummy.y });
+    inst.tick();
+    expect(dummy.targetId).toBe(tank.id);
+    tank.lockUntil = 0;
+    mage.x = tank.x + 3;
+    useSkill(inst, tank, 'rallyingBulwark', tank);
+    expect(mage.statuses.some((s) => s.id === 'bulwark')).toBe(true);
+    expect(mage.statuses.some((s) => s.id === 'barrier')).toBe(true);
+  });
+
+  it('crowd control stuns monsters and staggers bosses', () => {
+    const { inst, tank, dummy } = setup();
+    tank.x = dummy.x - 2;
+    useSkill(inst, tank, 'shieldBash', { x: dummy.x, y: dummy.y });
+    expect(dummy.statuses.some((s) => s.id === 'stun')).toBe(true);
+    const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss') as Monster;
+    boss.stagger = boss.staggerMax - 10;
+    tank.x = boss.x - boss.radius - 1;
+    tank.y = boss.y;
+    tank.cooldowns.clear();
+    tank.lockUntil = 0;
+    useSkill(inst, tank, 'shieldBash', { x: boss.x, y: boss.y });
+    expect(boss.statuses.some((s) => s.id === 'staggered')).toBe(true);
+    expect(boss.stagger).toBe(0);
+  });
+
+  it('statuses stack and add up', () => {
+    const { inst, tank } = setup();
+    applyStatus(inst, tank, 'vuln', 10, 0);
+    applyStatus(inst, tank, 'vuln', 10, 0);
+    applyStatus(inst, tank, 'bulwark', 10, 0);
+    expect(statSum(tank, 'dmgTaken')).toBeCloseTo(0.25 * 2 - 0.2);
+  });
+});
+
+describe('boss mechanics', () => {
+  it('a stack shares damage among everyone inside it', () => {
+    const inst = new Instance('s', seats, { seed: 3, countdown: 0 });
+    inst.tick();
+    const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss') as Monster;
+    for (const p of inst.players) {
+      p.x = boss.x + 6;
+      p.y = boss.y;
+    }
+    boss.targetId = inst.players[0]!.id;
+    const before = inst.players.map((p) => p.hp);
+    startAbility(inst, boss, { id: 'x', name: 'Test Stack', cast: 1, potency: 8000, pattern: { kind: 'stack', radius: 4 } });
+    for (let i = 0; i < 25; i++) inst.tick();
+    const taken = inst.players.map((p, i) => before[i]! - p.hp);
+    for (const t of taken) expect(t).toBeGreaterThan(0);
+    for (const t of taken) expect(t).toBeLessThan((8000 / 4) * 1.6);
+  });
+});
