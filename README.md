@@ -104,10 +104,10 @@ about 750 to 800 and Tanks about 500.
 
 ## Heroes and clans
 
-The heroes are chibi pixel art with dark outlines and three-tone shading: a gruff barbarian
-knight with a long dark mane and a bushy beard for the Tank, a long-haired white mage in
-star-blue robes for the Mage, an elvish archer for the Ranger, and a scarfed soldier in a steel
-cuirass for the Melee. Every weapon is its own pixel sprite. Heroes hold their weapon toward your aim and swing it when they attack,
+The heroes are chibi pixel art with dark outlines and three-tone shading: a brooding dark knight
+with shaggy hair over one eye, in charcoal plate with red straps, for the Tank; a long-haired
+white mage in star-blue robes for the Mage; an elvish archer for the Ranger; and a scarfed
+soldier in a steel cuirass for the Melee. Every weapon is its own pixel sprite. Heroes hold their weapon toward your aim and swing it when they attack,
 and the Sword & Shield tank carries a heater shield. Characters bob as they walk, lean into their
 strikes, flash when hit, and fall when knocked out.
 

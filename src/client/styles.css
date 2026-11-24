@@ -969,6 +969,14 @@ select {
   position: absolute;
   inset: 0;
   z-index: 1;
+  /* Holding the mouse to attack must not select HUD text as the cursor drags across it. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.game input {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .game canvas.world {
