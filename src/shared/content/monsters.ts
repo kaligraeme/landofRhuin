@@ -5,7 +5,8 @@
 
 export type MobKind = 'brute' | 'skirmisher' | 'archer' | 'caster' | 'elite' | 'sentry';
 export type BossKind = 'juggernaut' | 'hexer' | 'beast' | 'warden' | 'sovereign';
-export type ThemeId = 'archive' | 'foundry' | 'ossuary' | 'hollow';
+/** The three monster clans. Every dungeon belongs to one of them. */
+export type ThemeId = 'orc' | 'dragon' | 'undead';
 
 /** What a telegraphed attack covers. */
 export type Pattern =
@@ -279,41 +280,32 @@ export const BOSSES: Record<BossKind, BossDef> = {
 };
 
 export const THEMES: Record<ThemeId, ThemeDef> = {
-  archive: {
-    id: 'archive',
-    title: 'The Sunken Archive',
-    palette: { floor: '#1c3440', floorAlt: '#213d4a', wall: '#071016', wallTop: '#2f6273', accent: '#5fe1d9', light: '#7fe8e0', fog: '#03080c' },
-    mobNames: { brute: 'Drowned Warden', skirmisher: 'Ink Wraith', archer: 'Coral Archer', caster: 'Drowned Scribe', elite: 'Tome Mimic', sentry: 'Glyph Sentry' },
-    bossNames: { juggernaut: 'The Ink-Bound Colossus', hexer: 'Archivist Morvaine', beast: 'The Glyphmaw', warden: 'Sentinel of the Stacks', sovereign: 'Vael, the Drowned Curator' },
-    roomNames: ['Flooded Stacks', 'Reading Hall', 'Scriptorium', 'Drowned Gallery', 'Chart Room', 'Index Vault', 'Silt Cloister', 'Lantern Walk'],
-    arenaNames: ['Tidal Rotunda', 'Hall of Ledgers', 'The Inkwell', 'Abyssal Atrium', 'Curator’s Sanctum'],
+  orc: {
+    id: 'orc',
+    title: 'The Bloodtusk Stronghold',
+    palette: { floor: '#4a3626', floorAlt: '#54402c', wall: '#140c07', wallTop: '#6e4a2c', accent: '#e0562b', light: '#ffab5c', fog: '#090502' },
+    mobNames: { brute: 'Orc Brute', skirmisher: 'Goblin Cutthroat', archer: 'Orc Archer', caster: 'Orc Shaman', elite: 'Orc Ravager', sentry: 'War Totem' },
+    bossNames: { juggernaut: 'Grukk the Skullsplitter', hexer: 'Mother Zhura, Bone Seer', beast: 'Gnashtusk the War Boar', warden: 'Old Ironjaw the Ogre', sovereign: 'Warlord Krognar' },
+    roomNames: ['Mud Pens', 'War Kennels', 'Trophy Hall', 'Grog Cellar', 'Fighting Pit', 'Spoils Cave', 'Drum Hall', 'Butcher’s Den'],
+    arenaNames: ['The Blood Pit', 'Skull Ring', 'Boar Run', 'Ogre’s Gate', 'Throne of Tusks'],
   },
-  foundry: {
-    id: 'foundry',
-    title: 'The Ember Foundry',
-    palette: { floor: '#3a241b', floorAlt: '#432a1f', wall: '#120806', wallTop: '#7a4125', accent: '#ff8a3d', light: '#ffb070', fog: '#0a0403' },
-    mobNames: { brute: 'Slag Golem', skirmisher: 'Cinder Imp', archer: 'Bolt Thrower', caster: 'Bellows Cultist', elite: 'Magma Behemoth', sentry: 'Ember Turret' },
-    bossNames: { juggernaut: 'Slagheart Juggernaut', hexer: 'Cinder-Priestess Ashka', beast: 'Bellowmaw', warden: 'The Anvil Warden', sovereign: 'Ignar, the Forge-King' },
-    roomNames: ['Smelting Floor', 'Coal Galleries', 'Bellows Hall', 'Quench Pits', 'Ore Chutes', 'Crucible Walk', 'Furnace Steps', 'Cinder Yard'],
-    arenaNames: ['The Great Crucible', 'Anvil Ring', 'Slag Basin', 'Forge Throne', 'Molten Heart'],
+  dragon: {
+    id: 'dragon',
+    title: 'The Cinder Sanctum',
+    palette: { floor: '#2b1d1d', floorAlt: '#332222', wall: '#0b0505', wallTop: '#5a2a22', accent: '#ff7a2a', light: '#ff9a50', fog: '#070202' },
+    mobNames: { brute: 'Drakonid Warrior', skirmisher: 'Wyrmling', archer: 'Cult Crossbowman', caster: 'Flamecaller Cultist', elite: 'Fire Drake', sentry: 'Dragon Idol' },
+    bossNames: { juggernaut: 'Scalebreaker Vorth', hexer: 'High Priestess Seraphine', beast: 'Ashwing the Wyvern', warden: 'The Obsidian Guardian', sovereign: 'Ignaroth the Elder Flame' },
+    roomNames: ['Ember Halls', 'Cultist Dormitory', 'Hatchery', 'Ash Gallery', 'Scale Vault', 'Shrine of Cinders', 'Brimstone Steps', 'Offering Hall'],
+    arenaNames: ['Altar of Scales', 'The Pyre', 'Wyvern Roost', 'Obsidian Court', 'Elder Flame’s Lair'],
   },
-  ossuary: {
-    id: 'ossuary',
-    title: 'The Frostbound Ossuary',
-    palette: { floor: '#2b3445', floorAlt: '#313b4f', wall: '#090c13', wallTop: '#5d7194', accent: '#a9d8ff', light: '#cbe6ff', fog: '#04060a' },
-    mobNames: { brute: 'Rime Skeleton', skirmisher: 'Frost Wisp', archer: 'Bone Archer', caster: 'Pale Acolyte', elite: 'Glacial Hulk', sentry: 'Bone Totem' },
-    bossNames: { juggernaut: 'The Rimebound Brute', hexer: 'Hexer Ysolde', beast: 'Kharn, the Grave Wolf', warden: 'The Bone Warden', sovereign: 'Morrow, the Pale Sovereign' },
-    roomNames: ['Charnel Hall', 'Frozen Crypts', 'Reliquary', 'Bone Gallery', 'Mourners’ Walk', 'Ice Catacombs', 'Lantern Ossuary', 'Silent Nave'],
-    arenaNames: ['Hall of Rime', 'The Cold Altar', 'Wolfden Vault', 'Throne of Bones', 'Pale Sanctum'],
-  },
-  hollow: {
-    id: 'hollow',
-    title: 'The Verdant Hollow',
-    palette: { floor: '#1f3322', floorAlt: '#253d28', wall: '#07100a', wallTop: '#3f6935', accent: '#a6f07a', light: '#c6ff9a', fog: '#030805' },
-    mobNames: { brute: 'Bramble Brute', skirmisher: 'Thornling', archer: 'Spine Shooter', caster: 'Spore Shaman', elite: 'Moss Colossus', sentry: 'Root Sentinel' },
-    bossNames: { juggernaut: 'The Thornhide Behemoth', hexer: 'Spore-Witch Ilva', beast: 'The Bramblemaw', warden: 'The Root Warden', sovereign: 'Sylvar, Heart of the Hollow' },
-    roomNames: ['Fern Grotto', 'Mossy Hall', 'Rootways', 'Spore Gardens', 'Thorn Maze', 'Dew Basin', 'Canopy Steps', 'Hollow Glade'],
-    arenaNames: ['The Overgrown Ring', 'Bloom Chamber', 'Briar Court', 'The Elder Grove', 'Heartwood Sanctum'],
+  undead: {
+    id: 'undead',
+    title: 'The Barrow of Sorrows',
+    palette: { floor: '#252d2f', floorAlt: '#2b3437', wall: '#060909', wallTop: '#46575a', accent: '#6dffb0', light: '#9cffc8', fog: '#020504' },
+    mobNames: { brute: 'Skeleton Warrior', skirmisher: 'Ghoul', archer: 'Skeleton Archer', caster: 'Necromancer', elite: 'Bone Abomination', sentry: 'Cursed Obelisk' },
+    bossNames: { juggernaut: 'Sir Morgrave the Death Knight', hexer: 'Lich Vessanthe', beast: 'Grimmaw the Bone Hound', warden: 'The Wailing Warden', sovereign: 'Mortheus, the Dread King' },
+    roomNames: ['Catacombs', 'Embalming Hall', 'Ossuary', 'Mourners’ Walk', 'Crypt of Names', 'Charnel Pits', 'Bone Chapel', 'Silent Nave'],
+    arenaNames: ['Hall of the Fallen', 'The Lich’s Library', 'Kennel of Bones', 'The Wailing Vault', 'Throne of the Dread King'],
   },
 };
 

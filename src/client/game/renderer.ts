@@ -7,6 +7,7 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
+import { spriteFor, type Sprite } from '../art/sprites.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -70,6 +71,10 @@ export class Renderer {
   private edgePath = new Path2D();
   private wallTiles: { x: number; y: number; face: boolean; n: boolean; s: boolean; e: boolean; w: boolean }[] = [];
   private pebbles: { x: number; y: number; r: number; a: number }[] = [];
+  /** Clan-specific floor decorations. */
+  private decor: { x: number; y: number; kind: 'bones' | 'skull' | 'blood' | 'stakes' | 'crack' | 'scorch' | 'grave' | 'web'; rot: number; s: number; seed: number }[] = [];
+  /** Ambient particles: dust (orcs), embers (dragons), mist (undead). */
+  private particles: { x: number; y: number; vx: number; vy: number; age: number; life: number; size: number }[] = [];
   private builtVersion = -1;
   cam = { x: 0, y: 0 };
   private shakeAmt = 0;
@@ -77,6 +82,13 @@ export class Renderer {
   private h = 0;
   private dpr = 1;
   private zoom = 34;
+  private frameDt = 1 / 60;
+  /** Per-entity movement tracking for walk animation. */
+  private motion = new Map<number, { x: number; y: number; speed: number; phase: number }>();
+  /** Top of each sprite (world y), for nameplates and markers. */
+  private tops = new Map<number, number>();
+  /** Clickable sprite bounds (world units), for picking. */
+  readonly hitBoxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -149,6 +161,37 @@ export class Renderer {
       const prnd = mulberry(map.w * 31 + map.h);
       this.pebbles = [];
       for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) if (map.tiles[y * map.w + x] === T_FLOOR && prnd() < 0.05) this.pebbles.push({ x: x + prnd(), y: y + prnd(), r: 0.04 + prnd() * 0.08, a: 0.15 + prnd() * 0.25 });
+      // Each clan leaves its own mess on the floor.
+      const clan = world.theme.id;
+      const open = (x: number, y: number): boolean => map.tiles[y * map.w + x] === T_FLOOR;
+      this.decor = [];
+      for (let y = 1; y < map.h - 1; y++) {
+        for (let x = 1; x < map.w - 1; x++) {
+          if (!open(x, y)) continue;
+          const wallN = !open(x, y - 1);
+          const wallW = !open(x - 1, y);
+          const near = wallN || wallW || !open(x + 1, y) || !open(x, y + 1);
+          const r = prnd();
+          const d = (kind: (typeof this.decor)[number]['kind'], s = 1): void => {
+            this.decor.push({ x: x + 0.2 + prnd() * 0.6, y: y + 0.2 + prnd() * 0.6, kind, rot: prnd() * Math.PI * 2, s: s * (0.8 + prnd() * 0.4), seed: prnd() * 100 });
+          };
+          if (clan === 'orc') {
+            if (near && wallN && r < 0.07) d('stakes');
+            else if (r < 0.022) d('bones');
+            else if (r < 0.04) d('blood', 1.4);
+            else if (r < 0.047) d('skull');
+          } else if (clan === 'dragon') {
+            if (r < 0.03) d('crack', 1.6);
+            else if (r < 0.048) d('scorch', 1.5);
+            else if (r < 0.054) d('skull', 1.3);
+          } else {
+            if (wallN && wallW && r < 0.6) this.decor.push({ x, y, kind: 'web', rot: 0, s: 1, seed: 0 });
+            else if (near && wallN && r < 0.06) d('grave');
+            else if (r < 0.025) d('bones');
+            else if (r < 0.04) d('skull');
+          }
+        }
+      }
     }
     // Floor runs and wall edges change when gates open or close.
     this.floorPath = new Path2D();
@@ -208,6 +251,7 @@ export class Renderer {
     }
     this.w = cw;
     this.h = ch;
+    this.frameDt = Math.max(1 / 240, dt);
     this.dpr = dpr;
     this.zoom = view.zoom;
     const follow = 1 - Math.exp(-dt * 9);
@@ -238,6 +282,7 @@ export class Renderer {
     const y1 = Math.ceil(this.cam.y + ch / 2 / z) + 2;
 
     this.drawFloor(x0, y0, x1, y1);
+    this.drawDecor(world, now, x0, y0, x1, y1);
     this.drawArenas(world, now);
     this.drawWalls(world, x0, y0, x1, y1);
     this.drawGates(world, now);
@@ -250,6 +295,7 @@ export class Renderer {
     for (const t of world.telegraphs) if (t.style === 'aoe') this.drawTelegraph(view, t, serverNow, now);
     g.restore();
     for (const t of world.telegraphs) if (t.style !== 'aoe') this.drawTelegraph(view, t, serverNow, now);
+    this.drawParticles(world, dt, x0, y0, x1, y1);
     this.drawEntities(view, now, serverNow);
     this.drawProjectiles(view, serverNow, now);
     this.drawFx(view, now);
@@ -281,6 +327,196 @@ export class Renderer {
       g.lineWidth = 1.4;
       g.stroke(this.edgePath);
       g.restore();
+    }
+  }
+
+  private drawDecor(world: World, now: number, x0: number, y0: number, x1: number, y1: number): void {
+    const g = this.g;
+    const pal = world.theme.palette;
+    for (const d of this.decor) {
+      if (d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;
+      g.save();
+      g.translate(d.x, d.y);
+      switch (d.kind) {
+        case 'bones':
+          g.rotate(d.rot);
+          g.strokeStyle = '#d9cfb6';
+          g.lineCap = 'round';
+          g.lineWidth = 0.07 * d.s;
+          for (const a of [0, 1.1]) {
+            g.save();
+            g.rotate(a);
+            g.beginPath();
+            g.moveTo(-0.22 * d.s, 0);
+            g.lineTo(0.22 * d.s, 0);
+            g.stroke();
+            g.fillStyle = '#d9cfb6';
+            for (const e of [-0.22, 0.22]) {
+              g.beginPath();
+              g.arc(e * d.s, -0.035, 0.045 * d.s, 0, Math.PI * 2);
+              g.arc(e * d.s, 0.035, 0.045 * d.s, 0, Math.PI * 2);
+              g.fill();
+            }
+            g.restore();
+          }
+          break;
+        case 'skull': {
+          const k = 0.16 * d.s;
+          g.fillStyle = '#ddd3ba';
+          g.beginPath();
+          g.arc(0, 0, k, Math.PI, 0);
+          g.lineTo(k * 0.7, k * 0.8);
+          g.lineTo(-k * 0.7, k * 0.8);
+          g.closePath();
+          g.fill();
+          g.fillStyle = '#1a120d';
+          g.beginPath();
+          g.arc(-k * 0.4, 0, k * 0.26, 0, Math.PI * 2);
+          g.arc(k * 0.4, 0, k * 0.26, 0, Math.PI * 2);
+          g.fill();
+          break;
+        }
+        case 'blood':
+          g.rotate(d.rot);
+          g.fillStyle = 'rgba(90, 10, 8, 0.45)';
+          g.beginPath();
+          g.ellipse(0, 0, 0.35 * d.s, 0.22 * d.s, 0, 0, Math.PI * 2);
+          g.ellipse(0.25 * d.s, 0.1, 0.1 * d.s, 0.08 * d.s, 0, 0, Math.PI * 2);
+          g.fill();
+          break;
+        case 'stakes':
+          for (let i = 0; i < 3; i++) {
+            const x = (i - 1) * 0.28;
+            g.fillStyle = '#6b4527';
+            g.strokeStyle = '#1a120d';
+            g.lineWidth = 0.035;
+            g.beginPath();
+            g.moveTo(x - 0.07, 0.25);
+            g.lineTo(x + 0.07, 0.25);
+            g.lineTo(x, -0.35 - (i % 2) * 0.12);
+            g.closePath();
+            g.fill();
+            g.stroke();
+          }
+          break;
+        case 'crack': {
+          g.rotate(d.rot);
+          const flick = 0.6 + Math.sin(now * 3 + d.seed) * 0.25;
+          g.lineCap = 'round';
+          g.lineJoin = 'round';
+          const path = (): void => {
+            g.beginPath();
+            g.moveTo(-0.5 * d.s, 0);
+            g.lineTo(-0.2 * d.s, 0.12);
+            g.lineTo(0.05 * d.s, -0.08);
+            g.lineTo(0.3 * d.s, 0.1);
+            g.lineTo(0.5 * d.s, -0.02);
+            g.moveTo(0.05 * d.s, -0.08);
+            g.lineTo(0.12 * d.s, -0.3);
+          };
+          g.strokeStyle = `rgba(255, 90, 20, ${0.35 * flick})`;
+          g.lineWidth = 0.22;
+          path();
+          g.stroke();
+          g.strokeStyle = `rgba(255, 190, 90, ${0.9 * flick})`;
+          g.lineWidth = 0.06;
+          path();
+          g.stroke();
+          break;
+        }
+        case 'scorch': {
+          const grad = g.createRadialGradient(0, 0, 0, 0, 0, 0.5 * d.s);
+          grad.addColorStop(0, 'rgba(0,0,0,0.5)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = grad;
+          g.fillRect(-0.5 * d.s, -0.5 * d.s, d.s, d.s);
+          break;
+        }
+        case 'grave':
+          g.fillStyle = '#4b585b';
+          g.strokeStyle = '#141a1b';
+          g.lineWidth = 0.04;
+          g.beginPath();
+          g.moveTo(-0.2, 0.25);
+          g.lineTo(-0.2, -0.15);
+          g.arc(0, -0.15, 0.2, Math.PI, 0);
+          g.lineTo(0.2, 0.25);
+          g.closePath();
+          g.fill();
+          g.stroke();
+          g.strokeStyle = 'rgba(20, 26, 27, 0.8)';
+          g.beginPath();
+          g.moveTo(0, -0.25);
+          g.lineTo(0, 0.05);
+          g.moveTo(-0.08, -0.15);
+          g.lineTo(0.08, -0.15);
+          g.stroke();
+          break;
+        case 'web': {
+          g.strokeStyle = 'rgba(220, 230, 230, 0.22)';
+          g.lineWidth = 0.025;
+          g.beginPath();
+          for (let i = 0; i <= 4; i++) {
+            const a = (i / 4) * (Math.PI / 2);
+            g.moveTo(0, 0);
+            g.lineTo(Math.cos(a) * 1.1, Math.sin(a) * 1.1);
+          }
+          for (const rr of [0.35, 0.65, 0.95]) {
+            g.moveTo(rr, 0);
+            for (let i = 1; i <= 4; i++) {
+              const a = (i / 4) * (Math.PI / 2);
+              g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+            }
+          }
+          g.stroke();
+          break;
+        }
+      }
+      g.restore();
+    }
+    void pal;
+  }
+
+  private drawParticles(world: World, dt: number, x0: number, y0: number, x1: number, y1: number): void {
+    const g = this.g;
+    const clan = world.theme.id;
+    const area = (x1 - x0) * (y1 - y0);
+    const rate = clan === 'undead' ? 0.004 : clan === 'dragon' ? 0.02 : 0.008;
+    let spawn = area * rate * dt * 10;
+    while (spawn > 0) {
+      if (Math.random() < spawn && this.particles.length < 260) {
+        const x = x0 + Math.random() * (x1 - x0);
+        const y = y0 + Math.random() * (y1 - y0);
+        if (tileAt(world.map, Math.floor(x), Math.floor(y)) === T_FLOOR) {
+          if (clan === 'dragon') this.particles.push({ x, y, vx: (Math.random() - 0.5) * 0.3, vy: -0.4 - Math.random() * 0.6, age: 0, life: 2 + Math.random() * 2, size: 0.04 + Math.random() * 0.05 });
+          else if (clan === 'undead') this.particles.push({ x, y, vx: 0.15 + Math.random() * 0.2, vy: (Math.random() - 0.5) * 0.05, age: 0, life: 6 + Math.random() * 4, size: 0.8 + Math.random() * 1.2 });
+          else this.particles.push({ x, y, vx: (Math.random() - 0.5) * 0.15, vy: -0.05 - Math.random() * 0.1, age: 0, life: 4 + Math.random() * 3, size: 0.025 + Math.random() * 0.03 });
+        }
+      }
+      spawn -= 1;
+    }
+    this.particles = this.particles.filter((p) => (p.age += dt) < p.life);
+    for (const p of this.particles) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      const k = p.age / p.life;
+      const fade = Math.sin(k * Math.PI);
+      if (clan === 'dragon') {
+        p.vx += Math.sin(p.age * 3 + p.size * 100) * 0.3 * dt;
+        g.fillStyle = `rgba(255, ${140 + Math.round(80 * (1 - k))}, 60, ${0.85 * fade})`;
+        g.beginPath();
+        g.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        g.fill();
+      } else if (clan === 'undead') {
+        const grad = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+        grad.addColorStop(0, `rgba(150, 255, 200, ${0.07 * fade})`);
+        grad.addColorStop(1, 'rgba(150, 255, 200, 0)');
+        g.fillStyle = grad;
+        g.fillRect(p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
+      } else {
+        g.fillStyle = `rgba(255, 210, 150, ${0.35 * fade})`;
+        g.fillRect(p.x, p.y, p.size, p.size);
+      }
     }
   }
 
@@ -675,9 +911,12 @@ export class Renderer {
     // Shadows and rings first so bodies sit on top.
     for (const e of list) {
       const r = e.spawn.radius;
-      g.fillStyle = 'rgba(0,0,0,0.42)';
+      const sp = spriteFor(e.spawn, world.theme.id);
+      const sw = sp.ready ? (sp.def.height * sp.def.w) / sp.def.h : r * 3;
+      const footW = Math.min(sw * 0.3, Math.max(r * 1.1, 0.45));
+      g.fillStyle = sp.def.floats ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.42)';
       g.beginPath();
-      g.ellipse(e.x, e.y + r * 0.35, r * 1.05, r * 0.55, 0, 0, Math.PI * 2);
+      g.ellipse(e.x, e.y + 0.15, footW, footW * 0.38, 0, 0, Math.PI * 2);
       g.fill();
       if (e.spawn.team === 'enemy' && !e.diedAt) this.drawTargetCircle(e, view.targetId === e.id, now);
       if (e.id === world.meId) {
@@ -708,17 +947,16 @@ export class Renderer {
     for (const e of list) {
       const fade = e.diedAt && e.spawn.team === 'enemy' ? clamp(1 - (now - e.diedAt) / 0.7, 0, 1) : 1;
       g.globalAlpha = fade;
-      if (e.spawn.kind === 'player') {
+      const sprite = spriteFor(e.spawn, world.theme.id);
+      if (sprite.ready) this.drawSprite(view, e, sprite, now);
+      else if (e.spawn.kind === 'player') {
         if (e.id === world.meId && view.rolling) this.drawRolling(e, now);
-        else {
-          this.drawWeapon(view, e, now);
-          this.drawPlayer(e, now);
-        }
+        else this.drawPlayer(e, now);
       } else if (e.spawn.kind === 'boss') this.drawBoss(view, e, now);
       else this.drawMob(e, now);
-      // Flash white when struck.
+      // Flash white when struck (sprites flash their own silhouette).
       const hitAt = world.lastHit.get(e.id);
-      if (hitAt !== undefined && now - hitAt < 0.12 && !e.diedAt) {
+      if (!sprite.ready && hitAt !== undefined && now - hitAt < 0.12 && !e.diedAt) {
         g.fillStyle = `rgba(255, 255, 255, ${0.55 * (1 - (now - hitAt) / 0.12)})`;
         g.beginPath();
         g.arc(e.x, e.y, e.spawn.radius * (e.spawn.kind === 'boss' ? 0.95 : 1.05), 0, Math.PI * 2);
@@ -729,7 +967,7 @@ export class Renderer {
       for (const t of world.telegraphs) {
         if (t.style !== 'buster' || t.follow !== e.id) continue;
         const p = clamp((serverNow - t.start) / Math.max(0.01, t.end - t.start), 0, 1);
-        const y = e.y - e.spawn.radius - 1.1 - Math.sin(now * 6) * 0.08;
+        const y = (this.tops.get(e.id) ?? e.y - e.spawn.radius) - 0.8 - Math.sin(now * 6) * 0.08;
         g.fillStyle = `rgba(255, ${80 + p * 60}, 70, 0.95)`;
         g.beginPath();
         g.moveTo(e.x, y - 0.55);
@@ -787,11 +1025,12 @@ export class Renderer {
   }
 
   /** The hero's weapon, held toward their aim and swung when they attack. */
-  private drawWeapon(view: View, e: ClientEntity, now: number): void {
+  private drawWeapon(view: View, e: ClientEntity, now: number, hand: { x: number; y: number }): void {
     if (e.snap.d) return;
     const g = this.g;
     const weapon = e.spawn.weapon ?? '';
-    const r = e.spawn.radius;
+    // Weapons are drawn from just behind the gripping hand.
+    const r = -0.25;
     const swing = view.world.swings.get(e.id);
     let angle = e.f;
     let reach = 0;
@@ -804,7 +1043,7 @@ export class Renderer {
     }
     const metal = '#dfe6ef';
     g.save();
-    g.translate(e.x, e.y);
+    g.translate(hand.x, hand.y);
     g.rotate(angle);
     g.lineCap = 'round';
     const blade = (len: number, width: number, color = metal): void => {
@@ -823,12 +1062,9 @@ export class Renderer {
     };
     switch (weapon) {
       case 'sword_shield':
-        blade(0.85, 0.09);
-        g.strokeStyle = '#7fa8e6';
-        g.lineWidth = 0.14;
-        g.beginPath();
-        g.arc(0, 0, r + 0.12, -2.1, -1.1);
-        g.stroke();
+        blade(0.95, 0.1);
+        g.fillStyle = '#c9a14a';
+        g.fillRect(r * 0.6 + reach + 0.22, -0.16, 0.08, 0.32);
         break;
       case 'tank_greatsword':
       case 'greatsword':
@@ -910,6 +1146,114 @@ export class Renderer {
     g.restore();
   }
 
+  /**
+   * Draws an entity's sprite standing at its position: mirrored to face its heading, bobbing as it
+   * walks, leaning into attacks, flashing white when struck, and lying down when knocked out.
+   */
+  private drawSprite(view: View, e: ClientEntity, sp: Sprite, now: number): void {
+    const g = this.g;
+    const def = sp.def;
+    const H = def.height;
+    const W = (H * def.w) / def.h;
+    const isPlayer = e.spawn.kind === 'player';
+    const dead = isPlayer && !!e.snap.d;
+    let m = this.motion.get(e.id);
+    if (!m) {
+      m = { x: e.x, y: e.y, speed: 0, phase: 0 };
+      this.motion.set(e.id, m);
+    }
+    const step = Math.hypot(e.x - m.x, e.y - m.y) / this.frameDt;
+    m.speed += (Math.min(step, 20) - m.speed) * 0.25;
+    m.x = e.x;
+    m.y = e.y;
+    const moving = m.speed > 0.6 && !dead;
+    if (moving) m.phase += this.frameDt * (6 + m.speed * 1.2);
+    const flip = Math.cos(e.f) < -0.05;
+    const bob = moving ? Math.abs(Math.sin(m.phase)) * Math.min(H, 2.5) * 0.05 : 0;
+    const breathe = moving ? 0 : Math.sin(now * 2.2 + e.id) * 0.012;
+    const tilt = moving ? Math.sin(m.phase) * 0.05 : 0;
+    let lean = 0;
+    const swing = view.world.swings.get(e.id);
+    if (swing) {
+      const k = (now - swing.at) / 0.25;
+      if (k >= 0 && k < 1) lean = Math.sin(k * Math.PI) * 0.14;
+    }
+    if (!isPlayer && e.snap.c) lean += 0.05 + Math.sin(now * 14) * 0.02;
+    const float = def.floats ? 0.25 + Math.sin(now * 2 + e.id) * 0.15 : 0;
+    const feetY = e.y + 0.15 - bob - float;
+    const dx = (-W * (def.ax - def.vx)) / def.w;
+    const dy = (-H * (def.ay - def.vy)) / def.h;
+    const rolling = e.id === view.world.meId && view.rolling;
+    const sink = e.diedAt && !isPlayer ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
+
+    // The hand that holds the weapon, in world space.
+    let hand: { x: number; y: number } | null = null;
+    if (isPlayer && def.hand && !dead && !rolling) {
+      const hx = (W * (def.hand.x - def.ax)) / def.w;
+      const hy = (H * (def.hand.y - def.ay)) / def.h;
+      hand = { x: e.x + (flip ? -hx : hx), y: feetY + hy };
+    }
+    const weaponBehind = hand && Math.sin(e.f) < -0.35;
+    if (hand && weaponBehind) this.drawWeapon(view, e, now, hand);
+    if (isPlayer && e.spawn.weapon === 'sword_shield' && !dead && !rolling) this.drawShield(e, feetY, W, H, flip);
+
+    g.save();
+    g.translate(e.x, feetY);
+    if (dead) {
+      g.rotate(flip ? -1.45 : 1.45);
+      g.globalAlpha *= 0.85;
+    } else if (rolling) {
+      g.translate(0, dy / 2);
+      g.rotate((flip ? -1 : 1) * now * 18);
+      g.translate(0, -dy / 2);
+    } else {
+      g.rotate(tilt + (flip ? -lean : lean));
+    }
+    if (flip) g.scale(-1, 1);
+    g.scale(1, (1 + breathe) * (1 - sink * 0.45));
+    const img: CanvasImageSource = dead && sp.grey ? sp.grey : sp.img;
+    g.drawImage(img, dx, dy, W, H);
+    const hitAt = view.world.lastHit.get(e.id);
+    if (sp.white && hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead) {
+      g.globalAlpha *= (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1);
+      g.drawImage(sp.white, dx, dy, W, H);
+    }
+    g.restore();
+    if (hand && !weaponBehind) this.drawWeapon(view, e, now, hand);
+
+    const top = feetY + dy * (1 - sink * 0.45);
+    this.tops.set(e.id, top);
+    this.hitBoxes.set(e.id, { x0: e.x - W * 0.28, x1: e.x + W * 0.28, y0: feetY + dy * 0.9, y1: e.y + 0.3 });
+  }
+
+  /** The Guardian's shield, carried on the off hand. */
+  private drawShield(e: ClientEntity, feetY: number, W: number, H: number, flip: boolean): void {
+    const g = this.g;
+    const x = e.x + (flip ? 1 : -1) * W * 0.24;
+    const y = feetY - H * 0.36;
+    g.save();
+    g.translate(x, y);
+    const s = 0.34;
+    g.beginPath();
+    g.moveTo(-s, -s * 1.1);
+    g.lineTo(s, -s * 1.1);
+    g.quadraticCurveTo(s * 1.05, s * 0.4, 0, s * 1.35);
+    g.quadraticCurveTo(-s * 1.05, s * 0.4, -s, -s * 1.1);
+    g.closePath();
+    const grad = g.createLinearGradient(-s, 0, s, 0);
+    grad.addColorStop(0, '#6f7a8c');
+    grad.addColorStop(1, '#3c4452');
+    g.fillStyle = grad;
+    g.fill();
+    g.strokeStyle = '#1a120d';
+    g.lineWidth = 0.05;
+    g.stroke();
+    g.fillStyle = '#8e1f22';
+    g.fillRect(-0.05, -s * 0.9, 0.1, s * 1.9);
+    g.fillRect(-s * 0.7, -s * 0.35, s * 1.4, 0.1);
+    g.restore();
+  }
+
   /** You, mid-roll: a tucked, spinning silhouette. */
   private drawRolling(e: ClientEntity, now: number): void {
     const g = this.g;
@@ -986,10 +1330,24 @@ export class Renderer {
             g.lineTo(-0.2, -0.35);
             g.lineTo(-0.35, 0);
             g.lineTo(-0.2, 0.35);
-          } else g.arc(0, 0, pr.r, 0, Math.PI * 2);
-          g.closePath();
-          g.fill();
-          g.stroke();
+            g.closePath();
+            g.fill();
+            g.stroke();
+          } else {
+            // A heater shield with the Guardian's crimson cross.
+            const k = pr.r * 0.75;
+            g.moveTo(-k, -k * 1.1);
+            g.lineTo(k, -k * 1.1);
+            g.quadraticCurveTo(k * 1.05, k * 0.4, 0, k * 1.35);
+            g.quadraticCurveTo(-k * 1.05, k * 0.4, -k, -k * 1.1);
+            g.closePath();
+            g.fillStyle = '#6f7a8c';
+            g.fill();
+            g.stroke();
+            g.fillStyle = '#8e1f22';
+            g.fillRect(-0.05, -k * 0.9, 0.1, k * 1.9);
+            g.fillRect(-k * 0.7, -k * 0.35, k * 1.4, 0.1);
+          }
           break;
         }
         case 'wave':
@@ -1469,7 +1827,8 @@ export class Renderer {
       if (e.samples.length === 0 && e.id !== world.meId) continue;
       const s = this.worldToScreen(e.x, e.y);
       if (s.x < -100 || s.y < -100 || s.x > this.w + 100 || s.y > this.h + 100) continue;
-      const top = s.y - (e.spawn.radius + 0.55) * this.zoom;
+      const spriteTop = this.tops.get(e.id);
+      const top = spriteTop !== undefined ? this.worldToScreen(e.x, spriteTop).y - 6 : s.y - (e.spawn.radius + 0.55) * this.zoom;
       const isEnemy = e.spawn.team === 'enemy';
       const targeted = view.targetId === e.id;
       const boss = e.spawn.kind === 'boss';

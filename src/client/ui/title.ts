@@ -1,5 +1,6 @@
 /** The title screen: pick a name and enter. */
 import { h } from '../dom.js';
+import { heroImageUrl } from '../art/sprites.js';
 import { savedName } from '../net.js';
 
 export function titleScreen(onEnter: (name: string) => void): HTMLElement {
@@ -26,6 +27,7 @@ export function titleScreen(onEnter: (name: string) => void): HTMLElement {
       h('h1', { class: 'logo' }, 'RHUIN'),
       h('div', { class: 'logo-rule' }),
       h('div', { class: 'tagline' }, 'Four heroes · Endless ruin'),
+      h('div', { class: 'hero-line' }, (['tank', 'mage', 'ranger', 'melee'] as const).map((r) => h('img', { src: heroImageUrl(r), alt: r }))),
       h('div', { class: 'title-form' }, input, h('button', { class: 'btn primary', onclick: go }, 'Enter')),
       h('p', { class: 'title-hint' }, 'Form a party of four — Tank, Mage, Ranger and Melee — and hack and slash through a dungeon that is never the same twice. Empty roles are filled by AI companions.'),
     ),

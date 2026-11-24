@@ -3,6 +3,7 @@ import { READY_CHECK_SECONDS } from '../../shared/constants.js';
 import { HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
 import type { AiFill, LobbyState } from '../../shared/protocol.js';
 import { clear, fmtTime, h, toast } from '../dom.js';
+import { heroImageUrl } from '../art/sprites.js';
 import { roleIcon, skillIcon } from '../icons.js';
 import type { Net } from '../net.js';
 import { skillTooltip, withTooltip } from './common.js';
@@ -65,8 +66,7 @@ export class LobbyView {
     for (const role of ROLE_ORDER) {
       const def = ROLES[role];
       const card = h('button', { class: 'role-card', 'data-role': role, style: `--rc:${def.color}`, onclick: () => this.pickRole(role) });
-      card.innerHTML = roleIcon(role, 30);
-      card.append(h('span', { class: 'rname' }, def.name), h('span', { class: 'rtag' }, def.tagline));
+      card.append(h('img', { class: 'role-art', src: heroImageUrl(role), alt: '' }), h('span', { class: 'rname' }, def.name), h('span', { class: 'rtag' }, def.tagline));
       this.rolesEl.appendChild(card);
     }
     this.renderFill();
@@ -109,7 +109,7 @@ export class LobbyView {
             { class: 'section stack' },
             h('div', { class: 'duty-art' }, h('div', { class: 'dname' }, 'Random Dungeon Expedition')),
             h('div', { class: 'duty-facts' }, h('div', null, h('b', null, '3–4'), h('span', null, 'Bosses')), h('div', null, h('b', null, '4'), h('span', null, 'Heroes')), h('div', null, h('b', null, '∞'), h('span', null, 'Layouts'))),
-            h('p', { class: 'hint' }, 'Each run is a freshly generated dungeon: hack through waves of monsters, then face bosses whose attacks are marked on the ground before they land. Dodge-roll through danger, and stagger bosses with crowd control.'),
+            h('p', { class: 'hint' }, 'Each run is a freshly generated dungeon held by one of three clans: the Orcs of the Bloodtusk Stronghold, the Dragons and their cult in the Cinder Sanctum, or the Undead of the Barrow of Sorrows. Hack through waves of monsters, then face bosses whose attacks are marked on the ground before they land.'),
             h('div', null, h('div', { class: 'label' }, 'AI companions fill empty roles'), this.fillEl),
             this.queueBtn,
             this.queueEl,

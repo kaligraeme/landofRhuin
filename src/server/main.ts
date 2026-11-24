@@ -10,6 +10,7 @@ import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { TICK_RATE } from '../shared/constants.js';
+import { THEME_IDS, type ThemeId } from '../shared/content/monsters.js';
 import type { ClientMsg, ServerMsg } from '../shared/protocol.js';
 import { cleanName, Lobby, type LobbyOptions } from './lobby.js';
 
@@ -29,6 +30,8 @@ const lobbyOpts: LobbyOptions = {
     // --quick makes monsters frail, for trying things out and for browser tests.
     ...(flag('quick') ? { enemyHp: 0.25 } : {}),
     ...(arg('countdown') !== undefined ? { countdown: Number(arg('countdown')) } : {}),
+    // --clan orc|dragon|undead makes every dungeon belong to one clan.
+    ...(arg('clan') && (THEME_IDS as string[]).includes(arg('clan') as string) ? { theme: arg('clan') as ThemeId } : {}),
   },
 };
 const lobby = new Lobby(lobbyOpts);

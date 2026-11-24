@@ -11,6 +11,7 @@ import { findPath, moveCircle } from '../../shared/map.js';
 import type { GameEvent, InstanceStart, ServerMsg } from '../../shared/protocol.js';
 import { h } from '../dom.js';
 import type { Net } from '../net.js';
+import { preloadClan } from '../art/sprites.js';
 import { Effects } from './fx.js';
 import { Hud } from './hud.js';
 import { Renderer } from './renderer.js';
@@ -42,7 +43,7 @@ export class Game {
   private followId: number | null = null;
   private followPath: { x: number; y: number }[] | null = null;
   private followPathAt = 0;
-  private zoom = 36;
+  private zoom = 44;
   private raf = 0;
   private last = performance.now();
   private lastSend = 0;
@@ -55,6 +56,7 @@ export class Game {
     start: InstanceStart,
   ) {
     this.world = new World(start);
+    preloadClan(start.theme);
     this.renderer = new Renderer(this.canvas);
     this.hud = new Hud(this.world, {
       useSlot: (i) => this.useSlot(i),
@@ -152,7 +154,8 @@ export class Game {
       case 'dmg': {
         const t = pos(ev.t);
         if (!t) break;
-        w.lastHit.set(ev.t, now);
+        // Flash at most a few times a second, or a boss under fire would glow white non-stop.
+        if (now - (w.lastHit.get(ev.t) ?? -1) > 0.28) w.lastHit.set(ev.t, now);
         const target = w.ents.get(ev.t);
         const mine = ev.s === w.meId;
         if (target?.spawn.team === 'party') {
@@ -364,7 +367,9 @@ export class Game {
     for (const e of this.world.ents.values()) {
       if (e.removed || (e.diedAt && e.spawn.team === 'enemy')) continue;
       if (e.id === this.world.meId) continue;
-      const d = Math.hypot(p.x - e.x, p.y - e.y) - e.spawn.radius;
+      let d = Math.hypot(p.x - e.x, p.y - e.y) - e.spawn.radius;
+      const box = this.renderer.hitBoxes.get(e.id);
+      if (box && p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1) d = Math.min(d, 0.1);
       const bias = e.spawn.team === 'enemy' ? -0.2 : 0;
       if (d < 0.4 && d + bias < bestD) {
         best = e.id;
