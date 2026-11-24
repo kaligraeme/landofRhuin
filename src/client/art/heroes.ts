@@ -27,9 +27,12 @@ const DARK_LEATHER: Ramp = ['#7c5538', '#553620', '#382213'];
 const RED: Ramp = ['#ee5a52', '#bd2c38', '#7a1828'];
 const CAPE: Ramp = ['#c4323e', '#8e1c2c', '#5a1020'];
 const FUR: Ramp = ['#d4c2a2', '#9c8668', '#66563f'];
-const FACEPLATE: Ramp = ['#b4bccf', '#78809a', '#4a5068'];
 const BONE: Ramp = ['#fff8e6', '#e3d3ae', '#a99470'];
-const BLACK_HAIR: Ramp = ['#6e6488', '#3e3654', '#241f34'];
+const PLATE: Ramp = ['#93a2c4', '#5a6890', '#384265'];
+const PLATE_DARK: Ramp = ['#73809f', '#444f70', '#2a3150'];
+const DARK_HAIR: Ramp = ['#58525f', '#2f2a36', '#18141c'];
+const WEATHERED: Ramp = ['#f2c29c', '#d4946c', '#9c5e44'];
+const SCAR = '#f0b4a0';
 const WHITE_HAIR: Ramp = ['#ffffff', '#e6e4f1', '#aeaaca'];
 const ROBE: Ramp = ['#7360cc', '#44328e', '#2a1d5e'];
 const ROBE_INNER: Ramp = ['#ffffff', '#ddd6f2', '#a99dcc'];
@@ -64,24 +67,26 @@ function heroDef(p: Pix, hand: { x: number; y: number }): SpriteDef {
 
 // ── Heroes ───────────────────────────────────────────────────────────────────────────────────
 
-/** Tank: a barbarian dark knight — horned helm, wild black mane, fur collar and tattered cape. */
+/** Tank: a gruff barbarian dark knight — long dark mane, bushy beard, fur collar and tattered cape. */
 function tank(): SpriteDef {
   const p = new Pix(W, H);
   p.paint(shape().poly([[14, 22], [26, 22], [24, 30], [22, 40], [20, 43], [18, 41], [16, 44], [14, 41], [11, 44], [9, 41], [6, 43], [5, 37], [7, 30], [10, 25]], X), CAPE, { shade: 2 });
-  p.paint(shape().poly([[13, 12], [17, 14], [16, 22], [14, 30], [12, 27], [11, 31], [9, 27], [6, 29], [7, 24], [4, 24], [7, 20], [5, 17], [9, 15]], X), BLACK_HAIR, { shade: 2 });
-  p.dots([[9, 19], [10, 22], [8, 25], [12, 24]], BLACK_HAIR[0]);
-  legs(p, DARKER_STEEL, DARK_STEEL, DARK_STEEL, DARKER_STEEL);
-  p.paint(shape().ellipse(16.5, 37, 1.6, 1.2, X), DARK_STEEL, { line: false });
+  // Long dark mane down the back.
+  p.paint(shape().poly([[12, 8], [18, 6], [19, 20], [17, 28], [15, 34], [13, 31], [11, 35], [9, 31], [6, 33], [7, 27], [4, 28], [6, 22], [3, 19], [7, 15], [8, 11]], X), DARK_HAIR, { shade: 2 });
+  p.line(10, 12, 8, 20, DARK_HAIR[0]).line(14, 10, 13, 17, DARK_HAIR[0]);
+  p.line(9, 22, 8, 30, DARK_HAIR[2]).line(12, 20, 12, 31, DARK_HAIR[2]).line(6, 24, 5, 27, DARK_HAIR[2]).line(15, 24, 15, 31, DARK_HAIR[2]);
+  legs(p, PLATE_DARK, PLATE, PLATE, PLATE_DARK);
+  p.paint(shape().ellipse(16.5, 37, 1.6, 1.2, X), PLATE, { line: false });
   p.paint(shape().ellipse(22.5, 37, 1.8, 1.3, X), STEEL, { line: false });
   // Back arm and pauldron.
-  p.paint(shape().rect(11, 25, 14, 31, X), DARKER_STEEL);
-  p.paint(shape().rect(11, 31, 14, 34, X), DARKER_STEEL);
-  p.paint(shape().ellipse(13, 24.5, 3.5, 3, X), DARK_STEEL, { shade: 2 });
+  p.paint(shape().rect(11, 25, 14, 31, X), PLATE_DARK);
+  p.paint(shape().rect(11, 31, 14, 34, X), PLATE_DARK);
+  p.paint(shape().ellipse(13, 24.5, 3.5, 3, X), PLATE, { shade: 2 });
   p.paint(shape().poly([[10.5, 23], [13, 22.5], [10.5, 18]], X), BONE, { bottom: false });
   // Breastplate, belt and crimson tabard.
-  p.paint(shape().poly([[14, 22], [27, 22], [26, 34], [15, 34]], X), DARK_STEEL, { shade: 2 });
-  p.vline(20, 24, 28, DARK_STEEL[0]);
-  p.hline(16, 25, 28, DARKER_STEEL[2]);
+  p.paint(shape().poly([[14, 22], [27, 22], [26, 34], [15, 34]], X), PLATE, { shade: 2 });
+  p.vline(20, 24, 28, PLATE[0]);
+  p.hline(16, 25, 28, PLATE_DARK[2]);
   p.paint(shape().rect(15, 30, 26, 31, X), DARK_LEATHER, { hi: false });
   p.paint(shape().rect(19, 30, 21, 31, X), GOLD, { line: false });
   p.paint(shape().poly([[17, 32], [24, 32], [24, 38], [20.5, 41], [17, 38]], X), RED, { shade: 2 });
@@ -90,21 +95,27 @@ function tank(): SpriteDef {
   p.paint(shape().ellipse(20.5, 22.5, 8, 2.6, X).dots([[13, 25], [16, 26], [19, 25], [22, 26], [25, 25], [28, 24]], X), FUR, { shade: 2 });
   p.dots([[15, 21], [18, 21], [21, 21], [24, 21]], FUR[0]);
   // Front arm, gauntlet and spiked pauldron.
-  p.paint(shape().rect(26, 25, 29, 31, X), DARK_STEEL);
-  p.paint(shape().rect(26, 31, 29, 35, X), DARKER_STEEL);
-  p.hline(26, 28, 33, DARK_STEEL[0]);
-  p.paint(shape().ellipse(28, 24.5, 4.5, 3.5, X), DARK_STEEL, { shade: 2 });
-  p.hline(25, 31, 26, DARKER_STEEL[2]).dots([[26, 22], [27, 22]], DARK_STEEL[0]);
-  p.paint(shape().poly([[28, 22], [31, 22.5], [32, 16.5]], X), BONE, { bottom: false });
-  // Horned helm with a glowing T visor.
-  p.paint(shape().poly([[15, 11], [11, 9], [8, 6], [6, 1], [5, 2], [5, 6], [7, 10], [12, 13]], X), BONE, { bottom: false });
-  p.paint(shape().ellipse(20.5, 14, 8.5, 8, X), DARK_STEEL, { shade: 3 });
-  p.vline(19, 7, 12, DARK_STEEL[0]).vline(18, 8, 11, '#a6aec4');
-  p.dots([[14, 17], [15, 20], [13, 13]], DARK_STEEL[0]);
-  p.paint(shape().poly([[20, 12], [29.5, 12], [29.5, 19], [25, 23], [20, 20]], X), FACEPLATE, { shade: 2 });
-  p.hline(21, 29, 15, INK).hline(21, 29, 16, INK).rect(24, 17, 25, 21, INK);
-  p.dots([[22, 15], [26, 15]], '#ff4a32').dots([[23, 15], [27, 15]], '#ffd27a').dots([[22, 16], [23, 16], [26, 16], [27, 16]], '#8c1d1d');
-  p.paint(shape().poly([[26, 9], [30, 11], [32, 8], [34, 4], [34, 0], [33, 0], [32, 4], [29, 7]], X), BONE, { bottom: false });
+  p.paint(shape().rect(26, 25, 29, 31, X), PLATE);
+  p.paint(shape().rect(26, 31, 29, 35, X), PLATE_DARK);
+  p.hline(26, 28, 33, PLATE[0]);
+  p.paint(shape().ellipse(28, 24.5, 4.5, 3.5, X), PLATE, { shade: 2 });
+  p.hline(25, 31, 26, PLATE_DARK[2]).dots([[26, 22], [27, 22]], PLATE[0]);
+  p.paint(shape().poly([[29, 22], [32, 22.5], [33, 17]], X), BONE, { bottom: false });
+  // Weathered face, a crown of wild hair and a crooked nose.
+  p.paint(shape().ellipse(20.5, 14.5, 8, 7.5, X), WEATHERED, { shade: 2 });
+  p.paint(shape().poly([[12, 20], [11, 13], [12, 9], [14, 5], [16, 6.5], [18, 3.5], [20, 5], [23, 3.5], [24, 5.5], [27, 6], [29, 9], [29.5, 13], [28, 11.5], [26.5, 13], [25.5, 10.5], [23.5, 12], [22, 10], [20, 12.5], [19, 17], [17.5, 21], [14, 23]], X), DARK_HAIR, { shade: 2 });
+  p.line(15, 7, 13, 12, DARK_HAIR[0]).line(19, 6, 18, 9, DARK_HAIR[0]).line(23, 6, 24, 8, DARK_HAIR[0]);
+  p.line(15, 14, 15, 20, DARK_HAIR[2]).line(13, 13, 13, 18, DARK_HAIR[2]);
+  p.dots([[29, 16], [29, 17]], WEATHERED[1]).set(28, 17, WEATHERED[2]);
+  // A heavy scowl: low brows, narrowed eyes and a scar across the nose.
+  p.dots([[20, 13], [21, 13], [22, 14], [23, 14], [25, 14], [26, 13], [27, 13]], INK).dots([[21, 12], [26, 12]], DARK_HAIR[1]);
+  for (const x of [21, 25]) p.hline(x, x + 1, 15, INK).set(x, 16, '#f1e6d2').set(x + 1, 16, '#3b2418');
+  p.dots([[23, 15], [24, 16], [25, 17]], SCAR);
+  // Bushy beard and moustache, with a downturned mouth.
+  p.paint(shape().poly([[17, 17.5], [19, 19.5], [22, 18.5], [25, 19.5], [27.5, 18], [29, 17.5], [29, 22], [28, 25], [26, 27.5], [24.5, 29.5], [23, 28], [21.5, 29.5], [19.5, 27], [18, 24.5], [17, 21]], X), DARK_HAIR, { shade: 2, line: DARK_HAIR[2] });
+  p.line(20, 23, 21, 26, DARK_HAIR[2]).line(24, 23, 24, 27, DARK_HAIR[2]).line(27, 22, 26, 25, DARK_HAIR[2]).dots([[19, 21], [20, 22]], DARK_HAIR[0]);
+  p.hline(21, 28, 19, DARK_HAIR[1]).dots([[21, 20], [28, 20]], DARK_HAIR[1]);
+  p.hline(23, 26, 21, '#120c0c').dots([[22, 22], [27, 22]], '#120c0c');
   return heroDef(p, { x: 27.5, y: 33.5 });
 }
 
