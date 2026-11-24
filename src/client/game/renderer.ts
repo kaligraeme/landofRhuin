@@ -7,7 +7,7 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
-import { spriteFor, type Sprite } from '../art/sprites.js';
+import { shieldSprite, spriteFor, weaponSprite, type Sprite } from '../art/sprites.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -1024,13 +1024,12 @@ export class Renderer {
     g.restore();
   }
 
-  /** The hero's weapon, held toward their aim and swung when they attack. */
-  private drawWeapon(view: View, e: ClientEntity, now: number, hand: { x: number; y: number }): void {
+  /** The hero's pixel weapon, held toward their aim and swung when they attack. */
+  private drawWeapon(view: View, e: ClientEntity, now: number, hand: { x: number; y: number }, px: number, flip: boolean): void {
     if (e.snap.d) return;
+    const ws = weaponSprite(e.spawn.weapon ?? '');
+    if (!ws?.ready) return;
     const g = this.g;
-    const weapon = e.spawn.weapon ?? '';
-    // Weapons are drawn from just behind the gripping hand.
-    const r = -0.25;
     const swing = view.world.swings.get(e.id);
     let angle = e.f;
     let reach = 0;
@@ -1041,107 +1040,35 @@ export class Renderer {
         else reach = Math.sin(k * Math.PI) * 0.6;
       }
     }
-    const metal = '#dfe6ef';
+    const a = ws.art;
     g.save();
     g.translate(hand.x, hand.y);
-    g.rotate(angle);
-    g.lineCap = 'round';
-    const blade = (len: number, width: number, color = metal): void => {
-      g.strokeStyle = '#3a2a1c';
-      g.lineWidth = 0.09;
+    // The art points up; turn it to the aim, and mirror it with the hero so it keeps its top side up.
+    g.rotate(angle + Math.PI / 2);
+    if (flip) g.scale(-1, 1);
+    g.translate(0, -reach);
+    g.imageSmoothingEnabled = false;
+    if (e.spawn.weapon === 'mystic_sword') {
+      g.shadowColor = '#c77dff';
+      g.shadowBlur = 10;
+    }
+    g.drawImage(ws.img, -a.gx * px, -a.gy * px, a.w * px, a.h * px);
+    g.shadowBlur = 0;
+    g.imageSmoothingEnabled = true;
+    if (a.glow) {
+      const x = (a.glow.x - a.gx) * px;
+      const y = (a.glow.y - a.gy) * px;
+      const r = a.glow.r * px * (1 + Math.sin(now * 3) * 0.12);
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const [cr, cg, cb] = rgb(a.glow.color);
+      grad.addColorStop(0, 'rgba(255,255,255,0.45)');
+      grad.addColorStop(0.35, `rgba(${cr},${cg},${cb},0.35)`);
+      grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      g.globalCompositeOperation = 'lighter';
+      g.fillStyle = grad;
       g.beginPath();
-      g.moveTo(r * 0.6 + reach, 0);
-      g.lineTo(r * 0.6 + reach + 0.28, 0);
-      g.stroke();
-      g.strokeStyle = color;
-      g.lineWidth = width;
-      g.beginPath();
-      g.moveTo(r * 0.6 + reach + 0.3, 0);
-      g.lineTo(r * 0.6 + reach + len, 0);
-      g.stroke();
-    };
-    switch (weapon) {
-      case 'sword_shield':
-        blade(0.95, 0.1);
-        g.fillStyle = '#c9a14a';
-        g.fillRect(r * 0.6 + reach + 0.22, -0.16, 0.08, 0.32);
-        break;
-      case 'tank_greatsword':
-      case 'greatsword':
-        blade(1.35, 0.15);
-        break;
-      case 'battleaxe':
-        blade(1, 0.08, '#8a6a44');
-        g.fillStyle = metal;
-        g.beginPath();
-        g.moveTo(r * 0.6 + reach + 0.75, 0);
-        g.quadraticCurveTo(r * 0.6 + reach + 1.0, -0.45, r * 0.6 + reach + 1.15, -0.35);
-        g.lineTo(r * 0.6 + reach + 1.15, 0.35);
-        g.quadraticCurveTo(r * 0.6 + reach + 1.0, 0.45, r * 0.6 + reach + 0.75, 0);
-        g.fill();
-        break;
-      case 'staff': {
-        blade(1.3, 0.08, '#9b7a4c');
-        const glow = g.createRadialGradient(r * 0.6 + 1.35, 0, 0, r * 0.6 + 1.35, 0, 0.3);
-        glow.addColorStop(0, '#fff');
-        glow.addColorStop(0.4, `hsla(${130 + Math.sin(now * 3) * 20}, 90%, 70%, 0.9)`);
-        glow.addColorStop(1, 'hsla(140, 90%, 60%, 0)');
-        g.fillStyle = glow;
-        g.beginPath();
-        g.arc(r * 0.6 + 1.35, 0, 0.3, 0, Math.PI * 2);
-        g.fill();
-        break;
-      }
-      case 'mystic_sword':
-        g.shadowColor = '#c77dff';
-        g.shadowBlur = 8;
-        blade(1, 0.1, '#e7c8ff');
-        g.shadowBlur = 0;
-        break;
-      case 'bow':
-        g.strokeStyle = '#a8814f';
-        g.lineWidth = 0.08;
-        g.beginPath();
-        g.arc(r * 0.2, 0, 0.75, -1.1, 1.1);
-        g.stroke();
-        g.strokeStyle = 'rgba(240, 240, 230, 0.7)';
-        g.lineWidth = 0.025;
-        g.beginPath();
-        g.moveTo(r * 0.2 + Math.cos(-1.1) * 0.75, Math.sin(-1.1) * 0.75);
-        g.lineTo(r * 0.2 + Math.cos(1.1) * 0.75, Math.sin(1.1) * 0.75);
-        g.stroke();
-        break;
-      case 'crossbow':
-        blade(0.75, 0.12, '#7a5a3a');
-        g.strokeStyle = '#c9ced6';
-        g.lineWidth = 0.07;
-        g.beginPath();
-        g.moveTo(r * 0.6 + 0.6, -0.38);
-        g.quadraticCurveTo(r * 0.6 + 0.75, 0, r * 0.6 + 0.6, 0.38);
-        g.stroke();
-        break;
-      case 'spear':
-        blade(1.8, 0.06, '#a8814f');
-        g.fillStyle = metal;
-        g.beginPath();
-        g.moveTo(r * 0.6 + reach + 2.1, 0);
-        g.lineTo(r * 0.6 + reach + 1.75, -0.1);
-        g.lineTo(r * 0.6 + reach + 1.75, 0.1);
-        g.fill();
-        break;
-      case 'lance':
-        g.fillStyle = '#d4dbe6';
-        g.beginPath();
-        g.moveTo(r * 0.6 + reach + 2.2, 0);
-        g.lineTo(r * 0.6 + reach + 0.4, -0.18);
-        g.lineTo(r * 0.6 + reach + 0.4, 0.18);
-        g.closePath();
-        g.fill();
-        g.fillStyle = '#c9a14a';
-        g.fillRect(r * 0.6 + reach + 0.25, -0.24, 0.12, 0.48);
-        break;
-      default:
-        blade(0.9, 0.09);
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
     }
     g.restore();
   }
@@ -1193,9 +1120,11 @@ export class Renderer {
       const hy = (H * (def.hand.y - def.ay)) / def.h;
       hand = { x: e.x + (flip ? -hx : hx), y: feetY + hy };
     }
+    const px = H / def.h;
     const weaponBehind = hand && Math.sin(e.f) < -0.35;
-    if (hand && weaponBehind) this.drawWeapon(view, e, now, hand);
-    if (isPlayer && e.spawn.weapon === 'sword_shield' && !dead && !rolling) this.drawShield(e, feetY, W, H, flip);
+    const shield = isPlayer && e.spawn.weapon === 'sword_shield' && !dead && !rolling;
+    if (hand && weaponBehind) this.drawWeapon(view, e, now, hand, px, flip);
+    if (shield && weaponBehind) this.drawShield(e, feetY, px, flip);
 
     g.save();
     g.translate(e.x, feetY);
@@ -1212,6 +1141,7 @@ export class Renderer {
     if (flip) g.scale(-1, 1);
     g.scale(1, (1 + breathe) * (1 - sink * 0.45));
     const img: CanvasImageSource = dead && sp.grey ? sp.grey : sp.img;
+    if (def.pixel) g.imageSmoothingEnabled = false;
     g.drawImage(img, dx, dy, W, H);
     const hitAt = view.world.lastHit.get(e.id);
     if (sp.white && hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead) {
@@ -1219,38 +1149,25 @@ export class Renderer {
       g.drawImage(sp.white, dx, dy, W, H);
     }
     g.restore();
-    if (hand && !weaponBehind) this.drawWeapon(view, e, now, hand);
+    if (shield && !weaponBehind) this.drawShield(e, feetY, px, flip);
+    if (hand && !weaponBehind) this.drawWeapon(view, e, now, hand, px, flip);
 
     const top = feetY + dy * (1 - sink * 0.45);
     this.tops.set(e.id, top);
     this.hitBoxes.set(e.id, { x0: e.x - W * 0.28, x1: e.x + W * 0.28, y0: feetY + dy * 0.9, y1: e.y + 0.3 });
   }
 
-  /** The Guardian's shield, carried on the off hand. */
-  private drawShield(e: ClientEntity, feetY: number, W: number, H: number, flip: boolean): void {
+  /** The Guardian's shield, held out on the off arm: in front of the body unless facing away. */
+  private drawShield(e: ClientEntity, feetY: number, px: number, flip: boolean): void {
+    const sh = shieldSprite();
+    if (!sh.ready) return;
     const g = this.g;
-    const x = e.x + (flip ? 1 : -1) * W * 0.24;
-    const y = feetY - H * 0.36;
+    const a = sh.art;
     g.save();
-    g.translate(x, y);
-    const s = 0.34;
-    g.beginPath();
-    g.moveTo(-s, -s * 1.1);
-    g.lineTo(s, -s * 1.1);
-    g.quadraticCurveTo(s * 1.05, s * 0.4, 0, s * 1.35);
-    g.quadraticCurveTo(-s * 1.05, s * 0.4, -s, -s * 1.1);
-    g.closePath();
-    const grad = g.createLinearGradient(-s, 0, s, 0);
-    grad.addColorStop(0, '#6f7a8c');
-    grad.addColorStop(1, '#3c4452');
-    g.fillStyle = grad;
-    g.fill();
-    g.strokeStyle = '#1a120d';
-    g.lineWidth = 0.05;
-    g.stroke();
-    g.fillStyle = '#8e1f22';
-    g.fillRect(-0.05, -s * 0.9, 0.1, s * 1.9);
-    g.fillRect(-s * 0.7, -s * 0.35, s * 1.4, 0.1);
+    g.translate(e.x + (flip ? 10 : -10) * px, feetY - 14 * px);
+    if (flip) g.scale(-1, 1);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(sh.img, -a.gx * px, -a.gy * px, a.w * px, a.h * px);
     g.restore();
   }
 

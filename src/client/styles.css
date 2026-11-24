@@ -449,8 +449,10 @@ select {
 }
 
 .role-art {
-  height: 74px;
-  margin: -4px 0 2px;
+  /* Pixel art at a whole multiple of its 48-pixel height. */
+  height: 96px;
+  margin: -12px 0 0;
+  image-rendering: pixelated;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
   transition: transform 0.15s;
 }
@@ -468,13 +470,13 @@ select {
 }
 
 .hero-line img {
-  height: 120px;
+  height: 144px;
+  image-rendering: pixelated;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.7));
   animation: hero-bob 3s ease-in-out infinite;
 }
 
 .hero-line img:nth-child(2) {
-  height: 138px;
   animation-delay: -0.7s;
 }
 

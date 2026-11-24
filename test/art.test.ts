@@ -40,3 +40,29 @@ describe('sprite art', () => {
     expect(d.svg).not.toContain('undefined');
   });
 });
+
+describe('hero pixel art', () => {
+  it('draws every weapon, plus the shield, as a well-formed pixel image with its grip inside it', async () => {
+    const { WEAPONS } = await import('../src/shared/content/classes.js');
+    const { WEAPON_ART, shieldArt } = await import('../src/client/art/heroes.js');
+    for (const id of Object.keys(WEAPONS)) expect(WEAPON_ART[id], id).toBeDefined();
+    for (const art of [...Object.values(WEAPON_ART).map((f) => f()), shieldArt()]) {
+      expect(art.svg.startsWith('<svg')).toBe(true);
+      expect(wellFormed(art.svg)).toBe(true);
+      expect(art.svg).toContain('crispEdges');
+      expect(art.gx).toBeGreaterThan(0);
+      expect(art.gx).toBeLessThan(art.w);
+      expect(art.gy).toBeGreaterThan(0);
+      expect(art.gy).toBeLessThan(art.h);
+    }
+  });
+
+  it('gives every hero a weapon hand on the sprite and nearest-neighbour scaling', () => {
+    for (const make of Object.values(HERO_SPRITES)) {
+      const d = make();
+      expect(d.pixel).toBe(true);
+      expect(d.hand!.x).toBeGreaterThan(d.ax);
+      expect(d.hand!.y).toBeLessThan(d.ay);
+    }
+  });
+});

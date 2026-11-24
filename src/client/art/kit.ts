@@ -78,6 +78,8 @@ export interface SpriteDef {
   hand?: { x: number; y: number };
   /** Hovering creatures bob more and cast no foot shadow. */
   floats?: boolean;
+  /** Pixel art: drawn with nearest-neighbour scaling so pixels stay crisp. */
+  pixel?: boolean;
 }
 
 export function svgDoc(body: string, x: number, y: number, w: number, h: number, scale = 3): string {

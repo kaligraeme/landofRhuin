@@ -104,10 +104,12 @@ about 750 to 800 and Tanks about 500.
 
 ## Heroes and clans
 
-Every character is an illustrated sprite: a horned dark knight for the Tank, a robed wizard in a
-pointy hat for the Mage, a Robin Hood archer for the Ranger, and a lean headband brawler for the
-Melee. Heroes hold their weapon toward your aim and swing it when they attack. Characters bob as
-they walk, lean into their strikes, flash when hit, and fall when knocked out.
+The heroes are chibi pixel art with dark outlines and three-tone shading: a barbarian dark knight
+in a horned helm for the Tank, a long-haired white mage in star-blue robes for the Mage, an
+elvish archer for the Ranger, and a scarfed soldier in a steel cuirass for the Melee. Every weapon
+is its own pixel sprite. Heroes hold their weapon toward your aim and swing it when they attack,
+and the Sword & Shield tank carries a heater shield. Characters bob as they walk, lean into their
+strikes, flash when hit, and fall when knocked out.
 
 Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colours and floor:
 
@@ -117,15 +119,17 @@ Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colo
 | **Dragons** | The Cinder Sanctum: obsidian, glowing lava cracks and drifting embers | Drakonid Warrior, Wyrmling, Cult Crossbowman, Flamecaller Cultist, Fire Drake, Dragon Idol | Scalebreaker Vorth, High Priestess Seraphine, Ashwing the Wyvern, the Obsidian Guardian, and Ignaroth the Elder Flame |
 | **Undead** | The Barrow of Sorrows: cold stone, graves, cobwebs and green mist | Skeleton Warrior, Ghoul, Skeleton Archer, Necromancer, Bone Abomination, Cursed Obelisk | Sir Morgrave the Death Knight, Lich Vessanthe, Grimmaw the Bone Hound, the Wailing Warden, and Mortheus the Dread King |
 
-![Every hero, monster and boss, drawn to scale](docs/screenshots/bestiary.jpg)
+![The pixel heroes with their weapons, and every monster and boss](docs/screenshots/bestiary.jpg)
 
 | Orcs | Dragons | Undead |
 | --- | --- | --- |
 | ![An orc stronghold fight](docs/screenshots/orc-fight.jpg) | ![A fight in the Cinder Sanctum](docs/screenshots/dragon-fight.jpg) | ![A fight in the Barrow of Sorrows](docs/screenshots/undead-fight.jpg) |
 | ![An orc boss](docs/screenshots/orc-boss.jpg) | ![A dragon clan boss](docs/screenshots/dragon-boss.jpg) | ![An undead boss](docs/screenshots/undead-boss.jpg) |
 
-The sprites are drawn in code as SVG from a small kit of outlined, shaded parts, so they stay sharp
-at any zoom. They live in `src/client/art/`.
+All the art is drawn in code and lives in `src/client/art/`. The heroes and weapons are painted
+on a pixel grid (`pixel.ts`): each part gets an outline and light and shadow tones automatically,
+and the game draws them with nearest-neighbour scaling, at two screen pixels per art pixel at the
+default zoom. The monsters are SVG built from a kit of outlined, shaded parts.
 
 ## How a run works
 
@@ -192,7 +196,8 @@ src/server/      Node.js server.
   main.ts        HTTP server for the client and the WebSocket at /ws.
 src/client/      Browser client (TypeScript and canvas, no framework).
   ui/            Title screen and lobby.
-  art/           Sprite art: the SVG drawing kit, heroes, and the clans' monsters and bosses.
+  art/           Sprite art: the pixel kit and pixel heroes and weapons, the SVG kit and the
+                 clans' monsters and bosses.
   game/          World state, renderer, HUD, effects, input and prediction.
 test/            Unit tests and full dungeon runs.
 e2e/             Browser test with two players.
