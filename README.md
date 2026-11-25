@@ -11,7 +11,7 @@ cursor, and dodge-roll through danger. The dungeon structure takes its cues from
 dungeons: a finder queue with a ready check, enmity and taunts, sealed boss arenas, and orange
 telegraphs to step out of. All names, art, skills and bosses are original.
 
-![Fighting Mother Zhura, Bone Seer, in an Orc stronghold](docs/screenshots/orc-boss.jpg)
+![Fighting Gnashtusk the War Boar in an Orc stronghold](docs/screenshots/orc-boss.jpg)
 
 ![The title screen with the four heroes](docs/screenshots/title.jpg)
 
