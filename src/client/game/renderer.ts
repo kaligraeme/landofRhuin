@@ -7,6 +7,7 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
+import { WEAPON_PIXEL } from '../art/weapons.js';
 import { shieldSprite, spriteFor, weaponSprite, type Sprite } from '../art/sprites.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
@@ -1108,23 +1109,28 @@ export class Renderer {
     if (!isPlayer && e.snap.c) lean += 0.05 + Math.sin(now * 14) * 0.02;
     const float = def.floats ? 0.25 + Math.sin(now * 2 + e.id) * 0.15 : 0;
     const feetY = e.y + 0.15 - bob - float;
-    const dx = (-W * (def.ax - def.vx)) / def.w;
-    const dy = (-H * (def.ay - def.vy)) / def.h;
+    const dx = (-W * def.ax) / def.w;
+    const dy = (-H * def.ay) / def.h;
     const rolling = e.id === view.world.meId && view.rolling;
     const sink = e.diedAt && !isPlayer ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
 
-    // The hand that holds the weapon, in world space.
-    let hand: { x: number; y: number } | null = null;
-    if (isPlayer && def.hand && !dead && !rolling) {
-      const hx = (W * (def.hand.x - def.ax)) / def.w;
-      const hy = (H * (def.hand.y - def.ay)) / def.h;
-      hand = { x: e.x + (flip ? -hx : hx), y: feetY + hy };
-    }
-    const px = H / def.h;
-    const weaponBehind = hand && Math.sin(e.f) < -0.35;
-    const shield = isPlayer && e.spawn.weapon === 'sword_shield' && !dead && !rolling;
-    if (hand && weaponBehind) this.drawWeapon(view, e, now, hand, px, flip);
-    if (shield && weaponBehind) this.drawShield(e, feetY, px, flip);
+    const rotation = tilt + (flip ? -lean : lean);
+    const stretch = (1 + breathe) * (1 - sink * 0.45);
+    // Attach equipment to the same pose transform as the body.
+    const joint = (point?: { x: number; y: number }) => {
+      if (!isPlayer || dead || rolling || !point) return null;
+      const x = (H * (point.x - def.ax) * (flip ? -1 : 1)) / def.h;
+      const y = (H * (point.y - def.ay) * stretch) / def.h;
+      return {
+        x: e.x + x * Math.cos(rotation) - y * Math.sin(rotation),
+        y: feetY + x * Math.sin(rotation) + y * Math.cos(rotation),
+      };
+    };
+    const hand = joint(def.hand);
+    const offhand = e.spawn.weapon === 'sword_shield' ? joint(def.offhand) : null;
+    const equipmentBehind = Math.sin(e.f) < -0.35;
+    if (hand && equipmentBehind) this.drawWeapon(view, e, now, hand, WEAPON_PIXEL, flip);
+    if (offhand && equipmentBehind) this.drawShield(offhand, flip);
 
     g.save();
     g.translate(e.x, feetY);
@@ -1136,12 +1142,12 @@ export class Renderer {
       g.rotate((flip ? -1 : 1) * now * 18);
       g.translate(0, -dy / 2);
     } else {
-      g.rotate(tilt + (flip ? -lean : lean));
+      g.rotate(rotation);
     }
     if (flip) g.scale(-1, 1);
-    g.scale(1, (1 + breathe) * (1 - sink * 0.45));
+    g.scale(1, stretch);
     const img: CanvasImageSource = dead && sp.grey ? sp.grey : sp.img;
-    if (def.pixel) g.imageSmoothingEnabled = false;
+    g.imageSmoothingEnabled = false;
     g.drawImage(img, dx, dy, W, H);
     const hitAt = view.world.lastHit.get(e.id);
     if (sp.white && hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead) {
@@ -1149,8 +1155,8 @@ export class Renderer {
       g.drawImage(sp.white, dx, dy, W, H);
     }
     g.restore();
-    if (shield && !weaponBehind) this.drawShield(e, feetY, px, flip);
-    if (hand && !weaponBehind) this.drawWeapon(view, e, now, hand, px, flip);
+    if (offhand && !equipmentBehind) this.drawShield(offhand, flip);
+    if (hand && !equipmentBehind) this.drawWeapon(view, e, now, hand, WEAPON_PIXEL, flip);
 
     const top = feetY + dy * (1 - sink * 0.45);
     this.tops.set(e.id, top);
@@ -1158,13 +1164,14 @@ export class Renderer {
   }
 
   /** The Guardian's shield, held out on the off arm: in front of the body unless facing away. */
-  private drawShield(e: ClientEntity, feetY: number, px: number, flip: boolean): void {
+  private drawShield(hand: { x: number; y: number }, flip: boolean): void {
     const sh = shieldSprite();
     if (!sh.ready) return;
     const g = this.g;
     const a = sh.art;
     g.save();
-    g.translate(e.x + (flip ? 10 : -10) * px, feetY - 14 * px);
+    const px = WEAPON_PIXEL;
+    g.translate(hand.x, hand.y);
     if (flip) g.scale(-1, 1);
     g.imageSmoothingEnabled = false;
     g.drawImage(sh.img, -a.gx * px, -a.gy * px, a.w * px, a.h * px);

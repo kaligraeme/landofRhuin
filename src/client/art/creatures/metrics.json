@@ -1,0 +1,283 @@
+{
+  "dragon-brute": {
+    "w": 88,
+    "h": 114,
+    "ax": 47.65,
+    "ay": 109.32,
+    "height": 2.487
+  },
+  "dragon-skirmisher": {
+    "w": 172,
+    "h": 114,
+    "ax": 78.93,
+    "ay": 104.42,
+    "height": 1.451
+  },
+  "dragon-archer": {
+    "w": 99,
+    "h": 114,
+    "ax": 39.41,
+    "ay": 109.53,
+    "height": 2.228
+  },
+  "dragon-caster": {
+    "w": 82,
+    "h": 114,
+    "ax": 37.01,
+    "ay": 109.66,
+    "height": 2.384
+  },
+  "dragon-elite": {
+    "w": 137,
+    "h": 114,
+    "ax": 75.77,
+    "ay": 105.73,
+    "height": 2.902
+  },
+  "dragon-sentry": {
+    "w": 73,
+    "h": 114,
+    "ax": 37.15,
+    "ay": 109.42,
+    "height": 2.695
+  },
+  "dragon-boss-juggernaut": {
+    "w": 163,
+    "h": 168,
+    "ax": 78.39,
+    "ay": 163.41,
+    "height": 5.122
+  },
+  "dragon-boss-hexer": {
+    "w": 124,
+    "h": 168,
+    "ax": 60.24,
+    "ay": 163.47,
+    "height": 4.917
+  },
+  "dragon-boss-beast": {
+    "w": 168,
+    "h": 168,
+    "ax": 92.78,
+    "ay": 151.45,
+    "height": 4.302
+  },
+  "dragon-boss-warden": {
+    "w": 170,
+    "h": 168,
+    "ax": 89.05,
+    "ay": 161.51,
+    "height": 5.122
+  },
+  "dragon-boss-sovereign": {
+    "w": 176,
+    "h": 168,
+    "ax": 107.34,
+    "ay": 150.15,
+    "height": 5.941
+  },
+  "undead-brute": {
+    "w": 109,
+    "h": 114,
+    "ax": 68.04,
+    "ay": 110.44,
+    "height": 2.487
+  },
+  "undead-skirmisher": {
+    "w": 92,
+    "h": 114,
+    "ax": 42.18,
+    "ay": 110.42,
+    "height": 1.658
+  },
+  "undead-archer": {
+    "w": 105,
+    "h": 114,
+    "ax": 43.19,
+    "ay": 107.59,
+    "height": 2.228
+  },
+  "undead-caster": {
+    "w": 117,
+    "h": 114,
+    "ax": 57.33,
+    "ay": 104.66,
+    "height": 2.384,
+    "floats": true
+  },
+  "undead-elite": {
+    "w": 112,
+    "h": 114,
+    "ax": 53.84,
+    "ay": 110.95,
+    "height": 3.42
+  },
+  "undead-sentry": {
+    "w": 70,
+    "h": 114,
+    "ax": 34.3,
+    "ay": 110.69,
+    "height": 2.695
+  },
+  "undead-boss-juggernaut": {
+    "w": 166,
+    "h": 168,
+    "ax": 83.04,
+    "ay": 163.55,
+    "height": 5.122
+  },
+  "undead-boss-hexer": {
+    "w": 164,
+    "h": 168,
+    "ax": 84.24,
+    "ay": 164.06,
+    "height": 4.917
+  },
+  "undead-boss-beast": {
+    "w": 217,
+    "h": 168,
+    "ax": 113.45,
+    "ay": 164.07,
+    "height": 4.302
+  },
+  "undead-boss-warden": {
+    "w": 141,
+    "h": 168,
+    "ax": 68.49,
+    "ay": 160.82,
+    "height": 5.122,
+    "floats": true
+  },
+  "undead-boss-sovereign": {
+    "w": 192,
+    "h": 168,
+    "ax": 111.72,
+    "ay": 162.82,
+    "height": 5.941
+  },
+  "orc-brute": {
+    "w": 107,
+    "h": 114,
+    "ax": 37.42,
+    "ay": 106.5,
+    "height": 2.487
+  },
+  "orc-skirmisher": {
+    "w": 112,
+    "h": 114,
+    "ax": 48.96,
+    "ay": 109.08,
+    "height": 1.658
+  },
+  "orc-archer": {
+    "w": 98,
+    "h": 114,
+    "ax": 46.94,
+    "ay": 110.36,
+    "height": 2.228
+  },
+  "orc-caster": {
+    "w": 108,
+    "h": 114,
+    "ax": 42.0,
+    "ay": 105.82,
+    "height": 2.384
+  },
+  "orc-elite": {
+    "w": 120,
+    "h": 114,
+    "ax": 47.57,
+    "ay": 106.17,
+    "height": 3.42
+  },
+  "orc-sentry": {
+    "w": 72,
+    "h": 114,
+    "ax": 37.41,
+    "ay": 110.48,
+    "height": 2.695
+  },
+  "orc-boss-juggernaut": {
+    "w": 128,
+    "h": 168,
+    "ax": 64.39,
+    "ay": 158.93,
+    "height": 5.122
+  },
+  "orc-boss-hexer": {
+    "w": 174,
+    "h": 168,
+    "ax": 83.51,
+    "ay": 157.94,
+    "height": 4.917
+  },
+  "orc-boss-beast": {
+    "w": 218,
+    "h": 168,
+    "ax": 111.13,
+    "ay": 152.63,
+    "height": 4.302
+  },
+  "orc-boss-warden": {
+    "w": 163,
+    "h": 168,
+    "ax": 61.67,
+    "ay": 156.04,
+    "height": 5.122
+  },
+  "orc-boss-sovereign": {
+    "w": 170,
+    "h": 168,
+    "ax": 89.74,
+    "ay": 156.4,
+    "height": 5.941
+  },
+  "hero-tank": {
+    "w": 65,
+    "h": 96,
+    "ax": 37.52,
+    "ay": 92.1,
+    "height": 2.17,
+    "hand": {
+      "x": 59.73,
+      "y": 36.31
+    },
+    "offhand": {
+      "x": 29.6,
+      "y": 50.5
+    }
+  },
+  "hero-mage": {
+    "w": 59,
+    "h": 96,
+    "ax": 34.46,
+    "ay": 91.85,
+    "height": 2.17,
+    "hand": {
+      "x": 54.13,
+      "y": 34.19
+    }
+  },
+  "hero-ranger": {
+    "w": 56,
+    "h": 96,
+    "ax": 29.92,
+    "ay": 90.2,
+    "height": 2.17,
+    "hand": {
+      "x": 51.27,
+      "y": 34.74
+    }
+  },
+  "hero-melee": {
+    "w": 63,
+    "h": 96,
+    "ax": 33.56,
+    "ay": 91.66,
+    "height": 2.17,
+    "hand": {
+      "x": 58.49,
+      "y": 36.2
+    }
+  }
+}

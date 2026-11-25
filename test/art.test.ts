@@ -1,6 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { HERO_SPRITES } from '../src/client/art/heroes.js';
-import { allMonsterSprites } from '../src/client/art/monsters.js';
+import { creatureArt } from '../src/client/art/creature-art.js';
+import { shieldArt, WEAPON_ART } from '../src/client/art/weapons.js';
+import { WEAPONS } from '../src/shared/content/classes.js';
+
+const heroes = ['tank', 'mage', 'ranger', 'melee'] as const;
+const clans = ['orc', 'dragon', 'undead'] as const;
+const mobs = ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as const;
+const bosses = ['juggernaut', 'hexer', 'beast', 'warden', 'sovereign'] as const;
+
+const roster = [
+  ...heroes.map((role) => `hero-${role}` as const),
+  ...clans.flatMap((clan) => [
+    ...mobs.map((kind) => `${clan}-${kind}` as const),
+    ...bosses.map((kind) => `${clan}-boss-${kind}` as const),
+  ]),
+];
+
+describe('creature art', () => {
+  it.each(roster)('%s resolves to a sprite with its anchors inside the canvas', (id) => {
+    const sprite = creatureArt(id);
+    expect(sprite.url).toBeTruthy();
+    expect(sprite.ax).toBeGreaterThan(0);
+    expect(sprite.ax).toBeLessThan(sprite.w);
+    expect(sprite.ay).toBeGreaterThan(0);
+    expect(sprite.ay).toBeLessThanOrEqual(sprite.h);
+    expect(sprite.height).toBeGreaterThan(1);
+    if (id.startsWith('hero-')) {
+      expect(sprite.hand).toBeDefined();
+      expect(sprite.hand!.x).toBeGreaterThan(0);
+      expect(sprite.hand!.x).toBeLessThan(sprite.w);
+      expect(sprite.hand!.y).toBeGreaterThan(0);
+      expect(sprite.hand!.y).toBeLessThan(sprite.ay);
+    }
+  });
+});
 
 /** A small well-formedness check: every tag closes, in order. */
 function wellFormed(svg: string): boolean {
@@ -15,36 +48,8 @@ function wellFormed(svg: string): boolean {
   return stack.length === 0;
 }
 
-describe('sprite art', () => {
-  const all = { ...Object.fromEntries(Object.entries(HERO_SPRITES).map(([k, f]) => [`hero ${k}`, f()])), ...allMonsterSprites() };
-
-  it('covers four heroes and every clan’s six monsters and five bosses', () => {
-    expect(Object.keys(all)).toHaveLength(4 + 3 * (6 + 5));
-    for (const clan of ['orc', 'dragon', 'undead']) {
-      expect(Object.keys(all).filter((k) => k.startsWith(`${clan} `))).toHaveLength(11);
-    }
-  });
-
-  it.each(Object.keys(all))('%s is a well-formed SVG with unique ids and a sensible anchor', (key) => {
-    const d = all[key]!;
-    expect(d.svg.startsWith('<svg')).toBe(true);
-    expect(wellFormed(d.svg)).toBe(true);
-    const ids = [...d.svg.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
-    expect(new Set(ids).size).toBe(ids.length);
-    expect(d.ax).toBeGreaterThan(d.vx);
-    expect(d.ax).toBeLessThan(d.vx + d.w);
-    expect(d.ay).toBeGreaterThan(d.vy);
-    expect(d.ay).toBeLessThanOrEqual(d.vy + d.h);
-    expect(d.height).toBeGreaterThan(1);
-    expect(d.svg).not.toContain('NaN');
-    expect(d.svg).not.toContain('undefined');
-  });
-});
-
-describe('hero pixel art', () => {
-  it('draws every weapon, plus the shield, as a well-formed pixel image with its grip inside it', async () => {
-    const { WEAPONS } = await import('../src/shared/content/classes.js');
-    const { WEAPON_ART, shieldArt } = await import('../src/client/art/heroes.js');
+describe('weapon pixel art', () => {
+  it('draws every weapon, plus the shield, as a well-formed pixel image with its grip inside it', () => {
     for (const id of Object.keys(WEAPONS)) expect(WEAPON_ART[id], id).toBeDefined();
     for (const art of [...Object.values(WEAPON_ART).map((f) => f()), shieldArt()]) {
       expect(art.svg.startsWith('<svg')).toBe(true);
@@ -54,15 +59,6 @@ describe('hero pixel art', () => {
       expect(art.gx).toBeLessThan(art.w);
       expect(art.gy).toBeGreaterThan(0);
       expect(art.gy).toBeLessThan(art.h);
-    }
-  });
-
-  it('gives every hero a weapon hand on the sprite and nearest-neighbour scaling', () => {
-    for (const make of Object.values(HERO_SPRITES)) {
-      const d = make();
-      expect(d.pixel).toBe(true);
-      expect(d.hand!.x).toBeGreaterThan(d.ax);
-      expect(d.hand!.y).toBeLessThan(d.ay);
     }
   });
 });

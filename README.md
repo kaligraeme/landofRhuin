@@ -126,10 +126,10 @@ Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colo
 | ![An orc stronghold fight](docs/screenshots/orc-fight.jpg) | ![A fight in the Cinder Sanctum](docs/screenshots/dragon-fight.jpg) | ![A fight in the Barrow of Sorrows](docs/screenshots/undead-fight.jpg) |
 | ![An orc boss](docs/screenshots/orc-boss.jpg) | ![A dragon clan boss](docs/screenshots/dragon-boss.jpg) | ![An undead boss](docs/screenshots/undead-boss.jpg) |
 
-All the art is drawn in code and lives in `src/client/art/`. The heroes and weapons are painted
-on a pixel grid (`pixel.ts`): each part gets an outline and light and shadow tones automatically,
-and the game draws them with nearest-neighbour scaling, at two screen pixels per art pixel at the
-default zoom. The monsters are SVG built from a kit of outlined, shaded parts.
+The heroes, monsters and bosses use transparent pixel sprite assets in `src/client/art/creatures/`.
+Each sprite has a ground anchor and a display height, and heroes also have a grip point for
+their separately rendered weapons. Weapons and the Guardian's shield are drawn on a pixel grid
+in `src/client/art/weapons.ts`.
 
 ## How a run works
 

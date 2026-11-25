@@ -449,7 +449,6 @@ select {
 }
 
 .role-art {
-  /* Pixel art at a whole multiple of its 48-pixel height. */
   height: 96px;
   margin: -12px 0 0;
   image-rendering: pixelated;

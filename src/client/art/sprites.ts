@@ -1,16 +1,15 @@
 /**
- * Turns sprite SVGs into images the renderer can draw, plus a white silhouette for hit flashes
+ * Loads sprite images the renderer can draw, plus a white silhouette for hit flashes
  * and a grey copy for knocked-out heroes.
  */
 import type { RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import type { EntitySpawn } from '../../shared/protocol.js';
-import { HERO_SPRITES, shieldArt, WEAPON_ART, type WeaponArt } from './heroes.js';
-import type { SpriteDef } from './kit.js';
-import { bossArt, monsterArt } from './monsters.js';
+import { shieldArt, WEAPON_ART, type WeaponArt } from './weapons.js';
+import { creatureArt, type CreatureArt } from './creature-art.js';
 
 export interface Sprite {
-  def: SpriteDef;
+  def: CreatureArt;
   img: HTMLImageElement;
   white: HTMLCanvasElement | null;
   grey: HTMLCanvasElement | null;
@@ -19,7 +18,7 @@ export interface Sprite {
 
 const sprites = new Map<string, Sprite>();
 
-function load(key: string, make: () => SpriteDef): Sprite {
+function load(key: string, make: () => CreatureArt): Sprite {
   const hit = sprites.get(key);
   if (hit) return hit;
   const def = make();
@@ -55,19 +54,23 @@ function load(key: string, make: () => SpriteDef): Sprite {
       // Silhouettes are a nicety; the sprite still draws without them.
     }
   };
-  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(def.svg)}`;
+  img.src = def.url;
   sprites.set(key, sprite);
   return sprite;
 }
 
 export function heroSprite(role: RoleId): Sprite {
-  return load(`hero:${role}`, HERO_SPRITES[role]);
+  return load(`hero:${role}`, () => creatureArt(`hero-${role}`));
 }
 
 export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
-  if (spawn.kind === 'player') return heroSprite((spawn.role ?? 'tank') as RoleId);
-  if (spawn.kind === 'boss') return load(`boss:${clan}:${spawn.boss}`, () => bossArt(clan, (spawn.boss ?? 'juggernaut') as BossKind));
-  return load(`mob:${clan}:${spawn.mob}`, () => monsterArt(clan, (spawn.mob ?? 'brute') as MobKind));
+  if (spawn.kind === 'player') return heroSprite(spawn.role ?? 'tank');
+  if (spawn.kind === 'boss') {
+    const kind = spawn.boss ?? 'juggernaut';
+    return load(`boss:${clan}:${kind}`, () => creatureArt(`${clan}-boss-${kind}`));
+  }
+  const kind = spawn.mob ?? 'brute';
+  return load(`mob:${clan}:${kind}`, () => creatureArt(`${clan}-${kind}`));
 }
 
 /** Starts loading every sprite a dungeon of this clan can show. */
@@ -113,5 +116,5 @@ export function shieldSprite(): WeaponSprite {
 
 /** A hero's sprite as an image URL, for the lobby and title screen. */
 export function heroImageUrl(role: RoleId): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(HERO_SPRITES[role]().svg)}`;
+  return creatureArt(`hero-${role}`).url;
 }
