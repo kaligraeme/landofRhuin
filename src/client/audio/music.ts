@@ -26,6 +26,7 @@ interface PreparedPart {
   inst: Inst;
   stem: Stem;
   gain: number;
+  reverb: number | undefined;
   notes: Note[];
 }
 
@@ -37,6 +38,7 @@ function prepare(track: Track): PreparedPart[] {
       inst: p.inst,
       stem: p.stem,
       gain: p.gain,
+      reverb: p.reverb,
       notes: sorted.map((e, i) => {
         const prev = i > 0 ? sorted[i - 1] : track.loop ? sorted[sorted.length - 1] : undefined;
         return { beat: e.beat, notes: e.notes, dur: e.dur, vel: e.vel, from: e.slide ? prev?.notes[0] : undefined };
@@ -93,7 +95,7 @@ export function startTrack(synth: Synth, dest: AudioNode, id: TrackId, start: nu
     stems[s].connect(fader);
   }
   const parts = prepare(track);
-  const channels = parts.map((p) => synth.channel(stems[p.stem], p.gain, p.stem === 'drive' ? 0.18 : 0.38));
+  const channels = parts.map((p) => synth.channel(stems[p.stem], p.gain, p.reverb ?? (p.stem === 'drive' ? 0.18 : 0.38)));
   return { track, parts, start, cursor: 0, fader, stems, channels, stopAt: null };
 }
 

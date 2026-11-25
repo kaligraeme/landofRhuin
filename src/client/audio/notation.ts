@@ -9,7 +9,8 @@
  *   !A4      accented
  *   |        a bar line (ignored; it just keeps the score readable)
  *
- * Chord symbols (Dm, Bb, F#m, C#dim, Gsus) and a few pattern helpers build accompaniment.
+ * Chord symbols (Dm, Bb, F#m, C#dim, Gsus, E5, Am7, Fmaj7, Cadd9) and a few pattern helpers
+ * build accompaniment.
  */
 
 export interface NoteEvent {
@@ -68,20 +69,32 @@ export function parse(line: string, vel = 0.8, offset = 0): { events: NoteEvent[
   return { events, length: beat - offset };
 }
 
-const QUALITY: Record<string, number[]> = { '': [0, 4, 7], m: [0, 3, 7], dim: [0, 3, 6], sus: [0, 5, 7] };
+const QUALITY: Record<string, number[]> = {
+  '': [0, 4, 7],
+  m: [0, 3, 7],
+  dim: [0, 3, 6],
+  sus: [0, 5, 7],
+  // A power chord: root, fifth, octave.
+  '5': [0, 7, 12],
+  '7': [0, 4, 7, 10],
+  m7: [0, 3, 7, 10],
+  maj7: [0, 4, 7, 11],
+  add9: [0, 4, 7, 14],
+  madd9: [0, 3, 7, 14],
+};
 
-/** The root, third and fifth of a chord symbol, with the root in the given octave. */
+/** The tones of a chord symbol (root, third, fifth and any extension), the root in the given octave. */
 export function chord(symbol: string, octave: number): number[] {
-  const m = /^([A-G][#b]?)(m|dim|sus)?$/.exec(symbol);
+  const m = /^([A-G][#b]?)(maj7|madd9|add9|m7|dim|sus|m|5|7)?$/.exec(symbol);
   if (!m) throw new Error(`Bad chord: ${symbol}`);
   const root = midi(`${m[1]}${octave}`);
   return (QUALITY[m[2] ?? ''] as number[]).map((i) => root + i);
 }
 
-/** Chord tones going up: root, third, fifth, then the same an octave higher, and so on. */
+/** Chord tones going up: root, third, fifth (and extension), then the same an octave higher. */
 function tone(symbol: string, octave: number, i: number): number {
   const c = chord(symbol, octave);
-  return (c[i % 3] as number) + 12 * Math.floor(i / 3);
+  return (c[i % c.length] as number) + 12 * Math.floor(i / c.length);
 }
 
 /** A broken chord per bar, `shape` picking chord tones (0 root, 1 third, 2 fifth, 3 octave...). */
@@ -102,13 +115,34 @@ export function sustain(chords: string[], octave: number, beatsPerBar: number, v
   return chords.map((c, bar) => ({ beat: offset + bar * beatsPerBar, notes: voicing.map((i) => tone(c, octave, i)), dur: beatsPerBar, vel, slide: false }));
 }
 
-/** A bass or string figure: semitone offsets from each bar's root, one per step. */
-export function ostinato(chords: string[], octave: number, offsets: number[], step: number, beatsPerBar: number, vel = 0.6, offset = 0): NoteEvent[] {
+/**
+ * A bass, string or riff figure: semitone offsets from each bar's root, one per step (null is a
+ * rest). `accents` marks steps to hit harder.
+ */
+export function ostinato(chords: string[], octave: number, offsets: (number | null)[], step: number, beatsPerBar: number, vel = 0.6, offset = 0, accents: number[] = [0]): NoteEvent[] {
   const out: NoteEvent[] = [];
   chords.forEach((c, bar) => {
     const root = chord(c, octave)[0] as number;
     for (let k = 0; k * step < beatsPerBar - 1e-6; k++) {
-      out.push({ beat: offset + bar * beatsPerBar + k * step, notes: [root + (offsets[k % offsets.length] as number)], dur: step * 0.9, vel: vel * (k === 0 ? 1.1 : 1), slide: false });
+      const o = offsets[k % offsets.length];
+      if (o === null || o === undefined) continue;
+      out.push({ beat: offset + bar * beatsPerBar + k * step, notes: [root + o], dur: step * 0.9, vel: vel * (accents.includes(k % offsets.length) ? 1.2 : 1), slide: false });
+    }
+  });
+  return out;
+}
+
+/** Power or full chords struck on a rhythm: one pattern character per step (X accent, x hit, - hold, . rest). */
+export function stabs(chords: string[], octave: number, pattern: string, step: number, beatsPerBar: number, vel = 0.7, offset = 0, voicing?: number[]): NoteEvent[] {
+  const out: NoteEvent[] = [];
+  chords.forEach((c, bar) => {
+    const notes = voicing ? voicing.map((i) => tone(c, octave, i)) : chord(c, octave);
+    for (let k = 0; k < pattern.length && k * step < beatsPerBar - 1e-6; k++) {
+      const ch = pattern[k];
+      if (ch !== 'X' && ch !== 'x') continue;
+      let len = 1;
+      while (pattern[k + len] === '-') len++;
+      out.push({ beat: offset + bar * beatsPerBar + k * step, notes, dur: step * len * 0.92, vel: vel * (ch === 'X' ? 1.2 : 1), slide: false });
     }
   });
   return out;

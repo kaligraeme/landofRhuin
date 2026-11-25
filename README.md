@@ -178,27 +178,34 @@ painted first so a hero animates at once; the turned ones follow in the backgrou
 ## Music
 
 The score is original and generated live in the browser with the Web Audio API: no audio files.
-It is written in a dark folk style, modal and medieval, for a mournful reed lead, lute and harp,
-a hurdy-gurdy drone, a wordless choir, strings, bells and frame drums.
+It is written to drive the action: every dungeon theme has drums from the first bar, and a combat
+layer that makes it hit harder when a fight breaks out. The styles take their cue from the
+references the player chose: modern Final Fantasy battle anthems for the dragons and orcs, the
+*Divinity: Original Sin 2* main theme for the undead, and a Final Fantasy title theme for the
+lobby. The melodies are new.
 
-| Track | When it plays | Mode and meter |
+| Track | When it plays | Style |
 | --- | --- | --- |
-| Ballad of Rhuin | Title screen and lobby | D Dorian, a slow 3/4 |
-| The Bloodtusk Stronghold | Orc dungeons | E Phrygian, 4/4 |
-| The Cinder Sanctum | Dragon dungeons | A Phrygian dominant, 4/4 |
-| The Barrow of Sorrows | Undead dungeons | B minor, 3/4 |
-| The Last Sovereign | While a boss fights you | D minor, a driving 6/8 |
-| Victory | A dungeon cleared | |
+| Embers of Rhuin | Title screen and lobby | E harmonic minor, a brisk 3/4 at 152: a galloping piano, harp and pizzicato; a guitar states the tune, the violin carries it down a fifth and back, then soars with strings and horns over timpani |
+| The Bloodtusk Stronghold | Orc dungeons | D minor with a Phrygian snarl, 152 bpm: fuzz-guitar riffs and double kick, low horns, anvils on the backbeat, shouted chants and a half-time stomp |
+| The Cinder Sanctum | Dragon dungeons | G minor at a full-throttle 168: a choppy chanted hook, rock drums under galloping staccato strings and power chords, a march into a chorus where horns and choir turn bright |
+| The Barrow of Sorrows | Undead dungeons | C minor in a rolling 6/8: one haunting, singable theme, first on a cello over an oud and war drums, then on low horns with a wordless choir, a duduk over the bridge |
+| The Last Sovereign | While a boss fights you | D minor in a pounding 6/8: band, choir stabs, horns and violin |
+| Victory | A dungeon cleared | A horn fanfare with timpani |
 | Lament | The party falls | |
 
-Each clan's theme has a combat layer of drums, bass and a pulsing figure. It fades in when a fight
-breaks out near you and out a few seconds after it ends. A boss crossfades to the boss theme.
-Music starts on your first click or key press, as browsers require. The ♪ button and slider on
-every screen, or M in a dungeon, set it, and the browser remembers your choice.
+Each dungeon theme's combat layer adds double-time hats, war drums, horn stabs and chants. It
+fades in when a fight breaks out near you and out a few seconds after it ends. A boss crossfades
+to the boss theme. Music starts on your first click or key press, as browsers require. The ♪
+button and slider on every screen, or M in a dungeon, set it, and the browser remembers your
+choice.
 
-`src/client/audio/` holds it: `notation.ts` (a small note language), `score.ts` (the tracks),
-`synth.ts` (the instruments, a hall reverb and a compressor) and `music.ts` (the director, which
-schedules notes ahead on the audio clock, crossfades and fades the layers).
+`src/client/audio/` holds it: `notation.ts` (a small note language with chords, riffs and drum
+patterns), `score.ts` (the tracks), `synth.ts` (the instruments: a drum kit and war drums, fuzz
+guitar, staccato and solo strings, horns, choirs, piano, harp, oud, duduk and more, into a hall
+reverb, a compressor and a limiter) and `music.ts` (the director, which schedules notes ahead on
+the audio clock, crossfades and fades the layers). Tests check that no theme lulls and that every
+melody note sits in its key or on its chord.
 
 ## How a run works
 

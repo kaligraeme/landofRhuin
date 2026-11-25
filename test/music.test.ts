@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arpeggio, chord, drums, midi, ostinato, parse, sustain } from '../src/client/audio/notation.js';
+import type { TrackId } from '../src/client/audio/score.js';
 import { dungeonScene } from '../src/client/audio/scene.js';
 import { TRACKS } from '../src/client/audio/score.js';
 
@@ -52,6 +53,40 @@ describe('the soundtrack', () => {
     for (const part of track.parts.filter((p) => p.stem === 'melody')) {
       const last = Math.max(...part.events.map((e) => e.beat + e.dur));
       expect(last).toBeLessThanOrEqual(length);
+    }
+  });
+
+  it('never lulls: the lobby and dungeon themes keep a driving pulse even outside fights', () => {
+    for (const id of ['title', 'explore-orc', 'explore-dragon', 'explore-undead', 'boss'] as const) {
+      const t = TRACKS[id];
+      const seconds = (t.bars * t.beatsPerBar * 60) / t.bpm;
+      const base = t.parts.filter((p) => p.stem !== 'drive');
+      // Something new starts five or more times a second, every bar has a drum on it, and the
+      // pulse (a bar's length) moves along briskly.
+      const onsets = new Set(base.flatMap((p) => p.events.map((e) => Math.round(e.beat * 100))));
+      expect(onsets.size / seconds, id).toBeGreaterThanOrEqual(5);
+      const drumsOn = new Set(base.filter((p) => ['kick', 'taiko', 'frameDrum', 'snare', 'timpani'].includes(p.inst)).flatMap((p) => p.events.map((e) => Math.floor(e.beat / t.beatsPerBar))));
+      expect(drumsOn.size, id).toBe(t.bars);
+      expect((t.beatsPerBar * 60) / t.bpm, id).toBeLessThan(1.6);
+    }
+  });
+
+  it('keeps every tune in its key or on its chord: no stray accidentals', () => {
+    for (const [id, t] of Object.entries(TRACKS) as [TrackId, (typeof TRACKS)[TrackId]][]) {
+      if (!t.chords || !t.minorKey) continue;
+      expect(t.chords.length, id).toBe(t.bars);
+      const root = midi(`${t.minorKey}4`) % 12;
+      const scale = new Set([0, 2, 3, 5, 7, 8, 10].map((i) => (root + i) % 12));
+      for (const part of t.parts.filter((p) => p.stem === 'melody')) {
+        for (const e of part.events) {
+          const bar = Math.floor(e.beat / t.beatsPerBar) % t.bars;
+          const tones = new Set(chord(t.chords[bar] as string, 4).map((n) => n % 12));
+          for (const n of e.notes) {
+            // A leading tone a semitone under the root is fine when the bar's chord is the major dominant.
+            expect(scale.has(n % 12) || tones.has(n % 12), `${id} bar ${bar + 1} (${t.chords[bar]}): ${part.inst} note ${n}`).toBe(true);
+          }
+        }
+      }
     }
   });
 
