@@ -1,31 +1,49 @@
 /**
- * Loads sprite images the renderer can draw, plus a white silhouette for hit flashes
- * and a grey copy for knocked-out heroes.
+ * Loads sprite images the renderer can draw, plus a white silhouette for hit flashes and a grey
+ * copy for knocked-out heroes. Once a sprite has loaded, its animation frames are built in the
+ * background (one sprite at a time, so the game never stalls) and packed into an atlas.
  */
 import type { RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import { HERO_LOOKS, type EntitySpawn, type HeroLook } from '../../shared/protocol.js';
 import { equipmentArt, WEAPON_IDS, type WeaponArt } from './weapons.js';
 import { creatureArt, type CreatureArt } from './creature-art.js';
+import { buildFrames, CLIP_LENGTH, CLIPS, rigSprite, type Clip, type Pose, type Raster, type Rig } from './animation.js';
+import { auraFor, RIG_HINTS } from './rigs.js';
+
+/** A sprite's animation: every clip's frames in one atlas (a row per clip), and their poses. */
+export interface SpriteAnim {
+  atlas: HTMLCanvasElement;
+  fw: number;
+  fh: number;
+  pad: number;
+  rig: Rig;
+  poses: Record<Clip, Pose[]>;
+  rows: Record<Clip, number>;
+}
 
 export interface Sprite {
+  id: string;
   def: CreatureArt;
   img: HTMLImageElement;
   white: HTMLCanvasElement | null;
   grey: HTMLCanvasElement | null;
   ready: boolean;
+  /** Null until the frames are built; the renderer draws the still image meanwhile. */
+  anim: SpriteAnim | null;
 }
 
 const sprites = new Map<string, Sprite>();
 
-function load(key: string, make: () => CreatureArt): Sprite {
+function load(key: string, id: Parameters<typeof creatureArt>[0]): Sprite {
   const hit = sprites.get(key);
   if (hit) return hit;
-  const def = make();
+  const def = creatureArt(id);
   const img = new Image();
-  const sprite: Sprite = { def, img, white: null, grey: null, ready: false };
+  const sprite: Sprite = { id, def, img, white: null, grey: null, ready: false, anim: null };
   img.onload = () => {
     sprite.ready = true;
+    queueFrames(sprite);
     try {
       const w = img.naturalWidth;
       const h = img.naturalHeight;
@@ -59,23 +77,74 @@ function load(key: string, make: () => CreatureArt): Sprite {
   return sprite;
 }
 
+const pending: Sprite[] = [];
+let pumping = false;
+
+function queueFrames(sprite: Sprite): void {
+  pending.push(sprite);
+  if (!pumping) {
+    pumping = true;
+    setTimeout(pump, 0);
+  }
+}
+
+function pump(): void {
+  const sprite = pending.shift();
+  if (sprite) {
+    try {
+      sprite.anim = buildAnim(sprite);
+    } catch (err) {
+      // Animation is a nicety: a sprite whose frames fail to build is drawn still.
+      console.warn(`No animation for ${sprite.id}:`, err);
+    }
+  }
+  if (pending.length) setTimeout(pump, 0);
+  else pumping = false;
+}
+
+/** Rigs the sprite, renders every clip and packs the frames into an atlas. */
+function buildAnim(sprite: Sprite): SpriteAnim {
+  const { img, def } = sprite;
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  g.drawImage(img, 0, 0);
+  const src: Raster = { w, h, data: g.getImageData(0, 0, w, h).data };
+  const rig = rigSprite(src, def.ax, { floats: def.floats, hint: RIG_HINTS[sprite.id] });
+  const set = buildFrames(src, rig, auraFor(sprite.id));
+  const cols = Math.max(...CLIPS.map((clip) => CLIP_LENGTH[clip]));
+  const atlas = document.createElement('canvas');
+  atlas.width = set.fw * cols;
+  atlas.height = set.fh * CLIPS.length;
+  const ag = atlas.getContext('2d') as CanvasRenderingContext2D;
+  const rows = {} as Record<Clip, number>;
+  CLIPS.forEach((clip, row) => {
+    rows[clip] = row;
+    set.frames[clip].forEach((f, i) => ag.putImageData(new ImageData(new Uint8ClampedArray(f.data), f.w, f.h), i * set.fw, row * set.fh));
+  });
+  return { atlas, fw: set.fw, fh: set.fh, pad: set.pad, rig, poses: set.poses, rows };
+}
+
 export function defaultHeroLook(role: RoleId): HeroLook {
   return role === 'mage' || role === 'ranger' ? 'female' : 'male';
 }
 
 export function heroSprite(role: RoleId, look = defaultHeroLook(role)): Sprite {
   const id = `hero-${role}-${look}` as const;
-  return load(id, () => creatureArt(id));
+  return load(id, id);
 }
 
 export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
   if (spawn.kind === 'player') return heroSprite(spawn.role ?? 'tank', spawn.look);
   if (spawn.kind === 'boss') {
     const kind = spawn.boss ?? 'juggernaut';
-    return load(`boss:${clan}:${kind}`, () => creatureArt(`${clan}-boss-${kind}`));
+    return load(`boss:${clan}:${kind}`, `${clan}-boss-${kind}`);
   }
   const kind = spawn.mob ?? 'brute';
-  return load(`mob:${clan}:${kind}`, () => creatureArt(`${clan}-${kind}`));
+  return load(`mob:${clan}:${kind}`, `${clan}-${kind}`);
 }
 
 /** Starts loading every sprite a dungeon of this clan can show. */

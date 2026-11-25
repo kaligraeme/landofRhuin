@@ -205,3 +205,27 @@ describe('boss mechanics', () => {
     for (const t of taken) expect(t).toBeLessThan((8000 / 4) * 1.6);
   });
 });
+
+describe('animation events', () => {
+  it('tells clients when heroes attack or use skills, and how long they wind up', () => {
+    const { inst, melee, mage } = setup();
+    inst.drainEvents();
+    basicAttack(inst, melee);
+    expect(inst.drainEvents()).toContainEqual({ e: 'act', i: melee.id, k: 'atk' });
+    expect(useSkill(inst, mage, 'mendingLight', { x: mage.x + 2, y: mage.y })).toBeNull();
+    const act = inst.drainEvents().find((ev) => ev.e === 'act' && ev.i === mage.id);
+    expect(act).toMatchObject({ k: 'sk' });
+    expect((act as { d?: number }).d).toBeGreaterThan(0.2);
+  });
+
+  it('tells clients when monsters wind up their attacks', () => {
+    const { inst, tank } = setup();
+    const brute = inst.spawnMob('brute', tank.x + 1.5, tank.y, 0, 0);
+    inst.engage(brute);
+    inst.drainEvents();
+    run(inst, 4);
+    const acts = inst.drainEvents().filter((ev) => ev.e === 'act' && ev.i === brute.id);
+    expect(acts.length).toBeGreaterThan(0);
+    expect(acts[0]).toMatchObject({ k: 'atk' });
+  });
+});

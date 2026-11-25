@@ -11,6 +11,11 @@ function alive(inst: Instance): Player[] {
   return inst.players.filter((p) => !p.dead);
 }
 
+/** Tells clients a monster is winding up an attack or a skill, so they can animate it. */
+export function emitAct(inst: Instance, m: Monster, k: 'atk' | 'sk', end: number): void {
+  inst.emit({ e: 'act', i: m.id, k, d: Math.round(Math.max(0, end - inst.now) * 100) / 100 });
+}
+
 function hitPlayers(inst: Instance, m: Monster, shape: Shape, ability: AbilityDef, avoidable = !ability.minor): void {
   for (const p of alive(inst)) {
     if (!shapeHits(shape, p, p.radius)) continue;
@@ -274,6 +279,7 @@ export function runBossStep(inst: Instance, m: Monster): void {
   const lead = abilities[0];
   if (lead) {
     m.cast = { ability: lead, name: abilities.map((a) => a.name).join(' + '), start: inst.now, end, telegraphs: [], targetId: m.targetId };
+    emitAct(inst, m, lead.minor ? 'atk' : 'sk', end);
   }
   m.nextStepAt = end + step.gap;
   m.step++;

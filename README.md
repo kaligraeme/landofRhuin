@@ -107,10 +107,27 @@ about 750 to 800 and Warriors about 500.
 Every hero comes in a male and a female version; pick one under *Appearance* in the lobby, and
 your party sees it in the dungeon. The Warrior wears steel plate and a crimson cape, the Mage is a
 silver-haired spellcaster in embroidered robes, the Ranger a cloaked archer with a quiver, and the
-Duelist fights lightly armoured, with a red scarf. Weapons are separate pixel sprites: heroes
-hold theirs toward your aim and swing it when they attack, and a Sword & Shield Warrior carries a
-heater shield. Characters bob as they walk, lean into their strikes, flash when
-hit, and fall when knocked out.
+Duelist fights lightly armoured, with a red scarf. Weapons are separate pixel sprites:
+heroes hold theirs toward your aim and swing it when they attack, and a Sword & Shield Warrior
+carries a heater shield.
+
+### Animation
+
+Every hero, monster and boss is animated through five clips:
+
+| Clip | When it plays | What moves |
+| --- | --- | --- |
+| **Idle** | Out of combat | Slow breathing |
+| **Battle** | While a fight is on nearby | A lower, forward-leaning ready stance |
+| **Move** | Walking | A walk cycle: legs step, the body rises and falls, robes and wraiths sway |
+| **Action** | Basic attacks | Wind up for as long as the attack's wind-up, lunge into the blow with a motion smear, recover |
+| **Skill** | Skills and spells | Crouch and gather a glow (gold for Warriors, violet for Mages, green for Rangers, red for Duelists, and each clan's own colour), then release with a flash |
+
+![The cast cycling through idle, battle, move, action and skill](docs/screenshots/cast-animation.webp)
+
+The server tells every client when anyone attacks or uses a skill, and how long they wind up,
+so everyone sees the same animation in time with the telegraphs. Weapons and the shield stay in
+the hero's hand through every frame. Characters still flash when hit and fall when knocked out.
 
 ![Each hero's male and female appearance](docs/screenshots/hero-appearances.jpg)
 
@@ -133,6 +150,11 @@ The heroes, monsters and bosses use transparent pixel sprite assets in `src/clie
 Each sprite has a ground anchor and a display height, and heroes also have a grip point for
 their separately rendered weapons. Weapons and the Guardian's shield use matching transparent pixel sprites in
 `src/client/art/equipment/`, with grip points for aiming and attack animations.
+
+The animation frames are built from each sprite when it loads (`src/client/art/animation.ts`).
+Each sprite gets a rig (`rigs.ts`): two legs, a robe, four legs, a hovering form, or a rigid
+object such as a totem. The rig is then posed frame by frame, bending and moving the original
+artwork rather than repainting it, and adding only the skill glow and the attack smear.
 
 ## How a run works
 

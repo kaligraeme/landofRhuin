@@ -38,6 +38,8 @@ export class World {
   lastHit = new Map<number, number>();
   /** Each hero's latest weapon swing, for the swing animation. */
   swings = new Map<number, { at: number; kind: 'arc' | 'thrust'; a: number }>();
+  /** Each actor's latest attack or skill (seconds on the client clock), for animation. */
+  acts = new Map<number, { at: number; k: 'atk' | 'sk'; d: number }>();
   readonly meId: number;
   readonly hotbar: string[];
   me: MeSnap | null = null;

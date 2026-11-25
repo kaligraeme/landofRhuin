@@ -3,7 +3,7 @@ import { angleTo, dist, lerpAngle } from '../../shared/geometry.js';
 import { findPath, lineOfSight, moveCircle, segmentClear } from '../../shared/map.js';
 import { applyDamage, hasteMult, isStunned, outgoingDamage, speedOf } from './combat.js';
 import type { Instance } from './instance.js';
-import { runBossStep, startAbility } from './mechanics.js';
+import { emitAct, runBossStep, startAbility } from './mechanics.js';
 import type { Monster, Player } from './types.js';
 
 export function topEnmity(inst: Instance, m: Monster): Player | null {
@@ -59,6 +59,7 @@ export function updateMonster(inst: Instance, m: Monster, dt: number): void {
       m.facing = angleTo(m, target);
       const end = startAbility(inst, m, ab);
       m.cast = { ability: ab, name: ab.name, start: inst.now, end, telegraphs: [], targetId: target.id };
+      emitAct(inst, m, ab.minor ? 'atk' : 'sk', end);
       return;
     }
   }
@@ -109,7 +110,9 @@ export function updateMonster(inst: Instance, m: Monster, dt: number): void {
       const basic = m.mob.basic;
       const end = startAbility(inst, m, basic);
       m.cast = { ability: basic, name: basic.name, start: inst.now, end, telegraphs: [], targetId: target.id };
+      emitAct(inst, m, 'atk', end);
     } else {
+      inst.emit({ e: 'act', i: m.id, k: 'atk' });
       const { amount } = outgoingDamage(inst, m, m.autoPotency, false);
       inst.emit({ e: 'fx', k: 'slash', s: m.id, t: target.id, hue: 0 });
       applyDamage(inst, m, target, amount, { name: 'Attack' });

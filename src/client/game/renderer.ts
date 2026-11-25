@@ -9,6 +9,7 @@ import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
 import { WEAPON_PIXEL } from '../art/weapons.js';
 import { shieldSprite, spriteFor, weaponSprite, type Sprite } from '../art/sprites.js';
+import { ACTION_WINDUP, posePoint, SKILL_CHARGE, type Clip, type Pose } from '../art/animation.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -86,6 +87,10 @@ export class Renderer {
   private frameDt = 1 / 60;
   /** Per-entity movement tracking for walk animation. */
   private motion = new Map<number, { x: number; y: number; speed: number; phase: number }>();
+  /** Enemies currently fighting someone, this frame: heroes near them take a battle stance. */
+  private engaged: { x: number; y: number }[] = [];
+  /** Scratch canvas for flashing one animation frame white. */
+  private flashCanvas: HTMLCanvasElement | null = null;
   /** Top of each sprite (world y), for nameplates and markers. */
   private tops = new Map<number, number>();
   /** Clickable sprite bounds (world units), for picking. */
@@ -908,6 +913,7 @@ export class Renderer {
       list.push(e);
     }
     list.sort((a, b) => a.y - b.y);
+    this.engaged = list.filter((e) => e.spawn.team === 'enemy' && !e.diedAt && e.snap.t !== undefined).map((e) => ({ x: e.x, y: e.y }));
     const g = this.g;
     // Shadows and rings first so bodies sit on top.
     for (const e of list) {
@@ -1095,23 +1101,34 @@ export class Renderer {
     m.x = e.x;
     m.y = e.y;
     const moving = m.speed > 0.6 && !dead;
-    if (moving) m.phase += this.frameDt * (6 + m.speed * 1.2);
+    const rolling = e.id === view.world.meId && view.rolling;
+    // Animated sprites take their motion from their frames; until those are built, the still image
+    // bobs, tilts and leans instead.
+    const anim = !dead && !rolling ? sp.anim : null;
+    const px = H / def.h;
+    if (moving) m.phase += anim ? (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, H * 1.25) : this.frameDt * (6 + m.speed * 1.2);
     const flip = Math.cos(e.f) < -0.05;
-    const bob = moving ? Math.abs(Math.sin(m.phase)) * Math.min(H, 2.5) * 0.05 : 0;
-    const breathe = moving ? 0 : Math.sin(now * 2.2 + e.id) * 0.012;
-    const tilt = moving ? Math.sin(m.phase) * 0.05 : 0;
+    let pose: Pose | null = null;
+    let frameAt: [number, number] = [0, 0];
+    if (anim) {
+      const { clip, frame } = this.animState(view, e, m.phase, now, moving);
+      pose = anim.poses[clip][frame] ?? null;
+      frameAt = [frame * anim.fw, anim.rows[clip] * anim.fh];
+    }
+    const bob = moving && !anim ? Math.abs(Math.sin(m.phase)) * Math.min(H, 2.5) * 0.05 : 0;
+    const breathe = moving || anim ? 0 : Math.sin(now * 2.2 + e.id) * 0.012;
+    const tilt = moving && !anim ? Math.sin(m.phase) * 0.05 : 0;
     let lean = 0;
     const swing = view.world.swings.get(e.id);
-    if (swing) {
+    if (swing && !anim) {
       const k = (now - swing.at) / 0.25;
       if (k >= 0 && k < 1) lean = Math.sin(k * Math.PI) * 0.14;
     }
-    if (!isPlayer && e.snap.c) lean += 0.05 + Math.sin(now * 14) * 0.02;
-    const float = def.floats ? 0.25 + Math.sin(now * 2 + e.id) * 0.15 : 0;
+    if (!isPlayer && e.snap.c && !anim) lean += 0.05 + Math.sin(now * 14) * 0.02;
+    const float = def.floats ? 0.25 + (anim ? 0 : Math.sin(now * 2 + e.id) * 0.15) : 0;
     const feetY = e.y + 0.15 - bob - float;
     const dx = (-W * def.ax) / def.w;
     const dy = (-H * def.ay) / def.h;
-    const rolling = e.id === view.world.meId && view.rolling;
     const sink = e.diedAt && !isPlayer ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
 
     const rotation = tilt + (flip ? -lean : lean);
@@ -1119,6 +1136,11 @@ export class Renderer {
     // Attach equipment to the same pose transform as the body.
     const joint = (point?: { x: number; y: number }) => {
       if (!isPlayer || dead || rolling || !point) return null;
+      if (anim && pose) {
+        // The hand moves with the frame's pose.
+        const p = posePoint(anim.rig, pose, anim.pad, point);
+        return { x: e.x + (p.x - anim.pad - def.ax) * px * (flip ? -1 : 1), y: feetY + (p.y - anim.pad - def.ay) * px * stretch };
+      }
       const x = (H * (point.x - def.ax) * (flip ? -1 : 1)) / def.h;
       const y = (H * (point.y - def.ay) * stretch) / def.h;
       return {
@@ -1146,13 +1168,26 @@ export class Renderer {
     }
     if (flip) g.scale(-1, 1);
     g.scale(1, stretch);
-    const img: CanvasImageSource = dead && sp.grey ? sp.grey : sp.img;
     g.imageSmoothingEnabled = false;
-    g.drawImage(img, dx, dy, W, H);
     const hitAt = view.world.lastHit.get(e.id);
-    if (sp.white && hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead) {
-      g.globalAlpha *= (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1);
-      g.drawImage(sp.white, dx, dy, W, H);
+    const flash = hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead ? (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1) : 0;
+    if (anim) {
+      const [fx, fy] = frameAt;
+      const ox = dx - anim.pad * px;
+      const oy = dy - anim.pad * px;
+      g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox, oy, anim.fw * px, anim.fh * px);
+      if (flash > 0) {
+        const white = this.whiteFrame(anim.atlas, fx, fy, anim.fw, anim.fh);
+        g.globalAlpha *= flash;
+        g.drawImage(white, 0, 0, anim.fw, anim.fh, ox, oy, anim.fw * px, anim.fh * px);
+      }
+    } else {
+      const img: CanvasImageSource = dead && sp.grey ? sp.grey : sp.img;
+      g.drawImage(img, dx, dy, W, H);
+      if (sp.white && flash > 0) {
+        g.globalAlpha *= flash;
+        g.drawImage(sp.white, dx, dy, W, H);
+      }
     }
     g.restore();
     if (offhand && !equipmentBehind) this.drawShield(offhand, flip);
@@ -1161,6 +1196,55 @@ export class Renderer {
     const top = feetY + dy * (1 - sink * 0.45);
     this.tops.set(e.id, top);
     this.hitBoxes.set(e.id, { x0: e.x - W * 0.28, x1: e.x + W * 0.28, y0: feetY + dy * 0.9, y1: e.y + 0.3 });
+  }
+
+  /**
+   * Which clip and frame an entity shows: its attack or skill while one plays out (winding up for
+   * as long as the server said, then striking), otherwise walking, a battle stance near a fight,
+   * or idling.
+   */
+  private animState(view: View, e: ClientEntity, phase: number, now: number, moving: boolean): { clip: Clip; frame: number } {
+    if (e.diedAt) return { clip: 'idle', frame: 0 };
+    const act = view.world.acts.get(e.id);
+    if (act) {
+      const t = now - act.at;
+      if (act.k === 'atk') {
+        const wind = Math.max(act.d, 0.08);
+        if (t >= 0 && t < wind) return { clip: 'action', frame: t < wind / 2 ? 0 : 1 };
+        const r = (t - wind) / 0.32;
+        if (r >= 0 && r < 1) return { clip: 'action', frame: ACTION_WINDUP + Math.min(3, Math.floor(r * 4)) };
+      } else {
+        const charge = Math.max(act.d, 0.15);
+        if (t >= 0 && t < charge) return { clip: 'skill', frame: t < 0.1 ? 0 : 1 + (Math.floor((t - 0.1) / 0.12) % 2) };
+        const r = (t - charge) / 0.5;
+        if (r >= 0 && r < 1) return { clip: 'skill', frame: SKILL_CHARGE + Math.min(4, Math.floor(r * 5)) };
+      }
+    }
+    if (moving) return { clip: 'move', frame: Math.floor((phase / (Math.PI * 2)) * 8) % 8 };
+    const fighting = e.spawn.team === 'enemy' ? e.snap.t !== undefined : this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16);
+    if (fighting) return { clip: 'battle', frame: Math.floor(now * 5 + e.id * 0.37) % 4 };
+    return { clip: 'idle', frame: Math.floor(now * 3 + e.id * 0.37) % 4 };
+  }
+
+  /** One atlas frame as a white silhouette, for the hit flash. */
+  private whiteFrame(atlas: HTMLCanvasElement, fx: number, fy: number, fw: number, fh: number): HTMLCanvasElement {
+    let c = this.flashCanvas;
+    if (!c) {
+      c = document.createElement('canvas');
+      this.flashCanvas = c;
+    }
+    if (c.width < fw || c.height < fh) {
+      c.width = Math.max(c.width, fw);
+      c.height = Math.max(c.height, fh);
+    }
+    const g = c.getContext('2d') as CanvasRenderingContext2D;
+    g.globalCompositeOperation = 'copy';
+    g.drawImage(atlas, fx, fy, fw, fh, 0, 0, fw, fh);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, fw, fh);
+    g.globalCompositeOperation = 'source-over';
+    return c;
   }
 
   /** The Guardian's shield, held out on the off arm: in front of the body unless facing away. */

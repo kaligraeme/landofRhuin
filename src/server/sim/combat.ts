@@ -240,8 +240,10 @@ export function useSkill(inst: Instance, p: Player, skillId: string, aim: Vec): 
   p.facing = angleTo(p, aim);
   if (skill.windup > 0) {
     p.cast = { skillId, aim: { ...aim }, start: inst.now, end: inst.now + skill.windup * hasteMult(p), x: p.x, y: p.y };
+    inst.emit({ e: 'act', i: p.id, k: 'sk', d: Math.round((p.cast.end - p.cast.start) * 100) / 100 });
     return null;
   }
+  inst.emit({ e: 'act', i: p.id, k: 'sk' });
   executeSkill(inst, p, skill, aim);
   return null;
 }
@@ -270,6 +272,7 @@ export function basicAttack(inst: Instance, p: Player): void {
   p.basicReadyAt = inst.now + interval;
   p.chainResetAt = inst.now + interval + CHAIN_RESET;
   p.facing = angleTo(p, p.aim);
+  inst.emit({ e: 'act', i: p.id, k: 'atk' });
   executeSkill(inst, p, skillDef(id), p.aim);
 }
 

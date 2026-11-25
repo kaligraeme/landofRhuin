@@ -206,6 +206,8 @@ export type GameEvent =
   | { e: 'heal'; s: number; t: number; v: number; c?: 1; n?: string }
   | { e: 'fx'; k: 'proj' | 'slash' | 'burst' | 'heal' | 'buff' | 'dash' | 'rift' | 'impact' | 'shout' | 'arc' | 'thrust' | 'roll' | 'evade' | 'stagger'; s?: number; t?: number; x?: number; y?: number; hue?: number; r?: number; d?: number; a?: number; l?: number }
   | { e: 'death'; i: number }
+  /** An actor attacks (atk) or uses a skill (sk), winding up for d seconds first. Drives animation. */
+  | { e: 'act'; i: number; k: 'atk' | 'sk'; d?: number }
   | { e: 'raise'; i: number }
   | { e: 'spawn'; ent: EntitySpawn }
   | { e: 'despawn'; i: number }

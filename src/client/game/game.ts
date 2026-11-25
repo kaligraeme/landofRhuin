@@ -178,6 +178,9 @@ export class Game {
       case 'fx':
         this.onFx(ev, pos);
         break;
+      case 'act':
+        w.acts.set(ev.i, { at: performance.now() / 1000, k: ev.k, d: ev.d ?? 0 });
+        break;
       case 'gate':
         w.setGate(ev.id, ev.open);
         break;
