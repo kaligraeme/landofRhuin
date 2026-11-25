@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { creatureArt } from '../src/client/art/creature-art.js';
-import { shieldArt, WEAPON_ART } from '../src/client/art/weapons.js';
+import { equipmentArt } from '../src/client/art/weapons.js';
 import { HERO_LOOKS } from '../src/shared/protocol.js';
 import { WEAPONS } from '../src/shared/content/classes.js';
 
@@ -36,30 +36,14 @@ describe('creature art', () => {
   });
 });
 
-/** A small well-formedness check: every tag closes, in order. */
-function wellFormed(svg: string): boolean {
-  const stack: string[] = [];
-  for (const m of svg.matchAll(/<(\/?)([a-zA-Z][\w:-]*)([^>]*?)(\/?)>/g)) {
-    const [, closing, name, , selfClosing] = m;
-    if (selfClosing) continue;
-    if (closing) {
-      if (stack.pop() !== name) return false;
-    } else stack.push(name as string);
-  }
-  return stack.length === 0;
-}
 
-describe('weapon pixel art', () => {
-  it('draws every weapon, plus the shield, as a well-formed pixel image with its grip inside it', () => {
-    for (const id of Object.keys(WEAPONS)) expect(WEAPON_ART[id], id).toBeDefined();
-    for (const art of [...Object.values(WEAPON_ART).map((f) => f()), shieldArt()]) {
-      expect(art.svg.startsWith('<svg')).toBe(true);
-      expect(wellFormed(art.svg)).toBe(true);
-      expect(art.svg).toContain('crispEdges');
-      expect(art.gx).toBeGreaterThan(0);
-      expect(art.gx).toBeLessThan(art.w);
-      expect(art.gy).toBeGreaterThan(0);
-      expect(art.gy).toBeLessThan(art.h);
-    }
+describe('equipment sprites', () => {
+  it.each([...Object.keys(WEAPONS), 'shield'])('%s has an image and an in-bounds grip', (id) => {
+    const art = equipmentArt(id)!;
+    expect(art?.url).toBeTruthy();
+    expect(art.gx).toBeGreaterThan(0);
+    expect(art.gx).toBeLessThan(art.w);
+    expect(art.gy).toBeGreaterThan(0);
+    expect(art.gy).toBeLessThan(art.h);
   });
 });
