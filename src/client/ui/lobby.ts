@@ -7,6 +7,7 @@ import { defaultHeroLook, showHero } from '../art/sprites.js';
 import { roleIcon, skillIcon } from '../icons.js';
 import type { Net } from '../net.js';
 import { skillTooltip, withTooltip } from './common.js';
+import { musicControl } from './musicControl.js';
 
 const FILL_OPTIONS: { label: string; value: AiFill }[] = [
   { label: 'Now', value: 0 },
@@ -77,7 +78,7 @@ export class LobbyView {
     this.el = h(
       'div',
       { class: 'lobby' },
-      h('div', { class: 'topbar' }, h('span', { class: 'mini-logo' }, 'LAND OF RHUIN'), h('span', { class: 'spacer' }), this.rejoinBtn, h('span', { class: 'who' }, this.onlineEl, this.statusEl)),
+      h('div', { class: 'topbar' }, h('span', { class: 'mini-logo' }, 'LAND OF RHUIN'), h('span', { class: 'spacer' }), this.rejoinBtn, musicControl(), h('span', { class: 'who' }, this.onlineEl, this.statusEl)),
       h(
         'div',
         { class: 'lobby-grid' },

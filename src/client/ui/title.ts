@@ -1,5 +1,6 @@
 /** The title screen: pick a name and enter. */
 import { h } from '../dom.js';
+import { musicControl } from './musicControl.js';
 import { showHero } from '../art/sprites.js';
 import { savedName } from '../net.js';
 
@@ -20,6 +21,7 @@ export function titleScreen(onEnter: (name: string) => void): HTMLElement {
   const el = h(
     'div',
     { class: 'title-screen' },
+    h('div', { class: 'title-music' }, musicControl()),
     h(
       'div',
       { class: 'title-card' },

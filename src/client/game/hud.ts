@@ -9,6 +9,7 @@ import type { EntitySnap, MemberResult } from '../../shared/protocol.js';
 import { clear, fmtNum, fmtTime, h } from '../dom.js';
 import { roleIcon, skillIcon, statusIcon } from '../icons.js';
 import { hideTooltip, skillTooltip, withTooltip } from '../ui/common.js';
+import { musicControl } from '../ui/musicControl.js';
 import type { ClientEntity, World } from './world.js';
 
 export interface HudHandlers {
@@ -157,7 +158,7 @@ export class Hud {
       h(
         'div',
         { class: 'left-col' },
-        h('div', { class: 'top-actions interactive' }, leave, h('span', { class: 'who-am-i' }, `${ROLES[role].name} · ${weapon?.name ?? ''}`)),
+        h('div', { class: 'top-actions interactive' }, leave, musicControl(), h('span', { class: 'who-am-i' }, `${ROLES[role].name} · ${weapon?.name ?? ''}`)),
         this.party,
         h('div', { class: 'keys-help' }, 'WASD move · Mouse aim · Hold left click to attack · Right click, Q, E, R, F skills · 1–3 role skills and elixir · Space dodge · T follow · Wheel zoom · Enter chat'),
       ),

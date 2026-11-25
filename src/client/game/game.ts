@@ -12,6 +12,8 @@ import type { GameEvent, InstanceStart, ServerMsg } from '../../shared/protocol.
 import { h } from '../dom.js';
 import type { Net } from '../net.js';
 import { preloadClan } from '../art/sprites.js';
+import { music } from '../audio/music.js';
+import { dungeonScene } from '../audio/scene.js';
 import { Effects } from './fx.js';
 import { Hud } from './hud.js';
 import { Renderer } from './renderer.js';
@@ -49,6 +51,9 @@ export class Game {
   private lastSend = 0;
   private sent = { x: 0, y: 0, f: 0, ax: 0, ay: 0, atk: 0 };
   private hudTick = 0;
+  /** When a fight last went on nearby, and whether the duty is over (the victory cue plays). */
+  private lastFight = -99;
+  private finished = false;
   private disposers: (() => void)[] = [];
 
   constructor(
@@ -186,6 +191,7 @@ export class Game {
         break;
       case 'banner':
         this.hud.showBanner(ev.text, ev.sub, ev.style);
+        if (ev.style === 'wipe') music.stinger('lament');
         break;
       case 'log':
         this.hud.log(ev.text, ev.cls ?? 'sys');
@@ -199,6 +205,8 @@ export class Game {
         w.duty = ev.duty;
         break;
       case 'complete':
+        this.finished = true;
+        music.stinger('victory', 'title');
         setTimeout(() => this.hud.showResults(ev.results, ev.time, ev.wipes, () => this.net.send({ t: 'instance.leave' })), 3500);
         break;
       default:
@@ -289,7 +297,8 @@ export class Game {
         this.useSlot(slot);
         return;
       }
-      if (k === 't') this.toggleFollow();
+      if (k === 'm') music.toggleMute();
+      else if (k === 't') this.toggleFollow();
       else if (k === 'Tab') {
         e.preventDefault();
         this.cycleTarget(e.shiftKey);
@@ -472,6 +481,17 @@ export class Game {
     const full = this.hudTick > 0.1;
     if (full) this.hudTick = 0;
     this.hud.update(this.targetId, this.local, full);
+    if (full) this.updateMusic(now);
+  }
+
+  /** The clan's theme, its drums in while a fight is on nearby, or the boss theme. */
+  private updateMusic(now: number): void {
+    if (this.finished) return;
+    const foes = this.world.enemies().filter((e) => !e.removed && !e.diedAt).map((e) => ({ boss: e.spawn.kind === 'boss', x: e.x, y: e.y, engaged: e.snap.t !== undefined || !!e.snap.c }));
+    const scene = dungeonScene(this.world.theme.id, this.local, foes);
+    // Let the drums ring on a few seconds after the last blow so short lulls do not flap.
+    if (scene.combat) this.lastFight = now;
+    music.setScene(scene.track, scene.combat || now - this.lastFight < 4);
   }
 
   private updateMovement(dt: number, t: number): void {

@@ -12,6 +12,7 @@ import { Net } from './net.js';
 import { createBackdrop } from './ui/common.js';
 import { LobbyView } from './ui/lobby.js';
 import { titleScreen } from './ui/title.js';
+import { music } from './audio/music.js';
 
 const app = document.getElementById('app') as HTMLElement;
 const net = new Net();
@@ -20,11 +21,16 @@ let lobby: LobbyView | null = null;
 let game: Game | null = null;
 let online = false;
 
+// Browsers only allow sound after the player interacts with the page.
+for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => music.unlock(), { capture: true });
+
 function showTitle(): void {
+  music.setScene('title');
   app.replaceChildren(backdrop.el, titleScreen((name) => net.connect(name)));
 }
 
 function showLobby(): void {
+  music.setScene('title');
   if (!lobby) lobby = new LobbyView(net);
   lobby.setStatus(online);
   app.replaceChildren(backdrop.el, lobby.el);
@@ -77,6 +83,9 @@ net.onMessage((msg) => {
 (window as unknown as { rhuin: unknown }).rhuin = {
   get game() {
     return game;
+  },
+  get music() {
+    return { playing: music.nowPlaying, ...music.scene, volume: music.volume, muted: music.muted };
   },
 };
 

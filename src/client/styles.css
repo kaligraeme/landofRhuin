@@ -1814,3 +1814,53 @@ select {
     height: 42px;
   }
 }
+
+/* Music: a toggle and a volume slider on the title, the lobby bar and the dungeon HUD. */
+.music-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.music-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--gold);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.music-btn:hover {
+  border-color: var(--line-strong);
+}
+
+.music-btn.muted {
+  color: var(--faint);
+  opacity: 0.75;
+  text-decoration: line-through;
+}
+
+.music-vol {
+  width: 84px;
+  accent-color: var(--gold-2);
+  cursor: pointer;
+}
+
+.title-music {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 2;
+}
+
+@media (max-width: 640px) {
+  .music-vol {
+    display: none;
+  }
+}

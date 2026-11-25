@@ -60,6 +60,7 @@ http://localhost:5173 (it forwards the game socket to the server).
 | Tab, F1 – F4 | Select an enemy or a party member to see them in the target frame |
 | Mouse wheel | Zoom |
 | Enter | Chat |
+| M | Music on or off (the ♪ button and slider by it set the volume) |
 
 Every skill is aimed at the cursor:
 
@@ -161,6 +162,31 @@ The heroes are painted frame by frame (`heroes/`): a skeleton is posed for every
 the body, robes, capes, hair and weapon are drawn on it as outlined, cel-shaded pixel shapes. Each
 hero's face and hair are cut from their artwork in `creatures/`.
 
+## Music
+
+The score is original and generated live in the browser with the Web Audio API: no audio files.
+It is written in a dark folk style, modal and medieval, for a mournful reed lead, lute and harp,
+a hurdy-gurdy drone, a wordless choir, strings, bells and frame drums.
+
+| Track | When it plays | Mode and meter |
+| --- | --- | --- |
+| Ballad of Rhuin | Title screen and lobby | D Dorian, a slow 3/4 |
+| The Bloodtusk Stronghold | Orc dungeons | E Phrygian, 4/4 |
+| The Cinder Sanctum | Dragon dungeons | A Phrygian dominant, 4/4 |
+| The Barrow of Sorrows | Undead dungeons | B minor, 3/4 |
+| The Last Sovereign | While a boss fights you | D minor, a driving 6/8 |
+| Victory | A dungeon cleared | |
+| Lament | The party falls | |
+
+Each clan's theme has a combat layer of drums, bass and a pulsing figure. It fades in when a fight
+breaks out near you and out a few seconds after it ends. A boss crossfades to the boss theme.
+Music starts on your first click or key press, as browsers require. The ♪ button and slider on
+every screen, or M in a dungeon, set it, and the browser remembers your choice.
+
+`src/client/audio/` holds it: `notation.ts` (a small note language), `score.ts` (the tracks),
+`synth.ts` (the instruments, a hall reverb and a compressor) and `music.ts` (the director, which
+schedules notes ahead on the audio clock, crossfades and fades the layers).
+
 ## How a run works
 
 1. **Lobby.** Choose a role, then one of its two heroes: each carries their own weapon. Hover a skill
@@ -230,6 +256,7 @@ src/client/      Browser client (TypeScript and canvas, no framework).
   art/           Sprite art: the pixel kit and pixel heroes and weapons, the SVG kit and the
                  clans' monsters and bosses.
   game/          World state, renderer, HUD, effects, input and prediction.
+  audio/         The music: a note language, the score, synthesized instruments, the director.
 test/            Unit tests and full dungeon runs.
 e2e/             Browser test with two players.
 ```
