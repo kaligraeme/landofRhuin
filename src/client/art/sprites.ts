@@ -4,7 +4,7 @@
  */
 import type { RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
-import type { EntitySpawn } from '../../shared/protocol.js';
+import { HERO_LOOKS, type EntitySpawn, type HeroLook } from '../../shared/protocol.js';
 import { shieldArt, WEAPON_ART, type WeaponArt } from './weapons.js';
 import { creatureArt, type CreatureArt } from './creature-art.js';
 
@@ -59,12 +59,17 @@ function load(key: string, make: () => CreatureArt): Sprite {
   return sprite;
 }
 
-export function heroSprite(role: RoleId): Sprite {
-  return load(`hero:${role}`, () => creatureArt(`hero-${role}`));
+export function defaultHeroLook(role: RoleId): HeroLook {
+  return role === 'mage' || role === 'ranger' ? 'female' : 'male';
+}
+
+export function heroSprite(role: RoleId, look = defaultHeroLook(role)): Sprite {
+  const id = `hero-${role}-${look}` as const;
+  return load(id, () => creatureArt(id));
 }
 
 export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
-  if (spawn.kind === 'player') return heroSprite(spawn.role ?? 'tank');
+  if (spawn.kind === 'player') return heroSprite(spawn.role ?? 'tank', spawn.look);
   if (spawn.kind === 'boss') {
     const kind = spawn.boss ?? 'juggernaut';
     return load(`boss:${clan}:${kind}`, () => creatureArt(`${clan}-boss-${kind}`));
@@ -75,7 +80,9 @@ export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
 
 /** Starts loading every sprite a dungeon of this clan can show. */
 export function preloadClan(clan: ThemeId): void {
-  for (const role of ['tank', 'mage', 'ranger', 'melee'] as RoleId[]) heroSprite(role);
+  for (const role of ['tank', 'mage', 'ranger', 'melee'] as RoleId[]) {
+    for (const look of HERO_LOOKS) heroSprite(role, look);
+  }
   for (const weapon of Object.keys(WEAPON_ART)) weaponSprite(weapon);
   shieldSprite();
   for (const mob of ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as MobKind[]) spriteFor({ id: 0, kind: 'mob', team: 'enemy', name: '', radius: 1, mob }, clan);
@@ -115,6 +122,6 @@ export function shieldSprite(): WeaponSprite {
 }
 
 /** A hero's sprite as an image URL, for the lobby and title screen. */
-export function heroImageUrl(role: RoleId): string {
-  return creatureArt(`hero-${role}`).url;
+export function heroImageUrl(role: RoleId, look = defaultHeroLook(role)): string {
+  return creatureArt(`hero-${role}-${look}`).url;
 }

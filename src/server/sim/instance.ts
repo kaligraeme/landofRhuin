@@ -9,7 +9,7 @@ import { BOSSES, MOBS, THEMES, type MobKind, type ThemeId } from '../../shared/c
 import { STATUSES } from '../../shared/content/statuses.js';
 import { angleTo, dist, type Shape, type Vec } from '../../shared/geometry.js';
 import { circleFree, encodeTiles, moveCircle, nearestFree, segmentClear, T_FLOOR, T_GATE, type TileMap } from '../../shared/map.js';
-import type { DutyState, EntitySnap, EntitySpawn, GameEvent, GateInfo, InstanceStart, MemberResult, MeSnap, ProjectileSnap, RoomInfo, ServerMsg, TelegraphSnap } from '../../shared/protocol.js';
+import type { DutyState, EntitySnap, EntitySpawn, GameEvent, GateInfo, HeroLook, InstanceStart, MemberResult, MeSnap, ProjectileSnap, RoomInfo, ServerMsg, TelegraphSnap } from '../../shared/protocol.js';
 import { Rng } from '../../shared/rng.js';
 import { updateBot } from '../ai/botAI.js';
 import { generateDungeon, insideRoom, type DungeonPlan, type GatePlan, type RoomPlan } from '../dungeonGen.js';
@@ -19,6 +19,7 @@ import { updateMonster } from './monsterAI.js';
 import type { Actor, Monster, Player, Projectile, Telegraph } from './types.js';
 
 export interface Seat {
+  look?: HeroLook;
   ownerId: string | null;
   name: string;
   role: RoleId;
@@ -126,6 +127,7 @@ export class Instance {
       ownerId: seat.ownerId,
       botControlled: seat.ownerId === null,
       role: seat.role,
+      look: seat.look,
       weapon: seat.weapon,
       hotbar: hotbarFor(seat.role, seat.weapon),
       mp: role.mp,
@@ -255,7 +257,7 @@ export class Instance {
   spawnInfo(a: Actor): EntitySpawn {
     if (a.team === 'party') {
       const p = a as Player;
-      return { id: p.id, kind: 'player', team: 'party', name: p.name, radius: p.radius, role: p.role, weapon: p.weapon, bot: p.ownerId === null, ownerId: p.ownerId, speed: p.speed };
+      return { id: p.id, kind: 'player', team: 'party', name: p.name, radius: p.radius, role: p.role, weapon: p.weapon, look: p.look, bot: p.ownerId === null, ownerId: p.ownerId, speed: p.speed };
     }
     const m = a as Monster;
     const room = this.plan.rooms[m.roomIndex];

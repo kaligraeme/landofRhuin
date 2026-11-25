@@ -5,7 +5,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { READY_CHECK_SECONDS, SNAPSHOT_EVERY } from '../shared/constants.js';
 import { isValidLoadout, ROLE_ORDER, ROLES, WEAPONS, type RoleId } from '../shared/content/classes.js';
-import type { AiFill, ClientMsg, LobbyState, PartyView, QueueView, ReadyCheckView, ServerMsg } from '../shared/protocol.js';
+import type { AiFill, ClientMsg, HeroLook, LobbyState, PartyView, QueueView, ReadyCheckView, ServerMsg } from '../shared/protocol.js';
 import { generateDungeon } from './dungeonGen.js';
 import { findMatches, assemble, rolesFree, type QueueEntry } from './matchmaker.js';
 import { Instance, type InstanceOptions, type Seat } from './sim/instance.js';
@@ -19,6 +19,7 @@ interface LobbyPlayer {
   token: string;
   name: string;
   role: RoleId;
+  look?: HeroLook;
   weapon: string;
   partyId: string;
   conn: Conn | null;
@@ -128,6 +129,13 @@ export class Lobby {
     const run = p.instanceId ? this.instances.get(p.instanceId) : undefined;
     const me = run?.inst.playerByOwner(p.id);
     switch (msg.t) {
+      case 'appearance': {
+        if (msg.look !== 'male' && msg.look !== 'female') return this.error(p, 'Choose a valid appearance.');
+        const busy = this.busy(p);
+        if (busy) return this.error(p, busy);
+        p.look = msg.look;
+        return this.broadcastLobby(now);
+      }
       case 'loadout':
         return this.setLoadout(p, msg.role, msg.weapon, now);
       case 'party.join':
@@ -312,7 +320,7 @@ export class Lobby {
         for (const id of e.memberIds) {
           const m = this.players.get(id);
           if (m) {
-            seats.push({ ownerId: m.id, name: m.name, role: m.role, weapon: m.weapon });
+            seats.push({ ownerId: m.id, name: m.name, role: m.role, weapon: m.weapon, look: m.look });
             usedNames.add(m.name);
           }
         }
@@ -442,7 +450,7 @@ export class Lobby {
   lobbyState(p: LobbyPlayer, now: number): LobbyState {
     const party = this.parties.get(p.partyId) ?? this.newSoloParty(p);
     return {
-      you: { id: p.id, name: p.name, role: p.role, weapon: p.weapon },
+      you: { id: p.id, name: p.name, role: p.role, weapon: p.weapon, look: p.look },
       party: this.partyView(party),
       queue: this.queueView(party.id),
       readyCheck: this.readyView(p.id),

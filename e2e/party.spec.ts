@@ -28,6 +28,11 @@ test('two players form a party, queue with AI fill and clear the first room toge
   await alice.locator('.role-card[data-role="ranger"]').click();
   await alice.getByRole('button', { name: /Crossbow/ }).click();
   await expect(alice.locator('.weapon-card.selected')).toContainText('Crossbow');
+  const male = alice.getByRole('button', { name: 'Male', exact: true });
+  await male.click();
+  await expect(male).toHaveAttribute('aria-pressed', 'true');
+  await expect(alice.locator('.role-card[data-role="ranger"] img')).toHaveAttribute('src', /hero-ranger-male/);
+  await expect(alice.locator('.weapon-card.selected')).toContainText('Crossbow');
   const code = (await alice.locator('.code-box .code').textContent())?.trim() ?? '';
   expect(code).toMatch(/^[A-Z2-9]{5}$/);
   await bob.locator('.role-card[data-role="melee"]').click();
@@ -61,6 +66,12 @@ test('two players form a party, queue with AI fill and clear the first room toge
     await expect(p.locator('.hotbar .slot')).toHaveCount(10);
   }
   await expect.poll(async () => (await world(alice))?.phase, { timeout: 10_000 }).toBe('running');
+
+  const aliceLook = await bob.evaluate(() => {
+    const { game } = (window as unknown as { rhuin: { game: { world: { ents: Map<number, { spawn: { name: string; look?: string } }> } } } }).rhuin;
+    return [...game.world.ents.values()].find(({ spawn }) => spawn.name === 'Alice')?.spawn.look;
+  });
+  expect(aliceLook).toBe('male');
 
   // Bob walks, and Alice sees him move.
   const before = await bob.evaluate(() => {

@@ -50,7 +50,7 @@ export interface ReadyCheckView {
 }
 
 export interface LobbyState {
-  you: { id: string; name: string; role: RoleId; weapon: string };
+  you: { id: string; name: string; role: RoleId; weapon: string; look?: HeroLook };
   party: PartyView;
   queue: QueueView | null;
   readyCheck: ReadyCheckView | null;
@@ -65,6 +65,9 @@ export interface LobbyState {
 
 export type TelegraphStyle = 'aoe' | 'stack' | 'spread' | 'buster' | 'raidwide' | 'ally';
 
+export const HERO_LOOKS = ['male', 'female'] as const;
+export type HeroLook = (typeof HERO_LOOKS)[number];
+
 export interface EntitySpawn {
   id: number;
   kind: 'player' | 'mob' | 'boss';
@@ -72,6 +75,7 @@ export interface EntitySpawn {
   name: string;
   radius: number;
   role?: RoleId;
+  look?: HeroLook;
   weapon?: string;
   bot?: boolean;
   ownerId?: string | null;
@@ -231,6 +235,7 @@ export interface InstanceStart {
 
 export type ClientMsg =
   | { t: 'hello'; name: string; token?: string }
+  | { t: 'appearance'; look: HeroLook }
   | { t: 'loadout'; role: RoleId; weapon: string }
   | { t: 'party.join'; code: string }
   | { t: 'party.leave' }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { creatureArt } from '../src/client/art/creature-art.js';
 import { shieldArt, WEAPON_ART } from '../src/client/art/weapons.js';
+import { HERO_LOOKS } from '../src/shared/protocol.js';
 import { WEAPONS } from '../src/shared/content/classes.js';
 
 const heroes = ['tank', 'mage', 'ranger', 'melee'] as const;
@@ -9,7 +10,7 @@ const mobs = ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as c
 const bosses = ['juggernaut', 'hexer', 'beast', 'warden', 'sovereign'] as const;
 
 const roster = [
-  ...heroes.map((role) => `hero-${role}` as const),
+  ...heroes.flatMap((role) => HERO_LOOKS.map((look) => `hero-${role}-${look}` as const)),
   ...clans.flatMap((clan) => [
     ...mobs.map((kind) => `${clan}-${kind}` as const),
     ...bosses.map((kind) => `${clan}-boss-${kind}` as const),

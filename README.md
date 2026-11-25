@@ -133,7 +133,7 @@ in `src/client/art/weapons.ts`.
 
 ## How a run works
 
-1. **Lobby.** Choose a role and one of its weapons. Hover a skill to read what it does.
+1. **Lobby.** Choose a role, an appearance, and one of its weapons. Hover a skill to read what it does.
 
    ![The lobby: role and weapon, party, and the expedition finder](docs/screenshots/lobby.jpg)
 
