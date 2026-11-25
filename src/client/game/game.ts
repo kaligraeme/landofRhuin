@@ -56,7 +56,7 @@ export class Game {
     start: InstanceStart,
   ) {
     this.world = new World(start);
-    preloadClan(start.theme);
+    preloadClan(start.theme, start.entities.filter((e) => e.kind === 'player' && e.role).map((e) => ({ role: e.role!, look: e.look })));
     this.renderer = new Renderer(this.canvas);
     this.hud = new Hud(this.world, {
       useSlot: (i) => this.useSlot(i),

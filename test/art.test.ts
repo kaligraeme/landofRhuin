@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { creatureArt } from '../src/client/art/creature-art.js';
-import { equipmentArt } from '../src/client/art/weapons.js';
 import { HERO_LOOKS } from '../src/shared/protocol.js';
-import { WEAPONS } from '../src/shared/content/classes.js';
 
 const heroes = ['tank', 'mage', 'ranger', 'melee'] as const;
 const clans = ['orc', 'dragon', 'undead'] as const;
@@ -26,24 +24,5 @@ describe('creature art', () => {
     expect(sprite.ay).toBeGreaterThan(0);
     expect(sprite.ay).toBeLessThanOrEqual(sprite.h);
     expect(sprite.height).toBeGreaterThan(1);
-    if (id.startsWith('hero-')) {
-      expect(sprite.hand).toBeDefined();
-      expect(sprite.hand!.x).toBeGreaterThan(0);
-      expect(sprite.hand!.x).toBeLessThan(sprite.w);
-      expect(sprite.hand!.y).toBeGreaterThan(0);
-      expect(sprite.hand!.y).toBeLessThan(sprite.ay);
-    }
-  });
-});
-
-
-describe('equipment sprites', () => {
-  it.each([...Object.keys(WEAPONS), 'shield'])('%s has an image and an in-bounds grip', (id) => {
-    const art = equipmentArt(id)!;
-    expect(art?.url).toBeTruthy();
-    expect(art.gx).toBeGreaterThan(0);
-    expect(art.gx).toBeLessThan(art.w);
-    expect(art.gy).toBeGreaterThan(0);
-    expect(art.gy).toBeLessThan(art.h);
   });
 });

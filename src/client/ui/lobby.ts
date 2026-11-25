@@ -3,7 +3,7 @@ import { READY_CHECK_SECONDS } from '../../shared/constants.js';
 import { HERO_LOOKS, HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type RoleId } from '../../shared/content/classes.js';
 import type { AiFill, LobbyState } from '../../shared/protocol.js';
 import { clear, fmtTime, h, toast } from '../dom.js';
-import { defaultHeroLook, heroImageUrl } from '../art/sprites.js';
+import { defaultHeroLook, showHero } from '../art/sprites.js';
 import { roleIcon, skillIcon } from '../icons.js';
 import type { Net } from '../net.js';
 import { skillTooltip, withTooltip } from './common.js';
@@ -66,7 +66,9 @@ export class LobbyView {
     for (const role of ROLE_ORDER) {
       const def = ROLES[role];
       const card = h('button', { class: 'role-card', 'data-role': role, style: `--rc:${def.color}`, onclick: () => this.pickRole(role) });
-      card.append(h('img', { class: 'role-art', src: heroImageUrl(role), alt: '' }), h('span', { class: 'rname' }, def.name), h('span', { class: 'rtag' }, def.tagline));
+      const art = h('img', { class: 'role-art', alt: '' });
+      showHero(art, role);
+      card.append(art, h('span', { class: 'rname' }, def.name), h('span', { class: 'rtag' }, def.tagline));
       this.rolesEl.appendChild(card);
     }
     this.renderFill();
@@ -170,8 +172,8 @@ export class LobbyView {
       const cardRole = card.dataset.role as RoleId;
       card.classList.toggle('selected', cardRole === state.you.role);
       const portrait = card.querySelector('img');
-      const url = heroImageUrl(cardRole, state.you.look);
-      if (portrait && portrait.getAttribute('src') !== url) portrait.src = url;
+      const look = state.you.look ?? defaultHeroLook(cardRole);
+      if (portrait && portrait.dataset.hero !== `${cardRole}-${look}`) showHero(portrait, cardRole, look);
     }
     const selectedLook = state.you.look ?? defaultHeroLook(state.you.role);
     const locked = Boolean(state.queue || state.readyCheck || state.instanceId);
@@ -186,10 +188,12 @@ export class LobbyView {
         HERO_LOOKS.map((look) => {
           const w = WEAPONS[weaponFor(state.you.role, look)];
           if (!w) return null;
+          const art = h('img', { class: 'hero-card-art', alt: '' });
+          showHero(art, state.you.role, look);
           const card = h(
             'button',
             { class: `weapon-card hero-card${look === selectedLook ? ' selected' : ''}`, 'data-look': look, 'aria-pressed': String(look === selectedLook), onclick: () => this.net.send({ t: 'appearance', look }) },
-            h('img', { class: 'hero-card-art', src: heroImageUrl(state.you.role, look), alt: '' }),
+            art,
             h(
               'span',
               { class: 'hero-card-text' },

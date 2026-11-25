@@ -72,31 +72,33 @@ A few heavy skills have a short wind-up; moving or rolling cancels it.
 
 ## Roles and weapons
 
-| Role | Strengths | Weapons |
-| --- | --- | --- |
-| **Warrior** (tank) | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, Battleaxe, Sword & Shield |
-| **Mage** | Offensive and healing spells. | Staff, Mystic Sword |
-| **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | Bow, Crossbow |
-| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Spear, Lance, Greatsword |
+Each role has two heroes, a man and a woman, and each hero carries one weapon of their own:
+choosing your hero chooses your weapon.
+
+| Role | Strengths | His weapon | Her weapon |
+| --- | --- | --- | --- |
+| **Warrior** (tank) | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, two-handed | Battleaxe, two-handed |
+| **Mage** | Offensive and healing spells. | Branch staff, two-handed (the healer) | Mystic sword and a wand |
+| **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | Crossbow | Longbow |
+| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Halberd, two-handed | Twin blades |
 
 | Weapon | Style | Special (RMB) · Q · E · R · Ultimate (F) |
 | --- | --- | --- |
 | Greatsword (Warrior) | Warden | Parry · Upheaval (line stun) · Gravity Sweep (pulls enemies in) · Earthsplitter · Titan's Verdict (leap and stun) |
 | Battleaxe | Berserker | Iron Hide (damage heals you) · Cleaving Spin · Hurl Axe (stun) · War Stomp · Bloodstorm |
-| Sword & Shield | Guardian | Shield Block · Shield Bash (stun) · Rally Charge · Shield Throw · Bastion |
 | Staff | Sage (healer) | Mending Light (heal circle) · Arcane Orb · Sanctuary (healing ground) · Meteor · Resurrection |
-| Mystic Sword | Spellblade | Runic Ward (barriers) · Spellblade Rush · Arc Lightning · Lifebinding Sigil (damage and heal) · Astral Cleave |
-| Bow | Marksman | Charged Shot · Volley · Snare Trap · Fan of Arrows · Rain of Ruin |
+| Mystic Sword & Wand | Spellblade | Runic Ward (barriers) · Spellblade Rush · Arc Lightning · Lifebinding Sigil (damage and heal) · Astral Cleave |
 | Crossbow | Arbalist | Piercing Bolt · Explosive Bolt · Tumble Shot · Scattershot · Siege Barrage |
-| Spear | Lancer | Sweeping Strike · Piercing Thrust · Vault Strike · Whirling Spear · Skewer |
-| Lance | Cavalier | Brace · Lance Charge · Impaling Drive · Skybreaker · Valiant Onslaught |
-| Greatsword (Duelist) | Reaver | Rising Slash · Whirlwind · Reaver's Lunge · Executioner · Cataclysm Blade |
+| Longbow | Marksman | Charged Shot · Volley · Snare Trap · Fan of Arrows · Rain of Ruin |
+| Halberd | Halberdier | Sweeping Strike · Piercing Thrust · Vault Strike · Whirling Halberd · Skewer |
+| Twin Blades | Reaver | Rising Slash · Whirlwind · Reaver's Lunge · Executioner · Cataclysm Blades |
 
 Role skills: the Warrior has **Challenge** (taunt everything nearby) and **Rallying Bulwark**. The
 Mage has **Arcane Blink** and **Mana Font**. The Ranger has **Vault** and **Field Dressing**. The
 Duelist has **Bloodrush** (more damage dealt, more taken) and **Second Wind**.
 
-The Staff is the party's healer. AI companions filling the Mage slot always bring it. A party
+The Staff is the party's healer. An AI companion filling the Mage slot is always the Staff-carrying
+Mage. A party
 without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
 
 In AI-only test runs, Duelists deal about 1,500 damage per second, Rangers about 1,150, Mages
@@ -104,32 +106,35 @@ about 750 to 800 and Warriors about 500.
 
 ## Heroes and clans
 
-Every hero comes in a male and a female version; pick one under *Appearance* in the lobby, and
-your party sees it in the dungeon. The Warrior wears steel plate and a crimson cape, the Mage is a
-silver-haired spellcaster in embroidered robes, the Ranger a cloaked archer with a quiver, and the
-Duelist fights lightly armoured, with a red scarf. Weapons are separate pixel sprites:
-heroes hold theirs toward your aim and swing it when they attack, and a Sword & Shield Warrior
-carries a heater shield.
+Every role has a man and a woman to choose from in the lobby, each with their own weapon. The
+Warriors wear steel plate and crimson capes, the Mages embroidered robes, the Rangers green
+cloaks and quivers, and the Duelists light leathers and red scarves. Weapons are part of each
+hero's animation, held the way they are meant to be held: two-handed greatswords, axes, staves
+and halberds, the Mage's sword and wand, the Ranger's crossbow and longbow, and the Duelist's
+twin blades.
+
+![Every hero in their battle stance](docs/screenshots/hero-appearances.jpg)
 
 ### Animation
 
 Every hero, monster and boss is animated through five clips:
 
-| Clip | When it plays | What moves |
+| Clip | When it plays | Heroes |
 | --- | --- | --- |
-| **Idle** | Out of combat | Slow breathing |
-| **Battle** | While a fight is on nearby | A lower, forward-leaning ready stance |
-| **Move** | Walking | A walk cycle: legs step, the body rises and falls, robes and wraiths sway |
-| **Action** | Basic attacks | Wind up for as long as the attack's wind-up, lunge into the blow with a motion smear, recover |
-| **Skill** | Skills and spells | Crouch and gather a glow (gold for Warriors, violet for Mages, green for Rangers, red for Duelists, and each clan's own colour), then release with a flash |
+| **Idle** | Out of combat | Relaxed, breathing: the greatsword rests on a shoulder, the staff is leaned on, the halberd planted |
+| **Battle** | While a fight is on nearby | A low, wide fighting stance, weapon raised and ready, bouncing on the balls of the feet |
+| **Move** | Running | A full sprint: long strides, a hard forward lean, capes, scarves and hair streaming, dust kicked up |
+| **Action** | Basic attacks | A big wind-up, then the weapon's own blow with a motion smear: an overhead cleave, a two-handed chop, a thrust of the staff, a rising slash, a crossbow shot, a drawn and loosed arrow, a lunging sweep, a crossing double cut |
+| **Skill** | Skills and spells | Gathering a glow in the role's colour, then the weapon's signature move: a leaping slam that cracks the ground, a whirlwind of axe strokes, a magic circle and a blast of light, a three-bolt volley, arrows loosed at the sky, a spinning halberd, a storm of blades |
+
+Monsters and bosses walk, stand ready, lunge and gather their clan's glow the same way. Dodging
+plays as a dash with after-images.
 
 ![The cast cycling through idle, battle, move, action and skill](docs/screenshots/cast-animation.webp)
 
-The server tells every client when anyone attacks or uses a skill, and how long they wind up,
-so everyone sees the same animation in time with the telegraphs. Weapons and the shield stay in
-the hero's hand through every frame. Characters still flash when hit and fall when knocked out.
-
-![Each hero's male and female appearance](docs/screenshots/hero-appearances.jpg)
+The server tells every client when anyone attacks or uses a skill, and how long they wind up, so
+everyone sees the same animation in time with the telegraphs. Characters still flash when hit and
+fall when knocked out.
 
 Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colours and floor:
 
@@ -146,19 +151,20 @@ Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colo
 | ![An orc stronghold fight](docs/screenshots/orc-fight.jpg) | ![A fight in the Cinder Sanctum](docs/screenshots/dragon-fight.jpg) | ![A fight in the Barrow of Sorrows](docs/screenshots/undead-fight.jpg) |
 | ![An orc boss](docs/screenshots/orc-boss.jpg) | ![A dragon clan boss](docs/screenshots/dragon-boss.jpg) | ![An undead boss](docs/screenshots/undead-boss.jpg) |
 
-The heroes, monsters and bosses use transparent pixel sprite assets in `src/client/art/creatures/`.
-Each sprite has a ground anchor and a display height, and heroes also have a grip point for
-their separately rendered weapons. Weapons and the Guardian's shield use matching transparent pixel sprites in
-`src/client/art/equipment/`, with grip points for aiming and attack animations.
+The art lives in `src/client/art/`. Monsters and bosses are transparent pixel sprites in
+`creatures/`, each with a ground anchor and a display height. Their frames are built as they load
+(`animation.ts`): each gets a rig (`rigs.ts`) of two legs, a robe, four legs, a hovering form, or a
+rigid object such as a totem, and the rig is posed frame by frame, bending the original artwork.
 
-The animation frames are built from each sprite when it loads (`src/client/art/animation.ts`).
-Each sprite gets a rig (`rigs.ts`): two legs, a robe, four legs, a hovering form, or a rigid
-object such as a totem. The rig is then posed frame by frame, bending and moving the original
-artwork rather than repainting it, and adding only the skill glow and the attack smear.
+The heroes are painted frame by frame (`heroes/`): a skeleton is posed for every frame
+(`moves.ts` holds the choreography), knees and elbows are solved to reach the feet and hands, and
+the body, robes, capes, hair and weapon are drawn on it as outlined, cel-shaded pixel shapes. Each
+hero's face and hair are cut from their artwork in `creatures/`.
 
 ## How a run works
 
-1. **Lobby.** Choose a role, an appearance, and one of its weapons. Hover a skill to read what it does.
+1. **Lobby.** Choose a role, then one of its two heroes: each carries their own weapon. Hover a skill
+   to read what it does.
 
    ![The lobby: role and weapon, party, and the expedition finder](docs/screenshots/lobby.jpg)
 

@@ -46,14 +46,15 @@ describe('rigging', () => {
     expect(hinted.hipY).toBe(Math.round(5 + 0.5 * 53));
   });
 
-  it('has a rig and a skill glow for every hero, monster and boss', () => {
+  it('has a rig and a skill glow for every monster and boss', () => {
     const metrics = JSON.parse(readFileSync('src/client/art/creatures/metrics.json', 'utf8')) as Record<string, unknown>;
-    for (const id of Object.keys(metrics)) {
+    const monsters = Object.keys(metrics).filter((id) => !id.startsWith('hero-'));
+    for (const id of monsters) {
       expect(RIG_HINTS[id], id).toBeDefined();
       expect(['biped', 'robed', 'quadruped', 'floater', 'object']).toContain(RIG_HINTS[id]!.kind);
       expect(auraFor(id)).toHaveLength(3);
     }
-    expect(Object.keys(RIG_HINTS).sort()).toEqual(Object.keys(metrics).sort());
+    expect(Object.keys(RIG_HINTS).sort()).toEqual(monsters.sort());
   });
 });
 

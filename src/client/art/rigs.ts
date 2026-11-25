@@ -1,20 +1,11 @@
 /**
- * Per-sprite rig settings for the frame animator, and each creature's skill glow. Sprites not
- * listed here are rigged automatically: a figure with a gap between its legs walks on two legs,
- * anything else sways like a robe.
+ * Per-monster rig settings for the frame animator, and each creature's skill glow. (Heroes are
+ * painted from a skeleton instead: see heroes/.) Sprites not listed here are rigged automatically:
+ * a figure with a gap between its legs walks on two legs, anything else sways like a robe.
  */
 import { rgbOf, type RigHint } from './animation.js';
 
 export const RIG_HINTS: Record<string, RigHint> = {
-  // Heroes: the Mages walk in robes; everyone else on two legs.
-  'hero-tank-male': { kind: 'biped', hip: 0.55 },
-  'hero-tank-female': { kind: 'biped', hip: 0.55 },
-  'hero-ranger-male': { kind: 'biped', hip: 0.56 },
-  'hero-ranger-female': { kind: 'biped', hip: 0.56 },
-  'hero-melee-male': { kind: 'biped', hip: 0.56 },
-  'hero-melee-female': { kind: 'biped', hip: 0.56 },
-  'hero-mage-male': { kind: 'robed', hip: 0.56 },
-  'hero-mage-female': { kind: 'robed', hip: 0.56 },
   // Orcs.
   'orc-brute': { kind: 'biped', hip: 0.62 },
   'orc-skirmisher': { kind: 'biped', hip: 0.6 },

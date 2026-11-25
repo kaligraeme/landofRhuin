@@ -450,6 +450,8 @@ select {
 
 .role-art {
   height: 96px;
+  max-width: 100%;
+  object-fit: contain;
   margin: -12px 0 0;
   image-rendering: pixelated;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
@@ -463,13 +465,13 @@ select {
 
 .hero-line {
   display: flex;
-  gap: 18px;
+  gap: 6px;
   align-items: flex-end;
   margin-top: 6px;
 }
 
 .hero-line img {
-  height: 144px;
+  height: 132px;
   image-rendering: pixelated;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.7));
   animation: hero-bob 3s ease-in-out infinite;

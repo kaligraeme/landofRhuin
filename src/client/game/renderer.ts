@@ -7,9 +7,8 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
-import { WEAPON_PIXEL } from '../art/weapons.js';
-import { shieldSprite, spriteFor, weaponSprite, type Sprite } from '../art/sprites.js';
-import { ACTION_WINDUP, posePoint, SKILL_CHARGE, type Clip, type Pose } from '../art/animation.js';
+import { spriteFor, type Sprite, type SpriteAnim } from '../art/sprites.js';
+import type { Clip } from '../art/animation.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -1031,58 +1030,10 @@ export class Renderer {
     g.restore();
   }
 
-  /** The hero's pixel weapon, held toward their aim and swung when they attack. */
-  private drawWeapon(view: View, e: ClientEntity, now: number, hand: { x: number; y: number }, px: number, flip: boolean): void {
-    if (e.snap.d) return;
-    const ws = weaponSprite(e.spawn.weapon ?? '');
-    if (!ws?.ready) return;
-    const g = this.g;
-    const swing = view.world.swings.get(e.id);
-    let angle = e.f;
-    let reach = 0;
-    if (swing) {
-      const k = (now - swing.at) / 0.2;
-      if (k >= 0 && k < 1) {
-        if (swing.kind === 'arc') angle += (-0.5 + k) * swing.a * 1.1;
-        else reach = Math.sin(k * Math.PI) * 0.6;
-      }
-    }
-    const a = ws.art;
-    g.save();
-    g.translate(hand.x, hand.y);
-    // The art points up; turn it to the aim, and mirror it with the hero so it keeps its top side up.
-    g.rotate(angle + Math.PI / 2);
-    if (flip) g.scale(-1, 1);
-    g.translate(0, -reach);
-    g.imageSmoothingEnabled = false;
-    if (e.spawn.weapon === 'mystic_sword') {
-      g.shadowColor = '#c77dff';
-      g.shadowBlur = 10;
-    }
-    g.drawImage(ws.img, -a.gx * px, -a.gy * px, a.w * px, a.h * px);
-    g.shadowBlur = 0;
-    g.imageSmoothingEnabled = true;
-    if (a.glow) {
-      const x = (a.glow.x - a.gx) * px;
-      const y = (a.glow.y - a.gy) * px;
-      const r = a.glow.r * px * (1 + Math.sin(now * 3) * 0.12);
-      const grad = g.createRadialGradient(x, y, 0, x, y, r);
-      const [cr, cg, cb] = rgb(a.glow.color);
-      grad.addColorStop(0, 'rgba(255,255,255,0.45)');
-      grad.addColorStop(0.35, `rgba(${cr},${cg},${cb},0.35)`);
-      grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-      g.globalCompositeOperation = 'lighter';
-      g.fillStyle = grad;
-      g.beginPath();
-      g.arc(x, y, r, 0, Math.PI * 2);
-      g.fill();
-    }
-    g.restore();
-  }
-
   /**
-   * Draws an entity's sprite standing at its position: mirrored to face its heading, bobbing as it
-   * walks, leaning into attacks, flashing white when struck, and lying down when knocked out.
+   * Draws an entity standing at its position, mirrored to face its heading: an animation frame
+   * once its frames are built (heroes carry their weapons in them), otherwise the still artwork
+   * with a little bob. Flashes white when struck; knocked-out heroes lie greyed; dead monsters sink.
    */
   private drawSprite(view: View, e: ClientEntity, sp: Sprite, now: number): void {
     const g = this.g;
@@ -1102,128 +1053,110 @@ export class Renderer {
     m.y = e.y;
     const moving = m.speed > 0.6 && !dead;
     const rolling = e.id === view.world.meId && view.rolling;
-    // Animated sprites take their motion from their frames; until those are built, the still image
-    // bobs, tilts and leans instead.
-    const anim = !dead && !rolling ? sp.anim : null;
-    const px = H / def.h;
-    if (moving) m.phase += anim ? (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, H * 1.25) : this.frameDt * (6 + m.speed * 1.2);
+    const anim = sp.anim;
     const flip = Math.cos(e.f) < -0.05;
-    let pose: Pose | null = null;
-    let frameAt: [number, number] = [0, 0];
-    if (anim) {
-      const { clip, frame } = this.animState(view, e, m.phase, now, moving);
-      pose = anim.poses[clip][frame] ?? null;
-      frameAt = [frame * anim.fw, anim.rows[clip] * anim.fh];
-    }
-    const bob = moving && !anim ? Math.abs(Math.sin(m.phase)) * Math.min(H, 2.5) * 0.05 : 0;
-    const breathe = moving || anim ? 0 : Math.sin(now * 2.2 + e.id) * 0.012;
-    const tilt = moving && !anim ? Math.sin(m.phase) * 0.05 : 0;
-    let lean = 0;
-    const swing = view.world.swings.get(e.id);
-    if (swing && !anim) {
-      const k = (now - swing.at) / 0.25;
-      if (k >= 0 && k < 1) lean = Math.sin(k * Math.PI) * 0.14;
-    }
-    if (!isPlayer && e.snap.c && !anim) lean += 0.05 + Math.sin(now * 14) * 0.02;
-    const float = def.floats ? 0.25 + (anim ? 0 : Math.sin(now * 2 + e.id) * 0.15) : 0;
-    const feetY = e.y + 0.15 - bob - float;
-    const dx = (-W * def.ax) / def.w;
-    const dy = (-H * def.ay) / def.h;
     const sink = e.diedAt && !isPlayer ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
-
-    const rotation = tilt + (flip ? -lean : lean);
-    const stretch = (1 + breathe) * (1 - sink * 0.45);
-    // Attach equipment to the same pose transform as the body.
-    const joint = (point?: { x: number; y: number }) => {
-      if (!isPlayer || dead || rolling || !point) return null;
-      if (anim && pose) {
-        // The hand moves with the frame's pose.
-        const p = posePoint(anim.rig, pose, anim.pad, point);
-        return { x: e.x + (p.x - anim.pad - def.ax) * px * (flip ? -1 : 1), y: feetY + (p.y - anim.pad - def.ay) * px * stretch };
-      }
-      const x = (H * (point.x - def.ax) * (flip ? -1 : 1)) / def.h;
-      const y = (H * (point.y - def.ay) * stretch) / def.h;
-      return {
-        x: e.x + x * Math.cos(rotation) - y * Math.sin(rotation),
-        y: feetY + x * Math.sin(rotation) + y * Math.cos(rotation),
-      };
-    };
-    const hand = joint(def.hand);
-    const offhand = e.spawn.weapon === 'sword_shield' ? joint(def.offhand) : null;
-    const equipmentBehind = Math.sin(e.f) < -0.35;
-    if (hand && equipmentBehind) this.drawWeapon(view, e, now, hand, WEAPON_PIXEL, flip);
-    if (offhand && equipmentBehind) this.drawShield(offhand, flip);
-
-    g.save();
-    g.translate(e.x, feetY);
-    if (dead) {
-      g.rotate(flip ? -1.45 : 1.45);
-      g.globalAlpha *= 0.85;
-    } else if (rolling) {
-      g.translate(0, dy / 2);
-      g.rotate((flip ? -1 : 1) * now * 18);
-      g.translate(0, -dy / 2);
-    } else {
-      g.rotate(rotation);
-    }
-    if (flip) g.scale(-1, 1);
-    g.scale(1, stretch);
-    g.imageSmoothingEnabled = false;
     const hitAt = view.world.lastHit.get(e.id);
     const flash = hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead ? (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1) : 0;
+    const dy = (-H * def.ay) / def.h;
+    let feetY: number;
+
+    g.save();
     if (anim) {
-      const [fx, fy] = frameAt;
-      const ox = dx - anim.pad * px;
-      const oy = dy - anim.pad * px;
-      g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox, oy, anim.fw * px, anim.fh * px);
-      if (flash > 0) {
-        const white = this.whiteFrame(anim.atlas, fx, fy, anim.fw, anim.fh);
-        g.globalAlpha *= flash;
-        g.drawImage(white, 0, 0, anim.fw, anim.fh, ox, oy, anim.fw * px, anim.fh * px);
+      // Strides advance with distance travelled: a full stride every ~1.2 body heights.
+      if (rolling) m.phase += this.frameDt * 26;
+      else if (moving) m.phase += (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, H * 1.2);
+      const { clip, frame } = rolling ? { clip: 'move' as Clip, frame: Math.floor((m.phase / (Math.PI * 2)) * anim.lengths.move) % anim.lengths.move } : this.animState(view, e, anim, m.phase, now, moving);
+      feetY = e.y + 0.15 - (def.floats ? 0.25 : 0);
+      const k = anim.scale;
+      g.translate(e.x, feetY);
+      if (dead) {
+        g.rotate(flip ? -1.45 : 1.45);
+        g.globalAlpha *= 0.85;
+      }
+      if (flip) g.scale(-1, 1);
+      g.scale(1, 1 - sink * 0.45);
+      g.imageSmoothingEnabled = false;
+      const ox = -anim.ax * k;
+      const oy = -anim.ay * k;
+      const fx = frame * anim.fw;
+      const fy = anim.rows[clip] * anim.fh;
+      if (dead && anim.grey) {
+        g.drawImage(anim.grey, ox, oy, anim.fw * k, anim.fh * k);
+      } else {
+        if (rolling) {
+          // A dash: two fading after-images trail behind.
+          for (const [back, a] of [[1.1, 0.18], [0.55, 0.32]] as const) {
+            g.globalAlpha = a;
+            g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox - back, oy, anim.fw * k, anim.fh * k);
+          }
+          g.globalAlpha = 1;
+        }
+        g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox, oy, anim.fw * k, anim.fh * k);
+        if (flash > 0) {
+          g.globalAlpha *= flash;
+          g.drawImage(this.whiteFrame(anim.atlas, fx, fy, anim.fw, anim.fh), 0, 0, anim.fw, anim.fh, ox, oy, anim.fw * k, anim.fh * k);
+        }
       }
     } else {
-      const img: CanvasImageSource = dead && sp.grey ? sp.grey : sp.img;
-      g.drawImage(img, dx, dy, W, H);
+      if (moving) m.phase += this.frameDt * (6 + m.speed * 1.2);
+      const bob = moving ? Math.abs(Math.sin(m.phase)) * Math.min(H, 2.5) * 0.05 : 0;
+      const breathe = moving ? 0 : Math.sin(now * 2.2 + e.id) * 0.012;
+      feetY = e.y + 0.15 - bob - (def.floats ? 0.25 + Math.sin(now * 2 + e.id) * 0.15 : 0);
+      g.translate(e.x, feetY);
+      if (dead) {
+        g.rotate(flip ? -1.45 : 1.45);
+        g.globalAlpha *= 0.85;
+      } else {
+        g.rotate(moving ? Math.sin(m.phase) * 0.05 : 0);
+      }
+      if (flip) g.scale(-1, 1);
+      g.scale(1, (1 + breathe) * (1 - sink * 0.45));
+      g.imageSmoothingEnabled = false;
+      const dx = (-W * def.ax) / def.w;
+      g.drawImage(dead && sp.grey ? sp.grey : sp.img, dx, dy, W, H);
       if (sp.white && flash > 0) {
         g.globalAlpha *= flash;
         g.drawImage(sp.white, dx, dy, W, H);
       }
     }
     g.restore();
-    if (offhand && !equipmentBehind) this.drawShield(offhand, flip);
-    if (hand && !equipmentBehind) this.drawWeapon(view, e, now, hand, WEAPON_PIXEL, flip);
 
-    const top = feetY + dy * (1 - sink * 0.45);
-    this.tops.set(e.id, top);
+    this.tops.set(e.id, feetY + dy * (1 - sink * 0.45));
     this.hitBoxes.set(e.id, { x0: e.x - W * 0.28, x1: e.x + W * 0.28, y0: feetY + dy * 0.9, y1: e.y + 0.3 });
   }
 
   /**
    * Which clip and frame an entity shows: its attack or skill while one plays out (winding up for
-   * as long as the server said, then striking), otherwise walking, a battle stance near a fight,
-   * or idling.
+   * as long as the server said, then the blow or the release), otherwise running, a battle stance
+   * near a fight, or idling.
    */
-  private animState(view: View, e: ClientEntity, phase: number, now: number, moving: boolean): { clip: Clip; frame: number } {
+  private animState(view: View, e: ClientEntity, anim: SpriteAnim, phase: number, now: number, moving: boolean): { clip: Clip; frame: number } {
+    const len = anim.lengths;
     if (e.diedAt) return { clip: 'idle', frame: 0 };
     const act = view.world.acts.get(e.id);
     if (act) {
       const t = now - act.at;
       if (act.k === 'atk') {
         const wind = Math.max(act.d, 0.08);
-        if (t >= 0 && t < wind) return { clip: 'action', frame: t < wind / 2 ? 0 : 1 };
-        const r = (t - wind) / 0.32;
-        if (r >= 0 && r < 1) return { clip: 'action', frame: ACTION_WINDUP + Math.min(3, Math.floor(r * 4)) };
+        if (t >= 0 && t < wind) return { clip: 'action', frame: Math.min(anim.windup - 1, Math.floor((t / wind) * anim.windup)) };
+        const blow = len.action - anim.windup;
+        const r = (t - wind) / anim.strike;
+        if (r >= 0 && r < 1) return { clip: 'action', frame: anim.windup + Math.min(blow - 1, Math.floor(r * blow)) };
       } else {
         const charge = Math.max(act.d, 0.15);
-        if (t >= 0 && t < charge) return { clip: 'skill', frame: t < 0.1 ? 0 : 1 + (Math.floor((t - 0.1) / 0.12) % 2) };
-        const r = (t - charge) / 0.5;
-        if (r >= 0 && r < 1) return { clip: 'skill', frame: SKILL_CHARGE + Math.min(4, Math.floor(r * 5)) };
+        // Gathering power loops its later frames for as long as the wind-up lasts.
+        if (t >= 0 && t < charge) return { clip: 'skill', frame: t < 0.1 || anim.charge < 2 ? 0 : 1 + (Math.floor((t - 0.1) / 0.12) % (anim.charge - 1)) };
+        const rel = len.skill - anim.charge;
+        const r = (t - charge) / anim.release;
+        if (r >= 0 && r < 1) return { clip: 'skill', frame: anim.charge + Math.min(rel - 1, Math.floor(r * rel)) };
       }
     }
-    if (moving) return { clip: 'move', frame: Math.floor((phase / (Math.PI * 2)) * 8) % 8 };
+    if (moving) return { clip: 'move', frame: Math.floor((phase / (Math.PI * 2)) * len.move) % len.move };
+    const offset = e.id * 0.37;
     const fighting = e.spawn.team === 'enemy' ? e.snap.t !== undefined : this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16);
-    if (fighting) return { clip: 'battle', frame: Math.floor(now * 5 + e.id * 0.37) % 4 };
-    return { clip: 'idle', frame: Math.floor(now * 3 + e.id * 0.37) % 4 };
+    if (fighting) return { clip: 'battle', frame: Math.floor((now / 0.8 + offset) * len.battle) % len.battle };
+    return { clip: 'idle', frame: Math.floor((now / 1.4 + offset) * len.idle) % len.idle };
   }
 
   /** One atlas frame as a white silhouette, for the hit flash. */
@@ -1245,21 +1178,6 @@ export class Renderer {
     g.fillRect(0, 0, fw, fh);
     g.globalCompositeOperation = 'source-over';
     return c;
-  }
-
-  /** The Guardian's shield, held out on the off arm: in front of the body unless facing away. */
-  private drawShield(hand: { x: number; y: number }, flip: boolean): void {
-    const sh = shieldSprite();
-    if (!sh.ready) return;
-    const g = this.g;
-    const a = sh.art;
-    g.save();
-    const px = WEAPON_PIXEL;
-    g.translate(hand.x, hand.y);
-    if (flip) g.scale(-1, 1);
-    g.imageSmoothingEnabled = false;
-    g.drawImage(sh.img, -a.gx * px, -a.gy * px, a.w * px, a.h * px);
-    g.restore();
   }
 
   /** You, mid-roll: a tucked, spinning silhouette. */
