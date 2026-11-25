@@ -29,7 +29,7 @@ export function titleScreen(onEnter: (name: string) => void): HTMLElement {
       h('div', { class: 'tagline' }, 'Four heroes · Endless ruin'),
       h('div', { class: 'hero-line' }, (['tank', 'mage', 'ranger', 'melee'] as const).map((r) => h('img', { src: heroImageUrl(r), alt: r }))),
       h('div', { class: 'title-form' }, input, h('button', { class: 'btn primary', onclick: go }, 'Enter')),
-      h('p', { class: 'title-hint' }, 'Form a party of four — Tank, Mage, Ranger and Melee — and hack and slash through a dungeon that is never the same twice. Empty roles are filled by AI companions.'),
+      h('p', { class: 'title-hint' }, 'Form a party of four — Warrior, Mage, Ranger and Duelist — and hack and slash through a dungeon that is never the same twice. Empty roles are filled by AI companions.'),
     ),
   );
   setTimeout(() => input.focus(), 50);

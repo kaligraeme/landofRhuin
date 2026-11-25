@@ -301,7 +301,7 @@ export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
 export const ROLES: Record<RoleId, RoleDef> = {
   tank: {
     id: 'tank',
-    name: 'Tank',
+    name: 'Warrior',
     tagline: 'Hold the line',
     description: 'The most health and stamina in the party. Crowd control and taunts keep enemies on you, and Rallying Bulwark shields everyone.',
     color: '#4f8dff',
@@ -355,7 +355,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
   },
   melee: {
     id: 'melee',
-    name: 'Melee',
+    name: 'Duelist',
     tagline: 'Melee glass cannon',
     description: 'The highest damage in the party and the easiest to fall: low health and 20% more damage taken. Strike hard, dodge often.',
     color: '#ff7d5a',

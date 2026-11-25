@@ -1,7 +1,7 @@
 # Land of Rhuin
 
-A four-player co-op hack-and-slash dungeon RPG that runs in the browser. Form a party of four (Tank,
-Mage, Ranger and Melee) and carve through a dungeon generated fresh for every run. Every dungeon
+A four-player co-op hack-and-slash dungeon RPG that runs in the browser. Form a party of four (Warrior,
+Mage, Ranger and Duelist) and carve through a dungeon generated fresh for every run. Every dungeon
 belongs to one of three monster clans: **Orcs**, **Dragons and their cultists**, or the **Undead**.
 Each run has waves of monsters, then 3 or 4 bosses whose attacks are marked on the ground before
 they land. Players queue together or alone, and AI companions fill any role nobody is playing.
@@ -56,7 +56,7 @@ http://localhost:5173 (it forwards the game socket to the server).
 | 1, 2 | Role skills |
 | 3 | Elixir (restores 35% HP) |
 | Space | Dodge roll: a short roll during which nothing can hurt you. Costs stamina. |
-| T | Follow the tank, or the party member you selected |
+| T | Follow the Warrior, or the party member you selected |
 | Tab, F1 – F4 | Select an enemy or a party member to see them in the target frame |
 | Mouse wheel | Zoom |
 | Enter | Chat |
@@ -74,14 +74,14 @@ A few heavy skills have a short wind-up; moving or rolling cancels it.
 
 | Role | Strengths | Weapons |
 | --- | --- | --- |
-| **Tank** | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, Battleaxe, Sword & Shield |
+| **Warrior** (tank) | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, Battleaxe, Sword & Shield |
 | **Mage** | Offensive and healing spells. | Staff, Mystic Sword |
 | **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | Bow, Crossbow |
-| **Melee** | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Spear, Lance, Greatsword |
+| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Spear, Lance, Greatsword |
 
 | Weapon | Style | Special (RMB) · Q · E · R · Ultimate (F) |
 | --- | --- | --- |
-| Greatsword (Tank) | Warden | Parry · Upheaval (line stun) · Gravity Sweep (pulls enemies in) · Earthsplitter · Titan's Verdict (leap and stun) |
+| Greatsword (Warrior) | Warden | Parry · Upheaval (line stun) · Gravity Sweep (pulls enemies in) · Earthsplitter · Titan's Verdict (leap and stun) |
 | Battleaxe | Berserker | Iron Hide (damage heals you) · Cleaving Spin · Hurl Axe (stun) · War Stomp · Bloodstorm |
 | Sword & Shield | Guardian | Shield Block · Shield Bash (stun) · Rally Charge · Shield Throw · Bastion |
 | Staff | Sage (healer) | Mending Light (heal circle) · Arcane Orb · Sanctuary (healing ground) · Meteor · Resurrection |
@@ -90,26 +90,26 @@ A few heavy skills have a short wind-up; moving or rolling cancels it.
 | Crossbow | Arbalist | Piercing Bolt · Explosive Bolt · Tumble Shot · Scattershot · Siege Barrage |
 | Spear | Lancer | Sweeping Strike · Piercing Thrust · Vault Strike · Whirling Spear · Skewer |
 | Lance | Cavalier | Brace · Lance Charge · Impaling Drive · Skybreaker · Valiant Onslaught |
-| Greatsword (Melee) | Reaver | Rising Slash · Whirlwind · Reaver's Lunge · Executioner · Cataclysm Blade |
+| Greatsword (Duelist) | Reaver | Rising Slash · Whirlwind · Reaver's Lunge · Executioner · Cataclysm Blade |
 
-Role skills: the Tank has **Challenge** (taunt everything nearby) and **Rallying Bulwark**. The
+Role skills: the Warrior has **Challenge** (taunt everything nearby) and **Rallying Bulwark**. The
 Mage has **Arcane Blink** and **Mana Font**. The Ranger has **Vault** and **Field Dressing**. The
-Melee has **Bloodrush** (more damage dealt, more taken) and **Second Wind**.
+Duelist has **Bloodrush** (more damage dealt, more taken) and **Second Wind**.
 
 The Staff is the party's healer. AI companions filling the Mage slot always bring it. A party
 without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
 
-In AI-only test runs, Melee deals about 1,500 damage per second, Rangers about 1,150, Mages
-about 750 to 800 and Tanks about 500.
+In AI-only test runs, Duelists deal about 1,500 damage per second, Rangers about 1,150, Mages
+about 750 to 800 and Warriors about 500.
 
 ## Heroes and clans
 
 Every hero comes in a male and a female version; pick one under *Appearance* in the lobby, and
-your party sees it in the dungeon. The Tank is an armoured warrior in steel plate and a crimson
-cape, the Mage a silver-haired spellcaster in embroidered robes, the Ranger a cloaked archer with
-a quiver, and the Melee a lightly armoured duelist with a red scarf. Weapons are separate pixel
-sprites: heroes hold theirs toward your aim and swing it when they attack, and the Sword & Shield
-tank carries a heater shield. Characters bob as they walk, lean into their strikes, flash when
+your party sees it in the dungeon. The Warrior wears steel plate and a crimson cape, the Mage is a
+silver-haired spellcaster in embroidered robes, the Ranger a cloaked archer with a quiver, and the
+Duelist fights lightly armoured, with a red scarf. Weapons are separate pixel sprites: heroes
+hold theirs toward your aim and swing it when they attack, and a Sword & Shield Warrior carries a
+heater shield. Characters bob as they walk, lean into their strikes, flash when
 hit, and fall when knocked out.
 
 ![Each hero's male and female appearance](docs/screenshots/hero-appearances.jpg)
@@ -151,7 +151,7 @@ their separately rendered weapons. Weapons and the Guardian's shield use matchin
    ![The ready check: one player and three AI companions](docs/screenshots/ready-check.jpg)
 
 5. **The dungeon.** A chain of rooms joined by corridors. In front of each boss are one or two
-   rooms you clear in 2 or 3 waves; barrier gates open as you clear them. When the tank is an AI
+   rooms you clear in 2 or 3 waves; barrier gates open as you clear them. When the Warrior is an AI
    companion, it leads the party between fights and waits for the players. A boss arena seals six
    seconds after the fight starts, and the last boss always has three phases.
 6. **Stagger.** Stuns, knockbacks, pulls and heavy blows fill a boss's stagger bar. When it is
@@ -173,7 +173,7 @@ and casters draw an aim line before they shoot. Step aside or roll through.
 | Faint red arc or line | A monster's routine swing or shot. Dodge it if you can. |
 | Gold circle with arrows pointing in | **Stack**: the damage is shared by everyone inside. Stand together. |
 | Purple circle on each player | **Spread**: each circle also hits anyone else inside it. Spread out. |
-| Red circle and diamond over a head | **Tank buster**: a heavy hit on the target. Tank: block or parry. Everyone else: stay clear. |
+| Red circle and diamond over a head | **Tank buster**: a heavy hit on the target. Warrior: block or parry. Everyone else: stay clear. |
 | Blue arrows around the boss | **Knockback**: everyone is thrown away from the boss. |
 | Red screen edges | **Raid-wide** damage is about to hit everyone. |
 | Blue dashed circle | Your party's own delayed blast (Meteor, Volley, Rain of Ruin). |
