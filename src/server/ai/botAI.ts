@@ -3,12 +3,17 @@
  * bot picks a target, aims at it, works out where its role should stand, steps or rolls out of
  * telegraphed attacks (stacking and spreading as markers demand), holds its basic attack when in
  * reach, and fires whichever skill would do the most good right now.
+ *
+ * They play the aggro game: a tank grabs whatever is loose and leans on its aggro skills; the
+ * others watch their threat, ease off before they pull a monster off the tank, and run to the
+ * tank when something comes for them anyway.
  */
 import { PARTY_EFFECT_RADIUS, ROLL_STAMINA } from '../../shared/constants.js';
 import { skillDef, WEAPONS, type SkillDef } from '../../shared/content/classes.js';
 import { STATUSES } from '../../shared/content/statuses.js';
 import { angleDiff, angleTo, dist, shapeHits, type Shape, type Vec } from '../../shared/geometry.js';
 import { circleFree, findPath, lineOfSight, moveCircle, segmentClear } from '../../shared/map.js';
+import { AGGRO } from '../sim/aggro.js';
 import { dodge, enemiesIn, getStatus, skillBlocker, skillShape, speedOf, useSkill } from '../sim/combat.js';
 import type { Instance } from '../sim/instance.js';
 import type { Monster, Player, Telegraph } from '../sim/types.js';
@@ -25,9 +30,10 @@ interface BotMemory {
   side?: number;
 }
 
-function memory(p: Player): BotMemory {
+/** Each bot's quirks (reaction time, favourite flank) come from the dungeon's seed, so runs replay. */
+function memory(inst: Instance, p: Player): BotMemory {
   const ai = p.ai as { mem?: BotMemory };
-  if (!ai.mem) ai.mem = { notice: new Map(), reaction: 0.3 + Math.random() * 0.3, side: Math.random() < 0.5 ? 1 : -1 };
+  if (!ai.mem) ai.mem = { notice: new Map(), reaction: 0.3 + inst.rng.next() * 0.3, side: inst.rng.chance(0.5) ? 1 : -1 };
   return ai.mem;
 }
 
@@ -51,7 +57,7 @@ interface Ctx {
 
 export function updateBot(inst: Instance, p: Player, dt: number): void {
   if (p.dead) return;
-  const mem = memory(p);
+  const mem = memory(inst, p);
   const enemies = [...inst.monsters.values()].filter((m) => !m.dead && m.engaged);
   const allies = inst.players.filter((o) => !o.dead);
   const weapon = WEAPONS[p.weapon];
@@ -103,8 +109,29 @@ export function updateBot(inst: Instance, p: Player, dt: number): void {
   if (ctx.moving) moveToward(ctx, dest, speedOf(p) * dt);
   if (ctx.target) p.facing = angleTo(p, ctx.target);
 
-  p.attacking = !!ctx.target && ctx.inCombat && inBasicReach(ctx, ctx.target);
+  // A damage dealer about to rip a monster off the tank holds its swing until the tank pulls ahead.
+  const tooHot = p.role !== 'tank' && !!ctx.target && !!ctx.tank && threatOn(inst, p, ctx.target) > 0.95;
+  p.attacking = !!ctx.target && ctx.inCombat && inBasicReach(ctx, ctx.target) && !tooHot;
   if (!p.cast) chooseAndUseSkill(ctx);
+}
+
+// ── Aggro ──────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * How close this hero is to pulling a monster off whoever it is attacking: 1 means one more blow
+ * could do it. 0 for a monster already on the hero, or one on nobody.
+ */
+export function threatOn(inst: Instance, p: Player, m: Monster): number {
+  if (m.targetId == null || m.targetId === p.id) return 0;
+  const holder = inst.players.find((o) => o.id === m.targetId);
+  if (!holder || holder.dead) return 0;
+  const held = (m.enmity.get(holder.id) ?? 0) * (holder.role === 'tank' ? AGGRO.tankStick : AGGRO.stick);
+  return held > 0 ? (m.enmity.get(p.id) ?? 0) / held : 0;
+}
+
+/** Monsters that have turned on a hero who is not the tank. */
+function onMe(ctx: Ctx): Monster[] {
+  return ctx.enemies.filter((m) => m.targetId === ctx.p.id);
 }
 
 // ── Targeting ──────────────────────────────────────────────────────────────────────────────
@@ -211,6 +238,13 @@ function soonestDanger(ctx: Ctx): number {
   return best;
 }
 
+/** Behind the tank, so a monster chasing us runs into it and the tank can take it back. */
+function besideTank(ctx: Ctx, tank: Player): Vec {
+  const away = tank.facing + Math.PI;
+  const spot = { x: tank.x + Math.cos(away) * 1.6, y: tank.y + Math.sin(away) * 1.6 };
+  return circleFree(ctx.inst.map, spot.x, spot.y, ctx.p.radius) ? spot : { x: tank.x, y: tank.y };
+}
+
 function combatSpot(ctx: Ctx, t: Monster): Vec {
   const { p, inst } = ctx;
   if (p.role === 'tank') {
@@ -297,7 +331,8 @@ function chooseDestination(ctx: Ctx): Vec {
   const marks = [...ctx.inst.telegraphs.values()];
   const stackOnMe = marks.some((t) => t.style === 'stack' && t.followId === p.id);
   const spreadOnMe = marks.find((t) => t.style === 'spread' && t.followId === p.id && noticed(ctx, t));
-  if (ctx.inCombat && target) desired = stackOnMe ? { x: p.x, y: p.y } : spreadOnMe ? spreadSpot(ctx, spreadOnMe) : combatSpot(ctx, target);
+  const chased = p.role !== 'tank' && ctx.tank && ctx.tank !== p && onMe(ctx).some((m) => m.kind !== 'boss');
+  if (ctx.inCombat && target) desired = stackOnMe ? { x: p.x, y: p.y } : spreadOnMe ? spreadSpot(ctx, spreadOnMe) : chased && ctx.tank ? besideTank(ctx, ctx.tank) : combatSpot(ctx, target);
   else desired = followSpot(ctx);
 
   const hereDanger = danger(ctx, p);
@@ -439,7 +474,14 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
   }
   if (dmgPotency > 0) {
     if (hits.length === 0 && value === 0) return null;
-    value += dmgPotency * hits.length;
+    value += dmgPotency * hits.length * (d.kind === 'ground' ? d.repeat ?? 1 : 1);
+    // Damage dealers ease off a monster they are about to pull off the tank.
+    if (p.role !== 'tank' && ctx.tank && hits.some((m) => threatOn(inst, p, m) > 0.8)) value *= 0.15;
+  }
+  // Blood for power: only when healthy, in a real fight, with a healer standing.
+  if (skill.hpCost) {
+    const healerUp = ctx.allies.some((o) => o !== p && WEAPONS[o.weapon]?.healer);
+    if (hpFrac(p) < 0.85 || !healerUp || !(ctx.enemies.some((m) => m.kind === 'boss') || hits.length >= 3)) return null;
   }
   for (const e of skill.effects) {
     switch (e.kind) {
@@ -453,13 +495,19 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
         break;
       }
       case 'taunt':
+      case 'aggro':
         if (p.role === 'tank') {
-          const loose = hits.filter((m) => m.targetId !== p.id);
+          const loose = hits.filter((m) => m.engaged && m.targetId !== p.id);
           if (loose.length) value += 600 + loose.length * 300;
+          // Keep a margin over the party on what is already ours.
+          else if (e.kind === 'aggro' && hits.some((m) => m.engaged && threatMargin(m, p) < 1.6)) value += 250;
         }
         break;
+      case 'drain':
+        value += hpFrac(p) < 0.8 ? 500 : 0;
+        break;
       case 'healPct':
-        if (e.to === 'self') value += hpFrac(p) < 0.4 ? 1200 : 0;
+        if (e.to === 'self') value += hpFrac(p) < (p.role === 'tank' ? 0.6 : 0.4) ? 1200 : 0;
         else if (hurtNear(ctx, p, PARTY_EFFECT_RADIUS, 0.6).length >= 2) value += 800;
         break;
       case 'status': {
@@ -468,7 +516,7 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
         if (getStatus(p, e.status)) break;
         if (e.to === 'party') {
           if (ctx.raidwideSoon || hurtNear(ctx, p, PARTY_EFFECT_RADIUS, 0.6).length >= 2) value += 1500;
-        } else if ((def.dmgTaken ?? 0) < 0 || def.lifesteal) {
+        } else if ((def.dmgTaken ?? 0) < 0 || def.lifesteal || def.block) {
           const pressed = p.role === 'tank' ? ctx.busterOnMe || hpFrac(p) < 0.55 || ctx.enemies.filter((m) => m.targetId === p.id).length >= 4 : hpFrac(p) < 0.45;
           if (pressed) value += 900;
         } else if ((def.dmgDealt ?? 0) > 0 && ctx.inCombat && (ctx.enemies.some((m) => m.kind === 'boss') || ctx.enemies.length >= 3)) value += 600;
@@ -500,6 +548,14 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
   if (skill.mp > 0 && p.maxMp > 0 && !ctx.healer && p.mp - skill.mp < 1500) value *= 0.5;
   if (ctx.healer && dmgPotency > 0 && !areaHeal && p.mp - skill.mp < 2500) value *= 0.3;
   return { skill, aim, value };
+}
+
+/** How far ahead of the next hero the tank is on a monster's aggro table (Infinity if alone). */
+function threatMargin(m: Monster, tank: Player): number {
+  const mine = m.enmity.get(tank.id) ?? 0;
+  let next = 0;
+  for (const [id, v] of m.enmity) if (id !== tank.id) next = Math.max(next, v);
+  return next > 0 ? mine / next : Infinity;
 }
 
 function m0(list: Monster[]): Monster | undefined {

@@ -1,31 +1,18 @@
-/** Monster behaviour: pick the top-enmity target, close in, auto-attack and use abilities. */
+/** Monster behaviour: go for whoever holds its aggro, close in, auto-attack and use abilities. */
 import { angleTo, dist, lerpAngle } from '../../shared/geometry.js';
 import { findPath, lineOfSight, moveCircle, segmentClear } from '../../shared/map.js';
 import { applyDamage, hasteMult, isStunned, outgoingDamage, speedOf } from './combat.js';
 import type { Instance } from './instance.js';
 import { emitAct, runBossStep, startAbility } from './mechanics.js';
-import type { Monster, Player } from './types.js';
-
-export function topEnmity(inst: Instance, m: Monster): Player | null {
-  let best: Player | null = null;
-  let bestV = -1;
-  for (const p of inst.players) {
-    if (p.dead) continue;
-    const v = m.enmity.get(p.id) ?? 0;
-    if (v > bestV || (v === bestV && best && dist(m, p) < dist(m, best))) {
-      best = p;
-      bestV = v;
-    }
-  }
-  return best;
-}
+import { pickTarget } from './aggro.js';
+import type { Monster } from './types.js';
 
 export function updateMonster(inst: Instance, m: Monster, dt: number): void {
   if (m.dead || !m.engaged) return;
   if (m.cast && inst.now >= m.cast.end) m.cast = null;
   if (isStunned(m)) return;
 
-  const target = topEnmity(inst, m);
+  const target = pickTarget(inst, m);
   if (!target) return;
   m.targetId = target.id;
   if (m.cast) return; // Casting monsters stand still and keep their facing.
@@ -113,7 +100,7 @@ export function updateMonster(inst: Instance, m: Monster, dt: number): void {
       emitAct(inst, m, 'atk', end);
     } else {
       inst.emit({ e: 'act', i: m.id, k: 'atk' });
-      const { amount } = outgoingDamage(inst, m, m.autoPotency, false);
+      const { amount } = outgoingDamage(inst, m, m.autoPotency, false, true);
       inst.emit({ e: 'fx', k: 'slash', s: m.id, t: target.id, hue: 0 });
       applyDamage(inst, m, target, amount, { name: 'Attack' });
     }

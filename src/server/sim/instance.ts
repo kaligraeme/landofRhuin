@@ -13,10 +13,18 @@ import type { DutyState, EntitySnap, EntitySpawn, GameEvent, GateInfo, HeroLook,
 import { Rng } from '../../shared/rng.js';
 import { updateBot } from '../ai/botAI.js';
 import { generateDungeon, insideRoom, type DungeonPlan, type GatePlan, type RoomPlan } from '../dungeonGen.js';
-import { applyDamage, applyHeal, applyStatus, basicAttack, dodge, finishCast, getStatus, isStunned, speedOf, useSkill } from './combat.js';
+import { applyDamage, applyHeal, applyStatus, basicAttack, counterBurst, dodge, finishCast, getStatus, isStunned, speedOf, useSkill } from './combat.js';
 import { stepProjectiles } from './projectiles.js';
 import { updateMonster } from './monsterAI.js';
+import { aggroTable, fadeAggro } from './aggro.js';
 import type { Actor, Monster, Player, Projectile, Telegraph } from './types.js';
+
+/**
+ * Monsters' routine attacks and the blows they aim at whoever holds their aggro (swings, bolts,
+ * shots, tank-busters, boss attacks) hit this much harder than their area mechanics: only a tank
+ * can stand in front of them for long.
+ */
+export const FOCUS_DAMAGE = 3;
 
 export interface Seat {
   look?: HeroLook;
@@ -34,6 +42,8 @@ export interface InstanceOptions {
   enemyHp?: number;
   /** Multiplier on monster damage. */
   enemyDamage?: number;
+  /** Multiplier on monster attacks aimed at their aggro target (default FOCUS_DAMAGE). */
+  focusDamage?: number;
   /** Seconds before the entrance barrier drops. */
   countdown?: number;
 }
@@ -83,6 +93,8 @@ export class Instance {
   private wipeAt: number | null = null;
   private enemyHp: number;
   private enemyDamage: number;
+  /** Extra weight on monster attacks aimed at their aggro target (see outgoingDamage). */
+  focusDamage: number;
 
   constructor(id: string, seats: Seat[], opts: InstanceOptions = {}) {
     this.id = id;
@@ -92,6 +104,7 @@ export class Instance {
     this.map = this.plan.map;
     this.enemyHp = opts.enemyHp ?? 1;
     this.enemyDamage = opts.enemyDamage ?? 1;
+    this.focusDamage = opts.focusDamage ?? FOCUS_DAMAGE;
     this.startsAt = opts.countdown ?? 5;
     this.gates = this.plan.gates.map((g) => ({ plan: g, open: !g.startsClosed }));
     this.rooms = this.plan.rooms.map((plan) => ({ plan, status: 'idle', wave: 0, nextWaveAt: null, bossId: null, sealAt: null, sealed: false }));
@@ -186,6 +199,8 @@ export class Instance {
       roomIndex,
       engaged: false,
       enmity: new Map(),
+      heat: new Map(),
+      touched: new Set(),
       cast: null,
       abilityReady: new Map(),
       stunImmune: !!def.stunImmune,
@@ -235,6 +250,8 @@ export class Instance {
       roomIndex: room.index,
       engaged: false,
       enmity: new Map(),
+      heat: new Map(),
+      touched: new Set(),
       cast: null,
       abilityReady: new Map(),
       stunImmune: true,
@@ -479,6 +496,7 @@ export class Instance {
     for (const m of [...this.monsters.values()]) this.updateStatuses(m, dotTick);
     for (const p of this.players) this.updatePlayer(p, dt);
     for (const m of [...this.monsters.values()]) {
+      if (m.engaged && !m.dead) fadeAggro(this, m, dt);
       updateMonster(this, m, dt);
       if (m.stagger > 0) m.stagger = Math.max(0, m.stagger - 4 * dt);
     }
@@ -521,7 +539,9 @@ export class Instance {
 
   private updateStatuses(a: Actor, dotTick: boolean): void {
     if (a.statuses.length === 0) return;
+    const ending = a.statuses.filter((s) => s.expires <= this.now);
     a.statuses = a.statuses.filter((s) => s.expires > this.now);
+    if (a.team === 'party' && !a.dead) for (const s of ending) if (STATUSES[s.id]?.counter && s.value > 0) counterBurst(this, a as Player, s);
     if (a.dead || !dotTick) return;
     for (const s of [...a.statuses]) {
       const def = STATUSES[s.id];
@@ -732,6 +752,8 @@ export class Instance {
         Object.assign(boss, { hp: boss.maxHp, x: boss.home.x, y: boss.home.y, engaged: false, cast: null, statuses: [], phase: 0, step: 0, inIntro: false, targetId: null, stagger: 0 });
         boss.facing = angleTo(boss.home, rs.plan.entry);
         boss.enmity.clear();
+        boss.heat.clear();
+        boss.touched.clear();
       }
     }
     this.tasks = [];
@@ -863,6 +885,7 @@ export class Instance {
       const s = snapActor(m);
       if (m.cast && !m.cast.ability.minor) s.c = [m.cast.name, r2(m.cast.start), r2(m.cast.end), m.cast.ability.interruptible ? 1 : 0, m.cast.ability.id];
       if (m.engaged && m.targetId != null) s.a = m.targetId;
+      if (m.engaged && m.enmity.size) s.ag = aggroTable(m);
       if (m.staggerMax > 0) s.g = [Math.round(m.stagger), m.staggerMax];
       ents.push(s);
     }

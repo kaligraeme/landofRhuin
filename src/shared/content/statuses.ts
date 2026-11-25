@@ -29,6 +29,11 @@ export interface StatusDef {
   lifesteal?: number;
   /** Hidden from status bars (short technical states). */
   hidden?: boolean;
+  /** Blocks all damage; the amount blocked is kept on the applied status. */
+  block?: boolean;
+  /** When it ends, bursts on enemies within `counterRadius` tiles for this share of what it blocked. */
+  counter?: number;
+  counterRadius?: number;
 }
 
 const list: StatusDef[] = [
@@ -47,6 +52,9 @@ const list: StatusDef[] = [
   // Tank
   { id: 'parry', name: 'Parry', description: 'Blade raised to parry: 75% less damage taken.', glyph: '⟋', color: '#8fb8ff', debuff: false, dmgTaken: -0.75 },
   { id: 'aegis', name: 'Aegis', description: 'Shield raised: 60% less damage taken.', glyph: '◈', color: '#ffe38a', debuff: false, dmgTaken: -0.6 },
+  { id: 'stalwart', name: 'Stalwart', description: 'Charging in: 35% less damage taken.', glyph: '⇶', color: '#b48cff', debuff: false, dmgTaken: -0.35 },
+  { id: 'radiantGuard', name: 'Radiant Guard', description: 'Wreathed in light: 35% less damage taken.', glyph: '✧', color: '#fff0a8', debuff: false, dmgTaken: -0.35 },
+  { id: 'shieldsUp', name: 'Shield’s Up!', description: 'Blocking all damage; it bursts back at nearby foes when the shield comes down.', glyph: '⛉', color: '#ffd76a', debuff: false, block: true, counter: 0.3, counterRadius: 5 },
   { id: 'bulwark', name: 'Rallying Bulwark', description: 'Protected by the Warrior’s rally: 20% less damage taken.', glyph: '⛨', color: '#9cc4ff', debuff: false, dmgTaken: -0.2 },
 
   // Mage

@@ -8,8 +8,10 @@ they land. Players queue together or alone, and AI companions fill any role nobo
 
 Combat is aimed and hands-on. Hold the mouse to swing your weapon's combo, fire skills toward the
 cursor, and dodge-roll through danger. The dungeon structure takes its cues from big fantasy MMO
-dungeons: a finder queue with a ready check, enmity and taunts, sealed boss arenas, and orange
-telegraphs to step out of. All names, art, skills and bosses are original.
+dungeons: a finder queue with a ready check, aggro and taunts, sealed boss arenas, and orange
+telegraphs to step out of. Teamwork is the heart of it: monsters hit far too hard for anyone but the
+Warrior to take, the Warrior needs a healer to last, and the damage dealers have to keep their
+aggro under the Warrior's. All names, art, skills and bosses are original.
 
 ![Fighting Gnashtusk the War Boar in an Orc stronghold](docs/screenshots/orc-boss.jpg)
 
@@ -78,15 +80,15 @@ choosing your hero chooses your weapon.
 
 | Role | Strengths | His weapon | Her weapon |
 | --- | --- | --- | --- |
-| **Warrior** (tank) | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, two-handed | Sword and shield: the Guardian, a paladin with healing light |
+| **Warrior** (tank) | The only hero who can take the monsters' blows: 16,000 health and 55% damage reduction. Builds three times the aggro, holds it, and loses it three times slower. Needs a healer in a long fight. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, two-handed: the Dark Knight | Sword and shield: the Guardian, a paladin with healing light |
 | **Mage** | Offensive and healing spells. | Branch staff, two-handed (the healer) | Mystic sword and a wand |
 | **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | Crossbow | Longbow |
 | **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Halberd, two-handed | Twin blades |
 
 | Weapon | Style | Special (RMB) · Q · E · R · Ultimate (F) |
 | --- | --- | --- |
-| Greatsword (Warrior) | Warden | Parry · Upheaval (line stun) · Gravity Sweep (pulls enemies in) · Earthsplitter · Titan's Verdict (leap and stun) |
-| Sword & Shield (Warrior) | Guardian | Aegis (shield up: 60% less damage) · Shield Bash (stun and taunt) · Holy Smite (light at your aim; foes turn on you) · Cure (heals you and allies nearby) · Dawnbreaker (smites all around, heals and shields the party) |
+| Greatsword (Warrior) | Dark Knight | Parry · Stalwart Charge (dash through foes: a 0.5s stun, a great deal of aggro, and 35% less damage taken for 5s) · Eclipse (a full circle swing that slows) · Drain (damage all around; heals you for 60% of it) · Ruination (costs 50% of your maximum health: four massive strikes rain on your aim) |
+| Sword & Shield (Warrior) | Guardian | Aegis (shield up: 60% less damage) · Flash (dash through foes: a 0.5s stun, a great deal of aggro, and 35% less damage taken for 5s) · Mend (heals you for 18% and draws every foe nearby) · Shield's Up! (blocks all damage for 3s, then bursts for 30% of what it absorbed) · Luminaire (massive damage to every enemy in sight) |
 | Staff | Sage (healer) | Mending Light (heal circle) · Arcane Orb · Sanctuary (healing ground) · Meteor · Resurrection |
 | Mystic Sword & Wand | Spellblade | Runic Ward (barriers) · Spellblade Rush · Arc Lightning · Lifebinding Sigil (damage and heal) · Astral Cleave |
 | Crossbow | Arbalist | Piercing Bolt · Explosive Bolt · Tumble Shot · Scattershot · Siege Barrage |
@@ -103,7 +105,58 @@ Mage. A party
 without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
 
 In AI-only test runs, Duelists deal about 1,500 damage per second, Rangers about 1,150, Mages
-about 750 to 800 and Warriors about 500.
+about 700 and Warriors 550 (Guardian) to 700 (Dark Knight).
+
+## Aggro and teamwork
+
+Every monster keeps its own aggro table: how much each hero has drawn its attention. It attacks
+whoever tops that table.
+
+- **Damage builds aggro**, one point per point of damage. The Warrior builds three times as much.
+  Stalwart Charge and Flash build three times as much again, plus a flat 3,000. Eclipse, Drain,
+  Ruination and Luminaire build half as much again.
+- **Healing builds aggro** on every monster in the fight within 30 tiles of the healer: 0.6 per
+  point actually healed. Overhealing does not count.
+- **First contact** adds a flat 1,500 the first time a hero touches a monster, twice that for the
+  Warrior, so whoever opens the fight gets its attention.
+- **Unhinged damage builds aggro fast.** A hero's recent damage on a monster runs hot and cools by
+  half every 2 seconds. Once it passes about 4,500, every blow counts double, rising to 3.5 times.
+  A Duelist who unloads everything on one target pulls it.
+- **Monsters are sticky.** To pull a monster off its target you need 10% more aggro than the
+  target has, or 30% more if the target is the Warrior.
+- **Aggro fades** by 3% a second, the Warrior's by 1%, so a Warrior who keeps working holds what
+  they have taken. **Challenge** puts the Warrior at the top of every table within 9 tiles and
+  turns those monsters on them at once.
+
+Monsters hit hard. Blows aimed at their aggro target (routine swings and a boss's routine
+attacks, heavy cleaves, bolts and arrows) deal three times the damage they used to, and tank
+busters about 65% more. Wide area attacks and the other boss mechanics are unchanged. Monsters
+have 80% more health than before and bosses 30% more, so fights last long enough for aggro to
+matter.
+
+What that means in a fight:
+
+- With a pack of three on them, a Duelist, Ranger or Mage falls in 3 to 7 seconds, whether they
+  fight back or not.
+- A Warrior lasts far longer: about 12 seconds standing still, and much longer fighting.
+- Alone against five monsters, the Dark Knight falls in about 20 seconds and the Guardian in about
+  40. With the Staff healer behind them, both win.
+
+Reading aggro on screen:
+
+- **The target frame** lists the top four on your target's table as a share of the top, with
+  your own row marked.
+- **Over a monster's name:** a pulsing red **!** means it is coming for you. If you are the
+  Warrior, a gold **◆** marks the ones on you and an orange **◇** the ones loose on the party.
+- **By the hotbar:** "Pulling aggro: 90% of the tank — ease off" when you are close to pulling a
+  monster off the Warrior; "You have aggro! … get to the tank" when something has come for you.
+  The Warrior sees "2 loose on the party — grab them!".
+
+AI companions play by the same rules. Damage dealers ease off a monster when they come close to
+the Warrior's aggro, and run to the Warrior when something comes for them. An AI Warrior charges
+and taunts whatever gets loose.
+
+![The aggro table on an Orc Ravager: the Guardian holds it, the others well behind](docs/screenshots/aggro.jpg)
 
 ## Heroes and clans
 
@@ -305,7 +358,11 @@ npm run simulate -- 42 5   # play 5 dungeons (seeds 42-46) with AI parties and p
 
 The simulation tests have four AI parties with different weapons clear entire dungeons. That
 checks the generator, the combat rules, every boss and the AI together, and keeps the balance
-honest: AI parties clear a dungeon in about 8 to 11 minutes.
+honest: AI parties clear a dungeon in about 10 to 14 minutes. `test/teamwork.test.ts` checks the
+aggro balance: damage dealers with a pack on them fall in seconds, a tank lasts far longer, and a
+tank facing a big pack alone falls but wins with a healer. `PARTY=tank_greatsword,staff,crossbow,greatsword
+npm run simulate -- 1 4` picks the party's weapons and prints how often each hero pulled a
+monster off the tank and what killed them.
 
 ## Ideas for what is next
 

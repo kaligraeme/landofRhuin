@@ -95,6 +95,6 @@ export function skillTooltip(id: string): Node {
   if (!s) return h('div', null, id);
   const d = s.delivery;
   const reach = d.kind === 'ground' || d.kind === 'leap' ? `Range ${d.range}` : d.kind === 'projectile' ? `Range ${d.range}` : d.kind === 'dash' ? `Dash ${d.distance}` : '';
-  const bits = [SLOT_LABEL[s.slot] ?? '', s.windup > 0 ? `Wind-up ${s.windup}s` : '', s.cooldown > 0 ? `Cooldown ${s.cooldown}s` : '', s.mp ? `${s.mp} MP` : '', s.stamina ? `${s.stamina} stamina` : '', reach].filter(Boolean);
+  const bits = [SLOT_LABEL[s.slot] ?? '', s.windup > 0 ? `Wind-up ${s.windup}s` : '', s.cooldown > 0 ? `Cooldown ${s.cooldown}s` : '', s.mp ? `${s.mp} MP` : '', s.stamina ? `${s.stamina} stamina` : '', s.hpCost ? `Costs ${Math.round(s.hpCost * 100)}% HP` : '', s.aggro && s.aggro > 1 ? `${s.aggro}× aggro` : '', reach].filter(Boolean);
   return h('div', null, h('div', { class: 'tt-name' }, s.name), h('div', { class: 'tt-meta' }, bits.join(' · ')), h('div', null, s.description));
 }

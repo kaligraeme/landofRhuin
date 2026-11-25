@@ -112,7 +112,11 @@ export interface Monster extends ActorBase {
   bossKind?: BossKind;
   roomIndex: number;
   engaged: boolean;
+  /** Aggro per hero (see aggro.ts). */
   enmity: Map<number, number>;
+  /** Each hero's recent damage on this monster, for the surge, and who has touched it yet. */
+  heat: Map<number, { v: number; at: number }>;
+  touched: Set<number>;
   cast: MonsterCast | null;
   abilityReady: Map<string, number>;
   stunImmune: boolean;

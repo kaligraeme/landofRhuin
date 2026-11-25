@@ -8,6 +8,7 @@ import { skillDef, WEAPONS, type Effect, type SkillDef } from '../../shared/cont
 import { STATUSES, statusDef } from '../../shared/content/statuses.js';
 import { angleTo, dist, shapeHits, type Shape, type Vec } from '../../shared/geometry.js';
 import { circleFree, lineOfSight, moveCircle, nearestFree } from '../../shared/map.js';
+import { addAggro, damageAggro, healAggro, taunt } from './aggro.js';
 import type { Instance } from './instance.js';
 import type { Actor, Monster, Player, StatusInst } from './types.js';
 
@@ -66,9 +67,12 @@ export function hasteMult(a: Actor): number {
 
 const variance = (inst: Instance): number => 0.95 + inst.rng.next() * 0.1;
 
-/** Outgoing damage before the target's mitigation. */
-export function outgoingDamage(inst: Instance, src: Actor, potency: number, canCrit: boolean): { amount: number; crit: boolean } {
-  const scale = src.team === 'party' ? src.power / 100 : src.power;
+/**
+ * Outgoing damage before the target's mitigation. `focused` marks a monster's blow aimed at
+ * whoever holds its aggro, which hits much harder than its area mechanics.
+ */
+export function outgoingDamage(inst: Instance, src: Actor, potency: number, canCrit: boolean, focused = false): { amount: number; crit: boolean } {
+  const scale = src.team === 'party' ? src.power / 100 : src.power * (focused ? inst.focusDamage : 1);
   let amount = potency * scale * Math.max(0.1, 1 + statSum(src, 'dmgDealt')) * variance(inst);
   const crit = canCrit && inst.rng.chance(CRIT_CHANCE);
   if (crit) amount *= CRIT_MULT;
@@ -82,6 +86,8 @@ export interface DamageOpts {
   avoidable?: boolean;
   /** Damage over time ticks skip some effects. */
   tick?: boolean;
+  /** Multiplier on the aggro this damage builds (the skill's). */
+  aggro?: number;
 }
 
 export function applyDamage(inst: Instance, src: Actor | null, target: Actor, raw: number, opts: DamageOpts = {}): number {
@@ -93,6 +99,14 @@ export function applyDamage(inst: Instance, src: Actor | null, target: Actor, ra
   let amount = raw * Math.max(0.1, 1 + statSum(target, 'dmgTaken'));
   if (target.team === 'party') amount *= (target as Player).defense;
   amount = Math.max(1, Math.round(amount));
+  // A raised shield takes the whole blow and remembers it, to throw back when it comes down.
+  const shield = target.statuses.find((s) => STATUSES[s.id]?.block);
+  if (shield) {
+    shield.value += amount;
+    inst.emit({ e: 'dmg', s: src?.id ?? 0, t: target.id, v: amount, ab: amount, ...(opts.name ? { n: opts.name } : {}) });
+    if (target.team === 'party') (target as Player).lastHitAt = inst.now;
+    return 0;
+  }
   // Barriers absorb first.
   let absorbed = 0;
   for (const s of target.statuses) {
@@ -115,7 +129,7 @@ export function applyDamage(inst: Instance, src: Actor | null, target: Actor, ra
     const p = src as Player;
     p.stats.damage += amount;
     const m = target as Monster;
-    m.enmity.set(p.id, (m.enmity.get(p.id) ?? 0) + amount * p.enmityMult);
+    damageAggro(inst, m, p, amount, opts.aggro ?? 1);
     inst.engage(m);
     const steal = statSum(p, 'lifesteal');
     if (steal > 0 && !opts.tick) applyHeal(inst, p, p, amount * steal, false, undefined, true);
@@ -131,8 +145,8 @@ export function applyHeal(inst: Instance, src: Player, target: Actor, raw: numbe
   target.hp += effective;
   src.stats.healing += effective;
   if (!quiet || effective > 0) inst.emit({ e: 'heal', s: src.id, t: target.id, v: amount, ...(crit ? { c: 1 as const } : {}), ...(name ? { n: name } : {}) });
-  // Healing draws a little attention from every engaged enemy.
-  if (effective > 0) for (const m of inst.monsters.values()) if (m.engaged && !m.dead) m.enmity.set(src.id, (m.enmity.get(src.id) ?? 0) + effective * 0.25 * src.enmityMult);
+  // Healing draws the attention of every enemy fighting nearby.
+  healAggro(inst, src, effective);
   return effective;
 }
 
@@ -300,6 +314,14 @@ export function dodge(inst: Instance, p: Player, dx: number, dy: number): string
 
 export function executeSkill(inst: Instance, p: Player, skill: SkillDef, aim: Vec): void {
   p.mp -= skill.mp;
+  if (skill.hpCost) {
+    // Blood for power: the cost never kills.
+    const cost = Math.min(p.hp - 1, Math.round(p.maxHp * skill.hpCost));
+    if (cost > 0) {
+      p.hp -= cost;
+      inst.emit({ e: 'dmg', s: p.id, t: p.id, v: cost, n: skill.name });
+    }
+  }
   if (skill.cooldown > 0) p.cooldowns.set(skill.id, inst.now + skill.cooldown);
   if (skill.slot !== 'basic') p.lockUntil = inst.now + SKILL_LOCK;
   if (skill.iframes) applyStatus(inst, p, 'evasion', skill.iframes, p.id);
@@ -313,7 +335,8 @@ export function executeSkill(inst: Instance, p: Player, skill: SkillDef, aim: Ve
     case 'thrust':
     case 'self': {
       const shape = skillShape(inst, p, skill, aim) as Shape;
-      const hits = enemiesIn(inst, shape);
+      // Wide blasts reach only what the user can see, not packs in the next room.
+      const hits = enemiesIn(inst, shape).filter((m) => d.kind !== 'self' || d.radius <= 6 || lineOfSight(inst.map, p, m));
       const fxKind = d.kind === 'arc' ? 'arc' : d.kind === 'thrust' ? 'thrust' : 'burst';
       inst.emit({ e: 'fx', k: fxKind, s: p.id, x: p.x, y: p.y, d: dir, r: d.kind === 'arc' ? d.radius + p.radius : d.kind === 'self' ? d.radius : d.length, a: d.kind === 'arc' ? d.angle : d.kind === 'thrust' ? d.width : 0, hue: skill.hue });
       applyEffects(inst, p, skill, hits, p, d.kind === 'self' ? alliesIn(inst, shape) : [p], aim);
@@ -336,6 +359,8 @@ export function executeSkill(inst: Instance, p: Player, skill: SkillDef, aim: Ve
         inst.addTelegraph({ ownerId: p.id, ability: { id: skill.id, name: skill.name, cast: d.delay, potency: 0, pattern: { kind: 'raidwide' } }, shape, style: 'ally', start: inst.now, end: inst.now + d.delay, followId: null, minor: true });
         inst.schedule(inst.now + d.delay, p.id, land);
       } else land();
+      // Strikes that rain down again and again.
+      for (let i = 1; i < (d.repeat ?? 1); i++) inst.schedule(inst.now + (d.delay ?? 0) + i * (d.every ?? 0.3), p.id, land);
       break;
     }
     case 'projectile': {
@@ -380,7 +405,8 @@ export function executeSkill(inst: Instance, p: Player, skill: SkillDef, aim: Ve
  */
 export function applyEffects(inst: Instance, p: Player, skill: SkillDef, hits: Monster[], origin: Vec, area: Player[], aim: Vec): void {
   const buffs = skill.effects.some((e) => (e.kind === 'status' || e.kind === 'barrier') && (e.to === 'self' || e.to === 'party'));
-  for (const effect of skill.effects) applyEffect(inst, p, skill, effect, hits, origin, area, aim);
+  const dealt = { total: 0 };
+  for (const effect of skill.effects) applyEffect(inst, p, skill, effect, hits, origin, area, aim, dealt);
   if (buffs && skill.slot !== 'basic') inst.emit({ e: 'fx', k: 'buff', t: p.id, hue: skill.hue });
 }
 
@@ -388,14 +414,28 @@ function recipients(inst: Instance, p: Player, to: 'self' | 'area' | 'party', ar
   return to === 'self' ? [p] : to === 'party' ? partyAround(inst, p) : area;
 }
 
-function applyEffect(inst: Instance, p: Player, skill: SkillDef, effect: Effect, hits: Monster[], origin: Vec, area: Player[], aim: Vec): void {
+function applyEffect(inst: Instance, p: Player, skill: SkillDef, effect: Effect, hits: Monster[], origin: Vec, area: Player[], aim: Vec, dealt: { total: number }): void {
   switch (effect.kind) {
     case 'damage':
       for (const m of hits) {
         if (m.dead) continue;
         const pot = effect.potency * (skill.execute && m.hp < m.maxHp * 0.3 ? skill.execute : 1);
         const { amount, crit } = outgoingDamage(inst, p, pot, true);
-        applyDamage(inst, p, m, amount, { crit, name: skill.name });
+        dealt.total += applyDamage(inst, p, m, amount, { crit, name: skill.name, aggro: skill.aggro });
+      }
+      break;
+    case 'drain':
+      if (dealt.total > 0) {
+        applyHeal(inst, p, p, dealt.total * effect.pct, false, skill.name);
+        inst.emit({ e: 'fx', k: 'heal', t: p.id, hue: skill.hue });
+      }
+      break;
+    case 'aggro':
+      // Draws the attention of foes already in the fight; it does not wake sleeping packs.
+      for (const m of hits) {
+        if (m.dead || !m.engaged) continue;
+        addAggro(m, p, effect.amount);
+        inst.engage(m);
       }
       break;
     case 'heal':
@@ -461,10 +501,7 @@ function applyEffect(inst: Instance, p: Player, skill: SkillDef, effect: Effect,
     case 'taunt':
       for (const m of hits) {
         if (m.dead) continue;
-        let top = 0;
-        for (const v of m.enmity.values()) top = Math.max(top, v);
-        m.enmity.set(p.id, top * 1.1 + 1000);
-        m.targetId = p.id;
+        taunt(m, p);
         inst.engage(m);
       }
       if (hits.length) inst.emit({ e: 'fx', k: 'shout', s: p.id, hue: 0 });
@@ -498,4 +535,17 @@ export function projectileImpact(inst: Instance, p: Player, skill: SkillDef, at:
     inst.emit({ e: 'fx', k: 'impact', x: at.x, y: at.y, r: 0.8, hue: skill.hue });
     applyEffects(inst, p, { ...skill, effects: skill.effects.filter((e) => e.kind !== 'move') }, [target], at, [], at);
   }
+}
+
+/**
+ * A blocking status comes down (Shield's Up!): it bursts on every enemy around the bearer for its
+ * share of what it blocked, which also builds aggro.
+ */
+export function counterBurst(inst: Instance, p: Player, s: StatusInst): void {
+  const def = STATUSES[s.id];
+  if (!def?.counter) return;
+  const radius = def.counterRadius ?? 5;
+  const shape: Shape = { kind: 'circle', x: p.x, y: p.y, radius };
+  inst.emit({ e: 'fx', k: 'burst', x: p.x, y: p.y, r: radius, hue: 48, s: p.id });
+  for (const m of enemiesIn(inst, shape)) applyDamage(inst, p, m, s.value * def.counter, { name: def.name, aggro: 1.5 });
 }

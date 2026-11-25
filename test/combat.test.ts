@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyStatus, basicAttack, dodge, statSum, useSkill } from '../src/server/sim/combat.js';
+import { applyDamage, applyStatus, basicAttack, dodge, getStatus, statSum, useSkill } from '../src/server/sim/combat.js';
+import { lineOfSight } from '../src/shared/map.js';
 import { Instance, type Seat } from '../src/server/sim/instance.js';
 import { startAbility } from '../src/server/sim/mechanics.js';
 import type { Monster } from '../src/server/sim/types.js';
@@ -26,6 +27,7 @@ function setup() {
   dummy.autoNext = 1e9;
   return { inst, tank: tank!, mage: mage!, ranger: ranger!, melee: melee!, dummy };
 }
+const lineOfSightClear = (inst: Instance, a: { x: number; y: number }, b: { x: number; y: number }) => lineOfSight(inst.map, a, b);
 const run = (inst: Instance, seconds: number) => {
   for (let i = 0; i < seconds * 20; i++) inst.tick();
 };
@@ -168,46 +170,112 @@ describe('action combat', () => {
   it('crowd control stuns monsters and staggers bosses', () => {
     const { inst, tank, dummy } = setup();
     tank.x = dummy.x - 2;
-    useSkill(inst, tank, 'upheaval', { x: dummy.x, y: dummy.y });
+    useSkill(inst, tank, 'stalwartCharge', { x: dummy.x + 4, y: dummy.y });
     expect(dummy.statuses.some((s) => s.id === 'stun')).toBe(true);
     const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss') as Monster;
     boss.stagger = boss.staggerMax - 10;
-    tank.x = boss.x - boss.radius - 1;
+    tank.x = boss.x - boss.radius - 3;
     tank.y = boss.y;
     tank.cooldowns.clear();
     tank.lockUntil = 0;
-    useSkill(inst, tank, 'upheaval', { x: boss.x, y: boss.y });
+    useSkill(inst, tank, 'stalwartCharge', { x: boss.x, y: boss.y });
     expect(boss.statuses.some((s) => s.id === 'staggered')).toBe(true);
     expect(boss.stagger).toBe(0);
   });
 
-  it('the Guardian raises her shield, cures the party and smites foes into turning on her', () => {
+  it('the Dark Knight charges in, sweeps, drains life and bleeds for Ruination', () => {
+    const { inst, tank, dummy } = setup();
+    expect(hotbarFor('tank', 'tank_greatsword').slice(1, 6)).toEqual(['parry', 'stalwartCharge', 'eclipse', 'drain', 'ruination']);
+    expect(WEAPONS.tank_greatsword!.style).toBe('Dark Knight');
+    // Stalwart Charge: a dash through the foe, a stun, a big lump of aggro and a guard on himself.
+    tank.x = dummy.x - 4;
+    tank.y = dummy.y;
+    expect(useSkill(inst, tank, 'stalwartCharge', { x: dummy.x + 3, y: dummy.y })).toBeNull();
+    expect(dummy.statuses.some((s) => s.id === 'stun')).toBe(true);
+    expect(statSum(tank, 'dmgTaken')).toBeCloseTo(-0.35);
+    expect(dummy.enmity.get(tank.id) ?? 0).toBeGreaterThan(3000);
+    // Eclipse: everything around him is slowed.
+    tank.lockUntil = 0;
+    tank.x = dummy.x - 2;
+    expect(useSkill(inst, tank, 'eclipse', dummy)).toBeNull();
+    expect(dummy.statuses.some((s) => s.id === 'slow')).toBe(true);
+    // Drain heals him for a share of what it deals.
+    tank.lockUntil = 0;
+    tank.hp = 6000;
+    const before = dummy.hp;
+    expect(useSkill(inst, tank, 'drain', dummy)).toBeNull();
+    const dealt = before - dummy.hp;
+    expect(tank.hp - 6000).toBeCloseTo(dealt * 0.6, -1);
+    // Ruination costs half his health (it never kills) and strikes four times.
+    tank.lockUntil = 0;
+    tank.hp = tank.maxHp;
+    const hpBefore = dummy.hp;
+    expect(useSkill(inst, tank, 'ruination', dummy)).toBeNull();
+    expect(tank.hp).toBe(tank.maxHp - tank.maxHp * 0.5);
+    let strikes = 0;
+    let last = dummy.hp;
+    for (let i = 0; i < 40; i++) {
+      inst.tick();
+      if (dummy.hp < last) strikes++;
+      last = dummy.hp;
+    }
+    expect(strikes).toBe(4);
+    expect(hpBefore - dummy.hp).toBeGreaterThan(4 * 700 * 2 * 0.9);
+    tank.cooldowns.clear();
+    tank.lockUntil = 0;
+    tank.hp = 100;
+    useSkill(inst, tank, 'ruination', dummy);
+    expect(tank.hp).toBe(1);
+  });
+
+  it('the Guardian flashes in, mends herself, blocks and bursts back, and floods the field with light', () => {
     const inst = new Instance('g', seats.map((seat) => (seat.role === 'tank' ? { ...seat, weapon: 'sword_shield' } : seat)), { seed: 7, countdown: 0 });
     inst.tick();
-    const [tank, mage, ranger] = inst.players as [typeof inst.players[0], typeof inst.players[0], typeof inst.players[0]];
-    expect(hotbarFor('tank', 'sword_shield').slice(1, 6)).toEqual(['aegis', 'shieldBash', 'holySmite', 'cure', 'dawnbreaker']);
-    expect(useSkill(inst, tank, 'aegis', tank)).toBeNull();
-    expect(statSum(tank, 'dmgTaken')).toBeCloseTo(-0.6);
-    // Cure: her own wounds and an ally's nearby.
-    tank.lockUntil = 0;
-    tank.hp = 4000;
-    mage.hp = 2000;
-    mage.x = tank.x + 3;
-    mage.y = tank.y;
-    expect(useSkill(inst, tank, 'cure', tank)).toBeNull();
-    run(inst, 0.8);
-    expect(tank.hp).toBeGreaterThan(4000 + tank.maxHp * 0.19);
-    expect(mage.hp).toBeGreaterThan(2500);
-    // Holy Smite turns a foe that was after someone else.
-    const foe = inst.spawnMob('brute', tank.x + 6, tank.y, 0, 0);
+    const [tank, , ranger] = inst.players as [typeof inst.players[0], typeof inst.players[0], typeof inst.players[0]];
+    expect(hotbarFor('tank', 'sword_shield').slice(1, 6)).toEqual(['aegis', 'flash', 'mend', 'shieldsUp', 'luminaire']);
+    const foe = inst.spawnMob('brute', tank.x + 4, tank.y, 0, 0);
     foe.hp = foe.maxHp = 1e9;
+    foe.speed = 0;
+    foe.autoInterval = 1e9;
+    foe.mob = { ...foe.mob!, abilities: [] };
     inst.engage(foe);
-    foe.enmity.set(ranger.id, 50000);
+    foe.autoNext = 1e9;
+    // Flash: like Stalwart Charge, with a radiant guard.
+    expect(useSkill(inst, tank, 'flash', { x: foe.x + 3, y: foe.y })).toBeNull();
+    expect(foe.statuses.some((s) => s.id === 'stun')).toBe(true);
+    expect(getStatus(tank, 'radiantGuard')).toBeDefined();
+    // Mend: heals her and pulls every foe in the fight nearby onto her.
+    foe.enmity.set(ranger.id, 1e6);
+    foe.targetId = ranger.id;
     tank.lockUntil = 0;
-    expect(useSkill(inst, tank, 'holySmite', { x: foe.x, y: foe.y })).toBeNull();
-    run(inst, 0.6);
-    expect(foe.hp).toBeLessThan(foe.maxHp);
-    expect(foe.targetId).toBe(tank.id);
+    tank.hp = 5000;
+    const aggroBefore = foe.enmity.get(tank.id) ?? 0;
+    expect(useSkill(inst, tank, 'mend', tank)).toBeNull();
+    expect(tank.hp).toBeCloseTo(5000 + tank.maxHp * 0.18, -1);
+    expect((foe.enmity.get(tank.id) ?? 0) - aggroBefore).toBeGreaterThan(2500);
+    // Shield's Up!: nothing gets through for 3s, then 30% of it comes back.
+    tank.lockUntil = 0;
+    tank.hp = tank.maxHp;
+    tank.x = foe.x - foe.radius - 1;
+    tank.statuses = []; // Flash's dodge frames and guard would change the sums below.
+    expect(useSkill(inst, tank, 'shieldsUp', tank)).toBeNull();
+    applyDamage(inst, foe, tank, 5000);
+    applyDamage(inst, foe, tank, 3000);
+    expect(tank.hp).toBe(tank.maxHp);
+    const foeBefore = foe.hp;
+    run(inst, 3.2);
+    expect(getStatus(tank, 'shieldsUp')).toBeUndefined();
+    const absorbed = (5000 + 3000) * tank.defense;
+    expect(foeBefore - foe.hp).toBeCloseTo(absorbed * 0.3, -1);
+    // Luminaire: every enemy she can see, however far.
+    const far = inst.spawnMob('skirmisher', tank.x - 20, tank.y, 0, 0);
+    far.hp = far.maxHp = 1e9;
+    tank.lockUntil = 0;
+    tank.cast = null;
+    expect(useSkill(inst, tank, 'luminaire', tank)).toBeNull();
+    run(inst, 0.8);
+    const seen = [foe, far].map((m) => m.hp < m.maxHp);
+    expect(seen).toEqual([true, lineOfSightClear(inst, tank, far)]);
   });
 
   it('statuses stack and add up', () => {

@@ -1787,6 +1787,22 @@ export class Renderer {
       const nameY = showBar ? top - 6 : top;
       g.strokeText(label, s.x, nameY);
       g.fillText(label, s.x, nameY);
+      // A monster coming for you wears a red marker; for a tank, the ones loose on the party do.
+      if (isEnemy && !e.diedAt && e.snap.a !== undefined) {
+        const mine = e.snap.a === world.meId;
+        const meRole = world.meEntity()?.spawn.role;
+        const loose = meRole === 'tank' && !mine && world.ents.get(e.snap.a)?.spawn.role !== 'tank';
+        if (mine || loose) {
+          const y = nameY - (boss ? 20 : 16);
+          g.font = `900 ${boss ? 18 : 15}px Inter, system-ui, sans-serif`;
+          g.lineWidth = 3;
+          g.strokeStyle = 'rgba(0,0,0,0.9)';
+          g.fillStyle = mine ? (meRole === 'tank' ? '#ffd56b' : `rgba(255, 90, 70, ${0.75 + Math.sin(now * 10) * 0.25})`) : '#ff9f4a';
+          const mark = mine ? (meRole === 'tank' ? '◆' : '!') : '◇';
+          g.strokeText(mark, s.x, y);
+          g.fillText(mark, s.x, y);
+        }
+      }
       if (showBar) {
         const w = Math.max(36, e.spawn.radius * this.zoom * 1.8);
         g.fillStyle = 'rgba(0,0,0,0.7)';

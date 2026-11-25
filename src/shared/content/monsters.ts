@@ -128,18 +128,18 @@ const shot = (name: string, cast: number, potency: number, speed: number, radius
 
 export const MOBS: Record<MobKind, MobDef> = {
   brute: mob({
-    kind: 'brute', hp: 9000, radius: 0.7, speed: 4.4, ranged: false, attackRange: 1.4, autoPotency: 380, autoInterval: 2.2,
+    kind: 'brute', hp: 16200, radius: 0.7, speed: 4.4, ranged: false, attackRange: 1.4, autoPotency: 380, autoInterval: 2.2,
     basic: swing('Swing', 0.6, 380, 1.9, 110),
     abilities: [{ id: 'heavySwing', name: 'Heavy Swing', cast: 1.4, cooldown: 12, range: 4, potency: 1000, pattern: { kind: 'cleave', radius: 4.5, angle: (Math.PI * 2) / 3 } }],
   }),
-  skirmisher: mob({ kind: 'skirmisher', hp: 5000, radius: 0.5, speed: 5.8, ranged: false, attackRange: 1.1, autoPotency: 230, autoInterval: 1.4, basic: swing('Claw', 0.4, 230, 1.5, 100), abilities: [] }),
+  skirmisher: mob({ kind: 'skirmisher', hp: 9000, radius: 0.5, speed: 5.8, ranged: false, attackRange: 1.1, autoPotency: 230, autoInterval: 1.4, basic: swing('Claw', 0.4, 230, 1.5, 100), abilities: [] }),
   archer: mob({
-    kind: 'archer', hp: 5500, radius: 0.55, speed: 4.4, ranged: true, attackRange: 16, autoPotency: 300, autoInterval: 2.4,
+    kind: 'archer', hp: 9900, radius: 0.55, speed: 4.4, ranged: true, attackRange: 16, autoPotency: 300, autoInterval: 2.4,
     basic: shot('Arrow', 0.35, 300, 16),
     abilities: [{ id: 'volley', name: 'Volley', cast: 1.8, cooldown: 13, range: 25, potency: 900, pattern: { kind: 'targetCircle', radius: 3 } }],
   }),
   caster: mob({
-    kind: 'caster', hp: 6500, radius: 0.55, speed: 4.2, ranged: true, attackRange: 16, autoPotency: 280, autoInterval: 2.6,
+    kind: 'caster', hp: 11700, radius: 0.55, speed: 4.2, ranged: true, attackRange: 16, autoPotency: 280, autoInterval: 2.6,
     basic: shot('Hex Bolt', 0.45, 280, 12, 0.45),
     abilities: [
       { id: 'darkBolt', name: 'Dark Bolt', cast: 2.5, cooldown: 12, range: 25, potency: 1500, interruptible: true, pattern: { kind: 'bolt' } },
@@ -147,7 +147,7 @@ export const MOBS: Record<MobKind, MobDef> = {
     ],
   }),
   elite: mob({
-    kind: 'elite', hp: 26000, radius: 1.1, speed: 4.2, ranged: false, attackRange: 1.8, autoPotency: 620, autoInterval: 2.6, stunImmune: true,
+    kind: 'elite', hp: 46800, radius: 1.1, speed: 4.2, ranged: false, attackRange: 1.8, autoPotency: 620, autoInterval: 2.6, stunImmune: true,
     basic: swing('Maul', 0.7, 620, 2.4, 120),
     abilities: [
       { id: 'groundSlam', name: 'Ground Slam', cast: 2.2, cooldown: 14, range: 6, potency: 1500, pattern: { kind: 'pbaoe', radius: 6 } },
@@ -155,7 +155,7 @@ export const MOBS: Record<MobKind, MobDef> = {
     ],
   }),
   sentry: mob({
-    kind: 'sentry', hp: 9000, radius: 0.8, speed: 0, ranged: true, attackRange: 30, autoPotency: 260, autoInterval: 2.2, stunImmune: true,
+    kind: 'sentry', hp: 16200, radius: 0.8, speed: 0, ranged: true, attackRange: 30, autoPotency: 260, autoInterval: 2.2, stunImmune: true,
     basic: shot('Arc Shot', 0.3, 260, 14, 0.45),
     abilities: [{ id: 'pulse', name: 'Arc Pulse', cast: 2.5, cooldown: 8, range: 40, potency: 1000, pattern: { kind: 'targetCircle', radius: 3 } }],
   }),
@@ -168,7 +168,7 @@ const CONE_120 = (Math.PI * 2) / 3;
 
 export const BOSSES: Record<BossKind, BossDef> = {
   juggernaut: {
-    kind: 'juggernaut', title: 'the Juggernaut', hp: 300000, stagger: 480, radius: 2.4, speed: 4.5, attackRange: 1, autoPotency: 620, autoInterval: 3,
+    kind: 'juggernaut', title: 'the Juggernaut', hp: 390000, stagger: 480, radius: 2.4, speed: 4.5, attackRange: 1, autoPotency: 620, autoInterval: 3,
     abilities: byId(
       ab('rendingArc', 'Rending Arc', 3, 2800, { kind: 'cleave', radius: 12, angle: CONE_120 }),
       ab('skullsplitter', 'Skullsplitter', 4, 4600, { kind: 'tankbuster', radius: 2.5 }),
@@ -187,7 +187,7 @@ export const BOSSES: Record<BossKind, BossDef> = {
     ],
   },
   hexer: {
-    kind: 'hexer', title: 'the Hexer', hp: 260000, stagger: 440, radius: 2, speed: 4.2, attackRange: 1, autoPotency: 560, autoInterval: 3,
+    kind: 'hexer', title: 'the Hexer', hp: 338000, stagger: 440, radius: 2, speed: 4.2, attackRange: 1, autoPotency: 560, autoInterval: 3,
     abilities: byId(
       ab('hexPools', 'Hex Pools', 3, 2500, { kind: 'puddles', radius: 4 }),
       ab('malediction', 'Malediction', 5, 2000, { kind: 'spread', radius: 4 }),
@@ -207,7 +207,7 @@ export const BOSSES: Record<BossKind, BossDef> = {
     ],
   },
   beast: {
-    kind: 'beast', title: 'the Beast', hp: 280000, stagger: 480, radius: 2.6, speed: 5, attackRange: 1, autoPotency: 640, autoInterval: 3,
+    kind: 'beast', title: 'the Beast', hp: 364000, stagger: 480, radius: 2.6, speed: 5, attackRange: 1, autoPotency: 640, autoInterval: 3,
     abilities: byId(
       ab('mawSweep', 'Maw Sweep', 2.5, 2800, { kind: 'cleave', radius: 11, angle: (Math.PI * 5) / 6 }),
       ab('tailLash', 'Tail Lash', 2.5, 2600, { kind: 'cleave', radius: 10, angle: CONE_120, rear: true }),
@@ -227,7 +227,7 @@ export const BOSSES: Record<BossKind, BossDef> = {
     ],
   },
   warden: {
-    kind: 'warden', title: 'the Warden', hp: 290000, stagger: 480, radius: 2.3, speed: 4.2, attackRange: 1, autoPotency: 600, autoInterval: 3,
+    kind: 'warden', title: 'the Warden', hp: 377000, stagger: 480, radius: 2.3, speed: 4.2, attackRange: 1, autoPotency: 600, autoInterval: 3,
     abilities: byId(
       ab('sentinelsCross', 'Sentinel’s Cross', 4, 3000, { kind: 'cross', width: 5, length: 40 }),
       ab('lanceBeams', 'Lance Beams', 3.5, 2600, { kind: 'lines', count: 3, width: 3, length: 34 }),
@@ -247,7 +247,7 @@ export const BOSSES: Record<BossKind, BossDef> = {
     ],
   },
   sovereign: {
-    kind: 'sovereign', title: 'the Sovereign', hp: 520000, stagger: 650, radius: 2.8, speed: 4.5, attackRange: 1, autoPotency: 700, autoInterval: 3,
+    kind: 'sovereign', title: 'the Sovereign', hp: 676000, stagger: 650, radius: 2.8, speed: 4.5, attackRange: 1, autoPotency: 700, autoInterval: 3,
     abilities: byId(
       ab('sovereignCleave', 'Sovereign’s Edge', 3, 3000, { kind: 'cleave', radius: 14, angle: CONE_120 }),
       ab('crownfall', 'Crownfall', 3, 2600, { kind: 'puddles', radius: 4.5 }),

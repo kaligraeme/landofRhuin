@@ -17,9 +17,11 @@ export function emitAct(inst: Instance, m: Monster, k: 'atk' | 'sk', end: number
 }
 
 function hitPlayers(inst: Instance, m: Monster, shape: Shape, ability: AbilityDef, avoidable = !ability.minor): void {
+  // Swings aimed at the target (routine attacks and heavy cleaves) carry the monster's full weight.
+  const focused = ability.pattern.kind === 'cleave';
   for (const p of alive(inst)) {
     if (!shapeHits(shape, p, p.radius)) continue;
-    const { amount } = outgoingDamage(inst, m, ability.potency, false);
+    const { amount } = outgoingDamage(inst, m, ability.potency, false, focused);
     applyDamage(inst, m, p, amount, { name: ability.name, avoidable });
   }
 }
@@ -117,7 +119,9 @@ export function startAbility(inst: Instance, m: Monster, ability: AbilityDef, ca
         if (!shape) return;
         for (const p of alive(inst)) {
           if (!shapeHits(shape, p, p.radius)) continue;
-          const { amount } = outgoingDamage(inst, m, ability.potency, false);
+          // Tank-busters were built heavy already: they take only part of the focus weight, so a
+          // tank who braces survives one, and anyone else who has stolen aggro does not.
+          const { amount } = outgoingDamage(inst, m, ability.potency * 0.55, false, true);
           applyDamage(inst, m, p, amount, { name: ability.name, avoidable: p.id !== target.id });
         }
         inst.emit({ e: 'fx', k: 'impact', x: shape.x, y: shape.y, r: pat.radius, hue: 0 });
@@ -225,7 +229,7 @@ export function startAbility(inst: Instance, m: Monster, ability: AbilityDef, ca
       at(() => {
         const v = inst.actor(victimId);
         if (!v || v.dead) return;
-        const { amount } = outgoingDamage(inst, m, ability.potency, false);
+        const { amount } = outgoingDamage(inst, m, ability.potency, false, true);
         inst.emit({ e: 'fx', k: 'proj', s: m.id, t: v.id, hue: 280 });
         applyDamage(inst, m, v, amount, { name: ability.name });
       });
@@ -243,7 +247,7 @@ export function startAbility(inst: Instance, m: Monster, ability: AbilityDef, ca
         const aimAt = v && !v.dead ? v : target;
         const dir = angleTo(m, aimAt);
         m.facing = dir;
-        const { amount } = outgoingDamage(inst, m, ability.potency, false);
+        const { amount } = outgoingDamage(inst, m, ability.potency, false, true);
         inst.spawnProjectile({ ownerId: m.id, team: 'enemy', x: m.x + Math.cos(dir) * (m.radius + 0.2), y: m.y + Math.sin(dir) * (m.radius + 0.2), dir, speed, radius, range: 30, pierce: false, explode: 0, look: 'enemy', hue: m.mobKind === 'caster' ? 285 : m.mobKind === 'sentry' ? 200 : 30, skill: null, potency: amount, name: ability.name });
       });
       break;

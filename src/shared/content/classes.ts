@@ -20,8 +20,11 @@ export type Delivery =
   | { kind: 'thrust'; length: number; width: number }
   /** Everything within a radius of the user. */
   | { kind: 'self'; radius: number }
-  /** A circle at the aimed point (pulled in to `range`), optionally landing after a delay. */
-  | { kind: 'ground'; radius: number; range: number; delay?: number }
+  /**
+   * A circle at the aimed point (pulled in to `range`), optionally landing after a delay, and
+   * optionally striking `repeat` times, `every` seconds apart.
+   */
+  | { kind: 'ground'; radius: number; range: number; delay?: number; repeat?: number; every?: number }
   /** One or more projectiles that fly toward the aim. */
   | { kind: 'projectile'; speed: number; radius: number; range: number; pierce?: boolean; explode?: number; count?: number; spread?: number; look: ProjectileLook }
   /** The user rushes toward the aim, striking everything along the way. */
@@ -45,6 +48,10 @@ export type Effect =
   | { kind: 'pull'; distance: number }
   | { kind: 'stun'; duration: number }
   | { kind: 'taunt' }
+  /** Extra aggro on every enemy struck, on top of what the damage builds. */
+  | { kind: 'aggro'; amount: number }
+  /** Heals the user for this share of the damage the skill dealt. */
+  | { kind: 'drain'; pct: number }
   | { kind: 'stagger'; amount: number }
   | { kind: 'mp'; amount: number }
   | { kind: 'raise' }
@@ -71,6 +78,10 @@ export interface SkillDef {
   iframes?: number;
   /** Damage multiplier against enemies below 30% health. */
   execute?: number;
+  /** Multiplier on the aggro this skill's damage builds (tank skills built to hold a crowd). */
+  aggro?: number;
+  /** Health the user sacrifices to use it, as a share of their maximum. */
+  hpCost?: number;
 }
 
 export interface WeaponDef {
@@ -107,7 +118,7 @@ export interface RoleDef {
   healPower: number;
   /** Multiplier on damage taken. */
   defense: number;
-  /** Multiplier on enmity generated. */
+  /** Multiplier on the aggro the role's damage and healing build. */
   enmity: number;
   speed: number;
   /** The man's weapon, then the woman's: each hero carries one. */
@@ -146,7 +157,7 @@ def({ id: 'fieldDressing', name: 'Field Dressing', glyph: '✚', hue: 130, slot:
 def({ id: 'bloodrush', name: 'Bloodrush', glyph: '✪', hue: 10, slot: 'role', cooldown: 40, description: 'Deal 25% more damage for 12s, but take 15% more.', effects: [{ kind: 'status', status: 'bloodrush', duration: 12, to: 'self' }] });
 def({ id: 'secondWind', name: 'Second Wind', glyph: '✚', hue: 120, slot: 'role', cooldown: 40, description: 'Catch your breath: restore 25% of your max HP.', effects: [{ kind: 'healPct', pct: 0.25, to: 'self' }] });
 
-// ── Warrior: Greatsword ────────────────────────────────────────────────────────────────────────
+// ── Warrior: Greatsword (the Dark Knight) ─────────────────────────────────────────────────────
 const tgBasic = chain('tank_greatsword', 'Greatsword Cleave', '⚔', 30, [
   { delivery: arc(3.2, 160), potency: 120 },
   { delivery: arc(3.2, 160), potency: 120 },
@@ -154,10 +165,10 @@ const tgBasic = chain('tank_greatsword', 'Greatsword Cleave', '⚔', 30, [
 ]);
 const tgSkills: WeaponDef['skills'] = [
   def({ id: 'parry', name: 'Parry', glyph: '⟋', hue: 215, slot: 'special', cooldown: 7, description: 'Raise your blade for 1s: 75% less damage taken.', effects: [{ kind: 'status', status: 'parry', duration: 1, to: 'self' }] }),
-  def({ id: 'upheaval', name: 'Upheaval', glyph: '⇡', hue: 35, slot: 'q', cooldown: 9, delivery: thrust(6, 3), description: 'Rip the ground upward: potency 200 and a 1.5s stun in a line.', effects: [dmg(200), { kind: 'stun', duration: 1.5 }, { kind: 'stagger', amount: 30 }] }),
-  def({ id: 'gravitySweep', name: 'Gravity Sweep', glyph: '◎', hue: 260, slot: 'e', cooldown: 12, delivery: { kind: 'self', radius: 7 }, description: 'Drag every enemy within 7 tiles toward you: potency 140, and they turn on you.', effects: [dmg(140), { kind: 'pull', distance: 4 }, { kind: 'taunt' }, { kind: 'stagger', amount: 15 }] }),
-  def({ id: 'earthsplitter', name: 'Earthsplitter', glyph: '⇥', hue: 25, slot: 'r', cooldown: 11, delivery: thrust(10, 3), description: 'Split the earth in a 10-tile line: potency 260 and slows.', effects: [dmg(260), { kind: 'status', status: 'slow', duration: 5, to: 'hit' }] }),
-  def({ id: 'titansVerdict', name: 'Titan’s Verdict', glyph: '▼', hue: 40, slot: 'ult', cooldown: 40, iframes: 0.4, delivery: { kind: 'leap', range: 9, radius: 5 }, description: 'Ultimate. Leap to your aim and smash down: potency 420 and a 2s stun.', effects: [dmg(420), { kind: 'stun', duration: 2 }, { kind: 'stagger', amount: 70 }] }),
+  def({ id: 'stalwartCharge', name: 'Stalwart Charge', glyph: '⇶', hue: 265, slot: 'q', cooldown: 10, iframes: 0.2, aggro: 3, delivery: { kind: 'dash', distance: 7, width: 2.6 }, description: 'Charge 7 tiles, crashing through every foe in your path: potency 220, a 0.5s stun and a great deal of aggro. You take 35% less damage for 5s.', effects: [dmg(220), { kind: 'stun', duration: 0.5 }, { kind: 'aggro', amount: 3000 }, { kind: 'stagger', amount: 15 }, { kind: 'status', status: 'stalwart', duration: 5, to: 'self' }] }),
+  def({ id: 'eclipse', name: 'Eclipse', glyph: '◐', hue: 270, slot: 'e', cooldown: 8, aggro: 1.5, delivery: { kind: 'self', radius: 4.8 }, description: 'Swing the greatsword all the way around you: potency 260 to every foe within 4.8 tiles, and they are slowed for 5s.', effects: [dmg(260), { kind: 'status', status: 'slow', duration: 5, to: 'hit' }] }),
+  def({ id: 'drain', name: 'Drain', glyph: '♆', hue: 300, slot: 'r', cooldown: 12, aggro: 1.5, delivery: { kind: 'self', radius: 5 }, description: 'Tear the life out of every foe within 5 tiles: potency 240, and you heal for 60% of the damage dealt.', effects: [dmg(240), { kind: 'drain', pct: 0.6 }] }),
+  def({ id: 'ruination', name: 'Ruination', glyph: '☄', hue: 285, slot: 'ult', cooldown: 45, hpCost: 0.5, aggro: 1.5, delivery: { kind: 'ground', radius: 6, range: 10, delay: 0.4, repeat: 4, every: 0.3 }, description: 'Ultimate. Sacrifice 50% of your maximum health to rain four massive strikes on your aim: potency 700 each to every foe within 6 tiles.', effects: [dmg(700), { kind: 'stagger', amount: 25 }] }),
 ];
 
 // ── Warrior: Sword & Shield (the Guardian) ──────────────────────────────────────────────────────
@@ -168,10 +179,10 @@ const ssBasic = chain('sword_shield', 'Guardian’s Edge', '⚔', 48, [
 ]);
 const ssSkills: WeaponDef['skills'] = [
   def({ id: 'aegis', name: 'Aegis', glyph: '◈', hue: 48, slot: 'special', cooldown: 8, description: 'Raise your shield for 2s: 60% less damage taken.', effects: [{ kind: 'status', status: 'aegis', duration: 2, to: 'self' }] }),
-  def({ id: 'shieldBash', name: 'Shield Bash', glyph: '▣', hue: 40, slot: 'q', cooldown: 8, delivery: thrust(3.4, 2.4), description: 'Slam your shield into the foes before you: potency 170, a 1.5s stun, and they turn on you.', effects: [dmg(170), { kind: 'stun', duration: 1.5 }, { kind: 'taunt' }, { kind: 'stagger', amount: 25 }] }),
-  def({ id: 'holySmite', name: 'Holy Smite', glyph: '✦', hue: 52, slot: 'e', cooldown: 9, delivery: { kind: 'ground', radius: 3, range: 12, delay: 0.4 }, description: 'A lance of light strikes your aim: potency 250 to every foe there, and they turn on you.', effects: [dmg(250), { kind: 'taunt' }, { kind: 'stagger', amount: 10 }] }),
-  def({ id: 'cure', name: 'Cure', glyph: '✚', hue: 55, slot: 'r', cooldown: 15, windup: 0.5, delivery: { kind: 'self', radius: 8 }, description: 'Bathe in healing light: restore 20% of your max HP and heal allies within 8 tiles (potency 380).', effects: [{ kind: 'healPct', pct: 0.2, to: 'self' }, { kind: 'heal', potency: 380, to: 'area' }] }),
-  def({ id: 'dawnbreaker', name: 'Dawnbreaker', glyph: '☀', hue: 50, slot: 'ult', cooldown: 45, windup: 0.4, delivery: { kind: 'self', radius: 6 }, description: 'Ultimate. Call down the dawn: potency 450 to every foe within 6 tiles (they turn on you), and the whole party heals 20% of max HP and gains a barrier of 10%.', effects: [dmg(450), { kind: 'taunt' }, { kind: 'stagger', amount: 40 }, { kind: 'healPct', pct: 0.2, to: 'party' }, { kind: 'barrier', pct: 0.1, to: 'party' }] }),
+  def({ id: 'flash', name: 'Flash', glyph: '✧', hue: 52, slot: 'q', cooldown: 10, iframes: 0.2, aggro: 3, delivery: { kind: 'dash', distance: 7, width: 2.6 }, description: 'Charge 7 tiles in a flash of light: potency 200 to every foe in your path, a 0.5s stun and a great deal of aggro. You take 35% less damage for 5s.', effects: [dmg(200), { kind: 'stun', duration: 0.5 }, { kind: 'aggro', amount: 3000 }, { kind: 'stagger', amount: 15 }, { kind: 'status', status: 'radiantGuard', duration: 5, to: 'self' }] }),
+  def({ id: 'mend', name: 'Mend', glyph: '✚', hue: 55, slot: 'e', cooldown: 15, delivery: { kind: 'self', radius: 10 }, description: 'Mend your own wounds: restore 18% of your maximum health. The light draws every foe in the fight within 10 tiles to you.', effects: [{ kind: 'healPct', pct: 0.18, to: 'self' }, { kind: 'aggro', amount: 2500 }] }),
+  def({ id: 'shieldsUp', name: 'Shield’s Up!', glyph: '⛉', hue: 45, slot: 'r', cooldown: 16, description: 'Brace behind your shield for 3s: it blocks all damage, then bursts, striking every foe within 5 tiles for 30% of what it absorbed.', effects: [{ kind: 'status', status: 'shieldsUp', duration: 3, to: 'self' }] }),
+  def({ id: 'luminaire', name: 'Luminaire', glyph: '☀', hue: 50, slot: 'ult', cooldown: 50, windup: 0.6, aggro: 1.5, delivery: { kind: 'self', radius: 30 }, description: 'Ultimate. Flood the whole battlefield with light: potency 1100 to every enemy in sight.', effects: [dmg(1100), { kind: 'stagger', amount: 50 }] }),
 ];
 
 // ── Mage: Staff (healer) ────────────────────────────────────────────────────────────────────
@@ -257,8 +268,8 @@ export const SKILLS: Record<string, SkillDef> = Object.fromEntries(skills.map((s
 export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
   (
     [
-      { id: 'tank_greatsword', role: 'tank', name: 'Greatsword', style: 'Warden', ranged: false, reach: 1, description: 'Wide cleaves and crowd control: drag enemies together, stun them in lines, leap in to crush them.', basic: { interval: 0.85, hits: tgBasic }, skills: tgSkills },
-      { id: 'sword_shield', role: 'tank', name: 'Sword & Shield', style: 'Guardian', ranged: false, reach: 1, description: 'A paladin’s sword and shield: a shield that turns blows, a bash that stuns, and holy light that smites foes and cures the party.', basic: { interval: 0.65, hits: ssBasic }, skills: ssSkills },
+      { id: 'tank_greatsword', role: 'tank', name: 'Greatsword', style: 'Dark Knight', ranged: false, reach: 1, description: 'A dark knight’s greatsword: charge into the crowd, sweep it with Eclipse, drain its life to heal, and spend your own blood on Ruination.', basic: { interval: 0.85, hits: tgBasic }, skills: tgSkills },
+      { id: 'sword_shield', role: 'tank', name: 'Sword & Shield', style: 'Guardian', ranged: false, reach: 1, description: 'A paladin’s sword and shield: flash into the fight, mend your own wounds, block everything and throw it back, and flood the field with light.', basic: { interval: 0.65, hits: ssBasic }, skills: ssSkills },
       { id: 'staff', role: 'mage', name: 'Staff', style: 'Sage', ranged: true, healer: true, reach: 9, description: 'The party’s lifeline: healing circles, a sanctuary, meteors and the power to raise the fallen.', basic: { interval: 0.55, hits: stBasic }, skills: stSkills },
       { id: 'mystic_sword', role: 'mage', name: 'Mystic Sword & Wand', style: 'Spellblade', ranged: false, reach: 1.2, description: 'A sword in one hand and a wand in the other: arcane slashes, lightning, wards and a healing sigil.', basic: { interval: 0.55, hits: msBasic }, skills: msSkills },
       { id: 'bow', role: 'ranger', name: 'Longbow', style: 'Marksman', ranged: true, reach: 11, description: 'Long range and huge damage: charged shots, volleys, traps and a fan of arrows.', basic: { interval: 0.5, hits: bwBasic }, skills: bwSkills },
@@ -274,16 +285,16 @@ export const ROLES: Record<RoleId, RoleDef> = {
     id: 'tank',
     name: 'Warrior',
     tagline: 'Hold the line',
-    description: 'The most health and stamina in the party. Crowd control and taunts keep enemies on you, and Rallying Bulwark shields everyone. He swings a greatsword; she is a Guardian, with sword, shield and healing light.',
+    description: 'The only one who can take the monsters’ blows. Your attacks build three times the aggro, your skills hold it, and monsters cling to you, but in a long fight you need a healer. He is a Dark Knight with a greatsword; she is a Guardian with sword, shield and light.',
     color: '#4f8dff',
-    hp: 13000,
+    hp: 16000,
     mp: 0,
     stamina: 150,
     staminaRegen: 30,
     power: 200,
     healPower: 200,
-    defense: 0.75,
-    enmity: 5,
+    defense: 0.55,
+    enmity: 3,
     speed: 5.7,
     weapons: ['tank_greatsword', 'sword_shield'],
     roleSkills: ['challenge', 'rallyingBulwark'],

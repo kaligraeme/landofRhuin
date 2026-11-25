@@ -69,6 +69,10 @@ export class Hud {
   private tCastFill = h('div', { class: 'fill' });
   private tStatus = h('div', { class: 'tf-status' });
   private tTot = h('div', { class: 'tf-tot' });
+  /** The threat meter: who holds the target's aggro, and how close everyone else is. */
+  private tThreat = h('div', { class: 'tf-threat' });
+  /** Above the hotbar: you are pulling aggro, you have it, or (for a tank) monsters are loose. */
+  private aggroAlert = h('div', { class: 'aggro-alert' });
   private dutyName = h('div', { class: 'duty-name' });
   private dutyMeta = h('div', { class: 'duty-meta' });
   private dutyObj = h('div', { class: 'duty-obj' });
@@ -113,7 +117,7 @@ export class Hud {
     const castBar = h('div', { class: 'bar cast' }, this.tCastFill);
     this.tCast.append(this.tCastName, castBar);
     this.tStagger.append(h('div', { class: 'tf-stagger-lbl' }, 'Stagger'), h('div', { class: 'bar stagger' }, this.tStaggerFill));
-    this.target.append(h('div', { class: 'tf-head' }, this.tName, this.tSub, this.tPct), this.tBar, this.tStagger, this.tCast, this.tStatus, this.tTot);
+    this.target.append(h('div', { class: 'tf-head' }, this.tName, this.tSub, this.tPct), this.tBar, this.tStagger, this.tCast, this.tStatus, this.tTot, this.tThreat);
     // Hotbar.
     const hotbar = h('div', { class: 'hud-panel hotbar interactive' });
     world.hotbar.forEach((id, i) => {
@@ -164,7 +168,7 @@ export class Hud {
       ),
       this.target,
       h('div', { style: 'right:16px;top:16px;width:270px;display:flex;flex-direction:column;gap:10px' }, h('div', { class: 'hud-panel duty-panel', style: 'position:static;width:auto' }, this.dutyName, this.dutyMeta, this.dutyObj), h('div', { class: 'hud-panel minimap', style: 'position:static;width:auto' }, this.mini)),
-      h('div', { class: 'hotbar-wrap' }, this.errorEl, this.castBar, meBars, hotbar),
+      h('div', { class: 'hotbar-wrap' }, this.errorEl, this.aggroAlert, this.castBar, meBars, hotbar),
       h('div', { class: 'hud-panel log interactive' }, this.logLines, this.chatInput),
       this.banner,
       this.countdown,
@@ -306,6 +310,7 @@ export class Hud {
       this.ko.classList.toggle('show', !!meSnap.d);
     }
     this.updateTarget(targetId, now);
+    this.updateAggroAlert(me);
     // Raidwide warning: flash the screen edges just before it lands.
     const raid = world.telegraphs.some((t) => t.style === 'raidwide' && t.end - now < 0.9 && t.end - now > 0);
     this.flash.classList.toggle('on', raid);
@@ -371,6 +376,74 @@ export class Hud {
     }
     const tot = s.t != null ? this.world.ents.get(s.t) : undefined;
     this.tTot.textContent = tot ? `Targeting ${tot.id === this.world.meId ? 'you' : tot.spawn.name}` : '';
+    this.updateThreat(t.spawn.team === 'enemy' ? s.ag : undefined, s.a);
+  }
+
+  /** Bars of who holds the target's aggro (100%) and how close the others are. */
+  private updateThreat(table: [number, number][] | undefined, holder: number | undefined): void {
+    const key = JSON.stringify([table, holder]);
+    if (this.tThreat.dataset.key === key) return;
+    this.tThreat.dataset.key = key;
+    if (!table?.length) {
+      clear(this.tThreat);
+      return;
+    }
+    const rows = table.map(([id, pct]) => {
+      const who = this.world.ents.get(id);
+      const role = (who?.spawn.role ?? 'tank') as RoleId;
+      const mine = id === this.world.meId;
+      return h(
+        'div',
+        { class: `threat-row${mine ? ' me' : ''}${id === holder ? ' holder' : ''}`, title: id === holder ? 'Holds its aggro' : `${pct}% of the top` },
+        h('span', { class: 'threat-name', style: `color:${ROLES[role].color}` }, mine ? 'You' : (who?.spawn.name ?? '?')),
+        h('div', { class: 'threat-bar' }, h('div', { class: 'threat-fill', style: `width:${pct}%` })),
+        h('span', { class: 'threat-pct' }, `${pct}%`),
+      );
+    });
+    clear(this.tThreat, h('div', { class: 'threat-title' }, 'Aggro'), ...rows);
+  }
+
+  /**
+   * A warning by the hotbar. Not a tank: you are close to pulling a monster off whoever holds it,
+   * or something has come for you. A tank: monsters near you are loose on the party.
+   */
+  private updateAggroAlert(me: { x: number; y: number }): void {
+    const world = this.world;
+    const meEnt = world.meEntity();
+    if (!meEnt || meEnt.snap.d) {
+      this.aggroAlert.className = 'aggro-alert';
+      return;
+    }
+    const tank = meEnt.spawn.role === 'tank';
+    let onMe = 0;
+    let loose = 0;
+    let closest = 0;
+    for (const e of world.enemies()) {
+      if (e.removed || e.diedAt || e.snap.a === undefined || Math.hypot(e.x - me.x, e.y - me.y) > 24) continue;
+      if (e.snap.a === world.meId) onMe++;
+      else {
+        const holder = world.ents.get(e.snap.a);
+        if (tank && holder?.spawn.role !== 'tank') loose++;
+        const mine = e.snap.ag?.find(([id]) => id === world.meId)?.[1] ?? 0;
+        if (holder?.spawn.role === 'tank') closest = Math.max(closest, mine);
+      }
+    }
+    let cls = '';
+    let text = '';
+    if (tank) {
+      if (loose) {
+        cls = 'loose';
+        text = `${loose} loose on the party — grab ${loose === 1 ? 'it' : 'them'}!`;
+      }
+    } else if (onMe) {
+      cls = 'have';
+      text = `You have aggro! ${onMe === 1 ? 'It is' : `${onMe} are`} coming for you — get to the tank`;
+    } else if (closest >= 85) {
+      cls = 'pulling';
+      text = `Pulling aggro: ${closest}% of the tank — ease off`;
+    }
+    this.aggroAlert.className = `aggro-alert${cls ? ` show ${cls}` : ''}`;
+    if (this.aggroAlert.textContent !== text) this.aggroAlert.textContent = text;
   }
 
   private updateParty(targetId: number | null): void {
