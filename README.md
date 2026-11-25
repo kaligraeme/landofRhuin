@@ -190,7 +190,7 @@ lobby. The melodies are new.
 | The Bloodtusk Stronghold | Orc dungeons | D minor with a Phrygian snarl, 152 bpm: fuzz-guitar riffs and double kick, low horns, anvils on the backbeat, shouted chants and a half-time stomp |
 | The Cinder Sanctum | Dragon dungeons | G minor at a full-throttle 168: a choppy chanted hook, rock drums under galloping staccato strings and power chords, a march into a chorus where horns and choir turn bright |
 | The Barrow of Sorrows | Undead dungeons | C minor in a rolling 6/8: one haunting, singable theme, first on a cello over an oud and war drums, then on low horns with a wordless choir, a duduk over the bridge |
-| The Last Sovereign | While a boss fights you | D minor in a pounding 6/8: band, choir stabs, horns and violin |
+| The Last Sovereign | While a boss fights you | D minor in a pounding 6/8, the most intense track: the theme over a sixteenth-note gallop, a build where horns answer over war drums, then the theme again with a soaring violin and choir |
 | Victory | A dungeon cleared | A horn fanfare with timpani |
 | Lament | The party falls | |
 
