@@ -33,11 +33,11 @@ const run = (inst: Instance, seconds: number) => {
 describe('content', () => {
   it('matches the role and weapon design', () => {
     // Each hero carries one weapon: the man's first, then the woman's.
-    expect(ROLES.tank.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Greatsword', 'Battleaxe']);
+    expect(ROLES.tank.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Greatsword', 'Sword & Shield']);
     expect(ROLES.mage.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Staff', 'Mystic Sword & Wand']);
     expect(ROLES.ranger.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Crossbow', 'Longbow']);
     expect(ROLES.melee.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Halberd', 'Twin Blades']);
-    expect(weaponFor('tank', 'female')).toBe('battleaxe');
+    expect(weaponFor('tank', 'female')).toBe('sword_shield');
     expect(weaponFor('mage', DEFAULT_LOOK.mage)).toBe('staff');
     // Tanks are the sturdiest; rangers and melee are glass cannons, melee hitting hardest.
     expect(ROLES.tank.hp).toBeGreaterThan(ROLES.melee.hp);
@@ -179,6 +179,35 @@ describe('action combat', () => {
     useSkill(inst, tank, 'upheaval', { x: boss.x, y: boss.y });
     expect(boss.statuses.some((s) => s.id === 'staggered')).toBe(true);
     expect(boss.stagger).toBe(0);
+  });
+
+  it('the Guardian raises her shield, cures the party and smites foes into turning on her', () => {
+    const inst = new Instance('g', seats.map((seat) => (seat.role === 'tank' ? { ...seat, weapon: 'sword_shield' } : seat)), { seed: 7, countdown: 0 });
+    inst.tick();
+    const [tank, mage, ranger] = inst.players as [typeof inst.players[0], typeof inst.players[0], typeof inst.players[0]];
+    expect(hotbarFor('tank', 'sword_shield').slice(1, 6)).toEqual(['aegis', 'shieldBash', 'holySmite', 'cure', 'dawnbreaker']);
+    expect(useSkill(inst, tank, 'aegis', tank)).toBeNull();
+    expect(statSum(tank, 'dmgTaken')).toBeCloseTo(-0.6);
+    // Cure: her own wounds and an ally's nearby.
+    tank.lockUntil = 0;
+    tank.hp = 4000;
+    mage.hp = 2000;
+    mage.x = tank.x + 3;
+    mage.y = tank.y;
+    expect(useSkill(inst, tank, 'cure', tank)).toBeNull();
+    run(inst, 0.8);
+    expect(tank.hp).toBeGreaterThan(4000 + tank.maxHp * 0.19);
+    expect(mage.hp).toBeGreaterThan(2500);
+    // Holy Smite turns a foe that was after someone else.
+    const foe = inst.spawnMob('brute', tank.x + 6, tank.y, 0, 0);
+    foe.hp = foe.maxHp = 1e9;
+    inst.engage(foe);
+    foe.enmity.set(ranger.id, 50000);
+    tank.lockUntil = 0;
+    expect(useSkill(inst, tank, 'holySmite', { x: foe.x, y: foe.y })).toBeNull();
+    run(inst, 0.6);
+    expect(foe.hp).toBeLessThan(foe.maxHp);
+    expect(foe.targetId).toBe(tank.id);
   });
 
   it('statuses stack and add up', () => {

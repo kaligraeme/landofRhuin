@@ -7,7 +7,7 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
-import { spriteFor, type Sprite, type SpriteAnim } from '../art/sprites.js';
+import { spriteFor, type Facing, type Sheet, type Sprite, type SpriteAnim } from '../art/sprites.js';
 import type { Clip } from '../art/animation.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
@@ -85,7 +85,7 @@ export class Renderer {
   private zoom = 34;
   private frameDt = 1 / 60;
   /** Per-entity movement tracking for walk animation. */
-  private motion = new Map<number, { x: number; y: number; speed: number; phase: number }>();
+  private motion = new Map<number, { x: number; y: number; speed: number; phase: number; facing: Facing }>();
   /** Enemies currently fighting someone, this frame: heroes near them take a battle stance. */
   private engaged: { x: number; y: number }[] = [];
   /** Scratch canvas for flashing one animation frame white. */
@@ -1031,9 +1031,10 @@ export class Renderer {
   }
 
   /**
-   * Draws an entity standing at its position, mirrored to face its heading: an animation frame
-   * once its frames are built (heroes carry their weapons in them), otherwise the still artwork
-   * with a little bob. Flashes white when struck; knocked-out heroes lie greyed; dead monsters sink.
+   * Draws an entity standing at its position, facing its heading: an animation frame once its
+   * frames are built (heroes carry their weapons in them, and turn toward or away from the viewer
+   * as well as left and right), otherwise the still artwork with a little bob. Flashes white when
+   * struck; knocked-out heroes lie greyed; dead monsters sink.
    */
   private drawSprite(view: View, e: ClientEntity, sp: Sprite, now: number): void {
     const g = this.g;
@@ -1044,7 +1045,7 @@ export class Renderer {
     const dead = isPlayer && !!e.snap.d;
     let m = this.motion.get(e.id);
     if (!m) {
-      m = { x: e.x, y: e.y, speed: 0, phase: 0 };
+      m = { x: e.x, y: e.y, speed: 0, phase: 0, facing: 'side' };
       this.motion.set(e.id, m);
     }
     const step = Math.hypot(e.x - m.x, e.y - m.y) / this.frameDt;
@@ -1054,7 +1055,9 @@ export class Renderer {
     const moving = m.speed > 0.6 && !dead;
     const rolling = e.id === view.world.meId && view.rolling;
     const anim = sp.anim;
-    const flip = Math.cos(e.f) < -0.05;
+    const facing = this.facingOf(e, m, anim, dead);
+    const sheet: Sheet | undefined = anim && facing !== 'side' ? anim.turned?.[facing] : anim ?? undefined;
+    const flip = facing === 'side' && Math.cos(e.f) < -0.05;
     const sink = e.diedAt && !isPlayer ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
     const hitAt = view.world.lastHit.get(e.id);
     const flash = hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead ? (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1) : 0;
@@ -1062,7 +1065,7 @@ export class Renderer {
     let feetY: number;
 
     g.save();
-    if (anim) {
+    if (anim && sheet) {
       // Strides advance with distance travelled: a full stride every ~1.2 body heights.
       if (rolling) m.phase += this.frameDt * 26;
       else if (moving) m.phase += (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, H * 1.2);
@@ -1077,25 +1080,26 @@ export class Renderer {
       if (flip) g.scale(-1, 1);
       g.scale(1, 1 - sink * 0.45);
       g.imageSmoothingEnabled = false;
-      const ox = -anim.ax * k;
-      const oy = -anim.ay * k;
-      const fx = frame * anim.fw;
-      const fy = anim.rows[clip] * anim.fh;
+      const ox = -sheet.ax * k;
+      const oy = -sheet.ay * k;
+      const fx = frame * sheet.fw;
+      const fy = sheet.rows[clip] * sheet.fh;
       if (dead && anim.grey) {
-        g.drawImage(anim.grey, ox, oy, anim.fw * k, anim.fh * k);
+        g.drawImage(anim.grey, -anim.ax * k, -anim.ay * k, anim.fw * k, anim.fh * k);
       } else {
         if (rolling) {
-          // A dash: two fading after-images trail behind.
+          // A dash: two fading after-images trail behind (above when running toward the viewer).
+          const trail = facing === 'side' ? [-1, 0] : facing === 'front' ? [0, -1] : [0, 1];
           for (const [back, a] of [[1.1, 0.18], [0.55, 0.32]] as const) {
             g.globalAlpha = a;
-            g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox - back, oy, anim.fw * k, anim.fh * k);
+            g.drawImage(sheet.atlas, fx, fy, sheet.fw, sheet.fh, ox + trail[0]! * back, oy + trail[1]! * back * 0.7, sheet.fw * k, sheet.fh * k);
           }
           g.globalAlpha = 1;
         }
-        g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox, oy, anim.fw * k, anim.fh * k);
+        g.drawImage(sheet.atlas, fx, fy, sheet.fw, sheet.fh, ox, oy, sheet.fw * k, sheet.fh * k);
         if (flash > 0) {
           g.globalAlpha *= flash;
-          g.drawImage(this.whiteFrame(anim.atlas, fx, fy, anim.fw, anim.fh), 0, 0, anim.fw, anim.fh, ox, oy, anim.fw * k, anim.fh * k);
+          g.drawImage(this.whiteFrame(sheet.atlas, fx, fy, sheet.fw, sheet.fh), 0, 0, sheet.fw, sheet.fh, ox, oy, sheet.fw * k, sheet.fh * k);
         }
       }
     } else {
@@ -1124,6 +1128,20 @@ export class Renderer {
 
     this.tops.set(e.id, feetY + dy * (1 - sink * 0.45));
     this.hitBoxes.set(e.id, { x0: e.x - W * 0.28, x1: e.x + W * 0.28, y0: feetY + dy * 0.9, y1: e.y + 0.3 });
+  }
+
+  /**
+   * Which way a hero faces on screen: toward the viewer while heading down the screen, away while
+   * heading up, otherwise side on. A little hysteresis keeps a diagonal heading from flickering
+   * between the two. Monsters, and heroes whose turned frames are still being painted, stay side on.
+   */
+  private facingOf(e: ClientEntity, m: { facing: Facing }, anim: SpriteAnim | null, dead: boolean): Facing {
+    if (!anim?.turned || dead) return (m.facing = 'side');
+    const down = Math.sin(e.f);
+    const need = (f: Facing): number => (m.facing === f ? 0.62 : 0.78);
+    const want: Facing = down > need('front') ? 'front' : -down > need('back') ? 'back' : 'side';
+    m.facing = want;
+    return want === 'side' || anim.turned[want] ? want : 'side';
   }
 
   /**

@@ -221,18 +221,21 @@ function paintQuiver(c: Canvas, b: Body): void {
   }
 }
 
-const hexRamp = (a: string, b: string, cc: string): Ramp => [hex(a), hex(b), hex(cc)];
+export const hexRamp = (a: string, b: string, cc: string): Ramp => [hex(a), hex(b), hex(cc)];
 
 // ── Effects ──────────────────────────────────────────────────────────────────────────────────
 
-const SMEAR: RGB = hex('#f4f8ff');
+export const SMEAR: RGB = hex('#f4f8ff');
+
+/** The smear's body colour: white with a touch of the hero's aura. */
+export const smearColor = (tint: RGB): RGB => [Math.round((SMEAR[0] + tint[0]) / 2), Math.round((SMEAR[1] + tint[1]) / 2), Math.round((SMEAR[2] + tint[2]) / 2)];
 
 function smear(c: Canvas, kind: WeaponKind, hand: Vec, from: number, to: number, tint: RGB): void {
   const [r0, r1] = WEAPON_SHAPES[kind].reach;
   const span = to - from;
   const step = Math.max(1, (57 / Math.max(10, r1)) * 0.9);
   const n = Math.max(2, Math.ceil(Math.abs(span) / step));
-  const color: RGB = [Math.round((SMEAR[0] + tint[0]) / 2), Math.round((SMEAR[1] + tint[1]) / 2), Math.round((SMEAR[2] + tint[2]) / 2)];
+  const color = smearColor(tint);
   for (let i = 0; i < n; i++) {
     const t = i / n;
     const dir = weaponVec(from + span * t);
@@ -250,16 +253,17 @@ function smear(c: Canvas, kind: WeaponKind, hand: Vec, from: number, to: number,
   }
 }
 
-function burst(c: Canvas, p: Vec, r: number, col: RGB, a = 0.9): void {
+/** A starburst of light; `under` puts it behind the figure (a blow landing on its far side). */
+export function burst(c: Canvas, p: Vec, r: number, col: RGB, a = 0.9, under = false): void {
   for (let k = 0; k < 8; k++) {
     const ang = (k * Math.PI) / 4 + 0.3;
     const len = k % 2 ? r : r * 0.55;
-    for (let i = 1; i <= len; i++) c.glow(p[0] + Math.cos(ang) * i, p[1] + Math.sin(ang) * i, col, a * (1 - i / (len + 1)));
+    for (let i = 1; i <= len; i++) c.glow(p[0] + Math.cos(ang) * i, p[1] + Math.sin(ang) * i, col, a * (1 - i / (len + 1)), under);
   }
-  for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 4) c.glow(p[0] + x, p[1] + y, hex('#ffffff'), a);
+  for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 4) c.glow(p[0] + x, p[1] + y, hex('#ffffff'), a, under);
 }
 
-function auraRim(c: Canvas, col: RGB, k: number): void {
+export function auraRim(c: Canvas, col: RGB, k: number): void {
   const r = 2;
   for (let y = 0; y < c.h; y++) {
     for (let x = 0; x < c.w; x++) {

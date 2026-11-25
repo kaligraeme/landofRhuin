@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { HERO_DESIGNS } from '../src/client/art/heroes/designs.js';
 import { HERO_CHARGE, HERO_CLIP_LENGTH, HERO_WINDUP, heroClips, type HeroClip } from '../src/client/art/heroes/moves.js';
 import { renderHero } from '../src/client/art/heroes/render.js';
+import { renderTurned, TURNED_H, TURNED_W, TURNED_Y } from '../src/client/art/heroes/turned.js';
 import { FRAME_H, FRAME_W, GROUND_Y, solveLimb } from '../src/client/art/heroes/skeleton.js';
 import { HERO_LOOKS, ROLE_ORDER, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
 
@@ -11,7 +12,7 @@ const designs = Object.values(HERO_DESIGNS);
 /** Which painted weapon each hero's weapon kit is drawn as. */
 const DRAWN_AS: Record<string, string> = {
   tank_greatsword: 'greatsword',
-  battleaxe: 'battleaxe',
+  sword_shield: 'knightSword',
   staff: 'branchStaff',
   mystic_sword: 'mysticSword',
   crossbow: 'crossbow',
@@ -32,6 +33,7 @@ describe('hero designs', () => {
       }
     }
     expect(HERO_DESIGNS['hero-mage-female'].weapon2).toBe('wand');
+    expect(HERO_DESIGNS['hero-tank-female'].weapon2).toBe('shield');
     expect(HERO_DESIGNS['hero-melee-female'].weapon2).toBe('blade');
   });
 
@@ -84,6 +86,50 @@ describe('hero frames', () => {
     let glow = 0;
     for (let i = 3; i < charged.data.length; i += 4) if ((charged.data[i] as number) > 0 && (plain.data[i] as number) === 0) glow++;
     expect(glow).toBeGreaterThan(100);
+  });
+
+  it.each(designs.map((d) => d.id))('%s turns toward the viewer and away in every frame', (id) => {
+    const d = HERO_DESIGNS[id];
+    const clips = heroClips(d.moveset);
+    for (const clip of CLIPS) {
+      const swing = clip === 'action' || clip === 'skill';
+      clips[clip].forEach((pose, i) => {
+        const front = renderTurned(d, pose, 'front', swing);
+        const back = renderTurned(d, pose, 'back', swing);
+        for (const f of [front, back]) {
+          expect(f.w).toBe(TURNED_W);
+          expect(f.h).toBe(TURNED_H);
+          expect(opaque(f), `${id} ${clip} ${i}`).toBeGreaterThan(600);
+          if (clip === 'idle' || clip === 'battle') {
+            // Standing: the boots reach the ground line. (Mid-stride, a foot planted ahead sits
+            // higher or lower on screen, as it should.)
+            let feet = 0;
+            for (let y = TURNED_Y - 3; y <= TURNED_Y + 10; y++) for (let x = 0; x < f.w; x++) if ((f.data[(y * f.w + x) * 4 + 3] as number) === 255) feet++;
+            expect(feet, `${id} ${clip} ${i}`).toBeGreaterThan(8);
+          }
+        }
+        // Front and back are different pictures, not a mirror of each other.
+        let differ = 0;
+        for (let k = 0; k < front.data.length; k += 4) if (front.data[k] !== back.data[k] || front.data[k + 3] !== back.data[k + 3]) differ++;
+        expect(differ).toBeGreaterThan(300);
+      });
+    }
+  });
+
+  it('paints a face from the front and the back of the head from behind', () => {
+    const d = HERO_DESIGNS['hero-mage-male'];
+    const pose = heroClips(d.moveset).idle[0]!;
+    const count = (f: { data: Uint8ClampedArray }, rgb: readonly number[]) => {
+      let n = 0;
+      for (let i = 0; i < f.data.length; i += 4) if (f.data[i] === rgb[0] && f.data[i + 1] === rgb[1] && f.data[i + 2] === rgb[2] && f.data[i + 3] === 255) n++;
+      return n;
+    };
+    const front = renderTurned(d, pose, 'front', false);
+    const back = renderTurned(d, pose, 'back', false);
+    // Eyes from the front only; more grey hair from behind (his beard aside).
+    expect(count(front, [34, 24, 30])).toBe(2);
+    expect(count(back, [34, 24, 30])).toBe(0);
+    expect(count(back, d.hairdo.ramp[1])).toBeGreaterThan(count(front, d.hairdo.ramp[1]) - 20);
   });
 
   it('keeps limb lengths when solving knees and elbows', () => {

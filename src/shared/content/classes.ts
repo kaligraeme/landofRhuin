@@ -160,18 +160,18 @@ const tgSkills: WeaponDef['skills'] = [
   def({ id: 'titansVerdict', name: 'Titan’s Verdict', glyph: '▼', hue: 40, slot: 'ult', cooldown: 40, iframes: 0.4, delivery: { kind: 'leap', range: 9, radius: 5 }, description: 'Ultimate. Leap to your aim and smash down: potency 420 and a 2s stun.', effects: [dmg(420), { kind: 'stun', duration: 2 }, { kind: 'stagger', amount: 70 }] }),
 ];
 
-// ── Warrior: Battleaxe ─────────────────────────────────────────────────────────────────────────
-const baBasic = chain('battleaxe', 'Axe Chop', '⚒', 5, [
-  { delivery: arc(2.8, 110), potency: 110 },
-  { delivery: arc(2.8, 110), potency: 110 },
-  { delivery: arc(3, 140), potency: 170, effects: [{ kind: 'stagger', amount: 3 }] },
+// ── Warrior: Sword & Shield (the Guardian) ──────────────────────────────────────────────────────
+const ssBasic = chain('sword_shield', 'Guardian’s Edge', '⚔', 48, [
+  { delivery: arc(2.9, 120), potency: 120 },
+  { delivery: arc(2.9, 120), potency: 120 },
+  { delivery: arc(2.7, 110), potency: 175, effects: [{ kind: 'stagger', amount: 4 }] },
 ]);
-const baSkills: WeaponDef['skills'] = [
-  def({ id: 'ironHide', name: 'Iron Hide', glyph: '♥', hue: 350, slot: 'special', cooldown: 10, description: 'For 4s take 30% less damage and heal for 30% of the damage you deal.', effects: [{ kind: 'status', status: 'ironHide', duration: 4, to: 'self' }] }),
-  def({ id: 'cleavingSpin', name: 'Cleaving Spin', glyph: '◎', hue: 10, slot: 'q', cooldown: 7, delivery: { kind: 'self', radius: 4.5 }, description: 'Spin with your axe: potency 180 to everything around you, and they turn on you.', effects: [dmg(180), { kind: 'taunt' }] }),
-  def({ id: 'hurlAxe', name: 'Hurl Axe', glyph: '⚒', hue: 20, slot: 'e', cooldown: 9, delivery: { kind: 'projectile', speed: 18, radius: 0.6, range: 13, look: 'axe' }, description: 'Throw a hand axe: potency 180 and a 1.5s stun.', effects: [dmg(180), { kind: 'stun', duration: 1.5 }, { kind: 'stagger', amount: 20 }] }),
-  def({ id: 'warStomp', name: 'War Stomp', glyph: '≋', hue: 30, slot: 'r', cooldown: 14, delivery: { kind: 'self', radius: 6 }, description: 'Stomp the ground: potency 120, a 1.5s stun and a slow around you.', effects: [dmg(120), { kind: 'stun', duration: 1.5 }, { kind: 'status', status: 'slow', duration: 4, to: 'hit' }, { kind: 'stagger', amount: 30 }] }),
-  def({ id: 'bloodstorm', name: 'Bloodstorm', glyph: '✺', hue: 355, slot: 'ult', cooldown: 40, delivery: { kind: 'self', radius: 5 }, description: 'Ultimate. A whirlwind of blood: potency 450 around you, heal 20% of your max HP, and every enemy hit turns on you.', effects: [dmg(450), { kind: 'healPct', pct: 0.2, to: 'self' }, { kind: 'taunt' }, { kind: 'stagger', amount: 40 }] }),
+const ssSkills: WeaponDef['skills'] = [
+  def({ id: 'aegis', name: 'Aegis', glyph: '◈', hue: 48, slot: 'special', cooldown: 8, description: 'Raise your shield for 2s: 60% less damage taken.', effects: [{ kind: 'status', status: 'aegis', duration: 2, to: 'self' }] }),
+  def({ id: 'shieldBash', name: 'Shield Bash', glyph: '▣', hue: 40, slot: 'q', cooldown: 8, delivery: thrust(3.4, 2.4), description: 'Slam your shield into the foes before you: potency 170, a 1.5s stun, and they turn on you.', effects: [dmg(170), { kind: 'stun', duration: 1.5 }, { kind: 'taunt' }, { kind: 'stagger', amount: 25 }] }),
+  def({ id: 'holySmite', name: 'Holy Smite', glyph: '✦', hue: 52, slot: 'e', cooldown: 9, delivery: { kind: 'ground', radius: 3, range: 12, delay: 0.4 }, description: 'A lance of light strikes your aim: potency 250 to every foe there, and they turn on you.', effects: [dmg(250), { kind: 'taunt' }, { kind: 'stagger', amount: 10 }] }),
+  def({ id: 'cure', name: 'Cure', glyph: '✚', hue: 55, slot: 'r', cooldown: 15, windup: 0.5, delivery: { kind: 'self', radius: 8 }, description: 'Bathe in healing light: restore 20% of your max HP and heal allies within 8 tiles (potency 380).', effects: [{ kind: 'healPct', pct: 0.2, to: 'self' }, { kind: 'heal', potency: 380, to: 'area' }] }),
+  def({ id: 'dawnbreaker', name: 'Dawnbreaker', glyph: '☀', hue: 50, slot: 'ult', cooldown: 45, windup: 0.4, delivery: { kind: 'self', radius: 6 }, description: 'Ultimate. Call down the dawn: potency 450 to every foe within 6 tiles (they turn on you), and the whole party heals 20% of max HP and gains a barrier of 10%.', effects: [dmg(450), { kind: 'taunt' }, { kind: 'stagger', amount: 40 }, { kind: 'healPct', pct: 0.2, to: 'party' }, { kind: 'barrier', pct: 0.1, to: 'party' }] }),
 ];
 
 // ── Mage: Staff (healer) ────────────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
   (
     [
       { id: 'tank_greatsword', role: 'tank', name: 'Greatsword', style: 'Warden', ranged: false, reach: 1, description: 'Wide cleaves and crowd control: drag enemies together, stun them in lines, leap in to crush them.', basic: { interval: 0.85, hits: tgBasic }, skills: tgSkills },
-      { id: 'battleaxe', role: 'tank', name: 'Battleaxe', style: 'Berserker', ranged: false, reach: 1, description: 'Relentless chops that heal you, a thrown axe that stuns, and a stomp that locks down a crowd.', basic: { interval: 0.7, hits: baBasic }, skills: baSkills },
+      { id: 'sword_shield', role: 'tank', name: 'Sword & Shield', style: 'Guardian', ranged: false, reach: 1, description: 'A paladin’s sword and shield: a shield that turns blows, a bash that stuns, and holy light that smites foes and cures the party.', basic: { interval: 0.65, hits: ssBasic }, skills: ssSkills },
       { id: 'staff', role: 'mage', name: 'Staff', style: 'Sage', ranged: true, healer: true, reach: 9, description: 'The party’s lifeline: healing circles, a sanctuary, meteors and the power to raise the fallen.', basic: { interval: 0.55, hits: stBasic }, skills: stSkills },
       { id: 'mystic_sword', role: 'mage', name: 'Mystic Sword & Wand', style: 'Spellblade', ranged: false, reach: 1.2, description: 'A sword in one hand and a wand in the other: arcane slashes, lightning, wards and a healing sigil.', basic: { interval: 0.55, hits: msBasic }, skills: msSkills },
       { id: 'bow', role: 'ranger', name: 'Longbow', style: 'Marksman', ranged: true, reach: 11, description: 'Long range and huge damage: charged shots, volleys, traps and a fan of arrows.', basic: { interval: 0.5, hits: bwBasic }, skills: bwSkills },
@@ -274,7 +274,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     id: 'tank',
     name: 'Warrior',
     tagline: 'Hold the line',
-    description: 'The most health and stamina in the party. Crowd control and taunts keep enemies on you, and Rallying Bulwark shields everyone.',
+    description: 'The most health and stamina in the party. Crowd control and taunts keep enemies on you, and Rallying Bulwark shields everyone. He swings a greatsword; she is a Guardian, with sword, shield and healing light.',
     color: '#4f8dff',
     hp: 13000,
     mp: 0,
@@ -285,7 +285,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 0.75,
     enmity: 5,
     speed: 5.7,
-    weapons: ['tank_greatsword', 'battleaxe'],
+    weapons: ['tank_greatsword', 'sword_shield'],
     roleSkills: ['challenge', 'rallyingBulwark'],
   },
   mage: {

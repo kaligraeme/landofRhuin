@@ -46,7 +46,7 @@ const list: StatusDef[] = [
 
   // Tank
   { id: 'parry', name: 'Parry', description: 'Blade raised to parry: 75% less damage taken.', glyph: '⟋', color: '#8fb8ff', debuff: false, dmgTaken: -0.75 },
-  { id: 'ironHide', name: 'Iron Hide', description: '30% less damage taken, and damage dealt heals for 30% of it.', glyph: '♥', color: '#ff7a7a', debuff: false, dmgTaken: -0.3, lifesteal: 0.3 },
+  { id: 'aegis', name: 'Aegis', description: 'Shield raised: 60% less damage taken.', glyph: '◈', color: '#ffe38a', debuff: false, dmgTaken: -0.6 },
   { id: 'bulwark', name: 'Rallying Bulwark', description: 'Protected by the Warrior’s rally: 20% less damage taken.', glyph: '⛨', color: '#9cc4ff', debuff: false, dmgTaken: -0.2 },
 
   // Mage

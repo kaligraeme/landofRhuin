@@ -1,8 +1,9 @@
 /**
  * Loads the cast and builds their animation frames. Monsters animate their artwork (see
  * animation.ts); heroes are painted frame by frame from a skeleton, wielding their weapons, with
- * faces cut from their artwork (see heroes/). Frames are built in the background a step at a
- * time, so the game never stalls, and packed into one atlas per sprite: a row per clip.
+ * faces cut from their artwork (see heroes/), side on and also turned toward and away from the
+ * viewer. Frames are built in the background a step at a time, so the game never stalls, and
+ * packed into an atlas per sprite and facing: a row per clip.
  */
 import { DEFAULT_LOOK, HERO_LOOKS, type HeroLook, type RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
@@ -14,20 +15,31 @@ import { HERO_DESIGNS } from './heroes/designs.js';
 import { HERO_CHARGE, HERO_CLIP_LENGTH, HERO_WINDUP, heroClips } from './heroes/moves.js';
 import { cropHead, renderHero } from './heroes/render.js';
 import { ANCHOR_X, GROUND_Y } from './heroes/skeleton.js';
+import { renderTurned, TURNED_X, TURNED_Y } from './heroes/turned.js';
 
 /** Tiles per pixel of hero art: heroes stand about 2 tiles tall. */
 export const HERO_TILE = 2.17 / 96;
 
-/** A sprite's animation: every clip's frames in one atlas, a row per clip. */
-export interface SpriteAnim {
+/** Every clip's frames for one facing, in one atlas: a row per clip. */
+export interface Sheet {
   atlas: HTMLCanvasElement;
   fw: number;
   fh: number;
-  /** The feet, in frame pixels, and tiles per frame pixel. */
+  /** The feet, in frame pixels. */
   ax: number;
   ay: number;
-  scale: number;
   rows: Record<Clip, number>;
+}
+
+/** Which way a sprite is drawn: side on (mirrored to face left), toward the viewer or away. */
+export type Facing = 'side' | 'front' | 'back';
+
+/** A sprite's animation: every clip's frames in one atlas, a row per clip. */
+export interface SpriteAnim extends Sheet {
+  /** Tiles per frame pixel. */
+  scale: number;
+  /** Heroes also face toward the viewer and away; these arrive once painted. */
+  turned?: Partial<Record<'front' | 'back', Sheet>>;
   lengths: Record<Clip, number>;
   /** Frames of the attack that wind up, and of the skill that gather power. */
   windup: number;
@@ -171,7 +183,10 @@ function* monsterSteps(sprite: Sprite): Generator<void> {
   };
 }
 
-/** Heroes: paint every pose of every clip, one clip per step. */
+/**
+ * Heroes: paint every pose of every clip, one clip per step: side on first (the hero animates as
+ * soon as that is done), then turned toward the viewer and away.
+ */
 function* heroSteps(sprite: Sprite): Generator<void> {
   const design = HERO_DESIGNS[sprite.id as keyof typeof HERO_DESIGNS];
   const head = cropHead(rasterOf(sprite.img), design);
@@ -184,7 +199,7 @@ function* heroSteps(sprite: Sprite): Generator<void> {
   yield;
   const first = frames.idle[0] as Raster;
   const { atlas, rows } = pack(frames, first.w, first.h);
-  sprite.anim = {
+  const anim: SpriteAnim = {
     atlas,
     fw: first.w,
     fh: first.h,
@@ -198,7 +213,22 @@ function* heroSteps(sprite: Sprite): Generator<void> {
     strike: 0.4,
     release: 0.7,
     grey: greyOf(atlas, first.w, first.h, 0, rows.idle * first.h),
+    turned: {},
   };
+  sprite.anim = anim;
+  for (const facing of ['front', 'back'] as const) {
+    const turned = {} as Record<Clip, Raster[]>;
+    for (const clip of CLIPS) {
+      yield;
+      // Attacks and skills swing on a slant across the body.
+      const swing = clip === 'action' || clip === 'skill';
+      turned[clip] = clips[clip].map((pose) => renderTurned(design, pose, facing, swing));
+    }
+    yield;
+    const f = turned.idle[0] as Raster;
+    const packed = pack(turned, f.w, f.h);
+    (anim.turned ??= {})[facing] = { atlas: packed.atlas, rows: packed.rows, fw: f.w, fh: f.h, ax: TURNED_X, ay: TURNED_Y };
+  }
 }
 
 // ── The cast ─────────────────────────────────────────────────────────────────────────────────

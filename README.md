@@ -78,7 +78,7 @@ choosing your hero chooses your weapon.
 
 | Role | Strengths | His weapon | Her weapon |
 | --- | --- | --- | --- |
-| **Warrior** (tank) | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, two-handed | Battleaxe, two-handed |
+| **Warrior** (tank) | The most health and stamina, crowd control and taunts. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, two-handed | Sword and shield: the Guardian, a paladin with healing light |
 | **Mage** | Offensive and healing spells. | Branch staff, two-handed (the healer) | Mystic sword and a wand |
 | **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | Crossbow | Longbow |
 | **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Halberd, two-handed | Twin blades |
@@ -86,7 +86,7 @@ choosing your hero chooses your weapon.
 | Weapon | Style | Special (RMB) · Q · E · R · Ultimate (F) |
 | --- | --- | --- |
 | Greatsword (Warrior) | Warden | Parry · Upheaval (line stun) · Gravity Sweep (pulls enemies in) · Earthsplitter · Titan's Verdict (leap and stun) |
-| Battleaxe | Berserker | Iron Hide (damage heals you) · Cleaving Spin · Hurl Axe (stun) · War Stomp · Bloodstorm |
+| Sword & Shield (Warrior) | Guardian | Aegis (shield up: 60% less damage) · Shield Bash (stun and taunt) · Holy Smite (light at your aim; foes turn on you) · Cure (heals you and allies nearby) · Dawnbreaker (smites all around, heals and shields the party) |
 | Staff | Sage (healer) | Mending Light (heal circle) · Arcane Orb · Sanctuary (healing ground) · Meteor · Resurrection |
 | Mystic Sword & Wand | Spellblade | Runic Ward (barriers) · Spellblade Rush · Arc Lightning · Lifebinding Sigil (damage and heal) · Astral Cleave |
 | Crossbow | Arbalist | Piercing Bolt · Explosive Bolt · Tumble Shot · Scattershot · Siege Barrage |
@@ -108,11 +108,17 @@ about 750 to 800 and Warriors about 500.
 ## Heroes and clans
 
 Every role has a man and a woman to choose from in the lobby, each with their own weapon. The
-Warriors wear steel plate and crimson capes, the Mages embroidered robes, the Rangers green
-cloaks and quivers, and the Duelists light leathers and red scarves. Weapons are part of each
-hero's animation, held the way they are meant to be held: two-handed greatswords, axes, staves
-and halberds, the Mage's sword and wand, the Ranger's crossbow and longbow, and the Duelist's
+Warrior wears dark steel and a crimson cape; the Guardian polished plate, a white tabard and a
+blue cape. The Mages wear embroidered robes, the Rangers green cloaks and quivers, and the
+Duelists light leathers and red scarves. Weapons are part of each hero's animation, held the way
+they are meant to be held: the two-handed greatsword, staff and halberd, the Guardian's sword and
+kite shield, the Mage's sword and wand, the Ranger's crossbow and longbow, and the Duelist's
 twin blades.
+
+Heroes turn to face where they are aiming: side on to the left and right, toward you when they
+face down the screen and away from you when they face up it, in every clip.
+
+![Every hero toward you, side on and away, through every clip](docs/screenshots/hero-facings.webp)
 
 ![Every hero in their battle stance](docs/screenshots/hero-appearances.jpg)
 
@@ -122,11 +128,11 @@ Every hero, monster and boss is animated through five clips:
 
 | Clip | When it plays | Heroes |
 | --- | --- | --- |
-| **Idle** | Out of combat | Relaxed, breathing: the greatsword rests on a shoulder, the staff is leaned on, the halberd planted |
-| **Battle** | While a fight is on nearby | A low, wide fighting stance, weapon raised and ready, bouncing on the balls of the feet |
+| **Idle** | Out of combat | Relaxed, breathing: the greatsword rests on a shoulder, the Guardian's sword hangs point down, the staff is leaned on, the halberd planted |
+| **Battle** | While a fight is on nearby | A low, wide fighting stance, weapon raised and ready (the Guardian's behind her shield), bouncing on the balls of the feet |
 | **Move** | Running | A full sprint: long strides, a hard forward lean, capes, scarves and hair streaming, dust kicked up |
-| **Action** | Basic attacks | A big wind-up, then the weapon's own blow with a motion smear: an overhead cleave, a two-handed chop, a thrust of the staff, a rising slash, a crossbow shot, a drawn and loosed arrow, a lunging sweep, a crossing double cut |
-| **Skill** | Skills and spells | Gathering a glow in the role's colour, then the weapon's signature move: a leaping slam that cracks the ground, a whirlwind of axe strokes, a magic circle and a blast of light, a three-bolt volley, arrows loosed at the sky, a spinning halberd, a storm of blades |
+| **Action** | Basic attacks | A big wind-up, then the weapon's own blow with a motion smear: an overhead cleave, a cut over the shield's rim, a thrust of the staff, a rising slash, a crossbow shot, a drawn and loosed arrow, a lunging sweep, a crossing double cut |
+| **Skill** | Skills and spells | Gathering a glow in the role's colour, then the weapon's signature move: a leaping slam that cracks the ground, a sword raised to gather light and driven into the ground in a burst, a magic circle and a blast of light, a three-bolt volley, arrows loosed at the sky, a spinning halberd, a storm of blades |
 
 Monsters and bosses walk, stand ready, lunge and gather their clan's glow the same way. Dodging
 plays as a dash with after-images.
@@ -159,8 +165,15 @@ rigid object such as a totem, and the rig is posed frame by frame, bending the o
 
 The heroes are painted frame by frame (`heroes/`): a skeleton is posed for every frame
 (`moves.ts` holds the choreography), knees and elbows are solved to reach the feet and hands, and
-the body, robes, capes, hair and weapon are drawn on it as outlined, cel-shaded pixel shapes. Each
-hero's face and hair are cut from their artwork in `creatures/`.
+the body, robes, capes, hair and weapon are drawn on it as outlined, cel-shaded pixel shapes. Side
+on, each hero's face and hair are cut from their artwork in `creatures/`.
+
+For the front and back (`turned.ts`), the same choreography is lifted into 3D: the body gets its
+breadth, hands and weapons their place to either side, and blows swing on a slant so they sweep
+across the body. The figure is then drawn from in front or behind through the dungeon's tilted
+camera, so whatever is nearer the viewer sits lower on screen. Faces and the backs of heads are
+painted from each hero's hairdo (`heads.ts`): cut, colour, beard and ears. Side-on frames are
+painted first so a hero animates at once; the turned ones follow in the background.
 
 ## Music
 

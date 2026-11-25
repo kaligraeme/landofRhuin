@@ -113,7 +113,7 @@ describe('lobby', () => {
     lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
     expect(a.lobby().you).toMatchObject({ role: 'tank', look: 'male', weapon: 'tank_greatsword' });
     lobby.handle(a.id, { t: 'appearance', look: 'female' }, 0);
-    expect(a.lobby().you).toMatchObject({ look: 'female', weapon: 'battleaxe' });
+    expect(a.lobby().you).toMatchObject({ look: 'female', weapon: 'sword_shield' });
     // The look carries over to a new role, and brings that role's weapon.
     lobby.handle(a.id, { t: 'loadout', role: 'melee' }, 0);
     expect(a.lobby().you).toMatchObject({ role: 'melee', look: 'female', weapon: 'greatsword' });

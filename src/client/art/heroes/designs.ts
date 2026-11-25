@@ -5,9 +5,10 @@
  */
 import type { HeroLook, RoleId } from '../../../shared/content/classes.js';
 import { hex, ramp, type Ramp, type RGB } from './paint.js';
+import type { Hairdo } from './heads.js';
 import type { WeaponKind } from './weapons.js';
 
-export type Moveset = 'greatsword' | 'battleaxe' | 'staff' | 'swordWand' | 'crossbow' | 'longbow' | 'halberd' | 'twinBlades';
+export type Moveset = 'greatsword' | 'swordShield' | 'staff' | 'swordWand' | 'crossbow' | 'longbow' | 'halberd' | 'twinBlades';
 
 export interface HeroDesign {
   id: `hero-${RoleId}-${HeroLook}`;
@@ -36,6 +37,8 @@ export interface HeroDesign {
   scarf?: Ramp;
   /** Long hair falling down the back. */
   hair?: { ramp: Ramp; length: number };
+  /** Hair and beard as seen from the front and behind (side on, they come from the artwork). */
+  hairdo: Hairdo;
   quiver?: boolean;
   /** Skill glow. */
   aura: RGB;
@@ -74,28 +77,32 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     kneepad: ramp('#a2a6b4', '#666a78', '#3c3e48'),
     skirt: { kind: 'tassets', ramp: ramp('#80848f', '#52555f', '#2f313a') },
     cape: { ramp: CRIMSON, length: 40 },
+    hairdo: { style: 'medium', ramp: ramp('#4a4a5c', '#2a2a36', '#16161e') },
     aura: WARRIOR_GOLD,
   },
+  // The Guardian: a paladin in polished plate and a white tabard, sword in hand and shield on arm.
   'hero-tank-female': {
     id: 'hero-tank-female',
-    moveset: 'battleaxe',
-    weapon: 'battleaxe',
+    moveset: 'swordShield',
+    weapon: 'knightSword',
+    weapon2: 'shield',
     head: { x0: 27, y0: 1, x1: 47, y1: 14, neckX: 38, neckY: 14 },
     build: 1.05,
     skin: SKIN,
-    chest: ramp('#cbb896', '#8e7c60', '#564a38'),
-    front: CRIMSON,
+    chest: ramp('#e2e6ee', '#a4acbc', '#606a7e'),
+    front: ramp('#fbf8f0', '#d8d0bc', '#948a72'),
     trim: GOLD,
-    belt: DARK_LEATHER,
-    sleeve: ramp('#b8a682', '#7e6e54', '#4c4232'),
-    glove: ramp('#9a8a6c', '#66593f', '#3c3424'),
-    pauldron: ramp('#d6c4a0', '#9a8868', '#5e523e'),
-    pants: ramp('#9a8a6c', '#66593f', '#3c3424'),
-    boot: ramp('#7a6a52', '#4e4232', '#2c251c'),
-    kneepad: ramp('#d6c4a0', '#9a8868', '#5e523e'),
-    skirt: { kind: 'tassets', ramp: ramp('#b8a682', '#7e6e54', '#4c4232') },
-    cape: { ramp: CRIMSON, length: 38 },
-    aura: WARRIOR_GOLD,
+    belt: ramp('#8a6a44', '#5e4630', '#36281a'),
+    sleeve: ramp('#c8ced8', '#8a92a4', '#525a6c'),
+    glove: ramp('#d6dce6', '#98a0b0', '#5a6274'),
+    pauldron: ramp('#f2f4f8', '#b8bfcc', '#727b8e'),
+    pants: ramp('#9aa2b2', '#646c7e', '#3a4050'),
+    boot: ramp('#b8bfcc', '#7a8294', '#464c5c'),
+    kneepad: ramp('#f2f4f8', '#b8bfcc', '#727b8e'),
+    skirt: { kind: 'tassets', ramp: ramp('#d6dbe4', '#9aa2b2', '#5c6476') },
+    cape: { ramp: ramp('#5a7ad8', '#34509e', '#1c2c60'), length: 38 },
+    hairdo: { style: 'bun', ramp: ramp('#6e4a36', '#462c1e', '#26160e') },
+    aura: hex('#fff0a8'),
   },
   'hero-mage-male': {
     id: 'hero-mage-male',
@@ -113,6 +120,7 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     pants: ramp('#4a3a46', '#30263a', '#1c1624'),
     boot: BOOT,
     skirt: { kind: 'robe', ramp: ramp('#5a6cc0', '#36448c', '#1e2654') },
+    hairdo: { style: 'short', ramp: ramp('#e4e4ea', '#acacb6', '#6e6e7a'), beard: 'full' },
     aura: MAGE_VIOLET,
   },
   'hero-mage-female': {
@@ -133,6 +141,7 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     boot: BOOT,
     skirt: { kind: 'robe', ramp: ramp('#8c66c8', '#5c3f96', '#35205e') },
     hair: { ramp: ramp('#f4f2fa', '#c8c4dc', '#8e8aa8'), length: 26 },
+    hairdo: { style: 'long', ramp: ramp('#f4f2fa', '#c8c4dc', '#8e8aa8'), length: 26 },
     aura: MAGE_VIOLET,
   },
   'hero-ranger-male': {
@@ -153,6 +162,7 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     skirt: { kind: 'coat', ramp: GREEN_CLOAK },
     cape: { ramp: GREEN_CLOAK, length: 32 },
     quiver: true,
+    hairdo: { style: 'short', ramp: ramp('#ec8a48', '#b85a24', '#743410'), beard: 'short' },
     aura: RANGER_GREEN,
   },
   'hero-ranger-female': {
@@ -174,6 +184,7 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     cape: { ramp: GREEN_CLOAK, length: 30 },
     hair: { ramp: ramp('#ec9254', '#bc5e2c', '#783618'), length: 22 },
     quiver: true,
+    hairdo: { style: 'long', ramp: ramp('#ec9254', '#bc5e2c', '#783618'), length: 22, elf: true },
     aura: RANGER_GREEN,
   },
   'hero-melee-male': {
@@ -193,6 +204,7 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     boot: BOOT,
     skirt: { kind: 'tunic', ramp: ramp('#a47c5a', '#704e36', '#463020') },
     scarf: ramp('#de4a50', '#a8242e', '#64121a'),
+    hairdo: { style: 'messy', ramp: ramp('#946446', '#643e28', '#3c2416') },
     aura: DUELIST_RED,
   },
   'hero-melee-female': {
@@ -214,6 +226,7 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     skirt: { kind: 'tunic', ramp: ramp('#a47c5a', '#704e36', '#463020') },
     scarf: ramp('#de4a50', '#a8242e', '#64121a'),
     hair: { ramp: ramp('#946446', '#643e28', '#3c2416'), length: 20 },
+    hairdo: { style: 'ponytail', ramp: ramp('#946446', '#643e28', '#3c2416'), length: 20 },
     aura: DUELIST_RED,
   },
 };

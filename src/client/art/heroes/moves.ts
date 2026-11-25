@@ -88,37 +88,38 @@ const greatsword = (): Clips =>
     ],
   });
 
-// ── Warrior: battleaxe ───────────────────────────────────────────────────────────────────────
+// ── Warrior: the Guardian's sword and shield ─────────────────────────────────────────────────
 
-const battleaxe = (): Clips =>
-  build({ ...FIGHT, handF: [8, 9], weapon: 35, wind: 0.2 }, {
-    // The axe hangs from one hand, head down by her boot.
-    idle: (i) => ({ ...STAND, y: 1 + wave(i, 6), handF: [5, 20], handB: [-3, 21 + wave(i, 6)], weapon: 170, behind: false }),
-    battle: (i) => ({ y: 5 + wave(i, 6) * 2, handF: [8, 8 + wave(i, 6)], weapon: 32 + wave(i, 6) * 5 }),
-    move: (i) => ({ handF: [10 + pump(i, 1), 13], weapon: 62 + pump(i, 3) }),
-    // A huge two-handed chop from over the shoulder down to the floor.
+const swordShield = (): Clips =>
+  build({ ...FIGHT, handF: [6, 6], weapon: 52, handB: [13, 7], weapon2: 3, front2: true, wind: 0.2 }, {
+    // At ease: sword point down at her side, shield on her arm.
+    idle: (i) => ({ ...STAND, y: 1 + wave(i, 6), handF: [5, 19 + wave(i, 6)], weapon: 172, handB: [5, 13], weapon2: 8, front2: false }),
+    // Shield up and forward, sword cocked over its rim.
+    battle: (i) => ({ y: 5 + wave(i, 6) * 2, handF: [0, -1 - wave(i, 6)], weapon: 32 + wave(i, 6) * 4, handB: [15, 7 + wave(i, 6)], weapon2: 2 }),
+    move: (i) => ({ handF: [-2 + pump(i, 3), 15], weapon: -135 + pump(i, 4), handB: [10, 9], weapon2: 20, behind: true }),
+    // Behind the shield, a big overhead cut that comes down over its rim.
     action: [
-      { x: -2, y: 4, lean: -4, handF: [-2, -4], bendF: -1, weapon: -95, behind: true, wind: 0.4 },
-      { x: -4, y: 6, lean: -14, footF: [12, 0], footB: [-15, 0], handF: [-7, -8], bendF: -1, weapon: -140, behind: true, wind: 0.4 },
-      { x: 4, y: 3, lean: 18, footF: [17, 0], footB: [-14, 0], handF: [10, -6], weapon: 40, wind: 0.6, fx: { smear: -140 } },
-      { x: 9, y: 9, lean: 36, footF: [20, 0], footB: [-16, 0], handF: [17, 14], weapon: 150, wind: 0.7, fx: { smear: 40, impact: true, dust: true } },
-      { x: 9, y: 10, lean: 38, footF: [20, 0], footB: [-16, 0], handF: [15, 18], weapon: 170, wind: 0.5, fx: { smear: 150 } },
-      { x: 8, y: 9, lean: 34, footF: [20, 0], footB: [-16, 0], handF: [15, 18], weapon: 172, wind: 0.3 },
-      { x: 4, y: 6, lean: 22, handF: [11, 11], weapon: 95, wind: 0.2 },
-      { handF: [9, 9], weapon: 42 },
+      { x: -1, y: 4, lean: -2, handF: [-3, -6], bendF: -1, weapon: -95, behind: true, handB: [14, 6], weapon2: 0, wind: 0.3 },
+      { x: -3, y: 5, lean: -10, footF: [12, 0], footB: [-14, 0], handF: [-6, -9], bendF: -1, weapon: -130, behind: true, handB: [15, 5], weapon2: -4, wind: 0.4 },
+      { x: 4, y: 3, lean: 16, footF: [17, 0], footB: [-14, 0], handF: [12, -6], weapon: 40, handB: [10, 9], weapon2: 8, wind: 0.6, fx: { smear: -130 } },
+      { x: 8, y: 7, lean: 30, footF: [19, 0], footB: [-15, 0], handF: [19, 10], weapon: 128, handB: [6, 10], weapon2: 14, wind: 0.7, fx: { smear: 40, impact: true, dust: true } },
+      { x: 8, y: 8, lean: 32, footF: [19, 0], footB: [-15, 0], handF: [17, 15], weapon: 158, handB: [6, 11], weapon2: 16, wind: 0.5, fx: { smear: 128 } },
+      { x: 7, y: 7, lean: 28, footF: [19, 0], footB: [-15, 0], handF: [16, 15], weapon: 160, handB: [7, 10], weapon2: 12, wind: 0.3 },
+      { x: 3, y: 5, lean: 18, handF: [10, 8], weapon: 100, handB: [11, 8], weapon2: 6 },
+      { handF: [6, 6], weapon: 55 },
     ],
-    // A spinning whirlwind: the axe sweeps across the front, round the back and across again.
+    // Light: the sword raised to the sky gathers it, then is driven into the ground in a burst.
     skill: [
-      { y: 9, lean: -4, handF: [-2, 4], weapon: -100, behind: true, fx: { aura: 0.4 } },
-      { y: 11, lean: -10, handF: [-6, 2], bendF: -1, weapon: -125, behind: true, fx: { aura: 0.7 } },
-      { y: 12, lean: -12, handF: [-7, 2], bendF: -1, weapon: -130, behind: true, fx: { aura: 1, dust: true } },
-      { x: 3, y: 7, lean: 10, handF: [18, 8], weapon: 95, wind: 0.6, fx: { smear: -130, aura: 1 } },
-      { x: 3, y: 7, lean: -6, handF: [-8, 8], bendF: -1, weapon: -95, behind: true, wind: 0.7, fx: { aura: 0.9 } },
-      { x: 3, y: 7, lean: 12, handF: [18, 8], weapon: 98, wind: 0.8, fx: { smear: -95, aura: 0.9, dust: true } },
-      { x: 3, y: 7, lean: -6, handF: [-8, 8], bendF: -1, weapon: -95, behind: true, wind: 0.8, fx: { aura: 0.8 } },
-      { x: 8, y: 10, lean: 34, footF: [19, 0], footB: [-15, 0], handF: [17, 15], weapon: 155, wind: 0.6, fx: { smear: -95, impact: true, quake: true, aura: 0.6 } },
-      { x: 5, y: 7, lean: 24, handF: [12, 12], weapon: 110, fx: { aura: 0.2 } },
-      { handF: [9, 9], weapon: 42 },
+      { y: 3, lean: -2, handF: [3, -14], weapon: 2, handB: [8, 12], weapon2: 10, fx: { aura: 0.4, circle: 0.4 } },
+      { y: 2, lean: -6, handF: [2, -17], weapon: -2, handB: [6, 13], weapon2: 12, fx: { aura: 0.7, circle: 0.7 } },
+      { y: 2, lean: -8, handF: [1, -18], weapon: -4, handB: [5, 13], weapon2: 12, fx: { aura: 1, circle: 1, flash: true } },
+      { x: 5, y: 8, lean: 30, footF: [18, 0], footB: [-14, 0], handF: [16, 12], weapon: 150, handB: [8, 10], weapon2: 14, wind: 0.6, fx: { smear: -4, aura: 1, circle: 1, impact: true, quake: true } },
+      { x: 6, y: 10, lean: 34, footF: [18, 0], footB: [-14, 0], handF: [15, 17], weapon: 175, handB: [8, 11], weapon2: 16, wind: 0.5, fx: { aura: 0.9, circle: 1, quake: true } },
+      { x: 6, y: 10, lean: 34, footF: [18, 0], footB: [-14, 0], handF: [15, 17], weapon: 175, handB: [8, 11], weapon2: 16, wind: 0.3, fx: { aura: 0.8, circle: 0.9 } },
+      { x: 6, y: 9, lean: 32, footF: [18, 0], footB: [-14, 0], handF: [15, 16], weapon: 174, handB: [9, 10], weapon2: 14, fx: { aura: 0.6, circle: 0.7 } },
+      { x: 4, y: 7, lean: 24, handF: [12, 12], weapon: 130, handB: [10, 9], weapon2: 10, fx: { aura: 0.4, circle: 0.4 } },
+      { x: 2, y: 5, lean: 16, handF: [8, 8], weapon: 80, handB: [12, 8], weapon2: 5, fx: { aura: 0.2, circle: 0.2 } },
+      { handF: [6, 6], weapon: 55 },
     ],
   });
 
@@ -323,7 +324,7 @@ const twinBlades = (): Clips =>
     ],
   });
 
-const MOVESETS: Record<Moveset, () => Clips> = { greatsword, battleaxe, staff, swordWand, crossbow, longbow, halberd, twinBlades };
+const MOVESETS: Record<Moveset, () => Clips> = { greatsword, swordShield, staff, swordWand, crossbow, longbow, halberd, twinBlades };
 
 /** Every frame's pose, clip by clip, for a weapon style. */
 export function heroClips(moveset: Moveset): Clips {
