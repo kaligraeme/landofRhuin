@@ -104,12 +104,15 @@ about 750 to 800 and Tanks about 500.
 
 ## Heroes and clans
 
-The heroes are chibi pixel art with dark outlines and three-tone shading: a brooding dark knight
-with shaggy hair over one eye, in charcoal plate with red straps, for the Tank; a long-haired
-white mage in star-blue robes for the Mage; an elvish archer for the Ranger; and a scarfed
-soldier in a steel cuirass for the Melee. Every weapon is its own pixel sprite. Heroes hold their weapon toward your aim and swing it when they attack,
-and the Sword & Shield tank carries a heater shield. Characters bob as they walk, lean into their
-strikes, flash when hit, and fall when knocked out.
+Every hero comes in a male and a female version; pick one under *Appearance* in the lobby, and
+your party sees it in the dungeon. The Tank is an armoured warrior in steel plate and a crimson
+cape, the Mage a silver-haired spellcaster in embroidered robes, the Ranger a cloaked archer with
+a quiver, and the Melee a lightly armoured duelist with a red scarf. Weapons are separate pixel
+sprites: heroes hold theirs toward your aim and swing it when they attack, and the Sword & Shield
+tank carries a heater shield. Characters bob as they walk, lean into their strikes, flash when
+hit, and fall when knocked out.
+
+![Each hero's male and female appearance](docs/screenshots/hero-appearances.jpg)
 
 Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colours and floor:
 
@@ -119,7 +122,7 @@ Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colo
 | **Dragons** | The Cinder Sanctum: obsidian, glowing lava cracks and drifting embers | Drakonid Warrior, Wyrmling, Cult Crossbowman, Flamecaller Cultist, Fire Drake, Dragon Idol | Scalebreaker Vorth, High Priestess Seraphine, Ashwing the Wyvern, the Obsidian Guardian, and Ignaroth the Elder Flame |
 | **Undead** | The Barrow of Sorrows: cold stone, graves, cobwebs and green mist | Skeleton Warrior, Ghoul, Skeleton Archer, Necromancer, Bone Abomination, Cursed Obelisk | Sir Morgrave the Death Knight, Lich Vessanthe, Grimmaw the Bone Hound, the Wailing Warden, and Mortheus the Dread King |
 
-![The pixel heroes with their weapons, and every monster and boss](docs/screenshots/bestiary.jpg)
+![Every hero, monster and boss](docs/screenshots/bestiary.jpg)
 
 | Orcs | Dragons | Undead |
 | --- | --- | --- |
