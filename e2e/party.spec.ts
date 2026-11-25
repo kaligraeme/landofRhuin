@@ -24,15 +24,13 @@ test('two players form a party, queue with AI fill and clear the first room toge
   await enter(alice, 'Alice');
   await enter(bob, 'Bob');
 
-  // Alice plays a ranger with the Crossbow; Bob joins her party by code and plays melee.
+  // Alice plays the male Ranger, who carries the Crossbow; Bob joins her party by code and plays a Duelist.
   await alice.locator('.role-card[data-role="ranger"]').click();
-  await alice.getByRole('button', { name: /Crossbow/ }).click();
-  await expect(alice.locator('.weapon-card.selected')).toContainText('Crossbow');
-  const male = alice.getByRole('button', { name: 'Male', exact: true });
+  await expect(alice.locator('.hero-card.selected')).toContainText('Female · Longbow');
+  const male = alice.locator('.hero-card[data-look="male"]');
   await male.click();
   await expect(male).toHaveAttribute('aria-pressed', 'true');
-  await expect(alice.locator('.role-card[data-role="ranger"] img')).toHaveAttribute('src', /hero-ranger-male/);
-  await expect(alice.locator('.weapon-card.selected')).toContainText('Crossbow');
+  await expect(alice.locator('.hero-card.selected')).toContainText('Male · Crossbow');
   const code = (await alice.locator('.code-box .code').textContent())?.trim() ?? '';
   expect(code).toMatch(/^[A-Z2-9]{5}$/);
   await bob.locator('.role-card[data-role="melee"]').click();

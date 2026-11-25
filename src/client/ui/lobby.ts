@@ -1,7 +1,7 @@
 /** The lobby: character (role and weapon), party, expedition queue, ready check and chat. */
 import { READY_CHECK_SECONDS } from '../../shared/constants.js';
-import { HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
-import { HERO_LOOKS, type HeroLook, type AiFill, type LobbyState } from '../../shared/protocol.js';
+import { HERO_LOOKS, HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type RoleId } from '../../shared/content/classes.js';
+import type { AiFill, LobbyState } from '../../shared/protocol.js';
 import { clear, fmtTime, h, toast } from '../dom.js';
 import { defaultHeroLook, heroImageUrl } from '../art/sprites.js';
 import { roleIcon, skillIcon } from '../icons.js';
@@ -26,8 +26,6 @@ export class LobbyView {
   private statusEl = h('span');
   private onlineEl = h('span');
   private rejoinBtn = h('button', { class: 'btn small', style: 'display:none' }, 'Return to dungeon');
-  private lookEl = h('div', { class: 'fill-options', role: 'group', 'aria-label': 'Appearance' });
-  private lookButtons = new Map<HeroLook, HTMLButtonElement>();
   private rolesEl = h('div', { class: 'roles' });
   private roleDescEl = h('p', { class: 'role-desc' });
   private weaponsEl = h('div', { class: 'weapons' });
@@ -71,14 +69,6 @@ export class LobbyView {
       card.append(h('img', { class: 'role-art', src: heroImageUrl(role), alt: '' }), h('span', { class: 'rname' }, def.name), h('span', { class: 'rtag' }, def.tagline));
       this.rolesEl.appendChild(card);
     }
-    for (const look of HERO_LOOKS) {
-      const button = h('button', {
-        type: 'button', 'aria-pressed': 'false',
-        onclick: () => net.send({ t: 'appearance', look }),
-      }, look === 'male' ? 'Male' : 'Female');
-      this.lookButtons.set(look, button);
-      this.lookEl.appendChild(button);
-    }
     this.renderFill();
 
     const copyBtn = h('button', { class: 'btn ghost small', onclick: () => this.copyCode() }, 'Copy');
@@ -92,10 +82,9 @@ export class LobbyView {
         h(
           'section',
           { class: 'panel' },
-          h('div', { class: 'panel-title' }, 'Character', h('span', { class: 'sub' }, 'Role, appearance and weapon')),
+          h('div', { class: 'panel-title' }, 'Character', h('span', { class: 'sub' }, 'Role and hero')),
           h('div', { class: 'section' }, h('div', { class: 'label' }, 'Role'), this.rolesEl, this.roleDescEl),
-          h('div', { class: 'section' }, h('div', { class: 'label' }, 'Appearance'), this.lookEl),
-          h('div', { class: 'section' }, h('div', { class: 'label' }, 'Weapon'), this.weaponsEl),
+          h('div', { class: 'section' }, h('div', { class: 'label' }, 'Hero and weapon'), this.weaponsEl),
           h('div', { class: 'section' }, h('div', { class: 'label' }, 'Skills'), this.skillsEl),
         ),
         h(
@@ -160,7 +149,7 @@ export class LobbyView {
     if (!this.state) return;
     const current = this.state.you;
     if (current.role === role) return;
-    this.net.send({ t: 'loadout', role, weapon: ROLES[role].weapons[0] as string });
+    this.net.send({ t: 'loadout', role });
   }
 
   private renderFill(): void {
@@ -185,28 +174,31 @@ export class LobbyView {
       if (portrait && portrait.getAttribute('src') !== url) portrait.src = url;
     }
     const selectedLook = state.you.look ?? defaultHeroLook(state.you.role);
-    for (const [look, button] of this.lookButtons) {
-      button.classList.toggle('selected', look === selectedLook);
-      button.setAttribute('aria-pressed', String(look === selectedLook));
-      button.disabled = Boolean(state.queue || state.readyCheck || state.instanceId);
-    }
+    const locked = Boolean(state.queue || state.readyCheck || state.instanceId);
     const role = ROLES[state.you.role];
     this.roleDescEl.textContent = role.description;
     if (this.lastRoleRendered !== state.you.role || this.lastWeaponRendered !== state.you.weapon) {
       this.lastRoleRendered = state.you.role;
       this.lastWeaponRendered = state.you.weapon;
+      // One card per hero: the man and the woman of this role, each with their own weapon.
       clear(
         this.weaponsEl,
-        role.weapons.map((wid) => {
-          const w = WEAPONS[wid];
+        HERO_LOOKS.map((look) => {
+          const w = WEAPONS[weaponFor(state.you.role, look)];
           if (!w) return null;
-          return h(
+          const card = h(
             'button',
-            { class: `weapon-card${wid === state.you.weapon ? ' selected' : ''}`, onclick: () => this.net.send({ t: 'loadout', role: state.you.role, weapon: wid }) },
-            h('span', { class: 'wname' }, w.name, w.healer ? h('span', { class: 'healer-tag' }, 'HEALER') : null),
-            h('span', { class: 'wstyle' }, w.style),
-            h('span', { class: 'wdesc' }, w.description),
+            { class: `weapon-card hero-card${look === selectedLook ? ' selected' : ''}`, 'data-look': look, 'aria-pressed': String(look === selectedLook), onclick: () => this.net.send({ t: 'appearance', look }) },
+            h('img', { class: 'hero-card-art', src: heroImageUrl(state.you.role, look), alt: '' }),
+            h(
+              'span',
+              { class: 'hero-card-text' },
+              h('span', { class: 'wname' }, `${look === 'male' ? 'Male' : 'Female'} · ${w.name}`, w.healer ? h('span', { class: 'healer-tag' }, 'HEALER') : null),
+              h('span', { class: 'wstyle' }, w.style),
+              h('span', { class: 'wdesc' }, w.description),
+            ),
           );
+          return card;
         }),
       );
       const weapon = WEAPONS[state.you.weapon];
@@ -222,6 +214,8 @@ export class LobbyView {
         }),
       );
     }
+
+    for (const card of this.weaponsEl.querySelectorAll<HTMLButtonElement>('.hero-card')) card.disabled = locked;
 
     // Party.
     this.codeEl.textContent = state.party.code;

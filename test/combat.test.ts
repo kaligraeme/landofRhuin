@@ -3,14 +3,14 @@ import { applyStatus, basicAttack, dodge, statSum, useSkill } from '../src/serve
 import { Instance, type Seat } from '../src/server/sim/instance.js';
 import { startAbility } from '../src/server/sim/mechanics.js';
 import type { Monster } from '../src/server/sim/types.js';
-import { hotbarFor, ROLES, SKILLS, WEAPONS } from '../src/shared/content/classes.js';
+import { DEFAULT_LOOK, hotbarFor, ROLES, SKILLS, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
 import { STATUSES } from '../src/shared/content/statuses.js';
 
 const seats: Seat[] = [
-  { ownerId: 'h1', name: 'Tank', role: 'tank', weapon: 'sword_shield' },
+  { ownerId: 'h1', name: 'Warrior', role: 'tank', weapon: 'tank_greatsword' },
   { ownerId: 'h2', name: 'Mage', role: 'mage', weapon: 'staff' },
   { ownerId: 'h3', name: 'Ranger', role: 'ranger', weapon: 'bow' },
-  { ownerId: 'h4', name: 'Melee', role: 'melee', weapon: 'greatsword' },
+  { ownerId: 'h4', name: 'Duelist', role: 'melee', weapon: 'greatsword' },
 ];
 
 function setup() {
@@ -32,10 +32,13 @@ const run = (inst: Instance, seconds: number) => {
 
 describe('content', () => {
   it('matches the role and weapon design', () => {
-    expect(ROLES.tank.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Greatsword', 'Battleaxe', 'Sword & Shield']);
-    expect(ROLES.mage.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Staff', 'Mystic Sword']);
-    expect(ROLES.ranger.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Bow', 'Crossbow']);
-    expect(ROLES.melee.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Spear', 'Lance', 'Greatsword']);
+    // Each hero carries one weapon: the man's first, then the woman's.
+    expect(ROLES.tank.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Greatsword', 'Battleaxe']);
+    expect(ROLES.mage.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Staff', 'Mystic Sword & Wand']);
+    expect(ROLES.ranger.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Crossbow', 'Longbow']);
+    expect(ROLES.melee.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Halberd', 'Twin Blades']);
+    expect(weaponFor('tank', 'female')).toBe('battleaxe');
+    expect(weaponFor('mage', DEFAULT_LOOK.mage)).toBe('staff');
     // Tanks are the sturdiest; rangers and melee are glass cannons, melee hitting hardest.
     expect(ROLES.tank.hp).toBeGreaterThan(ROLES.melee.hp);
     expect(ROLES.tank.stamina).toBeGreaterThan(ROLES.melee.stamina);
@@ -89,7 +92,7 @@ describe('action combat', () => {
     }
     // 3 seconds at 0.8s per swing.
     expect(hits.length).toBeGreaterThanOrEqual(3);
-    expect(hits.slice(0, 3)).toEqual(['Reaver Slash I', 'Reaver Slash II', 'Reaver Slash III']);
+    expect(hits.slice(0, 3)).toEqual(['Twin Slash I', 'Twin Slash II', 'Twin Slash III']);
   });
 
   it('projectiles fly to the target, and walls stop them', () => {
@@ -165,7 +168,7 @@ describe('action combat', () => {
   it('crowd control stuns monsters and staggers bosses', () => {
     const { inst, tank, dummy } = setup();
     tank.x = dummy.x - 2;
-    useSkill(inst, tank, 'shieldBash', { x: dummy.x, y: dummy.y });
+    useSkill(inst, tank, 'upheaval', { x: dummy.x, y: dummy.y });
     expect(dummy.statuses.some((s) => s.id === 'stun')).toBe(true);
     const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss') as Monster;
     boss.stagger = boss.staggerMax - 10;
@@ -173,7 +176,7 @@ describe('action combat', () => {
     tank.y = boss.y;
     tank.cooldowns.clear();
     tank.lockUntil = 0;
-    useSkill(inst, tank, 'shieldBash', { x: boss.x, y: boss.y });
+    useSkill(inst, tank, 'upheaval', { x: boss.x, y: boss.y });
     expect(boss.statuses.some((s) => s.id === 'staggered')).toBe(true);
     expect(boss.stagger).toBe(0);
   });

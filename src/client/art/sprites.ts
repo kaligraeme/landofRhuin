@@ -3,7 +3,7 @@
  * copy for knocked-out heroes. Once a sprite has loaded, its animation frames are built in the
  * background (one sprite at a time, so the game never stalls) and packed into an atlas.
  */
-import type { RoleId } from '../../shared/content/classes.js';
+import { DEFAULT_LOOK, type RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import { HERO_LOOKS, type EntitySpawn, type HeroLook } from '../../shared/protocol.js';
 import { equipmentArt, WEAPON_IDS, type WeaponArt } from './weapons.js';
@@ -129,7 +129,7 @@ function buildAnim(sprite: Sprite): SpriteAnim {
 }
 
 export function defaultHeroLook(role: RoleId): HeroLook {
-  return role === 'mage' || role === 'ranger' ? 'female' : 'male';
+  return DEFAULT_LOOK[role];
 }
 
 export function heroSprite(role: RoleId, look = defaultHeroLook(role)): Sprite {

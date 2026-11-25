@@ -110,6 +110,7 @@ export interface RoleDef {
   /** Multiplier on enmity generated. */
   enmity: number;
   speed: number;
+  /** The man's weapon, then the woman's: each hero carries one. */
   weapons: string[];
   roleSkills: [string, string];
 }
@@ -145,21 +146,7 @@ def({ id: 'fieldDressing', name: 'Field Dressing', glyph: '✚', hue: 130, slot:
 def({ id: 'bloodrush', name: 'Bloodrush', glyph: '✪', hue: 10, slot: 'role', cooldown: 40, description: 'Deal 25% more damage for 12s, but take 15% more.', effects: [{ kind: 'status', status: 'bloodrush', duration: 12, to: 'self' }] });
 def({ id: 'secondWind', name: 'Second Wind', glyph: '✚', hue: 120, slot: 'role', cooldown: 40, description: 'Catch your breath: restore 25% of your max HP.', effects: [{ kind: 'healPct', pct: 0.25, to: 'self' }] });
 
-// ── Tank: Sword & Shield ────────────────────────────────────────────────────────────────────
-const ssBasic = chain('sword_shield', 'Sword Strike', '⚔', 210, [
-  { delivery: arc(2.6, 120), potency: 90 },
-  { delivery: arc(2.6, 120), potency: 90 },
-  { delivery: arc(2.8, 150), potency: 140, effects: [{ kind: 'stagger', amount: 2 }] },
-]);
-const ssSkills: WeaponDef['skills'] = [
-  def({ id: 'shieldBlock', name: 'Shield Block', glyph: '⬓', hue: 220, slot: 'special', cooldown: 6, description: 'Raise your shield for 2s: 60% less damage taken.', effects: [{ kind: 'status', status: 'guarding', duration: 2, to: 'self' }] }),
-  def({ id: 'shieldBash', name: 'Shield Bash', glyph: '⬢', hue: 50, slot: 'q', cooldown: 8, delivery: thrust(4, 2.4), description: 'Slam your shield forward: potency 160 and a 2s stun.', effects: [dmg(160), { kind: 'stun', duration: 2 }, { kind: 'stagger', amount: 25 }] }),
-  def({ id: 'rallyCharge', name: 'Rally Charge', glyph: '➤', hue: 200, slot: 'e', cooldown: 12, iframes: 0.25, delivery: { kind: 'dash', distance: 7, width: 2.4 }, description: 'Charge 7 tiles: potency 120 to everything in your path, knocking it aside and drawing its attention.', effects: [dmg(120), { kind: 'knockback', distance: 2 }, { kind: 'taunt' }] }),
-  def({ id: 'shieldThrow', name: 'Shield Throw', glyph: '◍', hue: 205, slot: 'r', cooldown: 10, delivery: { kind: 'projectile', speed: 22, radius: 0.7, range: 15, pierce: true, look: 'shield' }, description: 'Hurl your shield through a line of foes: potency 140, slows them and draws their attention.', effects: [dmg(140), { kind: 'status', status: 'slow', duration: 5, to: 'hit' }, { kind: 'taunt' }] }),
-  def({ id: 'bastion', name: 'Bastion', glyph: '▣', hue: 45, slot: 'ult', cooldown: 45, delivery: { kind: 'self', radius: 6 }, description: 'Ultimate. Plant your shield: potency 300 and a 2.5s stun around you, and take 40% less damage for 6s.', effects: [dmg(300), { kind: 'stun', duration: 2.5 }, { kind: 'stagger', amount: 60 }, { kind: 'status', status: 'bastion', duration: 6, to: 'self' }] }),
-];
-
-// ── Tank: Greatsword ────────────────────────────────────────────────────────────────────────
+// ── Warrior: Greatsword ────────────────────────────────────────────────────────────────────────
 const tgBasic = chain('tank_greatsword', 'Greatsword Cleave', '⚔', 30, [
   { delivery: arc(3.2, 160), potency: 120 },
   { delivery: arc(3.2, 160), potency: 120 },
@@ -173,7 +160,7 @@ const tgSkills: WeaponDef['skills'] = [
   def({ id: 'titansVerdict', name: 'Titan’s Verdict', glyph: '▼', hue: 40, slot: 'ult', cooldown: 40, iframes: 0.4, delivery: { kind: 'leap', range: 9, radius: 5 }, description: 'Ultimate. Leap to your aim and smash down: potency 420 and a 2s stun.', effects: [dmg(420), { kind: 'stun', duration: 2 }, { kind: 'stagger', amount: 70 }] }),
 ];
 
-// ── Tank: Battleaxe ─────────────────────────────────────────────────────────────────────────
+// ── Warrior: Battleaxe ─────────────────────────────────────────────────────────────────────────
 const baBasic = chain('battleaxe', 'Axe Chop', '⚒', 5, [
   { delivery: arc(2.8, 110), potency: 110 },
   { delivery: arc(2.8, 110), potency: 110 },
@@ -201,7 +188,7 @@ const stSkills: WeaponDef['skills'] = [
   def({ id: 'resurrection', name: 'Resurrection', glyph: '✧', hue: 55, slot: 'ult', cooldown: 60, mp: 2000, windup: 1.5, delivery: { kind: 'ground', radius: 5, range: 20 }, description: 'Ultimate. Revive every fallen ally in a circle at your aim, and heal everyone there (potency 600).', effects: [{ kind: 'raise' }, { kind: 'heal', potency: 600, to: 'area' }] }),
 ];
 
-// ── Mage: Mystic Sword ──────────────────────────────────────────────────────────────────────
+// ── Mage: Mystic Sword & Wand ──────────────────────────────────────────────────────────────────────
 const msBasic = chain('mystic_sword', 'Mystic Slash', '⟋', 290, [
   { delivery: arc(2.6, 130), potency: 110 },
   { delivery: arc(2.6, 130), potency: 110 },
@@ -215,7 +202,7 @@ const msSkills: WeaponDef['skills'] = [
   def({ id: 'astralCleave', name: 'Astral Cleave', glyph: '✹', hue: 300, slot: 'ult', cooldown: 35, mp: 800, windup: 0.5, delivery: thrust(14, 4), description: 'Ultimate. A great astral blade 14 tiles long: potency 560.', effects: [dmg(560), { kind: 'stagger', amount: 40 }] }),
 ];
 
-// ── Ranger: Bow ─────────────────────────────────────────────────────────────────────────────
+// ── Ranger: Longbow ─────────────────────────────────────────────────────────────────────────────
 const arrow = (potency: number) => ({ delivery: { kind: 'projectile', speed: 30, radius: 0.35, range: 24, look: 'arrow' } as Delivery, potency });
 const bwBasic = chain('bow', 'Quick Arrow', '➶', 95, [arrow(120), arrow(120), arrow(150)]);
 const bwSkills: WeaponDef['skills'] = [
@@ -237,8 +224,8 @@ const cbSkills: WeaponDef['skills'] = [
   def({ id: 'siegeBarrage', name: 'Siege Barrage', glyph: '⇶', hue: 25, slot: 'ult', cooldown: 35, delivery: { kind: 'projectile', speed: 32, radius: 0.4, range: 20, count: 9, spread: (30 * Math.PI) / 180, look: 'bolt' }, description: 'Ultimate. Nine bolts in a tight spread: potency 150 each.', effects: [dmg(150)] }),
 ];
 
-// ── Melee: Spear ────────────────────────────────────────────────────────────────────────────
-const spBasic = chain('spear', 'Spear Thrust', '↑', 220, [
+// ── Duelist: Halberd ────────────────────────────────────────────────────────────────────────────
+const spBasic = chain('spear', 'Halberd Thrust', '↑', 220, [
   { delivery: thrust(3.8, 1.3), potency: 125 },
   { delivery: thrust(3.8, 1.3), potency: 125 },
   { delivery: thrust(4.2, 1.6), potency: 170 },
@@ -247,36 +234,22 @@ const spSkills: WeaponDef['skills'] = [
   def({ id: 'sweepingStrike', name: 'Sweeping Strike', glyph: '◠', hue: 215, slot: 'special', cooldown: 5, delivery: arc(3.8, 200), description: 'Sweep the haft around you: potency 220, knocking foes back.', effects: [dmg(220), { kind: 'knockback', distance: 1.5 }] }),
   def({ id: 'piercingThrust', name: 'Piercing Thrust', glyph: '⇑', hue: 225, slot: 'q', cooldown: 6, delivery: thrust(6, 1.8), description: 'A lunging thrust 6 tiles long: potency 360.', effects: [dmg(360)] }),
   def({ id: 'vaultStrike', name: 'Vault Strike', glyph: '⤒', hue: 205, slot: 'e', cooldown: 10, iframes: 0.4, delivery: { kind: 'leap', range: 7, radius: 2.5 }, description: 'Pole-vault to your aim and strike: potency 250.', effects: [dmg(250)] }),
-  def({ id: 'whirlingSpear', name: 'Whirling Spear', glyph: '✣', hue: 230, slot: 'r', cooldown: 9, delivery: { kind: 'self', radius: 3.8 }, description: 'Spin the spear: potency 300 around you and slows.', effects: [dmg(300), { kind: 'status', status: 'slow', duration: 4, to: 'hit' }] }),
+  def({ id: 'whirlingSpear', name: 'Whirling Halberd', glyph: '✣', hue: 230, slot: 'r', cooldown: 9, delivery: { kind: 'self', radius: 3.8 }, description: 'Spin the halberd: potency 300 around you and slows.', effects: [dmg(300), { kind: 'status', status: 'slow', duration: 4, to: 'hit' }] }),
   def({ id: 'skewer', name: 'Skewer', glyph: '⟿', hue: 240, slot: 'ult', cooldown: 35, iframes: 0.3, delivery: { kind: 'dash', distance: 9, width: 2 }, description: 'Ultimate. Charge 9 tiles, skewering everything: potency 680.', effects: [dmg(680), { kind: 'stagger', amount: 40 }] }),
 ];
 
-// ── Melee: Lance ────────────────────────────────────────────────────────────────────────────
-const lnBasic = chain('lance', 'Lance Drive', '⇡', 45, [
-  { delivery: thrust(4.2, 1.6), potency: 160 },
-  { delivery: thrust(4.2, 1.6), potency: 160 },
-  { delivery: thrust(4.6, 2), potency: 230 },
-]);
-const lnSkills: WeaponDef['skills'] = [
-  def({ id: 'brace', name: 'Brace', glyph: '⇞', hue: 210, slot: 'special', cooldown: 8, description: 'Set your lance for 1.5s: 50% less damage taken.', effects: [{ kind: 'status', status: 'braced', duration: 1.5, to: 'self' }] }),
-  def({ id: 'lanceCharge', name: 'Lance Charge', glyph: '➠', hue: 40, slot: 'q', cooldown: 8, iframes: 0.25, delivery: { kind: 'dash', distance: 8, width: 2 }, description: 'Charge 8 tiles: potency 320 to everything in your path, knocking it aside.', effects: [dmg(320), { kind: 'knockback', distance: 2 }] }),
-  def({ id: 'impalingDrive', name: 'Impaling Drive', glyph: '⇨', hue: 50, slot: 'e', cooldown: 9, windup: 0.35, delivery: thrust(7, 2), description: 'Wind up and drive the lance 7 tiles deep: potency 460.', effects: [dmg(460)] }),
-  def({ id: 'skybreaker', name: 'Skybreaker', glyph: '⇓', hue: 200, slot: 'r', cooldown: 14, iframes: 0.45, delivery: { kind: 'leap', range: 9, radius: 3 }, description: 'Leap high and crash down at your aim: potency 380 and a 1s stun.', effects: [dmg(380), { kind: 'stun', duration: 1 }, { kind: 'stagger', amount: 20 }] }),
-  def({ id: 'valiantOnslaught', name: 'Valiant Onslaught', glyph: '⟹', hue: 45, slot: 'ult', cooldown: 40, iframes: 0.4, delivery: { kind: 'dash', distance: 12, width: 3 }, description: 'Ultimate. A thundering 12-tile charge: potency 820.', effects: [dmg(820), { kind: 'stagger', amount: 50 }] }),
-];
-
-// ── Melee: Greatsword ───────────────────────────────────────────────────────────────────────
-const mgBasic = chain('greatsword', 'Reaver Slash', '⚔', 0, [
+// ── Duelist: Twin Blades ───────────────────────────────────────────────────────────────────────
+const mgBasic = chain('greatsword', 'Twin Slash', '⚔', 0, [
   { delivery: arc(3.4, 150), potency: 175 },
   { delivery: arc(3.4, 150), potency: 175 },
   { delivery: arc(3.6, 200), potency: 260 },
 ]);
 const mgSkills: WeaponDef['skills'] = [
   def({ id: 'risingSlash', name: 'Rising Slash', glyph: '⤴', hue: 15, slot: 'special', cooldown: 6, delivery: arc(3.6, 120), description: 'An upward slash that launches foes: potency 280 and a short stun.', effects: [dmg(280), { kind: 'stun', duration: 0.8 }, { kind: 'stagger', amount: 15 }] }),
-  def({ id: 'whirlwind', name: 'Whirlwind', glyph: '◎', hue: 5, slot: 'q', cooldown: 8, delivery: { kind: 'self', radius: 4 }, description: 'Spin with the blade outstretched: potency 340 around you.', effects: [dmg(340)] }),
+  def({ id: 'whirlwind', name: 'Whirlwind', glyph: '◎', hue: 5, slot: 'q', cooldown: 8, delivery: { kind: 'self', radius: 4 }, description: 'Spin with both blades outstretched: potency 340 around you.', effects: [dmg(340)] }),
   def({ id: 'reaversLunge', name: 'Reaver’s Lunge', glyph: '⇢', hue: 355, slot: 'e', cooldown: 9, iframes: 0.25, delivery: { kind: 'dash', distance: 6, width: 2.2 }, description: 'Lunge 6 tiles: potency 260 to everything in your path.', effects: [dmg(260)] }),
-  def({ id: 'executioner', name: 'Executioner', glyph: '✠', hue: 350, slot: 'r', cooldown: 12, windup: 0.4, delivery: thrust(5, 3), execute: 1.6, description: 'A two-handed overhead chop: potency 520, and 60% more against foes below 30% health.', effects: [dmg(520)] }),
-  def({ id: 'cataclysmBlade', name: 'Cataclysm Blade', glyph: '✹', hue: 10, slot: 'ult', cooldown: 40, windup: 0.6, delivery: { kind: 'self', radius: 5.5 }, description: 'Ultimate. A ruinous spinning strike: potency 900 around you.', effects: [dmg(900), { kind: 'stagger', amount: 50 }] }),
+  def({ id: 'executioner', name: 'Executioner', glyph: '✠', hue: 350, slot: 'r', cooldown: 12, windup: 0.4, delivery: thrust(5, 3), execute: 1.6, description: 'Both blades brought down in a crossing chop: potency 520, and 60% more against foes below 30% health.', effects: [dmg(520)] }),
+  def({ id: 'cataclysmBlade', name: 'Cataclysm Blades', glyph: '✹', hue: 10, slot: 'ult', cooldown: 40, windup: 0.6, delivery: { kind: 'self', radius: 5.5 }, description: 'Ultimate. A ruinous spinning strike: potency 900 around you.', effects: [dmg(900), { kind: 'stagger', amount: 50 }] }),
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(skills.map((s) => [s.id, s]));
@@ -286,14 +259,12 @@ export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
     [
       { id: 'tank_greatsword', role: 'tank', name: 'Greatsword', style: 'Warden', ranged: false, reach: 1, description: 'Wide cleaves and crowd control: drag enemies together, stun them in lines, leap in to crush them.', basic: { interval: 0.85, hits: tgBasic }, skills: tgSkills },
       { id: 'battleaxe', role: 'tank', name: 'Battleaxe', style: 'Berserker', ranged: false, reach: 1, description: 'Relentless chops that heal you, a thrown axe that stuns, and a stomp that locks down a crowd.', basic: { interval: 0.7, hits: baBasic }, skills: baSkills },
-      { id: 'sword_shield', role: 'tank', name: 'Sword & Shield', style: 'Guardian', ranged: false, reach: 1, description: 'The steadiest defender: shield block, a stunning bash, a thrown shield and a charge that gathers foes.', basic: { interval: 0.6, hits: ssBasic }, skills: ssSkills },
       { id: 'staff', role: 'mage', name: 'Staff', style: 'Sage', ranged: true, healer: true, reach: 9, description: 'The party’s lifeline: healing circles, a sanctuary, meteors and the power to raise the fallen.', basic: { interval: 0.55, hits: stBasic }, skills: stSkills },
-      { id: 'mystic_sword', role: 'mage', name: 'Mystic Sword', style: 'Spellblade', ranged: false, reach: 1.2, description: 'Sword and sorcery up close: arcane slashes, lightning, wards and a healing sigil.', basic: { interval: 0.55, hits: msBasic }, skills: msSkills },
-      { id: 'bow', role: 'ranger', name: 'Bow', style: 'Marksman', ranged: true, reach: 11, description: 'Long range and huge damage: charged shots, volleys, traps and a fan of arrows.', basic: { interval: 0.5, hits: bwBasic }, skills: bwSkills },
+      { id: 'mystic_sword', role: 'mage', name: 'Mystic Sword & Wand', style: 'Spellblade', ranged: false, reach: 1.2, description: 'A sword in one hand and a wand in the other: arcane slashes, lightning, wards and a healing sigil.', basic: { interval: 0.55, hits: msBasic }, skills: msSkills },
+      { id: 'bow', role: 'ranger', name: 'Longbow', style: 'Marksman', ranged: true, reach: 11, description: 'Long range and huge damage: charged shots, volleys, traps and a fan of arrows.', basic: { interval: 0.5, hits: bwBasic }, skills: bwSkills },
       { id: 'crossbow', role: 'ranger', name: 'Crossbow', style: 'Arbalist', ranged: true, reach: 9, description: 'Rapid bolts, explosive shots, a shrapnel blast and a tumble to escape danger.', basic: { interval: 0.36, hits: cbBasic }, skills: cbSkills },
-      { id: 'spear', role: 'melee', name: 'Spear', style: 'Lancer', ranged: false, reach: 2.4, description: 'Fast thrusts with long reach, sweeping strikes, a vault and a skewering charge.', basic: { interval: 0.5, hits: spBasic }, skills: spSkills },
-      { id: 'lance', role: 'melee', name: 'Lance', style: 'Cavalier', ranged: false, reach: 2.6, description: 'Heavy thrusts and thundering charges that cross the battlefield.', basic: { interval: 0.65, hits: lnBasic }, skills: lnSkills },
-      { id: 'greatsword', role: 'melee', name: 'Greatsword', style: 'Reaver', ranged: false, reach: 1.4, description: 'The biggest hits in Rhuin: sweeping slashes, whirlwinds and an executioner’s chop.', basic: { interval: 0.8, hits: mgBasic }, skills: mgSkills },
+      { id: 'spear', role: 'melee', name: 'Halberd', style: 'Halberdier', ranged: false, reach: 2.4, description: 'An axe-blade on a long haft: fast thrusts with long reach, sweeping cuts, a vault and a skewering charge.', basic: { interval: 0.5, hits: spBasic }, skills: spSkills },
+      { id: 'greatsword', role: 'melee', name: 'Twin Blades', style: 'Reaver', ranged: false, reach: 1.4, description: 'A blade in each hand and the biggest hits in Rhuin: sweeping slashes, whirlwinds and an executioner’s cross-cut.', basic: { interval: 0.8, hits: mgBasic }, skills: mgSkills },
     ] satisfies WeaponDef[]
   ).map((w) => [w.id, w]),
 );
@@ -314,14 +285,14 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 0.75,
     enmity: 5,
     speed: 5.7,
-    weapons: ['tank_greatsword', 'battleaxe', 'sword_shield'],
+    weapons: ['tank_greatsword', 'battleaxe'],
     roleSkills: ['challenge', 'rallyingBulwark'],
   },
   mage: {
     id: 'mage',
     name: 'Mage',
     tagline: 'Spells to harm and heal',
-    description: 'Offensive and healing spells. The Staff keeps the party alive; the Mystic Sword fights up close with spellblade magic.',
+    description: 'Offensive and healing spells. His Staff keeps the party alive; her Mystic Sword and wand fight up close with spellblade magic.',
     color: '#c77dff',
     hp: 6200,
     mp: 10000,
@@ -350,7 +321,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 1.15,
     enmity: 1,
     speed: 6.4,
-    weapons: ['bow', 'crossbow'],
+    weapons: ['crossbow', 'bow'],
     roleSkills: ['vault', 'fieldDressing'],
   },
   melee: {
@@ -368,7 +339,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 1.2,
     enmity: 1,
     speed: 6.4,
-    weapons: ['spear', 'lance', 'greatsword'],
+    weapons: ['spear', 'greatsword'],
     roleSkills: ['bloodrush', 'secondWind'],
   },
 };
@@ -388,8 +359,20 @@ export function hotbarFor(role: RoleId, weaponId: string): string[] {
 
 export const HOTBAR_KEYS = ['LMB', 'RMB', 'Q', 'E', 'R', 'F', '1', '2', '3', 'Space'];
 
-export function isValidLoadout(role: unknown, weapon: unknown): role is RoleId {
-  return typeof role === 'string' && role in ROLES && typeof weapon === 'string' && WEAPONS[weapon]?.role === role;
+export function isRole(role: unknown): role is RoleId {
+  return typeof role === 'string' && role in ROLES;
+}
+
+/** Each hero comes as a man or a woman, and each carries one weapon of their own. */
+export const HERO_LOOKS = ['male', 'female'] as const;
+export type HeroLook = (typeof HERO_LOOKS)[number];
+
+/** The look a hero has until the player picks one: the Mage defaults to the healer. */
+export const DEFAULT_LOOK: Record<RoleId, HeroLook> = { tank: 'male', mage: 'male', ranger: 'female', melee: 'male' };
+
+/** The weapon a hero carries: each role lists the man's weapon first, then the woman's. */
+export function weaponFor(role: RoleId, look: HeroLook): string {
+  return ROLES[role].weapons[look === 'male' ? 0 : 1] as string;
 }
 
 /** The weapon a basic-attack skill belongs to. */

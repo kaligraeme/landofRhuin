@@ -45,10 +45,8 @@ const list: StatusDef[] = [
   { id: 'rhuinWard', name: 'Ward of Rhuin', description: 'The party has no Staff healer: 15% less damage taken, and health slowly returns in combat.', glyph: '❂', color: '#ffd98a', debuff: false, dmgTaken: -0.15, hot: true },
 
   // Tank
-  { id: 'guarding', name: 'Shield Block', description: 'Shield raised: 60% less damage taken.', glyph: '⬓', color: '#5aa0ff', debuff: false, dmgTaken: -0.6, speed: -0.4 },
   { id: 'parry', name: 'Parry', description: 'Blade raised to parry: 75% less damage taken.', glyph: '⟋', color: '#8fb8ff', debuff: false, dmgTaken: -0.75 },
   { id: 'ironHide', name: 'Iron Hide', description: '30% less damage taken, and damage dealt heals for 30% of it.', glyph: '♥', color: '#ff7a7a', debuff: false, dmgTaken: -0.3, lifesteal: 0.3 },
-  { id: 'bastion', name: 'Bastion', description: '40% less damage taken.', glyph: '▣', color: '#7fb0ff', debuff: false, dmgTaken: -0.4 },
   { id: 'bulwark', name: 'Rallying Bulwark', description: 'Protected by the Warrior’s rally: 20% less damage taken.', glyph: '⛨', color: '#9cc4ff', debuff: false, dmgTaken: -0.2 },
 
   // Mage
@@ -61,7 +59,6 @@ const list: StatusDef[] = [
 
   // Melee
   { id: 'bloodrush', name: 'Bloodrush', description: '25% more damage dealt, but 15% more damage taken.', glyph: '✪', color: '#ff5a3c', debuff: false, dmgDealt: 0.25, dmgTaken: 0.15 },
-  { id: 'braced', name: 'Braced', description: 'Lance set against the charge: 50% less damage taken.', glyph: '⇞', color: '#b8c4d6', debuff: false, dmgTaken: -0.5 },
 ];
 
 export const STATUSES: Record<string, StatusDef> = Object.fromEntries(list.map((s) => [s.id, s]));

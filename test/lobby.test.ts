@@ -15,14 +15,15 @@ describe('lobby', () => {
     const lobby = new Lobby({ instance: { enemyHp: 0.2 } });
     const a = client(lobby, 'Alice');
     const b = client(lobby, 'Bob');
-    lobby.handle(a.id, { t: 'loadout', role: 'tank', weapon: 'battleaxe' }, 0);
+    lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
+    lobby.handle(a.id, { t: 'appearance', look: 'female' }, 0);
     lobby.handle(b.id, { t: 'party.join', code: a.lobby().party.code }, 0);
     expect(a.lobby().party.members.map((m) => m.name)).toEqual(['Alice', 'Bob']);
 
     // Same role twice cannot queue.
     lobby.handle(a.id, { t: 'queue.join', aiFill: 10 }, 0);
     expect(a.last('error')?.message).toMatch(/different role/);
-    lobby.handle(b.id, { t: 'loadout', role: 'melee', weapon: 'spear' }, 0);
+    lobby.handle(b.id, { t: 'loadout', role: 'melee' }, 0);
     // Only the leader can queue.
     lobby.handle(b.id, { t: 'queue.join', aiFill: 10 }, 0);
     expect(b.last('error')?.message).toMatch(/leader/);
@@ -63,8 +64,9 @@ describe('lobby', () => {
     const lobby = new Lobby();
     const a = client(lobby, 'Alice');
     const b = client(lobby, 'Bob');
-    lobby.handle(a.id, { t: 'loadout', role: 'tank', weapon: 'sword_shield' }, 0);
-    lobby.handle(b.id, { t: 'loadout', role: 'mage', weapon: 'mystic_sword' }, 0);
+    lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
+    lobby.handle(b.id, { t: 'loadout', role: 'mage' }, 0);
+    lobby.handle(b.id, { t: 'appearance', look: 'female' }, 0);
     lobby.handle(a.id, { t: 'queue.join', aiFill: null }, 0);
     lobby.handle(b.id, { t: 'queue.join', aiFill: 0 }, 100);
     // Bob's AI fill pulls Alice in only if she accepts AI; she does not, so Bob goes alone.
@@ -103,5 +105,23 @@ describe('lobby', () => {
     expect(lobby.players.get(id)!.conn).toBe(newConn);
     lobby.disconnect(id, 30, newConn);
     expect(lobby.players.get(id)!.conn).toBeNull();
+  });
+
+  it('gives each hero their own weapon: the look picks it', () => {
+    const lobby = new Lobby();
+    const a = client(lobby, 'Alice');
+    lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
+    expect(a.lobby().you).toMatchObject({ role: 'tank', look: 'male', weapon: 'tank_greatsword' });
+    lobby.handle(a.id, { t: 'appearance', look: 'female' }, 0);
+    expect(a.lobby().you).toMatchObject({ look: 'female', weapon: 'battleaxe' });
+    // The look carries over to a new role, and brings that role's weapon.
+    lobby.handle(a.id, { t: 'loadout', role: 'melee' }, 0);
+    expect(a.lobby().you).toMatchObject({ role: 'melee', look: 'female', weapon: 'greatsword' });
+    lobby.handle(a.id, { t: 'appearance', look: 'male' }, 0);
+    expect(a.lobby().you.weapon).toBe('spear');
+    lobby.handle(a.id, { t: 'loadout', role: 'mage' }, 0);
+    expect(a.lobby().you.weapon).toBe('staff');
+    lobby.handle(a.id, { t: 'loadout', role: 'ranger' }, 0);
+    expect(a.lobby().you.weapon).toBe('crossbow');
   });
 });

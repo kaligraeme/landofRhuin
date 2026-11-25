@@ -20,10 +20,10 @@ function clear(seats: Seat[], seed: number) {
 
 describe('a full dungeon run with four AI companions', () => {
   it.each([
-    [101, party('sword_shield', 'staff', 'bow', 'spear')],
-    [202, party('tank_greatsword', 'staff', 'crossbow', 'lance')],
-    [303, party('battleaxe', 'staff', 'bow', 'greatsword')],
-    [404, party('sword_shield', 'mystic_sword', 'crossbow', 'greatsword')],
+    [101, party('tank_greatsword', 'staff', 'bow', 'spear')],
+    [202, party('battleaxe', 'staff', 'crossbow', 'greatsword')],
+    [303, party('battleaxe', 'staff', 'bow', 'spear')],
+    [404, party('tank_greatsword', 'mystic_sword', 'crossbow', 'greatsword')],
   ])('seed %i clears every boss', (seed, seats) => {
     const inst = clear(seats, seed);
     expect(inst.phase).toBe('complete');

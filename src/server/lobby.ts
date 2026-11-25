@@ -4,8 +4,8 @@
  */
 import { randomBytes, randomUUID } from 'node:crypto';
 import { READY_CHECK_SECONDS, SNAPSHOT_EVERY } from '../shared/constants.js';
-import { isValidLoadout, ROLE_ORDER, ROLES, WEAPONS, type RoleId } from '../shared/content/classes.js';
-import type { AiFill, ClientMsg, HeroLook, LobbyState, PartyView, QueueView, ReadyCheckView, ServerMsg } from '../shared/protocol.js';
+import { DEFAULT_LOOK, HERO_LOOKS, isRole, ROLE_ORDER, weaponFor, type HeroLook, type RoleId } from '../shared/content/classes.js';
+import type { AiFill, ClientMsg, LobbyState, PartyView, QueueView, ReadyCheckView, ServerMsg } from '../shared/protocol.js';
 import { generateDungeon } from './dungeonGen.js';
 import { findMatches, assemble, rolesFree, type QueueEntry } from './matchmaker.js';
 import { Instance, type InstanceOptions, type Seat } from './sim/instance.js';
@@ -19,7 +19,9 @@ interface LobbyPlayer {
   token: string;
   name: string;
   role: RoleId;
+  /** Unset until the player picks one; the role's default look applies meanwhile. */
   look?: HeroLook;
+  /** Follows from the role and the look. */
   weapon: string;
   partyId: string;
   conn: Conn | null;
@@ -65,6 +67,8 @@ export function cleanName(raw: unknown): string | null {
   return name.length >= 2 ? name : null;
 }
 
+const lookOf = (p: LobbyPlayer): HeroLook => p.look ?? DEFAULT_LOOK[p.role];
+
 export class Lobby {
   players = new Map<string, LobbyPlayer>();
   parties = new Map<string, Party>();
@@ -98,7 +102,7 @@ export class Lobby {
       return existing.id;
     }
     const id = randomUUID();
-    const p: LobbyPlayer = { id, token: randomBytes(16).toString('hex'), name, role: 'tank', weapon: 'sword_shield', partyId: '', conn, lastSeen: now, instanceId: null };
+    const p: LobbyPlayer = { id, token: randomBytes(16).toString('hex'), name, role: 'tank', weapon: weaponFor('tank', DEFAULT_LOOK.tank), partyId: '', conn, lastSeen: now, instanceId: null };
     this.players.set(id, p);
     this.newSoloParty(p);
     conn.send({ t: 'welcome', playerId: id, token: p.token, name });
@@ -134,10 +138,11 @@ export class Lobby {
         const busy = this.busy(p);
         if (busy) return this.error(p, busy);
         p.look = msg.look;
+        p.weapon = weaponFor(p.role, msg.look);
         return this.broadcastLobby(now);
       }
       case 'loadout':
-        return this.setLoadout(p, msg.role, msg.weapon, now);
+        return this.setRole(p, msg.role, now);
       case 'party.join':
         return this.joinParty(p, String(msg.code ?? ''), now);
       case 'party.leave':
@@ -208,12 +213,12 @@ export class Lobby {
     return null;
   }
 
-  private setLoadout(p: LobbyPlayer, role: unknown, weapon: unknown, now: number): void {
-    if (!isValidLoadout(role, weapon)) return this.error(p, 'That weapon does not belong to that role.');
+  private setRole(p: LobbyPlayer, role: unknown, now: number): void {
+    if (!isRole(role)) return this.error(p, 'Choose a valid role.');
     const busy = this.busy(p);
     if (busy) return this.error(p, busy);
     p.role = role;
-    p.weapon = weapon as string;
+    p.weapon = weaponFor(role, lookOf(p));
     this.broadcastLobby(now);
   }
 
@@ -320,7 +325,7 @@ export class Lobby {
         for (const id of e.memberIds) {
           const m = this.players.get(id);
           if (m) {
-            seats.push({ ownerId: m.id, name: m.name, role: m.role, weapon: m.weapon, look: m.look });
+            seats.push({ ownerId: m.id, name: m.name, role: m.role, weapon: m.weapon, look: lookOf(m) });
             usedNames.add(m.name);
           }
         }
@@ -328,11 +333,9 @@ export class Lobby {
       for (const role of match.aiRoles) {
         const name = BOT_NAMES.filter((n) => !usedNames.has(n))[Math.floor(Math.random() * 8)] ?? 'Companion';
         usedNames.add(name);
-        const weapons = ROLES[role].weapons;
-        // AI mages always bring the healing weapon so an AI-filled party has a healer.
-        const healer = weapons.find((w) => WEAPONS[w]?.healer);
-        const weapon = role === 'mage' && healer ? healer : (weapons[Math.floor(Math.random() * weapons.length)] as string);
-        seats.push({ ownerId: null, name, role, weapon });
+        // AI Mages are always the Staff-carrying healer, so an AI-filled party has one.
+        const look: HeroLook = role === 'mage' ? 'male' : (HERO_LOOKS[Math.floor(Math.random() * 2)] as HeroLook);
+        seats.push({ ownerId: null, name, role, weapon: weaponFor(role, look), look });
       }
       seats.sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
       const seed = Math.floor(Math.random() * 2 ** 31);
@@ -450,7 +453,7 @@ export class Lobby {
   lobbyState(p: LobbyPlayer, now: number): LobbyState {
     const party = this.parties.get(p.partyId) ?? this.newSoloParty(p);
     return {
-      you: { id: p.id, name: p.name, role: p.role, weapon: p.weapon, look: p.look },
+      you: { id: p.id, name: p.name, role: p.role, weapon: p.weapon, look: lookOf(p) },
       party: this.partyView(party),
       queue: this.queueView(party.id),
       readyCheck: this.readyView(p.id),

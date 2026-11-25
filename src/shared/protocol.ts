@@ -1,5 +1,5 @@
 /** Messages between the browser client and the game server, sent as JSON over a WebSocket. */
-import type { RoleId } from './content/classes.js';
+import type { HeroLook, RoleId } from './content/classes.js';
 import type { BossKind, MobKind, ThemeId } from './content/monsters.js';
 import type { Shape } from './geometry.js';
 
@@ -65,8 +65,7 @@ export interface LobbyState {
 
 export type TelegraphStyle = 'aoe' | 'stack' | 'spread' | 'buster' | 'raidwide' | 'ally';
 
-export const HERO_LOOKS = ['male', 'female'] as const;
-export type HeroLook = (typeof HERO_LOOKS)[number];
+export { HERO_LOOKS, type HeroLook } from './content/classes.js';
 
 export interface EntitySpawn {
   id: number;
@@ -238,7 +237,8 @@ export interface InstanceStart {
 export type ClientMsg =
   | { t: 'hello'; name: string; token?: string }
   | { t: 'appearance'; look: HeroLook }
-  | { t: 'loadout'; role: RoleId; weapon: string }
+  /** Pick a role; the weapon follows from the role and the hero's look. */
+  | { t: 'loadout'; role: RoleId }
   | { t: 'party.join'; code: string }
   | { t: 'party.leave' }
   | { t: 'party.kick'; playerId: string }
