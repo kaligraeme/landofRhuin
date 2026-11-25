@@ -139,7 +139,8 @@ What that means in a fight:
 
 - Standing still with a pack of three on them, a Duelist, Ranger or Mage falls in 3 to 5 seconds.
   Fighting back with no Warrior to run to, every one of them falls to a wave of five within 2 to
-  11 seconds. Against three, one now and then scrapes a win on a sliver of health.
+  11 seconds. A pack of only three is a fairer fight: the Reaver beats it about half the time,
+  other damage dealers now and then, and the Sage can hold out for a minute by healing.
 - A Warrior lasts far longer: about 11 seconds standing still, and much longer fighting.
 - Alone against a wave of five, the Dark Knight falls in 19 to 27 seconds and the Guardian in 30
   to 50. A Guardian who outlasts one wave falls to the next. With the Staff healer behind them,
