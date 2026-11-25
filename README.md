@@ -131,8 +131,8 @@ Each dungeon is the lair of one clan, with its own monsters, bosses, rooms, colo
 
 The heroes, monsters and bosses use transparent pixel sprite assets in `src/client/art/creatures/`.
 Each sprite has a ground anchor and a display height, and heroes also have a grip point for
-their separately rendered weapons. Weapons and the Guardian's shield are drawn on a pixel grid
-in `src/client/art/weapons.ts`.
+their separately rendered weapons. Weapons and the Guardian's shield use matching transparent pixel sprites in
+`src/client/art/equipment/`, with grip points for aiming and attack animations.
 
 ## How a run works
 

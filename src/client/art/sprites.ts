@@ -5,7 +5,7 @@
 import type { RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import { HERO_LOOKS, type EntitySpawn, type HeroLook } from '../../shared/protocol.js';
-import { shieldArt, WEAPON_ART, type WeaponArt } from './weapons.js';
+import { equipmentArt, WEAPON_IDS, type WeaponArt } from './weapons.js';
 import { creatureArt, type CreatureArt } from './creature-art.js';
 
 export interface Sprite {
@@ -83,7 +83,7 @@ export function preloadClan(clan: ThemeId): void {
   for (const role of ['tank', 'mage', 'ranger', 'melee'] as RoleId[]) {
     for (const look of HERO_LOOKS) heroSprite(role, look);
   }
-  for (const weapon of Object.keys(WEAPON_ART)) weaponSprite(weapon);
+  for (const weapon of WEAPON_IDS) weaponSprite(weapon);
   shieldSprite();
   for (const mob of ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as MobKind[]) spriteFor({ id: 0, kind: 'mob', team: 'enemy', name: '', radius: 1, mob }, clan);
   for (const boss of ['juggernaut', 'hexer', 'beast', 'warden', 'sovereign'] as BossKind[]) spriteFor({ id: 0, kind: 'boss', team: 'enemy', name: '', radius: 1, boss }, clan);
@@ -97,28 +97,29 @@ export interface WeaponSprite {
 
 const weapons = new Map<string, WeaponSprite>();
 
-function loadWeapon(key: string, make: () => WeaponArt): WeaponSprite {
+function loadWeapon(key: string, art: WeaponArt): WeaponSprite {
   const hit = weapons.get(key);
   if (hit) return hit;
-  const art = make();
   const img = new Image();
   const sprite: WeaponSprite = { art, img, ready: false };
   img.onload = () => {
     sprite.ready = true;
   };
-  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(art.svg)}`;
+  img.src = art.url;
   weapons.set(key, sprite);
   return sprite;
 }
 
 /** The pixel image of a hero's weapon, or null for an unknown weapon. */
 export function weaponSprite(weapon: string): WeaponSprite | null {
-  const make = WEAPON_ART[weapon];
-  return make ? loadWeapon(weapon, make) : null;
+  const art = equipmentArt(weapon);
+  return art ? loadWeapon(weapon, art) : null;
 }
 
 export function shieldSprite(): WeaponSprite {
-  return loadWeapon('shield', shieldArt);
+  const art = equipmentArt('shield');
+  if (!art) throw new Error('Missing shield sprite');
+  return loadWeapon('shield', art);
 }
 
 /** A hero's sprite as an image URL, for the lobby and title screen. */
