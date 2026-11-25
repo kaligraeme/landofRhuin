@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyDamage, applyStatus, basicAttack, dodge, getStatus, statSum, useSkill } from '../src/server/sim/combat.js';
-import { lineOfSight } from '../src/shared/map.js';
+import { lineOfSight, T_FLOOR, T_WALL, tileAt } from '../src/shared/map.js';
 import { Instance, type Seat } from '../src/server/sim/instance.js';
 import { startAbility } from '../src/server/sim/mechanics.js';
 import type { Monster } from '../src/server/sim/types.js';
@@ -228,6 +228,59 @@ describe('action combat', () => {
     expect(tank.hp).toBe(1);
   });
 
+  it('Ruination stops raining when the Dark Knight falls', () => {
+    const { inst, tank, dummy } = setup();
+    tank.x = dummy.x - 4;
+    tank.y = dummy.y;
+    expect(useSkill(inst, tank, 'ruination', dummy)).toBeNull();
+    let last = dummy.hp;
+    let strikes = 0;
+    for (let i = 0; i < 40; i++) {
+      inst.tick();
+      if (dummy.hp < last) {
+        strikes++;
+        if (strikes === 1) inst.kill(tank, null);
+      }
+      last = dummy.hp;
+    }
+    expect(strikes).toBe(1);
+    expect(dummy.enmity.has(tank.id)).toBe(false);
+  });
+
+  it('Challenge turns every foe within 9 tiles, even round a pillar; Luminaire needs sight', () => {
+    const inst = new Instance('c', seats.map((seat) => (seat.role === 'tank' ? { ...seat, weapon: 'sword_shield' } : seat)), { seed: 7, countdown: 0 });
+    inst.tick();
+    const tank = inst.players[0]!;
+    const melee = inst.players[3]!;
+    // Find a wall with floor three tiles either side of it.
+    const { map } = inst;
+    let spot: { x: number; y: number } | null = null;
+    for (let y = 2; y < map.h - 2 && !spot; y++) {
+      for (let x = 4; x < map.w - 4 && !spot; x++) {
+        if (tileAt(map, x, y) !== T_WALL) continue;
+        if (tileAt(map, x - 3, y) === T_FLOOR && tileAt(map, x + 3, y) === T_FLOOR) spot = { x, y };
+      }
+    }
+    expect(spot).not.toBeNull();
+    tank.x = spot!.x - 2.5;
+    tank.y = spot!.y + 0.5;
+    const foe = inst.spawnMob('brute', spot!.x + 3.5, spot!.y + 0.5, 0, 0);
+    foe.hp = foe.maxHp = 1e9;
+    foe.speed = 0;
+    inst.engage(foe);
+    expect(lineOfSightClear(inst, tank, foe)).toBe(false);
+    foe.enmity.set(melee.id, 50000);
+    foe.targetId = melee.id;
+    expect(useSkill(inst, tank, 'challenge', tank)).toBeNull();
+    expect(foe.targetId).toBe(tank.id);
+    tank.lockUntil = 0;
+    tank.cast = null;
+    const hpBefore = foe.hp;
+    expect(useSkill(inst, tank, 'luminaire', tank)).toBeNull();
+    run(inst, 0.8);
+    expect(foe.hp).toBe(hpBefore);
+  });
+
   it('the Guardian flashes in, mends herself, blocks and bursts back, and floods the field with light', () => {
     const inst = new Instance('g', seats.map((seat) => (seat.role === 'tank' ? { ...seat, weapon: 'sword_shield' } : seat)), { seed: 7, countdown: 0 });
     inst.tick();
@@ -244,15 +297,19 @@ describe('action combat', () => {
     expect(useSkill(inst, tank, 'flash', { x: foe.x + 3, y: foe.y })).toBeNull();
     expect(foe.statuses.some((s) => s.id === 'stun')).toBe(true);
     expect(getStatus(tank, 'radiantGuard')).toBeDefined();
-    // Mend: heals her and pulls every foe in the fight nearby onto her.
-    foe.enmity.set(ranger.id, 1e6);
+    // Mend: heals her and draws a foe that has turned on the ranger back to her, even while it
+    // is still stunned from Flash.
+    const aggroBefore = foe.enmity.get(tank.id) ?? 0;
+    foe.enmity.set(ranger.id, aggroBefore * 1.3 + 2000);
     foe.targetId = ranger.id;
     tank.lockUntil = 0;
     tank.hp = 5000;
-    const aggroBefore = foe.enmity.get(tank.id) ?? 0;
     expect(useSkill(inst, tank, 'mend', tank)).toBeNull();
     expect(tank.hp).toBeCloseTo(5000 + tank.maxHp * 0.18, -1);
     expect((foe.enmity.get(tank.id) ?? 0) - aggroBefore).toBeGreaterThan(2500);
+    inst.tick();
+    expect(foe.statuses.some((s) => s.id === 'stun')).toBe(true);
+    expect(foe.targetId).toBe(tank.id);
     // Shield's Up!: nothing gets through for 3s, then 30% of it comes back.
     tank.lockUntil = 0;
     tank.hp = tank.maxHp;
@@ -288,6 +345,36 @@ describe('action combat', () => {
 });
 
 describe('boss mechanics', () => {
+  it('a cleave aimed at the target hits with the monster’s full weight; a tail lash behind it does not', () => {
+    const inst = new Instance('r', seats, { seed: 3, countdown: 0 });
+    inst.tick();
+    const [tank, , , melee] = inst.players as [typeof inst.players[0], typeof inst.players[0], typeof inst.players[0], typeof inst.players[0]];
+    const m = inst.spawnMob('brute', tank.x, tank.y, 0, 0);
+    m.speed = 0;
+    m.autoInterval = 1e9;
+    m.mob = { ...m.mob!, abilities: [] };
+    inst.engage(m);
+    m.autoNext = 1e9;
+    const hitFor = (rear: boolean, behind: boolean): number => {
+      tank.x = m.x + 3;
+      tank.y = m.y;
+      melee.x = m.x + (behind ? -3 : 3);
+      melee.y = m.y + (behind ? 0 : 0.8);
+      melee.hp = melee.maxHp;
+      melee.statuses = [];
+      m.targetId = tank.id;
+      m.enmity.set(tank.id, 1e6);
+      startAbility(inst, m, { id: 'lash', name: 'Lash', cast: 0.5, potency: 1000, pattern: { kind: 'cleave', radius: 5, angle: Math.PI / 2, rear } });
+      run(inst, 0.7);
+      return melee.maxHp - melee.hp;
+    };
+    const front = hitFor(false, false);
+    const rear = hitFor(true, true);
+    expect(front).toBeGreaterThan(0);
+    expect(rear).toBeGreaterThan(0);
+    expect(front / rear).toBeGreaterThan(2.5);
+  });
+
   it('a stack shares damage among everyone inside it', () => {
     const inst = new Instance('s', seats, { seed: 3, countdown: 0 });
     inst.tick();

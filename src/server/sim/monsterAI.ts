@@ -10,11 +10,10 @@ import type { Monster } from './types.js';
 export function updateMonster(inst: Instance, m: Monster, dt: number): void {
   if (m.dead || !m.engaged) return;
   if (m.cast && inst.now >= m.cast.end) m.cast = null;
-  if (isStunned(m)) return;
-
+  // Even a stunned monster knows who it will go for, so the threat meter and markers stay true.
   const target = pickTarget(inst, m);
-  if (!target) return;
-  m.targetId = target.id;
+  if (target) m.targetId = target.id;
+  if (isStunned(m) || !target) return;
   if (m.cast) return; // Casting monsters stand still and keep their facing.
 
   // Boss timeline.

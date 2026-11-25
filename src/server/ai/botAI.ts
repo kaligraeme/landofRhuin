@@ -331,7 +331,8 @@ function chooseDestination(ctx: Ctx): Vec {
   const marks = [...ctx.inst.telegraphs.values()];
   const stackOnMe = marks.some((t) => t.style === 'stack' && t.followId === p.id);
   const spreadOnMe = marks.find((t) => t.style === 'spread' && t.followId === p.id && noticed(ctx, t));
-  const chased = p.role !== 'tank' && ctx.tank && ctx.tank !== p && onMe(ctx).some((m) => m.kind !== 'boss');
+  // Chased by a monster: run to the tank, if the tank is close enough to reach; otherwise fight it out.
+  const chased = p.role !== 'tank' && ctx.tank && ctx.tank !== p && dist(p, ctx.tank) < 30 && onMe(ctx).some((m) => m.kind !== 'boss');
   if (ctx.inCombat && target) desired = stackOnMe ? { x: p.x, y: p.y } : spreadOnMe ? spreadSpot(ctx, spreadOnMe) : chased && ctx.tank ? besideTank(ctx, ctx.tank) : combatSpot(ctx, target);
   else desired = followSpot(ctx);
 
@@ -470,6 +471,7 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
     } else {
       const shape = skillShape(inst, p, skill, aim);
       if (shape) hits = enemiesIn(inst, shape);
+      if (d.kind === 'self' && d.sight) hits = hits.filter((m) => lineOfSight(inst.map, p, m));
     }
   }
   if (dmgPotency > 0) {
@@ -478,9 +480,9 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
     // Damage dealers ease off a monster they are about to pull off the tank.
     if (p.role !== 'tank' && ctx.tank && hits.some((m) => threatOn(inst, p, m) > 0.8)) value *= 0.15;
   }
-  // Blood for power: only when healthy, in a real fight, with a healer standing.
+  // Blood for power: only when healthy, in a real fight, with a healer standing close enough to help.
   if (skill.hpCost) {
-    const healerUp = ctx.allies.some((o) => o !== p && WEAPONS[o.weapon]?.healer);
+    const healerUp = ctx.allies.some((o) => o !== p && !o.dead && WEAPONS[o.weapon]?.healer && dist(o, p) <= 22 && lineOfSight(inst.map, o, p));
     if (hpFrac(p) < 0.85 || !healerUp || !(ctx.enemies.some((m) => m.kind === 'boss') || hits.length >= 3)) return null;
   }
   for (const e of skill.effects) {

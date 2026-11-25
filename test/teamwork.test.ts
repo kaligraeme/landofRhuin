@@ -19,7 +19,10 @@ const WEAPON: Record<string, [Seat['role'], string]> = {
   Reaver: ['melee', 'greatsword'],
 };
 
-/** Puts a pack on one hero (everyone else out of the fight) and returns seconds until they fall (or the limit). */
+/**
+ * Puts a pack on one hero, with everyone else out of the fight, and returns seconds until they fall
+ * (or the limit). When the hero is not the tank, the tank is gone, so there is no one to run to.
+ */
 function standAgainst(hero: string, pack: MobKind[], opts: { fight: boolean; healer?: boolean; seed?: number; limit?: number }): { fell: number | null; won: boolean } {
   const [role, weapon] = WEAPON[hero] as [Seat['role'], string];
   const others = (['tank', 'mage', 'ranger', 'melee'] as Seat['role'][]).filter((r) => r !== role);
@@ -33,6 +36,7 @@ function standAgainst(hero: string, pack: MobKind[], opts: { fight: boolean; hea
     if (opts.healer && o.role === 'mage') continue;
     o.botControlled = false;
     o.x += 400;
+    if (o.role === 'tank') inst.kill(o, null);
   }
   const mobs = pack.map((k, i) => inst.spawnMob(k, me.x + 3 + (i % 3), me.y + (i - 2), 0, 1));
   for (const m of mobs) {
@@ -61,11 +65,15 @@ describe('teamwork', () => {
     expect(fell.Guardian).toBeGreaterThan(longest * 1.6);
   });
 
-  it('fighting back does not save a damage dealer who has a pack on them', () => {
-    for (const hero of ['Marksman', 'Sage', 'Halberdier', 'Reaver']) {
-      const r = standAgainst(hero, pack, { fight: true, limit: 60 });
-      expect(r.won, hero).toBe(false);
-      expect(r.fell, hero).not.toBeNull();
+  it('fighting back does not save a damage dealer from a wave with no tank to hold it', () => {
+    const wave: MobKind[] = ['brute', 'brute', 'skirmisher', 'archer', 'caster'];
+    for (const hero of Object.keys(WEAPON).filter((h) => WEAPON[h]![0] !== 'tank')) {
+      for (const seed of [1, 2, 3]) {
+        const r = standAgainst(hero, wave, { fight: true, seed, limit: 60 });
+        expect(r.won, `${hero}, seed ${seed}`).toBe(false);
+        expect(r.fell, `${hero}, seed ${seed}`).not.toBeNull();
+        expect(r.fell!, `${hero}, seed ${seed}`).toBeLessThan(15);
+      }
     }
   });
 

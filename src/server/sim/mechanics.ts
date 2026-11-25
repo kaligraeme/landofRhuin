@@ -18,7 +18,8 @@ export function emitAct(inst: Instance, m: Monster, k: 'atk' | 'sk', end: number
 
 function hitPlayers(inst: Instance, m: Monster, shape: Shape, ability: AbilityDef, avoidable = !ability.minor): void {
   // Swings aimed at the target (routine attacks and heavy cleaves) carry the monster's full weight.
-  const focused = ability.pattern.kind === 'cleave';
+  // A rear cleave (a tail lash) strikes away from the target, so it does not.
+  const focused = ability.pattern.kind === 'cleave' && !ability.pattern.rear;
   for (const p of alive(inst)) {
     if (!shapeHits(shape, p, p.radius)) continue;
     const { amount } = outgoingDamage(inst, m, ability.potency, false, focused);

@@ -1910,6 +1910,15 @@ select {
   background: linear-gradient(90deg, #a83a2e, var(--enemy));
 }
 
+/* Within reach of pulling it off the holder. */
+.threat-row.close .threat-fill {
+  background: linear-gradient(90deg, #b8642e, #ff8a3d);
+}
+
+.threat-row.close .threat-pct {
+  color: #ff9f4a;
+}
+
 .threat-row.me .threat-name::before {
   content: '▸ ';
   color: var(--gold);

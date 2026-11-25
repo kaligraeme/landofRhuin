@@ -2,6 +2,7 @@
  * The in-dungeon interface: party list, target frame, duty objectives, minimap, hotbar with
  * cooldowns, your health and cast bar, battle log, banners and the results screen.
  */
+import { AGGRO_STICK, AGGRO_TANK_STICK } from '../../shared/constants.js';
 import { HOTBAR_KEYS, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
 import { STATUSES } from '../../shared/content/statuses.js';
 import { T_FLOOR, T_GATE } from '../../shared/map.js';
@@ -379,7 +380,11 @@ export class Hud {
     this.updateThreat(t.spawn.team === 'enemy' ? s.ag : undefined, s.a);
   }
 
-  /** Bars of who holds the target's aggro (100%) and how close the others are. */
+  /**
+   * Bars of who holds the target's aggro (100%) and how close the others are to pulling it. The
+   * server sends each hero's aggro as a share of the holder's; a monster turns at 110% (130% off
+   * a tank), and the bar fills to that line.
+   */
   private updateThreat(table: [number, number][] | undefined, holder: number | undefined): void {
     const key = JSON.stringify([table, holder]);
     if (this.tThreat.dataset.key === key) return;
@@ -388,15 +393,18 @@ export class Hud {
       clear(this.tThreat);
       return;
     }
+    const turnsAt = pullLine(this.world, holder);
     const rows = table.map(([id, pct]) => {
       const who = this.world.ents.get(id);
       const role = (who?.spawn.role ?? 'tank') as RoleId;
       const mine = id === this.world.meId;
+      const isHolder = id === holder;
+      const fill = isHolder ? 100 : Math.min(100, (pct / turnsAt) * 100);
       return h(
         'div',
-        { class: `threat-row${mine ? ' me' : ''}${id === holder ? ' holder' : ''}`, title: id === holder ? 'Holds its aggro' : `${pct}% of the top` },
+        { class: `threat-row${mine ? ' me' : ''}${isHolder ? ' holder' : ''}${!isHolder && pct >= turnsAt * 0.85 ? ' close' : ''}`, title: isHolder ? 'Holds its aggro' : `${pct}% of the holder's aggro: it turns at ${turnsAt}%` },
         h('span', { class: 'threat-name', style: `color:${ROLES[role].color}` }, mine ? 'You' : (who?.spawn.name ?? '?')),
-        h('div', { class: 'threat-bar' }, h('div', { class: 'threat-fill', style: `width:${pct}%` })),
+        h('div', { class: 'threat-bar' }, h('div', { class: 'threat-fill', style: `width:${fill.toFixed(1)}%` })),
         h('span', { class: 'threat-pct' }, `${pct}%`),
       );
     });
@@ -418,6 +426,7 @@ export class Hud {
     let onMe = 0;
     let loose = 0;
     let closest = 0;
+    const tankLine = Math.round(AGGRO_TANK_STICK * 100);
     for (const e of world.enemies()) {
       if (e.removed || e.diedAt || e.snap.a === undefined || Math.hypot(e.x - me.x, e.y - me.y) > 24) continue;
       if (e.snap.a === world.meId) onMe++;
@@ -438,9 +447,9 @@ export class Hud {
     } else if (onMe) {
       cls = 'have';
       text = `You have aggro! ${onMe === 1 ? 'It is' : `${onMe} are`} coming for you — get to the tank`;
-    } else if (closest >= 85) {
+    } else if (closest >= tankLine * 0.85) {
       cls = 'pulling';
-      text = `Pulling aggro: ${closest}% of the tank — ease off`;
+      text = `Pulling aggro: ${closest}% of the tank's (it turns at ${tankLine}%) — ease off`;
     }
     this.aggroAlert.className = `aggro-alert${cls ? ` show ${cls}` : ''}`;
     if (this.aggroAlert.textContent !== text) this.aggroAlert.textContent = text;
@@ -596,4 +605,10 @@ export class Hud {
     for (const e of world.partyMembers()) if (e.id !== world.meId) dot(e.x, e.y, 6, ROLES[(e.spawn.role ?? 'tank') as RoleId].color);
     dot(me.x, me.y, 8, '#fff3d0');
   }
+}
+
+/** The share of the holder's aggro at which a monster turns: 130% off a tank, 110% otherwise. */
+function pullLine(world: World, holder: number | undefined): number {
+  const role = holder != null ? world.ents.get(holder)?.spawn.role : undefined;
+  return Math.round((role === 'tank' ? AGGRO_TANK_STICK : AGGRO_STICK) * 100);
 }

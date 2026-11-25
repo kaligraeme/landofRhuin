@@ -4,7 +4,7 @@
  *
  *  - Damage builds aggro, multiplied by the hero's role (tanks build three times as much) and by
  *    the skill (charges and sweeps built to hold a crowd build more).
- *  - Healing builds aggro on every monster in the fight nearby.
+ *  - Healing builds aggro on every monster in the fight nearby (no first-contact bonus).
  *  - First contact: the first time a hero touches a monster adds a flat chunk (twice as much for
  *    a tank), so whoever opens the fight gets its attention.
  *  - Unhinged damage builds aggro fast: each hero's recent damage on a monster is a heat that
@@ -13,6 +13,7 @@
  *    30% more if the target is a tank. And aggro fades, the tank's three times slower, so a tank
  *    that keeps working holds what it has taken.
  */
+import { AGGRO_STICK, AGGRO_TANK_STICK } from '../../shared/constants.js';
 import { dist } from '../../shared/geometry.js';
 import type { Instance } from './instance.js';
 import type { Monster, Player } from './types.js';
@@ -32,8 +33,8 @@ export const AGGRO = {
   fade: 0.03,
   tankFade: 0.01,
   /** How much more aggro than the current target a hero needs to pull a monster off it. */
-  stick: 1.1,
-  tankStick: 1.3,
+  stick: AGGRO_STICK,
+  tankStick: AGGRO_TANK_STICK,
   /** A taunt puts the taunter this far above the top of the table, plus a flat amount. */
   tauntOver: 1.1,
   tauntFlat: 1000,
@@ -51,9 +52,12 @@ export function surgeOf(heat: number): number {
   return 1 + Math.min(AGGRO.surgeMax, (heat / AGGRO.surgeAt) ** 2);
 }
 
-/** Adds aggro, with the first-contact bonus the first time this hero touches this monster. */
-export function addAggro(m: Monster, p: Player, amount: number): void {
-  if (!m.touched.has(p.id)) {
+/**
+ * Adds aggro, with the first-contact bonus the first time this hero touches this monster.
+ * Healing (`contact` false) adds only its own share: it never touches the monster.
+ */
+export function addAggro(m: Monster, p: Player, amount: number, contact = true): void {
+  if (contact && !m.touched.has(p.id)) {
     m.touched.add(p.id);
     amount += AGGRO.firstContact * (p.role === 'tank' ? 2 : 1);
   }
@@ -62,6 +66,8 @@ export function addAggro(m: Monster, p: Player, amount: number): void {
 
 /** Aggro for damage dealt: role and skill multipliers, then the surge from recent damage. */
 export function damageAggro(inst: Instance, m: Monster, p: Player, damage: number, skillMult = 1): number {
+  // A fallen hero's last blows (a strike still raining down, a bleed) do not put them back on the table.
+  if (p.dead) return 0;
   const heat = heatOf(inst, m, p) + damage;
   m.heat.set(p.id, { v: heat, at: inst.now });
   const amount = damage * p.enmityMult * skillMult * surgeOf(heat);
@@ -71,11 +77,11 @@ export function damageAggro(inst: Instance, m: Monster, p: Player, damage: numbe
 
 /** Aggro for healing: every monster fighting nearby notices the healer. */
 export function healAggro(inst: Instance, healer: Player, healed: number): void {
-  if (healed <= 0) return;
+  if (healed <= 0 || healer.dead) return;
   const amount = healed * AGGRO.healShare * healer.enmityMult;
   for (const m of inst.monsters.values()) {
     if (!m.engaged || m.dead || dist(m, healer) > AGGRO.healRange) continue;
-    addAggro(m, healer, amount);
+    addAggro(m, healer, amount, false);
   }
 }
 
@@ -120,10 +126,16 @@ export function pickTarget(inst: Instance, m: Monster): Player | null {
   return best;
 }
 
-/** The top aggro holders, as [hero id, percent of the top], for the threat meter. */
+/**
+ * The top of the table for the threat meter, as [hero id, percent of the holder's aggro]. The
+ * hero the monster is on reads 100; anyone else reads how close they are to pulling it, and can
+ * read over 100 while the monster still sticks (it turns at 110, or 130 off a tank).
+ */
 export function aggroTable(m: Monster, limit = 4): [number, number][] {
   const rows = [...m.enmity.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const top = rows[0]?.[1] ?? 0;
   if (top <= 0) return [];
-  return rows.slice(0, limit).map(([id, v]) => [id, Math.round((v / top) * 100)]);
+  const held = m.targetId != null ? (m.enmity.get(m.targetId) ?? 0) : 0;
+  const base = held > 0 ? held : top;
+  return rows.slice(0, limit).map(([id, v]) => [id, Math.min(999, Math.round((v / base) * 100))]);
 }

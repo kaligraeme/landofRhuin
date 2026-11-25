@@ -335,8 +335,8 @@ export function executeSkill(inst: Instance, p: Player, skill: SkillDef, aim: Ve
     case 'thrust':
     case 'self': {
       const shape = skillShape(inst, p, skill, aim) as Shape;
-      // Wide blasts reach only what the user can see, not packs in the next room.
-      const hits = enemiesIn(inst, shape).filter((m) => d.kind !== 'self' || d.radius <= 6 || lineOfSight(inst.map, p, m));
+      // Blasts as wide as the battlefield reach only what the user can see, not packs in the next room.
+      const hits = enemiesIn(inst, shape).filter((m) => d.kind !== 'self' || !d.sight || lineOfSight(inst.map, p, m));
       const fxKind = d.kind === 'arc' ? 'arc' : d.kind === 'thrust' ? 'thrust' : 'burst';
       inst.emit({ e: 'fx', k: fxKind, s: p.id, x: p.x, y: p.y, d: dir, r: d.kind === 'arc' ? d.radius + p.radius : d.kind === 'self' ? d.radius : d.length, a: d.kind === 'arc' ? d.angle : d.kind === 'thrust' ? d.width : 0, hue: skill.hue });
       applyEffects(inst, p, skill, hits, p, d.kind === 'self' ? alliesIn(inst, shape) : [p], aim);
@@ -359,8 +359,12 @@ export function executeSkill(inst: Instance, p: Player, skill: SkillDef, aim: Ve
         inst.addTelegraph({ ownerId: p.id, ability: { id: skill.id, name: skill.name, cast: d.delay, potency: 0, pattern: { kind: 'raidwide' } }, shape, style: 'ally', start: inst.now, end: inst.now + d.delay, followId: null, minor: true });
         inst.schedule(inst.now + d.delay, p.id, land);
       } else land();
-      // Strikes that rain down again and again.
-      for (let i = 1; i < (d.repeat ?? 1); i++) inst.schedule(inst.now + (d.delay ?? 0) + i * (d.every ?? 0.3), p.id, land);
+      // Strikes that rain down again and again, until the user falls.
+      for (let i = 1; i < (d.repeat ?? 1); i++) {
+        inst.schedule(inst.now + (d.delay ?? 0) + i * (d.every ?? 0.3), p.id, () => {
+          if (!p.dead) land();
+        });
+      }
       break;
     }
     case 'projectile': {

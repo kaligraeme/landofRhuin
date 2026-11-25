@@ -25,6 +25,13 @@ export const DOT_TICK = 3;
 export const CRIT_CHANCE = 0.1;
 export const CRIT_MULT = 1.5;
 
+/**
+ * To pull a monster off the hero it is on, you need this much more aggro than they have: 10%
+ * more, or 30% more if they are the tank. The client draws the threat meter against these.
+ */
+export const AGGRO_STICK = 1.1;
+export const AGGRO_TANK_STICK = 1.3;
+
 /** Radius of "party" effects such as songs and area heals. */
 export const PARTY_EFFECT_RADIUS = 20;
 

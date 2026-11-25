@@ -164,8 +164,14 @@ export class Game {
         const target = w.ents.get(ev.t);
         const mine = ev.s === w.meId;
         if (target?.spawn.team === 'party') {
-          if (ev.t === w.meId || ev.v > 1500) this.fx.text(`-${ev.v}`, t.x, t.y, '#ff6b5b', ev.t === w.meId ? 15 : 12);
-          if (ev.t === w.meId && ev.v > 1500) this.renderer.shake(0.6);
+          // A shield or barrier takes some or all of it: show what got through.
+          const taken = ev.v - (ev.ab ?? 0);
+          if (taken <= 0) {
+            if (ev.t === w.meId || ev.v > 1500) this.fx.text('Blocked', t.x, t.y, '#9fc3ff', ev.t === w.meId ? 14 : 11);
+          } else {
+            if (ev.t === w.meId || taken > 1500) this.fx.text(`-${taken}`, t.x, t.y, '#ff6b5b', ev.t === w.meId ? 15 : 12);
+            if (ev.t === w.meId && taken > 1500) this.renderer.shake(0.6);
+          }
         } else if (mine) {
           this.fx.text(`${ev.v}${ev.c ? '!' : ''}`, t.x, t.y, ev.c ? '#ffd76a' : '#ffffff', ev.c ? 20 : 15);
           if (ev.c) this.renderer.shake(0.25);

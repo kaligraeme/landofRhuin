@@ -19,7 +19,8 @@ export type Delivery =
   /** A straight strike from the user toward the aim. */
   | { kind: 'thrust'; length: number; width: number }
   /** Everything within a radius of the user. */
-  | { kind: 'self'; radius: number }
+  /** `sight`: reaches only foes the user can see (a blast too wide to stop at walls otherwise). */
+  | { kind: 'self'; radius: number; sight?: boolean }
   /**
    * A circle at the aimed point (pulled in to `range`), optionally landing after a delay, and
    * optionally striking `repeat` times, `every` seconds apart.
@@ -182,7 +183,7 @@ const ssSkills: WeaponDef['skills'] = [
   def({ id: 'flash', name: 'Flash', glyph: '✧', hue: 52, slot: 'q', cooldown: 10, iframes: 0.2, aggro: 3, delivery: { kind: 'dash', distance: 7, width: 2.6 }, description: 'Charge 7 tiles in a flash of light: potency 200 to every foe in your path, a 0.5s stun and a great deal of aggro. You take 35% less damage for 5s.', effects: [dmg(200), { kind: 'stun', duration: 0.5 }, { kind: 'aggro', amount: 3000 }, { kind: 'stagger', amount: 15 }, { kind: 'status', status: 'radiantGuard', duration: 5, to: 'self' }] }),
   def({ id: 'mend', name: 'Mend', glyph: '✚', hue: 55, slot: 'e', cooldown: 15, delivery: { kind: 'self', radius: 10 }, description: 'Mend your own wounds: restore 18% of your maximum health. The light draws every foe in the fight within 10 tiles to you.', effects: [{ kind: 'healPct', pct: 0.18, to: 'self' }, { kind: 'aggro', amount: 2500 }] }),
   def({ id: 'shieldsUp', name: 'Shield’s Up!', glyph: '⛉', hue: 45, slot: 'r', cooldown: 16, description: 'Brace behind your shield for 3s: it blocks all damage, then bursts, striking every foe within 5 tiles for 30% of what it absorbed.', effects: [{ kind: 'status', status: 'shieldsUp', duration: 3, to: 'self' }] }),
-  def({ id: 'luminaire', name: 'Luminaire', glyph: '☀', hue: 50, slot: 'ult', cooldown: 50, windup: 0.6, aggro: 1.5, delivery: { kind: 'self', radius: 30 }, description: 'Ultimate. Flood the whole battlefield with light: potency 1100 to every enemy in sight.', effects: [dmg(1100), { kind: 'stagger', amount: 50 }] }),
+  def({ id: 'luminaire', name: 'Luminaire', glyph: '☀', hue: 50, slot: 'ult', cooldown: 50, windup: 0.6, aggro: 1.5, delivery: { kind: 'self', radius: 30, sight: true }, description: 'Ultimate. Flood the whole battlefield with light: potency 1100 to every enemy in sight.', effects: [dmg(1100), { kind: 'stagger', amount: 50 }] }),
 ];
 
 // ── Mage: Staff (healer) ────────────────────────────────────────────────────────────────────

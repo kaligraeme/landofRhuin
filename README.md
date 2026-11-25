@@ -117,8 +117,9 @@ whoever tops that table.
   Ruination and Luminaire build half as much again.
 - **Healing builds aggro** on every monster in the fight within 30 tiles of the healer: 0.6 per
   point actually healed. Overhealing does not count.
-- **First contact** adds a flat 1,500 the first time a hero touches a monster, twice that for the
-  Warrior, so whoever opens the fight gets its attention.
+- **First contact** adds a flat 1,500 the first time a hero strikes a monster, twice that for the
+  Warrior, so whoever opens the fight gets its attention. Healing near a monster does not count
+  as contact.
 - **Unhinged damage builds aggro fast.** A hero's recent damage on a monster runs hot and cools by
   half every 2 seconds. Once it passes about 4,500, every blow counts double, rising to 3.5 times.
   A Duelist who unloads everything on one target pulls it.
@@ -136,21 +137,26 @@ matter.
 
 What that means in a fight:
 
-- With a pack of three on them, a Duelist, Ranger or Mage falls in 3 to 7 seconds, whether they
-  fight back or not.
-- A Warrior lasts far longer: about 12 seconds standing still, and much longer fighting.
-- Alone against five monsters, the Dark Knight falls in about 20 seconds and the Guardian in about
-  40. With the Staff healer behind them, both win.
+- Standing still with a pack of three on them, a Duelist, Ranger or Mage falls in 3 to 5 seconds.
+  Fighting back with no Warrior to run to, every one of them falls to a wave of five within 2 to
+  11 seconds. Against three, one now and then scrapes a win on a sliver of health.
+- A Warrior lasts far longer: about 11 seconds standing still, and much longer fighting.
+- Alone against a wave of five, the Dark Knight falls in 19 to 27 seconds and the Guardian in 30
+  to 50. A Guardian who outlasts one wave falls to the next. With the Staff healer behind them,
+  both clear wave after wave and usually end each one above three-quarters health.
 
 Reading aggro on screen:
 
-- **The target frame** lists the top four on your target's table as a share of the top, with
-  your own row marked.
+- **The target frame** lists the top four on your target's table, your own row marked. Each is
+  a share of the aggro of the hero it is on, who reads 100%. The monster turns at 110%, or 130% if
+  it is on the Warrior. A row close to that line turns orange.
 - **Over a monster's name:** a pulsing red **!** means it is coming for you. If you are the
   Warrior, a gold **◆** marks the ones on you and an orange **◇** the ones loose on the party.
-- **By the hotbar:** "Pulling aggro: 90% of the tank — ease off" when you are close to pulling a
-  monster off the Warrior; "You have aggro! … get to the tank" when something has come for you.
-  The Warrior sees "2 loose on the party — grab them!".
+- **By the hotbar:** "Pulling aggro: 118% of the tank's (it turns at 130%) — ease off" when you
+  are close to pulling a monster off the Warrior; "You have aggro! … get to the tank" when
+  something has come for you. The Warrior sees "2 loose on the party — grab them!".
+- A hit your shield or barrier takes in full shows as **Blocked**; otherwise you see what got
+  through.
 
 AI companions play by the same rules. Damage dealers ease off a monster when they come close to
 the Warrior's aggro, and run to the Warrior when something comes for them. An AI Warrior charges
@@ -358,7 +364,8 @@ npm run simulate -- 42 5   # play 5 dungeons (seeds 42-46) with AI parties and p
 
 The simulation tests have four AI parties with different weapons clear entire dungeons. That
 checks the generator, the combat rules, every boss and the AI together, and keeps the balance
-honest: AI parties clear a dungeon in about 10 to 14 minutes. `test/teamwork.test.ts` checks the
+honest: AI parties clear a dungeon in about 10 to 14 minutes. Without the Staff healer they can
+take twice as long and wipe once or twice. `test/teamwork.test.ts` checks the
 aggro balance: damage dealers with a pack on them fall in seconds, a tank lasts far longer, and a
 tank facing a big pack alone falls but wins with a healer. `PARTY=tank_greatsword,staff,crossbow,greatsword
 npm run simulate -- 1 4` picks the party's weapons and prints how often each hero pulled a

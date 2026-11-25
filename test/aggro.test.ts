@@ -69,12 +69,27 @@ describe('aggro', () => {
     tank.hp = 1000;
     const healed = applyHeal(inst, mage, tank, 2000, false);
     expect(healed).toBe(2000);
-    expect(near.enmity.get(mage.id)).toBeCloseTo(AGGRO.firstContact + 2000 * AGGRO.healShare, 0);
+    // Healing never touches the monster: no first-contact bonus, only the healing share.
+    expect(near.enmity.get(mage.id)).toBeCloseTo(2000 * AGGRO.healShare, 0);
     expect(far.enmity.get(mage.id) ?? 0).toBe(0);
     // Overhealing does not count.
     const before = near.enmity.get(mage.id) ?? 0;
     healAggro(inst, mage, 0);
     expect(near.enmity.get(mage.id)).toBe(before);
+    // The healer's first blow on it still counts as first contact.
+    damageAggro(inst, near, mage, 10);
+    expect(near.enmity.get(mage.id)).toBeCloseTo(before + AGGRO.firstContact + 10, 0);
+  });
+
+  it('a fallen hero builds no aggro, from blows or heals still landing', () => {
+    const { inst, tank, melee, mob } = setup();
+    const m = mob();
+    melee.dead = true;
+    expect(damageAggro(inst, m, melee, 5000)).toBe(0);
+    expect(m.enmity.has(melee.id)).toBe(false);
+    tank.dead = true;
+    healAggro(inst, tank, 3000);
+    expect(m.enmity.has(tank.id)).toBe(false);
   });
 
   it('unhinged damage builds aggro fast: the same damage in a burst counts far more than spread out', () => {
@@ -155,6 +170,13 @@ describe('aggro', () => {
     expect(snap.ents.find((e) => e.i === m.id)?.ag).toEqual([
       [tank.id, 100],
       [ranger.id, 75],
+    ]);
+    // Shares are of the holder's aggro: a ranger above a sticky tank reads over 100 until it turns.
+    m.enmity.set(ranger.id, 2400);
+    expect(pickTarget(inst, m)?.id).toBe(tank.id);
+    expect(aggroTable(m)).toEqual([
+      [ranger.id, 120],
+      [tank.id, 100],
     ]);
   });
 
