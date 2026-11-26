@@ -3,7 +3,7 @@
  *
  *   guard    4  Parry: a braced crouch behind the blade held level across his body, a clang
  *   hurt     3  a flinch: knocked back, head snapped, coat flicked forward
- *   kneel    4  (loop) low health: down on his left knee, leaning on the planted blade, heaving
+ *   kneel    4  (loop) low health: down on his right knee, leaning on the planted blade, heaving
  *   ko       6  (hold) stagger, drop to his knees, topple; the last frame lies on his back, blade dropped
  *   victory  8  (hold) a flourish of the blade, then it comes to rest on his shoulder, coat billowing
  */
@@ -12,11 +12,11 @@ import { type ChibiPose, pose, wave } from './rig.js';
 
 const S = GUARD_STANCE;
 
-/** The blade held level across his body, the left hand braced on its flat. */
-const BLOCK: ChibiPose = pose(S, { x: -1, y: 8, lean: 4, twist: 18, head: 4, footF: [11, 0, 6], footB: [-10, 0, 5.6], handF: [9, -1, 7], handB: [10, 0, -6], weapon: 90, roll: 0, yaw: -78, face: 'grit', wind: 0.2 });
+/** The blade held up across his body like a shield, the left hand braced against its flat. */
+const BLOCK: ChibiPose = pose(S, { x: -1, y: 8, lean: 6, twist: 12, head: 6, footF: [11, 0, 6], footB: [-10, 0, 5.6], handF: [9, 8, 7], handB: [12, -6, -2], weapon: 14, roll: -58, yaw: 0, face: 'grit', wind: 0.2 });
 
 const guard: ChibiPose[] = [
-  pose(BLOCK, { y: 6, lean: 8, handF: [9, 2, 7], handB: [10, 3, -6], fx: { rune: 0.5 } }),
+  pose(BLOCK, { y: 6, lean: 8, handF: [9, 10, 7], handB: [12, -3, -2], weapon: 30, roll: -50, fx: { rune: 0.5 } }),
   pose(BLOCK, { fx: { clang: 1, rune: 1 }, wind: 0.5, phase: 0.2 }),
   pose(BLOCK, { x: -3, y: 9, lean: 0, head: 2, wind: 0.4, phase: 0.4, fx: { clang: 0.35, dust: 0.6, rune: 0.6 } }),
   pose(BLOCK, { x: -2, y: 8, lean: 3, phase: 0.6, fx: { rune: 0.4 } }),
@@ -28,18 +28,18 @@ const hurt: ChibiPose[] = [
   pose(S, { x: -2, y: 6, lean: 4, twist: -12, head: 0, handF: [7, 12, 4], weapon: 55, face: 'grit', wind: 0.15, phase: 0.6 }),
 ];
 
-/** Down on the left knee, both hands on the blade planted at a slant in front of him. */
+/** Down on his right knee, both hands on the blade planted at a slant in front of him. */
 const KNELT: ChibiPose = {
   x: 0,
-  y: 12,
+  y: 13,
   lean: 20,
   twist: -4,
-  head: 12,
-  footF: [9, 0, 5.5],
-  footB: [-9, -1, 4.6],
-  kneel: 'B',
-  handF: [11, 9, 2],
-  weapon: 128,
+  head: 6,
+  footF: [-12, 0, 5],
+  footB: [9, 0, 5],
+  kneel: 'F',
+  handF: [12, 17, 6],
+  weapon: 118,
   roll: -6,
   face: 'grit',
   wind: 0.05,
@@ -47,7 +47,7 @@ const KNELT: ChibiPose = {
 
 const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
   const b = wave(i, 4);
-  return pose(KNELT, { y: 12 + b * 1.2, lean: 20 + b * 4, head: 12 + b * 5, handF: [11, 9 + b * 0.8, 2], phase: i / 4, sway: (b - 0.5) * 0.2 });
+  return pose(KNELT, { y: 13 + b * 1, lean: 20 + b * 4, head: 6 + b * 5, handF: [12, 17 + b * 0.8, 6], phase: i / 4, sway: (b - 0.5) * 0.2 });
 });
 
 const ko: ChibiPose[] = [

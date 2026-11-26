@@ -10,7 +10,7 @@ import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import type { FaceDesign, HeadDesign, HeadPiece, Lock, PieceContext } from './design.js';
 import { flat, type Hit, type Mat, type Part } from './raster.js';
-import { add3, at3, clamp, cross3, dirIn, dot3, type Face, type Frame3, mul3, norm3, rad, TO_CAMERA, type V3 } from './rig.js';
+import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, mul3, norm3, rad, TO_CAMERA, type V3 } from './rig.js';
 
 /** Shape ids inside the head's part. */
 const SKIN = 1;
@@ -48,9 +48,9 @@ interface Glyph {
 }
 
 const EYES: Record<'full' | 'mid' | 'narrow' | 'closed' | 'squeeze' | 'wide', Glyph> = {
-  full: { rows: ['.KKKK', 'KIhIW', 'KiiIW', '.....'], ax: 2, ay: 1 },
-  mid: { rows: ['KKKK', 'IhIW', 'iiIK'], ax: 1, ay: 1 },
-  narrow: { rows: ['KKK', 'IhK', 'iI.'], ax: 1, ay: 1 },
+  full: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '..ii.'], ax: 2, ay: 1 },
+  mid: { rows: ['KKKK', 'IhIW', 'iIIK', '.ii.'], ax: 1, ay: 1 },
+  narrow: { rows: ['KKK', 'IhK', 'iIK', 'i..'], ax: 1, ay: 1 },
   closed: { rows: ['....', 'KKKK', '.KK.'], ax: 2, ay: 1 },
   squeeze: { rows: ['K...', '.KKK', 'K...'], ax: 2, ay: 1 },
   wide: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '.KKK.'], ax: 2, ay: 1 },
@@ -116,7 +116,15 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   part.blobs(fr, [{ c: d.ear.c, r: d.ear.r, id: EAR }, { c: [d.ear.c[0], d.ear.c[1], -d.ear.c[2]], r: d.ear.r, id: EAR }], () => ({ m: d.skin, light: -0.05 }));
   part.blobs(fr, [{ c: d.shell.c, r: d.shell.r, id: SHELL }], (h: Hit) => {
     if (h.back) return { m: d.hair, light: -0.7 };
-    return bare(d, h.p) ? null : { m: d.hair };
+    if (bare(d, h.p)) return null;
+    // Strands: grooves running from the crown down over the back of the head.
+    const yaw = (Math.atan2(h.p[2] - d.shell.c[2], h.p[0] - d.shell.c[0]) * 180) / Math.PI;
+    const up = (h.p[1] - d.shell.c[1]) / d.shell.r[1];
+    if (Math.abs(yaw) > 95 && up < 0.9 && up > -0.85) {
+      const g = (((yaw + 13 * up) % 26) + 26) % 26;
+      if (g < 3.4) return { m: d.hair, light: cam.light(dirIn(fr, h.n[0], h.n[1], h.n[2])) - 0.62 };
+    }
+    return { m: d.hair };
   });
   for (const piece of pieces) for (const b of piece.blobs(ctx)) part.blobs(b.frame, b.blobs, b.shade);
   under?.(part);
@@ -209,7 +217,6 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, fr: Frame3, fac
     const dir = side * rightX;
     const kind = facing > 0.7 ? 'full' : facing > 0.42 ? 'mid' : 'narrow';
     const eye = face === 'closed' ? EYES.closed : face === 'hurt' ? EYES.squeeze : face === 'shout' && kind === 'full' ? EYES.wide : EYES[kind];
-    // The eye on the far side of the face sits in by a pixel so the nose bridge shows.
     stamp(part, eye, p[0], p[1], dir, eyeCols, z, onFace);
     const brow = BROWS[kind];
     const lift = face === 'hurt' ? -1 : face === 'smirk' && side === 1 ? 1 : 0;
@@ -226,7 +233,7 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, fr: Frame3, fac
     stamp(part, shrink, mp[0], mp[1], rightX > 0 ? -1 : 1, { M: m(f.mouth), r: m([70, 16, 20]), T: m([236, 226, 214]) }, ctx.depth(hero([f.mouthAt[0], f.mouthAt[1], 0])) + 0.4, onFace);
   }
   const nose = ctx.proj(hero([f.noseAt[0], f.noseAt[1], 0]));
-  if (cam.facing(norm3(dirIn(fr, 1, 0, 0))) > 0.35) stamp(part, { rows: ['n'], ax: 0, ay: 0 }, nose[0] + (rightX > 0 ? 0 : 0), nose[1], 1, { n: m(d_noseColour(f)) }, ctx.depth(hero([f.noseAt[0], f.noseAt[1], 0])) + 0.4, onFace);
+  if (cam.facing(norm3(dirIn(fr, 1, 0, 0))) > 0.35) stamp(part, { rows: ['n'], ax: 0, ay: 0 }, nose[0], nose[1], 1, { n: m(noseColour(f)) }, ctx.depth(hero([f.noseAt[0], f.noseAt[1], 0])) + 0.4, onFace);
   // The scar across his cheek.
   if (f.scar) {
     const at = f.scar.at;
@@ -237,10 +244,9 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, fr: Frame3, fac
       stamp(part, { rows: ['..s', '.s.', 's..'], ax: 1, ay: 1 }, p[0], p[1], dir, { s: m(f.scar.colour) }, ctx.depth(hero(at)) + 0.4, onFace);
     }
   }
-  void clamp;
 }
 
 /** The nose's shadow: the mouth colour, lightened toward skin. */
-function d_noseColour(f: FaceDesign): RGB {
+function noseColour(f: FaceDesign): RGB {
   return [Math.min(255, f.mouth[0] + 70), Math.min(255, f.mouth[1] + 50), Math.min(255, f.mouth[2] + 40)];
 }

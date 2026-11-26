@@ -18,7 +18,7 @@ const SKIN = mat4('#f6d0a8', '#e2a67e', '#c2805e', '#8e5442', '#5c2a22', 0.16);
 const HAIR = mat4('#a87650', '#7c5236', '#583822', '#341f12', '#1e1009', -0.2);
 const ARMOUR = mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', -0.36);
 const SILVER = mat4('#d2d6e0', '#a4aab8', '#767c8c', '#4a4e5e', '#20222c', 0.1);
-const COAT = mat4('#b33e48', '#8e2a34', '#64161f', '#3a0a12', '#22050b', -0.2);
+const COAT = mat4('#b33e48', '#8e2a34', '#64161f', '#3a0a12', '#22050b', -0.27);
 const COAT_SEAM = mat4('#64161f', '#4c0f18', '#3a0a12', '#2a060d', '#22050b');
 const LINING = mat4('#46303a', '#2e1f27', '#1c1218', '#110a0e', '#08050a');
 const SUIT = mat4('#6c6672', '#4e4954', '#36323c', '#221f27', '#141218', -0.15);
@@ -123,8 +123,8 @@ const DARK_KNIGHT: ChibiDesign = {
       brow: hex('#2c170c'),
       browUp: 3,
       mouth: hex('#6e2a26'),
-      mouthAt: [9.5, -7.8],
-      noseAt: [10.2, -4.6],
+      mouthAt: [9.8, -6.5],
+      noseAt: [10.3, -3.9],
       scar: { at: [7.2, -5.8, 6], colour: hex('#f8dcc4') },
     },
   },

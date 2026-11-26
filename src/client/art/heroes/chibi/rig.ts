@@ -172,8 +172,9 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *  - `footF`, `footB`: his right foot (the near one side on) and his left foot, `[forward, y]`
  *    relative to the ground point under him; negative y lifts the foot. A third value moves the
  *    foot outward from his centre line (default: hip width). Knees are solved, bending forward.
- *  - `kneel`: puts a knee on the ground instead: 'F' or 'B'. (Write that foot well behind the
- *    pelvis with y about -1; the rig only uses it to shade the shin as resting.)
+ *  - `kneel`: 'F' or 'B' turns that foot back onto its toes, as a kneeling leg's is. To kneel,
+ *    put that foot about 12 behind the pelvis at y 0 and drop the pelvis to `y` 12 or 13: the
+ *    knee then rests on the ground.
  *  - `handF`, `handB`: his right hand (sword hand) and left hand, `[forward, down]` from the base
  *    of the neck. A third value moves the hand outward from his centre line (+) or across his
  *    body (-); without it, hands sit beside the shoulders and come in toward the middle as they
@@ -187,8 +188,11 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    a diagonal cut from high on his right to low on his left is about `roll: 30`, the reverse
  *    (rising backhand) about `roll: -30`. Seen from the front this is what makes blows sweep
  *    across the body rather than straight at the viewer.
- *  - `yaw`: turns the blade about the vertical, + toward his right (a level blade held out to his
- *    right for Eclipse is `weapon: 90, yaw: 90`).
+ *  - `yaw`: turns the blade about the vertical like `turn` does the body (clockwise seen from
+ *    above): a blade pointing ahead swings to his right, one pointing behind him swings to his
+ *    left (so a blade resting back over his right shoulder takes a negative yaw to stand clear of
+ *    his head seen from the front). A level blade held out to his right for Eclipse is
+ *    `weapon: 90, yaw: 90`.
  *  - `grip`: slides the right hand along the grip (+ toward the guard); `drop`: the sword is not
  *    held (ko, kneel) and lies where `dropAt` (hero space `[f, u, r]` of the grip) puts it, at
  *    `weapon`/`roll`/`yaw` as usual.
@@ -379,6 +383,8 @@ export function solveRig(b: Build, pose: ChibiPose, grip2: number): Rig {
   const legR = ik(hipR, foot(pose.footF, 1), b.thigh, b.shin, [1, 0, 0.3]);
   const legL = ik(hipL, foot(pose.footB, -1), b.thigh, b.shin, [1, 0, -0.3]);
   const toe = (leg: Limb, side: number): V3 => {
+    // A kneeling leg's foot is turned back onto its toes.
+    if ((pose.kneel === 'F' && side === 1) || (pose.kneel === 'B' && side === -1)) return norm3([-0.92, -0.25, side * 0.12]);
     // Feet point ahead, splayed a little; a foot in the air hangs toward the shin's direction.
     const shin = norm3(sub3(leg.end, leg.mid));
     const flat = norm3([1, 0, side * 0.22]);

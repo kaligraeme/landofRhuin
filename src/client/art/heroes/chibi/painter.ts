@@ -16,7 +16,7 @@ import { type ChibiDesign, type DrawItem, type PieceContext, WEAPON_TAG } from '
 import { paintFx } from './fx.js';
 import { paintHead } from './head.js';
 import { dim, Part } from './raster.js';
-import { add3, at3, camera, type ChibiPose, type ChibiView, clamp, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
+import { add3, at3, camera, type ChibiPose, type ChibiView, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
 
 export interface Box {
   w: number;
@@ -62,8 +62,8 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   const items: DrawItem[] = [];
 
   // Legs.
-  for (const [leg, toe, side, z] of [[rig.legR, rig.toeR, 1, zR], [rig.legL, rig.toeL, -1, zL]] as const) {
-    items.push({ z, draw: () => paintLeg(ctx, d, leg, toe, side, farSide(leg.mid)) });
+  for (const [leg, toe, z] of [[rig.legR, rig.toeR, zR], [rig.legL, rig.toeL, zL]] as const) {
+    items.push({ z, draw: () => paintLeg(ctx, d, leg, toe, farSide(leg.mid)) });
   }
 
   // Torso.
@@ -126,7 +126,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   return c.flatten();
 }
 
-function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, side: number, far: boolean): void {
+function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, far: boolean): void {
   const { proj, depth } = ctx;
   const B = d.body;
   const bias = far ? FAR : 0;
@@ -145,7 +145,6 @@ function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, side: n
   const sole = (p: V3): V3 => add3(p, down, ctx.build.ankle - 3.3);
   const heel = sole(add3(ankle, toe, -bt.heel));
   const tip = sole(add3(ankle, toe, bt.toe));
-  const flatFoot = clamp(1 - (ankle[1] - ctx.build.ankle) / 6, 0, 1);
   // The sole, a dark band under the foot.
   part.capsule(proj(add3(heel, down, 1)), proj(add3(tip, down, 0.9)), 2.3, 2.1, k(bt.sole), bias - 0.3, depth(heel) - 0.2, depth(tip) - 0.2, 4);
   part.capsule(proj(heel), proj(tip), 2.6, 2.4, k(bt.mat), bias, depth(heel) + 0.3, depth(tip) + 0.3, 3);
@@ -153,7 +152,6 @@ function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, side: n
     const capA = add3(lerp3(heel, tip, 0.62), [0, 0.6, 0]);
     part.capsule(proj(capA), proj(add3(tip, [0, 0.3, 0])), 2.2, 2.0, k(bt.cap), bias + 0.1, depth(capA) + 0.6, depth(tip) + 0.8, 6);
   }
-  void flatFoot;
   // A knee cop, a little forward of the joint.
   if (B.knee) {
     const fwd = norm3(sub3(lerp3(knee, ankle, 0.5), lerp3(hip, knee, 0.5)));
@@ -162,7 +160,6 @@ function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, side: n
     part.ellipse(p[0], p[1], B.knee.r, B.knee.r * 0.95, k(B.knee.mat), bias + 0.05, depth(kc) + 1.5, 7);
   }
   part.commit();
-  void side;
 }
 
 function paintArm(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): void {

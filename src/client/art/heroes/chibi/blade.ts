@@ -8,7 +8,7 @@ import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import { type PieceContext, WEAPON_TAG, type WeaponDesign } from './design.js';
 import { type Mat, type Part } from './raster.js';
-import { add3, cross3, norm3, type V3 } from './rig.js';
+import { add3, cross3, norm3 } from './rig.js';
 
 export interface BladeSpec {
   /** The blade's outline in [u, v] (v + toward the cutting edge), from the guard round to the tip and back. */

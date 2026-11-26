@@ -10,7 +10,7 @@ import type { Vec } from '../skeleton.js';
 import type { ChibiDesign, PieceContext } from './design.js';
 import { hash } from './pieces.js';
 import { scanPoly } from './raster.js';
-import { add3, at3, type ChibiFx, clamp, type FxContext, lerp, mul3, rad, type V3, weaponAxes } from './rig.js';
+import { add3, type ChibiFx, clamp, cross3, dot3, type FxContext, len3, lerp, norm3, rad, TO_CAMERA, type V3, weaponAxes } from './rig.js';
 
 const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
 const WHITE: RGB = [255, 255, 255];
@@ -42,6 +42,7 @@ function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOu
   const { c } = ctx;
   const n = dirs.length - 1;
   if (n < 1) return;
+  dirs = faceCamera(ctx, dirs);
   const bands: [number, number, RGB, number][] = [
     [0, 0.14, d.aura.hot, 1],
     [0.14, 0.34, mixc(d.aura.hot, d.aura.core, 0.45), 0.92],
@@ -70,6 +71,56 @@ function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOu
       glowPoly(c, [pa0, pb0, pb1, pa1], col, a * alpha * fade, under);
     }
   }
+}
+
+/**
+ * A swing seen edge on (a cut straight at the viewer) would smear into a sliver. As sprite artists
+ * do, turn the arc's plane about the blade's final direction (so the arc still ends on the blade)
+ * until it shows at least half its face to the viewer.
+ */
+function faceCamera(ctx: PieceContext, dirs: V3[]): V3[] {
+  const end = dirs[dirs.length - 1] as V3;
+  const start = dirs[0] as V3;
+  let nrm = cross3(start, end);
+  if (len3(nrm) < 0.05) nrm = cross3(dirs[Math.floor(dirs.length / 2)] as V3, end);
+  if (len3(nrm) < 0.05) return dirs;
+  nrm = norm3(nrm);
+  const cam = norm3(ctx.cam.local(TO_CAMERA));
+  const side = cross3(end, nrm);
+  const a = dot3(nrm, cam);
+  const b = dot3(side, cam);
+  const want = 0.55;
+  const reach = Math.hypot(a, b);
+  if (Math.abs(a) >= want || reach < 1e-3) return dirs;
+  // The smallest turn that brings the facing up to `want` (or as near as it can get).
+  const phase = Math.atan2(b, a);
+  const target = Math.min(want, reach * 0.999);
+  const sign = a >= 0 ? 1 : -1;
+  const base = Math.acos(clamp((sign * target) / reach, -1, 1));
+  const turn = (beta: number): V3[] => {
+    const cb = Math.cos(beta);
+    const sb = Math.sin(beta);
+    // Rodrigues: turn each direction about `end`.
+    return dirs.map((v) => {
+      const kv = cross3(end, v);
+      const kd = dot3(end, v);
+      return [v[0] * cb + kv[0] * sb + end[0] * kd * (1 - cb), v[1] * cb + kv[1] * sb + end[1] * kd * (1 - cb), v[2] * cb + kv[2] * sb + end[2] * kd * (1 - cb)];
+    });
+  };
+  // Of the two turns that will do, keep the one whose arc starts where the blade came from on screen.
+  const from = ctx.cam.vec(start);
+  let best: V3[] = dirs;
+  let bestD = Infinity;
+  for (const beta of [phase + base, phase - base]) {
+    const t = turn(Math.atan2(Math.sin(beta), Math.cos(beta)));
+    const s0 = ctx.cam.vec(t[0] as V3);
+    const dd = Math.hypot(s0[0] - from[0], s0[1] - from[1]);
+    if (dd < bestD) {
+      bestD = dd;
+      best = t;
+    }
+  }
+  return best;
 }
 
 /** A starburst: four long rays, four short ones, a white core and a coloured fringe. */
@@ -217,29 +268,40 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   }
 
   if (fx.shock) {
+    // A ring of crimson force rolling out over the floor, white-hot at its front, with rubble.
     const k = clamp(fx.shock, 0, 1);
     const g = fx.shockAt ? ground(fx.shockAt) : ground(tip);
     const R = 8 + 46 * k;
-    const n = Math.ceil(R * 7);
+    const n = Math.ceil(R * 8);
+    const fade = 1 - k * 0.65;
     for (let i = 0; i < n; i++) {
       const th = (i / n) * Math.PI * 2;
-      const p = ctx.proj([g[0] + Math.cos(th) * R, 0, g[2] + Math.sin(th) * R]);
       const front = Math.sin(th + cam.yaw) > 0;
-      for (let t = 0; t < 3 - k * 2; t++) c.glow(p[0], p[1] - t, t === 0 ? aura.hot : aura.core, (0.85 - 0.6 * k) * (t === 0 ? 1 : 0.6), !front);
+      for (const [rr, col, a] of [[1, aura.hot, 0.95], [0.94, aura.core, 0.85], [0.86, aura.core, 0.5], [0.76, aura.edge, 0.3]] as [number, RGB, number][]) {
+        const p = ctx.proj([g[0] + Math.cos(th) * R * rr, 0, g[2] + Math.sin(th) * R * rr]);
+        c.glow(p[0], p[1], col, a * fade, !front);
+      }
+      // A lip of force standing up off the floor at the front of the ring.
+      if (i % 2 === 0) {
+        const p = ctx.proj([g[0] + Math.cos(th) * R, (1 - k) * 3, g[2] + Math.sin(th) * R]);
+        c.glow(p[0], p[1], aura.core, 0.6 * fade, !front);
+      }
     }
     // Rubble thrown up near the centre.
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 10; i++) {
       const th = hash(i, 11) * Math.PI * 2;
-      const rr = R * (0.3 + 0.6 * hash(i, 12));
-      const hgt = (1 - k) * (4 + 10 * hash(i, 13)) * Math.sin(Math.PI * Math.min(1, k * 1.6 + 0.2));
+      const rr = R * (0.25 + 0.6 * hash(i, 12));
+      const hgt = (1 - k) * (5 + 12 * hash(i, 13)) * Math.sin(Math.PI * Math.min(1, k * 1.6 + 0.2));
       const p = ctx.proj([g[0] + Math.cos(th) * rr, hgt, g[2] + Math.sin(th) * rr]);
-      c.glow(p[0], p[1], i % 2 ? DUST_DARK : [86, 74, 66], 0.95 * (1 - k * 0.7));
-      if (i % 3 === 0) c.glow(p[0] + 1, p[1], DUST_DARK, 0.9 * (1 - k * 0.7));
+      const col: RGB = i % 2 ? DUST_DARK : [70, 60, 56];
+      c.glow(p[0], p[1], col, 0.95 * fade);
+      c.glow(p[0] + 1, p[1], col, 0.95 * fade);
+      if (i % 3 === 0) c.glow(p[0], p[1] - 1, DUST, 0.9 * fade);
     }
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 4; i++) {
       const th = hash(i, 21) * Math.PI * 2;
-      const p = ctx.proj([g[0] + Math.cos(th) * R * 0.7, 0, g[2] + Math.sin(th) * R * 0.5]);
-      puff(c, p[0], p[1] - 3, 3 + 3 * k, DUST, 0.35 * (1 - k * 0.6));
+      const p = ctx.proj([g[0] + Math.cos(th) * R * 0.6, 0, g[2] + Math.sin(th) * R * 0.6]);
+      puff(c, p[0], p[1] - 2, 2 + 2 * k, DUST, 0.25 * (1 - k * 0.6));
     }
   }
 
@@ -269,23 +331,31 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
         const b = pts[s + 1] as Vec;
         const fade = 1 - s / pts.length;
         const col = s === 0 ? aura.hot : s < 3 ? aura.core : aura.edge;
-        glowLine(c, a, b, col, 0.85 * fade * Math.min(1, t * 4 + 0.3), (deep[s] as number) < centreZ - 4);
-        if (s < 3) glowLine(c, [a[0], a[1] + 1], [b[0], b[1] + 1], [60, 6, 16], 0.6 * fade, (deep[s] as number) < centreZ - 4);
+        const behind = (deep[s] as number) < centreZ - 4;
+        glowLine(c, a, b, col, 0.9 * fade * Math.min(1, t * 4 + 0.3), behind);
+        if (s < 5) glowLine(c, [a[0], a[1] + 1], [b[0], b[1] + 1], s < 2 ? aura.core : [70, 8, 22], 0.75 * fade, behind);
+        if (s === 0) puff(c, a[0], a[1], 1.2, aura.hot, 0.9, behind);
       }
     }
   }
 
   if (fx.blood) {
     const k = clamp(fx.blood, 0, 1);
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 34; i++) {
       const th = hash(i, 41) * Math.PI * 2;
-      const rr = 8 + hash(i, 42) * 22 * (0.6 + k * 0.6);
-      const u = rig.pelvis.o[1] + (hash(i, 43) - 0.3) * 50 + k * 6;
-      const p = ctx.proj([rig.pelvis.o[0] + Math.cos(th) * rr, u, Math.sin(th) * rr]);
-      const r = 1.5 + hash(i, 44) * 3 * k;
-      const col: RGB = i % 3 === 0 ? [150, 10, 26] : i % 3 === 1 ? [96, 6, 18] : [200, 30, 44];
-      puff(c, p[0], p[1], r, col, (0.25 + 0.3 * hash(i, 45)) * k, false);
-      if (i % 2 === 0) c.glow(p[0] + 2, p[1] - 3, [230, 40, 56], 0.9 * k);
+      const rr = 6 + hash(i, 42) * 24 * (0.6 + k * 0.6);
+      const u = rig.pelvis.o[1] + (hash(i, 43) - 0.3) * 52 + k * 6;
+      const p3: V3 = [rig.pelvis.o[0] + Math.cos(th) * rr, u, Math.sin(th) * rr];
+      const p = ctx.proj(p3);
+      // The mist hangs around and behind him (the figure hides it); droplets fly in front.
+      const behind = true;
+      const r = 2 + hash(i, 44) * 3.5 * k;
+      const col: RGB = i % 3 === 0 ? [150, 10, 26] : i % 3 === 1 ? [96, 6, 18] : [190, 24, 40];
+      puff(c, p[0], p[1], r, col, (0.35 + 0.35 * hash(i, 45)) * k, behind);
+      if (i % 2 === 0) {
+        c.glow(p[0] + 2, p[1] - 3, [236, 44, 60], 0.95 * k);
+        c.glow(p[0] + 2, p[1] - 2, [140, 8, 24], 0.8 * k);
+      }
     }
   }
 
@@ -323,8 +393,6 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
     const fctx: FxContext = { c, cam, rig, proj: ctx.proj, depth: ctx.depth, tip, aura, hash };
     fx.extra(fctx);
   }
-  void at3;
-  void mul3;
 }
 
 function glowLine(c: Canvas, a: Vec, b: Vec, col: RGB, alpha: number, under: boolean): void {

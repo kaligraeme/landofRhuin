@@ -145,7 +145,7 @@ export function hash(a: number, b = 0): number {
 /** A skirt of cloth panels: each its own item, sorted by depth around the legs. */
 export function skirt(spec: SkirtSpec): Piece {
   return (ctx: PieceContext) => {
-    const { rig, pose, cam } = ctx;
+    const { rig, pose } = ctx;
     const pf = rig.pelvis;
     const wind = clamp(pose.wind ?? 0, 0, 1.3) * (spec.give ?? 1);
     const lift = pose.lift ?? 0;
@@ -207,7 +207,6 @@ export function skirt(spec: SkirtSpec): Piece {
         draw: () => drawPanel(ctx, spec, pn, pi, grid),
       };
     });
-    void cam;
     return items;
   };
 }
@@ -261,8 +260,6 @@ function drawPanel(ctx: PieceContext, spec: SkirtSpec, pn: Panel, pi: number, gr
       for (let j = 1; j < ROWS; j++) {
         const a = (grid[k] as V3[])[j] as V3;
         const b = (grid[k] as V3[])[j + 1] as V3;
-        const n = norm3(cross3(sub3(b, a), sub3((grid[k + 1] as V3[])[j] as V3, a)));
-        void n;
         const pa = (P[k] as Vec[])[j] as Vec;
         const pb = (P[k] as Vec[])[j + 1] as Vec;
         const z = ctx.depth(lerp3(a, b, 0.5)) + 0.05;
