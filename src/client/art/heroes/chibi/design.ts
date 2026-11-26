@@ -107,6 +107,12 @@ export interface Tress {
   give?: number;
   /** The share of its length over which it narrows to its tip (default 0.35). */
   taper?: number;
+  /**
+   * How far its end flips out, away from the head, as the ends of a layered cut do (default 0: it
+   * hangs straight). About 1 turns the last two fifths of it out and a little up. A flipped end
+   * catches the light where it turns up, rather than darkening to its tip.
+   */
+  flip?: number;
 }
 
 /**
@@ -138,8 +144,9 @@ export interface Ponytail {
 
 /**
  * Hair that hangs past the shoulders, painted with the head's hair material (head.ts
- * `hairItems`). Each part of it is sorted with the body on its own, so a curtain down the back
- * hangs behind the body seen from the front and over the back (and a cape) seen from behind, and
+ * `hairItems`). Each part of it is sorted with the body on its own (but for layers at the nape:
+ * see `nape`), so a curtain down the back hangs behind the body seen from the front and over the
+ * back (and a cape) seen from behind, and
  * where it grows out of the head's own hair no line parts them. It hangs from the head, then falls
  * and lies over the body; the pose's `wind` streams it back (a negative wind leaves it be),
  * `lift` raises it, `flare` swings it out around the body in a spin and `sway` swings it to a side,
@@ -157,6 +164,20 @@ export interface LongHair {
   front?: readonly Tress[];
   /** A tied tail. */
   tail?: Ponytail;
+  /**
+   * Short layers at the nape (a wolf cut's or a mullet's), painted with the head inside its depth
+   * test rather than sorted with the body, so they lie over a high collar where they fall outside
+   * it and stay hidden where it stands nearer, in every view. They lie over the head, the jaw and
+   * the head's pieces (a high collar: the pieces' ellipsoids whole, `lie` clear of them), and sort
+   * as the head does: keep them short (about 8 to 16), above the shoulders.
+   */
+  nape?: readonly Tress[];
+  /**
+   * How many tones darker than other long hair the nape layers are where they grow out from under
+   * the hair above them, in its shadow (default 1: their upper part a tone deeper, so the layers
+   * read apart from the hair over them). With 0 they are lit all along as the rest of the hair is.
+   */
+  napeDeep?: number;
   /** How far clear of the body the hair lies (default 1.5): more over a cape or a high collar. */
   lie?: number;
 }

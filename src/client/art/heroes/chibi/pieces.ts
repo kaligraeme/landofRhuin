@@ -482,9 +482,17 @@ export interface StrandSpec {
    * cape flies higher than its sides, so streaming side on it shows its breadth rather than an edge.
    */
   fan?: number;
+  /**
+   * How far its end flips out to its own side (`side`, or else out from `axis`) and a little up,
+   * as the ends of a layered haircut do (default 0: it hangs straight). The flip grows over the
+   * last two fifths of its length; about 1 turns its tip mostly outward.
+   */
+  flip?: number;
 }
 
 const DOWN: V3 = [0, -1, 0];
+/** Where along a strand (0 root to 1 tip) its `flip` starts. */
+export const FLIP_FROM = 0.6;
 const smooth = (x: number): number => x * x * (3 - 2 * x);
 
 /**
@@ -542,6 +550,10 @@ export function strand(pose: ChibiPose, s: StrandSpec): V3[] {
     hang = add3(hang, [ox / ol, 0, oz / ol], flare * 1.4 * t * t);
     hang = add3(hang, [0, 0, 1], sway * 0.35 * t);
     if (s.fan) hang = add3(norm3(hang), [0, 1, 0], s.fan * bend * 1.2);
+    if (s.flip && t > FLIP_FROM) {
+      const out = s.side ?? [ox / ol, 0, oz / ol];
+      hang = add3(norm3(hang), norm3(add3(out, [0, 0.4, 0])), s.flip * 1.6 * smooth((t - FLIP_FROM) / (1 - FLIP_FROM)));
+    }
     const d = norm3(add3(mul3(dir, hold), norm3(hang), 1 - hold));
     // A ripple across it and in and out, stronger toward the tip and in the wind.
     const wave = Math.sin(phase - j * 1.05 + (s.seed ?? 0)) * (0.35 + wind * 1.2 + flare) * t * (s.ripple ?? 1);

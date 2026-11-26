@@ -249,7 +249,9 @@ left), toward you and away from you. The other five heroes still use the skeleto
 
 Each has the same sixteen clips. The server's act event names the skill used (`s`) and the hit of
 the combo (`c`), so everyone sees the right one. The Dark Knight is a stern young knight with a
-messy mop of dark chestnut hair, blackened plate with dull silver edges, a long open oxblood coat
+shaggy dark-chestnut wolf cut (a big, ragged crown of choppy pieces, a piece-y fringe to his brows,
+short sides and longer pointed layers that fall onto his high collar and flick out at the ends),
+blackened plate with dull silver edges, a long open oxblood coat
 with a high collar and split tails, and an oversized black greatsword with a pale edge, a
 saw-toothed back and a crimson rune that blazes when he fights. His swings leave white-hot arcs
 that fade through crimson, and his skills burn crimson with a violet edge
@@ -338,7 +340,8 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
   and:
   - the head (`head.ts`): its locks of hair; long hair if it has any (a curtain down the back laid
     out with `curtain`, locks over the shoulders, a tied ponytail with a `sheen` for glossy dark
-    hair); a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
+    hair; short layers at the nape, painted with the head, whose ends can `flip` out, as in a
+    layered cut); a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
     resting expression; and anything worn on the head (a hairpin, a circlet) as a head piece,
     which is given the head's frame as painted so it stays on the hair;
   - the limbs and boots (`BodyDesign`; a boot's `foot` can taper a soft boot to a point);
