@@ -112,11 +112,10 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
     if (yaw < 3 && u > 10) return ARMOUR_RIDGE;
     return ARMOUR;
   }
-  // Two leather straps cross the back of the tunic from the shoulders to the belt.
-  if (yaw > 120) {
+  // A leather strap across the back of the tunic, from his left shoulder down to his right hip.
+  if (yaw > 110) {
     const x = (180 - yaw) * (h.p[2] >= 0 ? 1 : -1);
-    const strap = (u - 8) * 2.6 - 34;
-    if (Math.abs(x - strap) < 4 || Math.abs(-x - strap) < 4) return LEATHER;
+    if (Math.abs(x + (u - 15) * 5) < 7) return LEATHER;
   }
   return TEAL;
 }

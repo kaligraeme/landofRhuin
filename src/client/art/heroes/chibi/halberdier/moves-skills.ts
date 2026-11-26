@@ -10,10 +10,11 @@
  *   q         8  (2 wind-up) Piercing Thrust: drawn far back and low while the point gathers its
  *                glow, then a deep lunge, the front hand sliding up the haft, a long drill of wind
  *                spiralling off the point well past it
- *   e        11  (1 wind-up) Vault Strike: the butt swung down and planted ahead, a spring up the
- *                haft into a high vault (scarf and ponytail streaming), the halberd pulled up and
- *                flipped point down overhead, then driven into the floor as he lands: a burst of
- *                wind, a shockwave, dust. The server moves him to his aim at once, so it plays in place.
+ *   e        11  (1 wind-up) Vault Strike: the butt swung down and planted just ahead of him, a
+ *                spring up the haft and over its top (scarf and ponytail streaming), the halberd
+ *                pulled up and flipped point down in a wheel of wind, then driven into the floor
+ *                beside him as he lands: a burst of wind, a shockwave, dust. The server moves him to
+ *                his aim at once, so it plays in place.
  *   r        10  (1 wind-up) Whirling Halberd: two fast turns with the haft held level at its
  *                middle in both hands, a ring of wind round him that trails the head, the scarf,
  *                ribbon and ponytail flung out

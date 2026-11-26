@@ -10,8 +10,9 @@
  *   battle  8  a low, bladed spear stance, left foot and left hand leading, the right hand on the
  *              haft by his hip, the point forward and up; a quick, springy bounce on his toes, the
  *              point bobbing, head, scarf and hair a frame behind
- *   move    8  a sprint: long strides, a hard lean, the halberd trailing low behind him in his
- *              right hand, the left arm pumping, the scarf and ponytail streaming
+ *   move    8  a sprint: long strides, a hard lean, the halberd held near its butt in his right
+ *              hand and trailing level behind him, the left arm pumping, the scarf and ponytail
+ *              streaming
  *   atk1    7  (1 wind-up) a straight thrust from the stance: drawn back, driven out with a
  *              stamp of the lead foot, the left hand sliding up the haft
  *   atk2    7  (1 wind-up) an overhand thrust: the haft lifted to his shoulder and driven forward
@@ -19,8 +20,8 @@
  *   atk3    9  (2 wind-up) a coil low, then a long leaping lunge from the butt end of the haft
  *              for the farthest reach: a drill of wind off the point, a burst, dust
  *
- * Thrusts leave spiralling wind streaks (`fx.swirl`) and a streak of jade along the path of the
- * point (`streak` below); each has an anticipation, a strike, a held extension and a recovery
+ * Thrusts leave a drill of wind spiralling off the point (`drill` below, an `fx.swirl`) and streaks
+ * of wind along the path of the point (`streak`); each has an anticipation, a strike, a held extension and a recovery
  * into the battle stance (`settle`), with the scarf and ponytail streaming hardest a frame after
  * the strike. The skill and state clips (moves-skills.ts, moves-states.ts) start from the stance
  * (`fromReady`) and those that hand back to it end in it (`settle`).
@@ -203,7 +204,7 @@ export const gust =
   };
 
 /** Runs several extra painters in turn. */
-export const both =
+const both =
   (...fs: ((x: FxContext) => void)[]) =>
   (x: FxContext): void => {
     for (const f of fs) f(x);
