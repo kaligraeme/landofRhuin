@@ -2,7 +2,9 @@
  * Bladed weapons from a profile: the blade, guard, grip and pommel are drawn in the weapon's own
  * plane (u along it from the grip, v across it toward the cutting edge) and laid onto the screen
  * through the camera. A blade seen edge on keeps at least part of its breadth, as sprite blades
- * do, so a broad sword still reads when swung toward the viewer.
+ * do, so a broad sword still reads when swung toward the viewer. A rune channel down the blade
+ * smoulders a deep red at rest and blazes (brighter, with its marks and a soft glow) as the pose's
+ * `fx.rune` or `fx.aura` rises.
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
@@ -17,12 +19,16 @@ export interface BladeSpec {
   edge: { from: number; width: number; mat: Mat };
   /** A line along the blade's spine catching the light: v and u range. */
   spine?: { v: number; from: number; to: number; mat: Mat };
-  /** A glowing channel down the blade: v, u range, colour and glow colour. */
-  rune?: { v: number; from: number; to: number; colour: RGB; glow: RGB; marks?: readonly number[] };
+  /**
+   * A glowing channel down the blade: v, u range, its colour at rest and blazing, the glow's
+   * colour, and marks across it that show as it blazes.
+   */
+  rune?: { v: number; from: number; to: number; rest: RGB; colour: RGB; glow: RGB; marks?: readonly number[] };
   steel: Mat;
   guard: { pts: readonly (readonly [number, number])[]; mat: Mat; gem?: { u: number; r: number; mat: Mat } };
   grip: { from: number; to: number; r: number; mat: Mat; wrap?: Mat };
-  pommel: { u: number; r: number; mat: Mat; gem?: Mat };
+  /** The pommel: a steel cap, and a gem set in it (`gem` the gem's material, `gemR` its radius). */
+  pommel: { u: number; r: number; mat: Mat; gem?: Mat; gemR?: number };
   grip2: number;
   reach: readonly [number, number];
 }
@@ -44,6 +50,14 @@ export function bladeAxes(ctx: PieceContext): { o: Vec; u: Vec; v: Vec; flip: nu
   }
   if (comp < 0) flip = -1;
   return { o, u, v, flip };
+}
+
+const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
+
+/** How brightly the rune blazes in a pose (0 smouldering at rest, 1 ablaze). */
+export function blaze(ctx: PieceContext): number {
+  const fx = ctx.pose.fx ?? {};
+  return Math.max(0, Math.min(1, (fx.rune ?? 0) + (fx.aura ?? 0) * 0.35));
 }
 
 export function blade(spec: BladeSpec): WeaponDesign {
@@ -78,11 +92,12 @@ export function blade(spec: BladeSpec): WeaponDesign {
       const g1 = at(spec.grip.to, 0);
       part.capsule(g0, g1, spec.grip.r, spec.grip.r, spec.grip.mat, 0, z(spec.grip.from), z(spec.grip.to), 1);
       if (spec.grip.wrap) {
-        for (let u = spec.grip.from + 1; u < spec.grip.to - 0.5; u += 2.2) part.line(at(u, -spec.grip.r), at(u + 1, spec.grip.r), spec.grip.wrap, 0, z(u) + 0.5, 1, true);
+        // The wrap: dark bands slanting round the grip, two pixels apart.
+        for (let u = spec.grip.from + 0.8; u < spec.grip.to - 0.5; u += 2) part.line(at(u, -spec.grip.r), at(u + 1.2, spec.grip.r), spec.grip.wrap, 0, z(u) + 0.5, 1, true);
       }
       const pm = at(spec.pommel.u, 0);
-      part.poly([at(spec.pommel.u + 2.2, 0), at(spec.pommel.u, spec.pommel.r), at(spec.pommel.u - 2.4, 0), at(spec.pommel.u, -spec.pommel.r)], spec.pommel.mat, flatLight, z(spec.pommel.u) + 0.5, 2);
-      if (spec.pommel.gem) part.plot(pm[0], pm[1], spec.pommel.gem, 0.3, z(spec.pommel.u) + 1, 2, true);
+      part.poly([at(spec.pommel.u + 2.2, 0), at(spec.pommel.u + 0.6, spec.pommel.r), at(spec.pommel.u - 2.6, spec.pommel.r * 0.6), at(spec.pommel.u - 2.6, -spec.pommel.r * 0.6), at(spec.pommel.u + 0.6, -spec.pommel.r)], spec.pommel.mat, flatLight, z(spec.pommel.u) + 0.5, 2);
+      if (spec.pommel.gem) part.ellipse(pm[0], pm[1], spec.pommel.gemR ?? 1, spec.pommel.gemR ?? 1, spec.pommel.gem, 0.1, z(spec.pommel.u) + 2.5, 6);
       // The blade, its pale cutting edge, the bright spine and the rune channel.
       const bladePts = spec.blade.map(([u, v]) => at(u, v));
       part.poly(bladePts, spec.steel, (x, y) => {
@@ -105,18 +120,23 @@ export function blade(spec: BladeSpec): WeaponDesign {
       }
       if (spec.spine) part.line(at(spec.spine.from, spec.spine.v), at(spec.spine.to, spec.spine.v), spec.spine.mat, 0.7, z(spec.spine.from) + 0.6, 3, true);
       if (spec.rune) {
+        // A thin channel smouldering at rest; ablaze it brightens toward the glow's colour and its marks show.
         const r = spec.rune;
-        const runeMat: Mat = { tones: [r.colour, r.colour, r.colour, r.colour], line: r.colour, flat: true };
+        const k = blaze(ctx);
+        const col = k < 0.6 ? mixc(r.rest, r.colour, k / 0.6) : mixc(r.colour, r.glow, (k - 0.6) / 0.4);
+        const runeMat: Mat = { tones: [col, col, col, col], line: col, flat: true };
         const n2 = Math.ceil(Math.abs(r.to - r.from) * Math.hypot(ax.u[0], ax.u[1]));
         for (let i = 0; i <= n2; i++) {
           const u = r.from + ((r.to - r.from) * i) / Math.max(1, n2);
           const p = at(u, r.v);
           if (part.idAt(Math.floor(p[0]), Math.floor(p[1])) === 3) part.plot(p[0], p[1], runeMat, 0, z(u) + 0.7, 3, true);
         }
-        for (const u of r.marks ?? []) {
-          for (const dv of [-1, 1]) {
-            const p = at(u, r.v + dv);
-            if (part.idAt(Math.floor(p[0]), Math.floor(p[1])) === 3) part.plot(p[0], p[1], runeMat, 0, z(u) + 0.7, 3, true);
+        if (k > 0.3) {
+          for (const u of r.marks ?? []) {
+            for (const dv of [-1, 1]) {
+              const p = at(u, r.v + dv);
+              if (part.idAt(Math.floor(p[0]), Math.floor(p[1])) === 3) part.plot(p[0], p[1], runeMat, 0, z(u) + 0.7, 3, true);
+            }
           }
         }
       }

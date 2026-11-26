@@ -34,7 +34,8 @@ const SOLE = mat4('#2a2026', '#1e171c', '#151014', '#0c090b', '#08060a');
 const STEEL = mat4('#80869a', '#505466', '#32343f', '#1c1d25', '#0d0e13');
 const EDGE = mat4('#f6f8fc', '#d8dce6', '#aab0be', '#7e8494', '#2a2c36');
 const GUARD = mat4('#b8bcca', '#6c7080', '#40424e', '#25262f', '#111218');
-const GRIP = mat4('#843640', '#5e242b', '#40161b', '#260c10', '#150608');
+// Leather bound round the grip, a warm brown so the dark wrap shows across it.
+const GRIP = mat4('#9a6448', '#76482f', '#52301e', '#321c11', '#180c07');
 const GEM = mat4('#ff8a8a', '#e8283c', '#a8101e', '#600812', '#30040a');
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────
@@ -212,34 +213,35 @@ const DARK_KNIGHT: ChibiDesign = {
     }),
   ],
   weapon: blade({
+    // A broad black blade 64 px from the grip to the tip, its back stepped in saw teeth.
     blade: [
-      [5, 3.4],
-      [5, -3.4],
-      [9, -4.6],
-      [13, -4.6],
-      [15.6, -2.8],
-      [16.2, -4.9],
-      [21, -4.5],
-      [23.6, -2.7],
-      [24.2, -4.8],
-      [29, -4.4],
-      [31.6, -2.7],
-      [32.2, -4.7],
-      [37, -4.3],
-      [39.6, -2.8],
-      [40.2, -4.5],
-      [47, -4.1],
-      [56, -2.6],
+      [5, 3.6],
+      [5, -3.6],
+      [8, -5],
+      [12, -5],
+      [15.4, -2.8],
+      [16, -5.4],
+      [20, -5.3],
+      [23.4, -2.8],
+      [24, -5.4],
+      [28, -5.2],
+      [31.4, -2.8],
+      [32, -5.3],
+      [36, -5.1],
+      [39.4, -2.8],
+      [40, -5.1],
+      [47, -4.7],
+      [56, -3],
       [64, 0.2],
-      [59, 2.8],
-      [52, 4.8],
-      [40, 5.5],
-      [20, 5.3],
-      [9, 4.8],
+      [59.5, 3.2],
+      [52, 5.4],
+      [40, 6],
+      [20, 5.8],
+      [9, 5.2],
     ],
-    edge: { from: 8, width: 1.7, mat: EDGE },
-    spine: { v: -3.5, from: 7, to: 46, mat: STEEL },
-    rune: { v: -0.3, from: 10, to: 46, colour: hex('#e01a34'), glow: hex('#ff3a52'), marks: [17, 25, 33, 41] },
+    edge: { from: 8, width: 1.8, mat: EDGE },
+    spine: { v: -3.9, from: 7, to: 46, mat: STEEL },
+    rune: { v: 0.2, from: 10, to: 46, rest: hex('#801224'), colour: hex('#e8203a'), glow: hex('#ff6a7c'), marks: [17, 25, 33, 41] },
     steel: STEEL,
     guard: {
       pts: [
@@ -257,12 +259,12 @@ const DARK_KNIGHT: ChibiDesign = {
       mat: GUARD,
       gem: { u: 3.2, r: 1.6, mat: GEM },
     },
-    grip: { from: -10, to: 0.6, r: 1.7, mat: GRIP, wrap: flat(hex('#1c0a0c')) },
-    pommel: { u: -12, r: 2.6, mat: GUARD, gem: flat(hex('#f02a40')) },
+    grip: { from: -10, to: 0.6, r: 1.8, mat: GRIP, wrap: flat(hex('#1e0e0a')) },
+    pommel: { u: -12.2, r: 2.8, mat: GUARD, gem: GEM, gemR: 1.5 },
     grip2: -6.5,
     reach: [8, 64],
   }),
-  aura: { core: hex('#c81a34'), edge: hex('#8c3ce0'), hot: hex('#fff2f2') },
+  aura: { core: hex('#d01a30'), edge: hex('#7a34c8'), hot: hex('#fff2f2') },
 };
 
 export default DARK_KNIGHT;
