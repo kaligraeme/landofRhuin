@@ -152,8 +152,9 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   for (const piece of pieces) for (const b of piece.blobs(ctx)) part.blobs(b.frame, b.blobs, b.shade);
   under?.(part);
 
-  // Locks: wind streams them back and sideways, in the head's own axes.
-  const wind = pose.wind ?? 0;
+  // Locks: wind streams them back and sideways, in the head's own axes (never forward: a
+  // negative wind flicks only the coat, or the fringe would fall over his eyes).
+  const wind = Math.max(0, pose.wind ?? 0);
   const push = inFrame(fr, mul3([-1, 0.3 + (pose.lift ?? 0) * 0.6, (pose.sway ?? 0) * 0.6], wind * 0.55 + Math.abs(pose.sway ?? 0) * 0.2));
   const lift = inFrame(fr, [0, (pose.lift ?? 0) * 0.4, 0]);
   const centre = ctx.proj(hero(d.shell.c));

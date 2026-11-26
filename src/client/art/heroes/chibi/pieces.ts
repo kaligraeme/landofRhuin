@@ -155,13 +155,15 @@ export function skirt(spec: SkirtSpec): Piece {
   return (ctx: PieceContext) => {
     const { rig, pose } = ctx;
     const pf = rig.pelvis;
-    const wind = clamp(pose.wind ?? 0, 0, 1.3) * (spec.give ?? 1);
+    // Negative wind flicks the tails forward (a flinch): the same bend, the other way.
+    const blow = clamp(pose.wind ?? 0, -0.8, 1.3);
+    const wind = Math.abs(blow) * (spec.give ?? 1);
     const lift = pose.lift ?? 0;
     const flare = pose.flare ?? 0;
     const sway = pose.sway ?? 0;
     const phase = (pose.phase ?? 0) * Math.PI * 2;
     const down: V3 = [0, -1, 0];
-    const windDir = norm3([-1, 0.06 + lift * 0.5, sway * 0.5]);
+    const windDir = norm3([blow < 0 ? 1 : -1, 0.06 + lift * 0.5, sway * 0.5]);
     const toCam = norm3(ctx.cam.local(TO_CAMERA));
     const fan = spec.fan ?? 0.8;
     const items = spec.panels.map((pn, pi) => {

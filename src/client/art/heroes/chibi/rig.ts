@@ -205,7 +205,8 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    `weapon`/`roll`/`yaw` as usual.
  *
  * Cloth and hair
- *  - `wind`: coat tails and hair stream back (0 hanging, 1 flying flat behind him).
+ *  - `wind`: coat tails and hair stream back (0 hanging, 1 flying flat behind him). Down to
+ *    -0.8 flicks the coat tails forward instead (a flinch thrown back); the hair stays put.
  *  - `lift`: an updraft: tails rise and spread (falling, leaping, a burst of power), -1 to 1.
  *  - `flare`: tails swing out around him (spins), 0 to 1.
  *  - `sway`: tails and hair swing sideways, -1 (to his left) to 1 (to his right).

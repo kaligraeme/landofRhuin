@@ -4,7 +4,7 @@
  *   guard    5  (1 wind-up) Parry: the blade whipped up across his body, flat to the foe, his left
  *               hand braced on it; a crouch, a clang, sparks as he skids back, then a held brace
  *   hurt     3  a flinch: knocked back and sideways, head snapped back, eyes squeezed shut, arms
- *               flung loose, the coat jolted up
+ *               flung loose, the coat tails flicked forward
  *   kneel    4  (loop) low health: down on his right knee, left knee up, leaning on the blade
  *               planted upright beside him; heaving, panting, a bead of sweat
  *   ko       6  (hold) stagger, drop to his knees, topple back, twisting so that he lies across
@@ -76,10 +76,11 @@ const guard: ChibiPose[] = [
 // ── Hurt ─────────────────────────────────────────────────────────────────────────────────────
 
 const hurt: ChibiPose[] = [
-  // The blow: thrown back and sideways, head snapped back, the arms flung loose, the coat jolted up.
-  pose(S, { x: -4, y: 5, lean: -18, twist: -14, tilt: -10, head: -16, look: -10, footF: [12, 0, 6], footB: [-10, -2, 5.5], handF: [8, 16, 13], handB: [-4, 8, 14], weapon: 118, roll: 20, yaw: 10, face: 'hurt', wind: 0, lift: 0.6, flare: 0.35, sway: -0.5, phase: 0.2 }),
+  // The blow: thrown back and sideways, head snapped back, the arms flung loose, the coat tails
+  // whipped forward past his legs.
+  pose(S, { x: -4, y: 5, lean: -18, twist: -14, tilt: -10, head: -16, look: -10, footF: [12, 0, 6], footB: [-10, -2, 5.5], handF: [8, 16, 13], handB: [-4, 8, 14], weapon: 118, roll: 20, yaw: 10, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
   // Knocked back a step.
-  pose(S, { x: -6, y: 6, lean: -10, twist: -10, tilt: -6, head: -8, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.5], handF: [7, 15, 11], handB: [-1, 11, 13], weapon: 104, roll: 22, yaw: 4, face: 'hurt', wind: 0, lift: 0.35, flare: 0.15, sway: -0.3, phase: 0.4 }),
+  pose(S, { x: -6, y: 6, lean: -10, twist: -10, tilt: -6, head: -8, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.5], handF: [7, 15, 11], handB: [-1, 11, 13], weapon: 104, roll: 22, yaw: 4, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
   settle(pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [8, 12, 9], weapon: 60 }), 0.7, { grip: -6, face: 'grit', wind: 0.15, phase: 0.6 }),
 ];
@@ -283,13 +284,15 @@ const victory: ChibiPose[] = [
   // A breath first: the blade trailing low behind him.
   pose(S, { y: 6, lean: 8, twist: -12, head: 2, look: 4, handF: [2, 15, 11], handB: [1, 14, 11], weapon: 250, roll: 0, yaw: 0, face: 'smirk', wind: 0.25 }),
   // The blade wheels up behind him, over the top...
-  pose(TWIRL, { weapon: 400, phase: 0.1, fx: { smear: { from: 250, roll: 0, width: 0.5 }, rune: 0.8 } }),
-  // ...and round again.
-  pose(TWIRL, { weapon: 650, phase: 0.25, wind: 0.6, fx: { smear: { from: 400, width: 0.5 }, rune: 1 } }),
-  // Raised high and out beside him with a glint at the tip, the coat thrown wide.
-  pose(TWIRL, { y: 2, lean: -5, head: -8, handF: [-6, -4, 18], weapon: 720, roll: 30, wind: 0.6, lift: 0.5, flare: 0.3, phase: 0.4, fx: { smear: { from: 650, roll: -20, width: 0.45, alpha: 0.7 }, rune: 1, extra: glint(1) } }),
+  // (standing nearly upright over his head here: tipped forward it would cross his face side on)...
+  pose(TWIRL, { weapon: 372, phase: 0.1, fx: { smear: { from: 250, roll: 0, width: 0.5 }, rune: 0.8 } }),
+  // ...and round again, ending tipped out to his left so from behind it shows its length.
+  pose(TWIRL, { weapon: 650, yaw: -30, phase: 0.25, wind: 0.6, fx: { smear: { from: 372, width: 0.5 }, rune: 1 } }),
+  // Raised high and out beside him with a glint at the tip, the coat thrown wide. (No swoosh on
+  // these two: a short arc at the tip reads as a pennant, not a swing.)
+  pose(TWIRL, { y: 2, lean: -5, head: -8, handF: [-6, -4, 18], weapon: 720, roll: 30, wind: 0.6, lift: 0.5, flare: 0.3, phase: 0.4, fx: { rune: 1, extra: glint(1) } }),
   // Swung down onto his shoulder.
-  pose(PROUD, { y: 2, handF: [5, 4, 8], weapon: -40, wind: 0.7, lift: 0.45, phase: 0.55, face: 'stern', look: 6, fx: { smear: { from: 0, roll: 30, yaw: 0, width: 0.4, alpha: 0.6 } } }),
+  pose(PROUD, { y: 2, handF: [5, 4, 8], weapon: -40, wind: 0.7, lift: 0.45, phase: 0.55, face: 'stern', look: 6, fx: { rune: 0.5 } }),
   // Settled: chin up, a smirk, the coat still streaming.
   pose(PROUD, { phase: 0.7, wind: 0.65 }),
   pose(PROUD, { phase: 0.85, wind: 0.6 }),

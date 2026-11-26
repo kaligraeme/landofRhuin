@@ -79,6 +79,9 @@ const roar =
     }
   };
 
+/** The farther of a charge's afterimages. */
+const GHOST_FAR: RGB = [118, 14, 36];
+
 /**
  * The rush of a charge (strength k). Side on, crimson afterimages of him trail behind (copies of
  * his silhouette, under the figure); toward or away from the viewer, streaks burst out all round him.
@@ -91,8 +94,9 @@ const rush =
     const fv = cam.vec([1, 0, 0]);
     if (Math.abs(fv[0]) > 0.4) {
       const dir = fv[0] >= 0 ? 1 : -1;
+      // The far ghost a deep blood red, the near one the aura's crimson: violet stays a faint edge.
       const ghosts: [number, RGB, number][] = [
-        [20, aura.edge, 0.3],
+        [20, GHOST_FAR, 0.4],
         [10, aura.core, 0.5],
       ];
       for (let y = 0; y < c.h; y++) {
