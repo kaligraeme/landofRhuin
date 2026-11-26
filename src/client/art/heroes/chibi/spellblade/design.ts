@@ -60,7 +60,7 @@ const L = (yaw: number, pitch: number, dir: [number, number, number], len: numbe
 
 const LOCKS: Lock[] = [
   // The crown: big smooth clumps lying back over the head and down toward the curtain.
-  L(8, 62, [-0.95, -0.25, 0.05], 12, 5.4, [-0.1, -0.4, 0], 0.5, 0.4),
+  L(8, 60, [-0.9, -0.4, 0.05], 10.5, 5.4, [-0.1, -0.5, 0], 0.5, 0.4),
   // The fringe, soft and swept across to her left, longest over her left brow; her right temple
   // is left clear where the crescent pin holds the hair back.
   L(36, 46, [0.3, -0.7, -0.9], 6, 3, [0.1, -0.15, -0.3], 0.3, 0.3),
