@@ -296,8 +296,9 @@ const greatArc =
 function facing(x: FxContext): { d: Vec; k: number } {
   const fv = x.cam.vec([1, 0, 0]);
   if (Math.abs(fv[0]) > 0.4) return { d: [Math.sign(fv[0]), 0], k: 1 };
-  // Away from the viewer it runs up past her head, so it shows beyond her.
-  return fv[1] >= 0 ? { d: [0, 1], k: 0.6 } : { d: [0, -1], k: 1 };
+  // Away from the viewer it runs up behind her and on past her head, drawn longer so that most
+  // of it shows beyond her.
+  return fv[1] >= 0 ? { d: [0, 1], k: 0.6 } : { d: [0, -1], k: 1.6 };
 }
 
 /** Where the sword's point meets the floor (or the floor under it), on screen. */
@@ -307,8 +308,8 @@ const pointOnFloor = (x: FxContext): Vec => x.proj([x.tip[0], 0, x.tip[2]]);
  * The astral blade slammed down along the floor ahead of her: a great translucent blade of light
  * from where the sword's point meets the floor, `len` pixels along the way she faces (see
  * `facing`), `k` its strength; a white-hot spine, the aura's violet body and a pale cyan rim,
- * tapering to a point. It is painted over her even away from the viewer, where it runs up the
- * screen from her feet past her head (she shows through it), so the blow reads in every view.
+ * tapering to a point. Away from the viewer it lies beyond her, so it passes behind her and shows
+ * running on up the screen past her head.
  */
 const slam =
   (len: number, k: number): Extra =>
@@ -322,7 +323,7 @@ const slam =
     const W = 4.5 + len * 0.03;
     const at = (t: number, w: number): Vec => [S[0] + d[0] * L * t + n[0] * w, S[1] + d[1] * L * t + n[1] * w];
     const pts = (s: number): Vec[] => [at(-0.04, W * 0.5 * s), at(0.18, W * s), at(0.72, W * 0.75 * s), at(1 + 2 / Math.max(1, L), 0), at(0.72, -W * 0.75 * s), at(0.18, -W * s), at(-0.04, -W * 0.5 * s)];
-    const under = false;
+    const under = x.cam.view === 'back';
     fill(c, pts(1.25), aura.edge, 0.4 * k, under);
     fill(c, pts(1), aura.core, 0.55 * k, under);
     fill(c, pts(0.45), mixc(aura.core, aura.hot, 0.6), 0.7 * k, under);
@@ -332,7 +333,8 @@ const slam =
 /**
  * A rift of light running on along the floor beyond the slammed blade, the way she faces (see
  * `facing`): `k` how far it has run (0 to 1) and `a` its strength. A jagged crack of white-hot
- * light three pixels wide with a violet glow either side, and shards of light thrown up along it.
+ * light three pixels wide with a violet glow either side, and shards of light thrown up along it;
+ * away from the viewer it passes behind her, as the slammed blade does.
  */
 const rift =
   (k: number, a: number): Extra =>
@@ -342,7 +344,7 @@ const rift =
     const n: Vec = [-d[1], d[0]];
     const S = pointOnFloor(x);
     const len = (22 + 58 * k) * fk;
-    const under = false;
+    const under = x.cam.view === 'back';
     let prev: Vec | null = null;
     for (let s = 0; s <= 24; s++) {
       const t = s / 24;
