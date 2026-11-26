@@ -246,8 +246,8 @@ edges, a long open oxblood coat with a high collar and split tails, and an overs
 greatsword with a pale edge, a saw-toothed back and a crimson rune that blazes when he fights.
 His swings leave white-hot arcs that fade through crimson, and his skills burn crimson with a
 violet edge. Every pose is solved in 3D and painted in three views: side on (a three-quarter view,
-mirrored to face left), toward you and away from you. The other heroes still use the skeleton
-painter above.
+mirrored to face left), toward you and away from you. The Halberdier (below) is the second; the
+other heroes still use the skeleton painter above.
 
 He has sixteen clips. The server's act event names the skill used (`s`) and the hit of the combo
 (`c`), so everyone sees the right one:
@@ -274,6 +274,29 @@ slot whatever its weapon. When several apply (`game/chibiState.ts`), knocked out
 attack or skill playing out, then running or dodging, then the victory pose (which holds its last
 frame), a flinch, kneeling, the battle stance and idling. The skill and state clips take the
 blade up from where the battle stance holds it, and those that give way to the stance end in it.
+
+The Halberdier, the male Duelist, is a lean, long-legged young lancer about 85 pixels tall with
+a cocky half-smile: jet-black hair with a blue sheen tied high in a long ponytail with a red cord,
+a long red scarf round his neck and jaw with two tails streaming behind him, light gunmetal armour
+(a breastplate, one layered pauldron on his leading shoulder, vambraces and greaves) over a teal
+tunic with a split skirt, and a halberd-lance longer than he is tall: a dark lacquered haft, a
+leaf-shaped point with a jade channel, an axe blade, a back spike, flared lugs and a teal ribbon.
+His thrusts leave spiralling drills of jade wind, his sweeps and spins rings of it
+(`heroes/chibi/halberdier/`):
+
+| Clip | Frames | The Halberdier |
+| --- | --- | --- |
+| `idle` | 8 | The halberd across his shoulders, wrists draped over it, a smirk |
+| `battle` | 8 | A low, bladed spear stance, left side leading, bouncing on his toes |
+| `move` | 8 | A sprint, the halberd trailing behind him, scarf and ponytail streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A straight thrust, an overhand thrust, then a coiled, leaping lunge from the butt end |
+| `special` | 7 | Sweeping Strike: the haft swung round low and wide, a ring of wind, a gust |
+| `q` | 8 | Piercing Thrust: a deep lunge, the front hand sliding up the haft, a long drill of wind |
+| `e` | 11 | Vault Strike: the butt planted, a spring up the haft, a flip and the point driven into the floor |
+| `r` | 10 | Whirling Halberd: two fast turns with the haft held level, a ring of wind |
+| `ult` | 12 | Skewer: the lance couched, a charge with jade afterimages and a cone of wind, a skid |
+| `cast` | 8 | The halberd spun once and planted, a burst of wind |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted halberd; a fall, the halberd clattering down; a twirl, then the halberd planted beside him and a grin |
 
 His 375 frames (125 per view) are painted in the background as a dungeon loads, a few
 milliseconds at a time. Each frame is cropped to what is painted and the crops are shelf-packed
