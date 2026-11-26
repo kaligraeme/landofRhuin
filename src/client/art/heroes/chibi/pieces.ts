@@ -470,6 +470,14 @@ export interface StrandSpec {
   view?: V3;
   side?: V3;
   /**
+   * With `view` and `side`: when the wind would carry it straight away from the viewer, how far
+   * the wind taken off that line lifts it instead (0, the default, to about 1): seen front on, a
+   * scarf's tails then climb the screen behind the shoulders rather than standing out sideways.
+   */
+  climb?: number;
+  /** How strongly the ripple running down it bends it to and fro (default 1; 2 to 3 makes a scarf's tail wave in an S). */
+  ripple?: number;
+  /**
    * How much higher (+) or lower (-) than the rest it flies as the wind bends it: the middle of a
    * cape flies higher than its sides, so streaming side on it shows its breadth rather than an edge.
    */
@@ -506,7 +514,8 @@ export function strand(pose: ChibiPose, s: StrandSpec): V3[] {
     if (k > 0) {
       // What is left of the wind blows less hard, so the strand hangs more.
       const side = sub3(s.side, mul3(view, dot3(s.side, view)));
-      const left = add3(add3(windDir, view, -Math.sign(at) * k * 0.8), side, k * 0.4);
+      const up = at < 0 ? (s.climb ?? 0) * k : 0;
+      const left = add3(add3(add3(windDir, view, -Math.sign(at) * k * 0.8), side, k * 0.4), [0, 1, 0], up);
       wind *= Math.min(1, len3(left));
       windDir = norm3(left);
     }
@@ -535,7 +544,7 @@ export function strand(pose: ChibiPose, s: StrandSpec): V3[] {
     if (s.fan) hang = add3(norm3(hang), [0, 1, 0], s.fan * bend * 1.2);
     const d = norm3(add3(mul3(dir, hold), norm3(hang), 1 - hold));
     // A ripple across it and in and out, stronger toward the tip and in the wind.
-    const wave = Math.sin(phase - j * 1.05 + (s.seed ?? 0)) * (0.35 + wind * 1.2 + flare) * t;
+    const wave = Math.sin(phase - j * 1.05 + (s.seed ?? 0)) * (0.35 + wind * 1.2 + flare) * t * (s.ripple ?? 1);
     let across = sub3([0, 0, 1], mul3(d, d[2]));
     across = Math.hypot(across[0], across[1], across[2]) < 0.2 ? norm3(cross3(d, [1, 0, 0])) : norm3(across);
     const normal = norm3(cross3(across, d));
@@ -645,10 +654,16 @@ export interface ScarfSpec {
   wrap: { u: number; r: readonly [number, number]; h: number; muffle?: number };
   /** Where the knot sits, in degrees round the neck (180 the back, 200 a little to his left). */
   knot: number;
-  /** Its tails, hanging from the knot: length and half-width; `fork` cuts a swallowtail into the end. */
-  tails: readonly { len: number; w: number; fork?: number }[];
-  /** How readily the tails stream (default 1.1: a light cloth). */
+  /**
+   * Its tails, hanging from the knot: length and half-width; `fork` cuts a swallowtail into the
+   * end, `taper` narrows it toward the end (the share of its width left there, default 1), and
+   * `climb` says how far, blown away from the viewer, it climbs behind the shoulders instead of
+   * standing out to the side (StrandSpec `climb`, default 0; give each tail its own so they part).
+   */
+  tails: readonly { len: number; w: number; fork?: number; taper?: number; climb?: number }[];
+  /** How readily the tails stream (default 1.1: a light cloth), and how strongly they wave (StrandSpec `ripple`, default 1). */
   give?: number;
+  ripple?: number;
   /** What the tails lie over (usually the design's `body.chest` and `body.hips`). */
   over: { chest: readonly Blob[]; hips: readonly Blob[]; pad?: number };
 }
@@ -692,7 +707,7 @@ export function scarf(spec: ScarfSpec): { wrap: HeadPiece; tails: Piece } {
       const across = norm3(cross3(out, [0, 1, 0]));
       const start = add3(root, across, side * 1.6);
       const dir = add3(add3(dirIn(cf, 0, -1, 0), out, 0.45), across, side * 0.25);
-      const spine = strand(pose, { root: start, dir, len: tl.len, n: ROWS, stiff: 0.15, give: spec.give ?? 1.1, seed: 1.3 + ti * 2.1, flick: true, avoid, pad: spec.over.pad ?? 1.5, axis: rig.pelvis.o, view: norm3(ctx.cam.local(TO_CAMERA)), side: add3(out, across, 0.6 + side * 0.4) });
+      const spine = strand(pose, { root: start, dir, len: tl.len, n: ROWS, stiff: 0.15, give: spec.give ?? 1.1, seed: 1.3 + ti * 2.1, flick: true, avoid, pad: spec.over.pad ?? 1.5, axis: rig.pelvis.o, view: norm3(ctx.cam.local(TO_CAMERA)), side: add3(out, across, 0.6 + side * 0.4), climb: tl.climb, ripple: spec.ripple });
       // The ribbon's breadth lies across its run and level, as a scarf's tail hangs and flies.
       const grid: V3[][] = Array.from({ length: COLS + 1 }, () => [] as V3[]);
       const faces: V3[] = [];
@@ -709,7 +724,8 @@ export function scarf(spec: ScarfSpec): { wrap: HeadPiece; tails: Piece } {
         // A slow twist down the tail with the ripple.
         const twist = Math.sin((pose.phase ?? 0) * Math.PI * 2 - j * 0.7 + ti) * 0.25 * (j / ROWS);
         const bv = norm3(add3(breadth, faces[j] as V3, twist));
-        for (let k = 0; k <= COLS; k++) (grid[k] as V3[]).push(add3(spine[j] as V3, bv, tl.w * ((2 * k) / COLS - 1)));
+        const w = tl.w * lerp(1, tl.taper ?? 1, j / ROWS);
+        for (let k = 0; k <= COLS; k++) (grid[k] as V3[]).push(add3(spine[j] as V3, bv, w * ((2 * k) / COLS - 1)));
       }
       const pn: Panel = { from: 0, to: 0, len: tl.len, jag: tl.fork ?? 0 };
       const mid = spine[ROWS >> 1] as V3;
