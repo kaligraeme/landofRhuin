@@ -3,14 +3,18 @@
  * animation.ts); heroes are painted frame by frame from a skeleton, wielding their weapons, with
  * faces cut from their artwork (see heroes/), side on and also turned toward and away from the
  * viewer. Frames are built in the background a step at a time, so the game never stalls, and
- * packed into an atlas per sprite and facing: a row per clip.
+ * packed into an atlas per sprite and facing: a row per clip. Chibi heroes (see heroes/chibi/) are
+ * painted the same way, clip by clip and view by view, but each frame is cropped to the figure and
+ * its effects and the crops are shelf-packed, an atlas per view.
  */
 import { DEFAULT_LOOK, HERO_LOOKS, type HeroLook, type RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import type { EntitySpawn } from '../../shared/protocol.js';
+import { cropRaster, opaqueBounds, shelfPack } from './atlas.js';
 import { creatureArt, type CreatureArt } from './creature-art.js';
 import { ACTION_WINDUP, buildFrames, CLIP_LENGTH, CLIPS, rigSprite, SKILL_CHARGE, type Clip, type Raster } from './animation.js';
 import { auraFor, RIG_HINTS } from './rigs.js';
+import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip, type ChibiHero, type ChibiView } from './heroes/chibi/index.js';
 import { HERO_DESIGNS } from './heroes/designs.js';
 import { HERO_CHARGE, HERO_CLIP_LENGTH, HERO_WINDUP, heroClips } from './heroes/moves.js';
 import { cropHead, renderHero } from './heroes/render.js';
@@ -51,6 +55,32 @@ export interface SpriteAnim extends Sheet {
   grey: HTMLCanvasElement | null;
 }
 
+/**
+ * One chibi frame, cropped to its opaque pixels plus a pixel of margin: where it sits in its view's
+ * atlas, and where its top-left corner sits relative to the ground point under the feet (frame
+ * pixels, facing right).
+ */
+export interface ChibiFrame {
+  sx: number;
+  sy: number;
+  w: number;
+  h: number;
+  ox: number;
+  oy: number;
+}
+
+/** Every frame of every clip of a chibi hero in one view, shelf-packed into one atlas. */
+export interface ChibiSheet {
+  atlas: HTMLCanvasElement;
+  frames: Record<ChibiClip, ChibiFrame[]>;
+}
+
+/** A chibi hero's animation: a sheet per view, each arriving once painted (side on first). */
+export interface ChibiAnim {
+  hero: ChibiHero;
+  views: Partial<Record<ChibiView, ChibiSheet>>;
+}
+
 export interface Sprite {
   id: string;
   def: CreatureArt;
@@ -60,6 +90,8 @@ export interface Sprite {
   ready: boolean;
   /** Null until the frames are built; the renderer draws the still image meanwhile. */
   anim: SpriteAnim | null;
+  /** Chibi heroes animate from these instead of `anim`. */
+  chibi: ChibiAnim | null;
 }
 
 type CreatureId = Parameters<typeof creatureArt>[0];
@@ -96,10 +128,11 @@ function load(key: string, id: CreatureId): Sprite {
   if (hit) return hit;
   const def = creatureArt(id);
   const img = new Image();
-  const sprite: Sprite = { id, def, img, white: null, grey: null, ready: false, anim: null };
+  const sprite: Sprite = { id, def, img, white: null, grey: null, ready: false, anim: null, chibi: null };
   img.onload = () => {
     sprite.ready = true;
-    queue(id in HERO_DESIGNS ? heroSteps(sprite) : monsterSteps(sprite));
+    const chibi = CHIBI_HEROES[id];
+    queue(chibi ? chibiSteps(sprite, chibi) : id in HERO_DESIGNS ? heroSteps(sprite) : monsterSteps(sprite));
     try {
       const [white, wg] = canvas(img.naturalWidth, img.naturalHeight);
       wg.drawImage(img, 0, 0);
@@ -231,6 +264,41 @@ function* heroSteps(sprite: Sprite): Generator<void> {
   }
 }
 
+/** Paints one chibi frame and crops it to the figure and its effects, a pixel of margin around. */
+function chibiCrop(hero: ChibiHero, clip: ChibiClip, frame: number, view: ChibiView): { raster: Raster; ox: number; oy: number } {
+  const box = hero.frame[view];
+  const painted = hero.paint(clip, frame, view);
+  const crop = opaqueBounds(painted, 1, { x: box.ax, y: box.ay });
+  return { raster: cropRaster(painted, crop), ox: crop.x - box.ax, oy: crop.y - box.ay };
+}
+
+/**
+ * Chibi heroes: paint every frame of every clip, one clip per step, view by view: side on first
+ * (the hero animates as soon as that is done), then toward the viewer and away. Each view's crops
+ * are shelf-packed into one atlas.
+ */
+function* chibiSteps(sprite: Sprite, hero: ChibiHero): Generator<void> {
+  const anim: ChibiAnim = { hero, views: {} };
+  for (const view of CHIBI_VIEWS) {
+    const crops: { clip: ChibiClip; raster: Raster; ox: number; oy: number }[] = [];
+    for (const clip of CHIBI_CLIPS) {
+      yield;
+      for (let i = 0; i < hero.timing[clip].frames; i++) crops.push({ clip, ...chibiCrop(hero, clip, i, view) });
+    }
+    yield;
+    const packed = shelfPack(crops.map((c) => c.raster));
+    const [atlas, g] = canvas(packed.w, packed.h);
+    const frames = Object.fromEntries(CHIBI_CLIPS.map((clip) => [clip, [] as ChibiFrame[]])) as Record<ChibiClip, ChibiFrame[]>;
+    crops.forEach((c, i) => {
+      const at = packed.at[i] as { x: number; y: number };
+      g.putImageData(new ImageData(new Uint8ClampedArray(c.raster.data), c.raster.w, c.raster.h), at.x, at.y);
+      frames[c.clip].push({ sx: at.x, sy: at.y, w: c.raster.w, h: c.raster.h, ox: c.ox, oy: c.oy });
+    });
+    anim.views[view] = { atlas, frames };
+    sprite.chibi = anim;
+  }
+}
+
 // ── The cast ─────────────────────────────────────────────────────────────────────────────────
 
 export function defaultHeroLook(role: RoleId): HeroLook {
@@ -263,6 +331,26 @@ export function preloadClan(clan: ThemeId, heroes: { role: RoleId; look?: HeroLo
 
 const portraits = new Map<string, Promise<string>>();
 
+/** A painted frame cropped to the figure, keeping the feet (`groundY`) on the bottom edge, as an image URL. */
+function portraitOf(f: Raster, groundY: number): string {
+  let x0 = f.w;
+  let x1 = 0;
+  let y0 = f.h;
+  for (let y = 0; y < f.h; y++) {
+    for (let x = 0; x < f.w; x++) {
+      if ((f.data[(y * f.w + x) * 4 + 3] as number) === 0) continue;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+    }
+  }
+  const w = x1 - x0 + 3;
+  const h = groundY + 2 - y0 + 2;
+  const [c, g] = canvas(w, h);
+  g.putImageData(new ImageData(new Uint8ClampedArray(f.data), f.w, f.h), 1 - x0, 1 - y0);
+  return c.toDataURL('image/png');
+}
+
 /**
  * A hero in their battle stance, weapon in hand, as an image URL for the lobby and title screen.
  * Resolves once painted; `heroImageUrl` gives the plain artwork meanwhile.
@@ -271,36 +359,22 @@ export function heroPortrait(role: RoleId, look: HeroLook = defaultHeroLook(role
   const id = `hero-${role}-${look}` as const;
   let hit = portraits.get(id);
   if (!hit) {
-    hit = new Promise<string>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const design = HERO_DESIGNS[id];
-          const f = renderHero(design, heroClips(design.moveset).battle[0]!, cropHead(rasterOf(img), design));
-          // Crop to the figure, keeping the feet on the bottom edge.
-          let x0 = f.w;
-          let x1 = 0;
-          let y0 = f.h;
-          for (let y = 0; y < f.h; y++) {
-            for (let x = 0; x < f.w; x++) {
-              if ((f.data[(y * f.w + x) * 4 + 3] as number) === 0) continue;
-              x0 = Math.min(x0, x);
-              x1 = Math.max(x1, x);
-              y0 = Math.min(y0, y);
+    const chibi = CHIBI_HEROES[id];
+    hit = chibi
+      ? Promise.resolve().then(() => portraitOf(chibi.paint('battle', 0, 'side'), chibi.frame.side.ay))
+      : new Promise<string>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const design = HERO_DESIGNS[id];
+              resolve(portraitOf(renderHero(design, heroClips(design.moveset).battle[0]!, cropHead(rasterOf(img), design)), GROUND_Y));
+            } catch (err) {
+              reject(err);
             }
-          }
-          const w = x1 - x0 + 3;
-          const h = GROUND_Y + 2 - y0 + 2;
-          const [c, g] = canvas(w, h);
-          g.putImageData(new ImageData(new Uint8ClampedArray(f.data), f.w, f.h), 1 - x0, 1 - y0);
-          resolve(c.toDataURL('image/png'));
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.onerror = reject;
-      img.src = creatureArt(id).url;
-    });
+          };
+          img.onerror = reject;
+          img.src = creatureArt(id).url;
+        });
     portraits.set(id, hit);
   }
   return hit;

@@ -254,10 +254,10 @@ export function useSkill(inst: Instance, p: Player, skillId: string, aim: Vec): 
   p.facing = angleTo(p, aim);
   if (skill.windup > 0) {
     p.cast = { skillId, aim: { ...aim }, start: inst.now, end: inst.now + skill.windup * hasteMult(p), x: p.x, y: p.y };
-    inst.emit({ e: 'act', i: p.id, k: 'sk', d: Math.round((p.cast.end - p.cast.start) * 100) / 100 });
+    inst.emit({ e: 'act', i: p.id, k: 'sk', d: Math.round((p.cast.end - p.cast.start) * 100) / 100, s: skillId });
     return null;
   }
-  inst.emit({ e: 'act', i: p.id, k: 'sk' });
+  inst.emit({ e: 'act', i: p.id, k: 'sk', s: skillId });
   executeSkill(inst, p, skill, aim);
   return null;
 }
@@ -280,13 +280,14 @@ export function basicAttack(inst: Instance, p: Player): void {
   const weapon = WEAPONS[p.weapon];
   if (!weapon) return;
   if (inst.now > p.chainResetAt) p.chain = 0;
-  const id = weapon.basic.hits[p.chain % weapon.basic.hits.length] as string;
+  const hit = p.chain % weapon.basic.hits.length;
+  const id = weapon.basic.hits[hit] as string;
   p.chain = (p.chain + 1) % weapon.basic.hits.length;
   const interval = weapon.basic.interval * hasteMult(p);
   p.basicReadyAt = inst.now + interval;
   p.chainResetAt = inst.now + interval + CHAIN_RESET;
   p.facing = angleTo(p, p.aim);
-  inst.emit({ e: 'act', i: p.id, k: 'atk' });
+  inst.emit({ e: 'act', i: p.id, k: 'atk', c: hit });
   executeSkill(inst, p, skillDef(id), p.aim);
 }
 

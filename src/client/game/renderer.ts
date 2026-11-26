@@ -7,8 +7,9 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
-import { spriteFor, type Facing, type Sheet, type Sprite, type SpriteAnim } from '../art/sprites.js';
+import { spriteFor, type ChibiAnim, type ChibiFrame, type Facing, type Sheet, type Sprite, type SpriteAnim } from '../art/sprites.js';
 import type { Clip } from '../art/animation.js';
+import { chibiClip, type ChibiPick } from './chibiState.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -94,6 +95,8 @@ export class Renderer {
   private tops = new Map<number, number>();
   /** Clickable sprite bounds (world units), for picking. */
   readonly hitBoxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>();
+  /** The clip and frame each chibi hero showed last frame, and from which view (for tests and the console). */
+  readonly chibiShown = new Map<number, ChibiPick & { view: Facing }>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -1052,6 +1055,7 @@ export class Renderer {
     m.speed += (Math.min(step, 20) - m.speed) * 0.25;
     m.x = e.x;
     m.y = e.y;
+    if (sp.chibi?.views.side) return this.drawChibi(view, e, sp, sp.chibi, m, now);
     const moving = m.speed > 0.6 && !dead;
     const rolling = e.id === view.world.meId && view.rolling;
     const anim = sp.anim;
@@ -1137,11 +1141,94 @@ export class Renderer {
    */
   private facingOf(e: ClientEntity, m: { facing: Facing }, anim: SpriteAnim | null, dead: boolean): Facing {
     if (!anim?.turned || dead) return (m.facing = 'side');
+    const turned = anim.turned;
+    return this.turnTo(e, m, (f) => !!turned[f]);
+  }
+
+  /** Toward the viewer, away or side on by heading (with hysteresis), if that view is painted yet. */
+  private turnTo(e: ClientEntity, m: { facing: Facing }, painted: (f: 'front' | 'back') => boolean): Facing {
     const down = Math.sin(e.f);
     const need = (f: Facing): number => (m.facing === f ? 0.62 : 0.78);
     const want: Facing = down > need('front') ? 'front' : -down > need('back') ? 'back' : 'side';
     m.facing = want;
-    return want === 'side' || anim.turned[want] ? want : 'side';
+    return want === 'side' || painted(want) ? want : 'side';
+  }
+
+  /**
+   * Draws a chibi hero: the frame its state calls for (see chibiState.ts) from the atlas of the
+   * view it faces, each frame cropped and placed by its offset from the feet, mirrored to face
+   * left. Flashes white when struck, trails after-images while dodging, and shows the fall of the
+   * knocked-out clip, darkened, instead of lying a still down.
+   */
+  private drawChibi(view: View, e: ClientEntity, sp: Sprite, chibi: ChibiAnim, m: { phase: number; speed: number; facing: Facing }, now: number): void {
+    const g = this.g;
+    const { world } = view;
+    const { hero, views } = chibi;
+    const dead = !!e.snap.d;
+    const moving = m.speed > 0.6 && !dead;
+    const rolling = e.id === world.meId && view.rolling;
+    // Strides advance with distance travelled, as for every hero.
+    if (rolling) m.phase += this.frameDt * 26;
+    else if (moving) m.phase += (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, sp.def.height * 1.2);
+    const facing = this.turnTo(e, m, (f) => !!views[f]);
+    const sheet = views[facing] ?? (views.side as NonNullable<typeof views.side>);
+    const flip = facing === 'side' && Math.cos(e.f) < -0.05;
+    const pick = chibiClip({
+      timing: hero.timing,
+      now,
+      id: e.id,
+      down: dead,
+      downAt: world.downAt.get(e.id) ?? null,
+      complete: world.completedAt !== null || world.duty.phase === 'complete',
+      completeAt: world.completedAt,
+      act: world.acts.get(e.id) ?? null,
+      rolling,
+      moving,
+      phase: m.phase,
+      hurtAt: world.hurtAt.get(e.id) ?? null,
+      hp: e.snap.hp,
+      maxHp: e.snap.mh,
+      fighting: this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16),
+    });
+    this.chibiShown.set(e.id, { ...pick, view: facing });
+    const clipFrames = sheet.frames[pick.clip];
+    const f = (clipFrames[pick.frame] ?? clipFrames[0] ?? sheet.frames.idle[0]) as ChibiFrame;
+    const hitAt = world.lastHit.get(e.id);
+    const flash = hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead ? 0.6 * (1 - (now - hitAt) / 0.1) : 0;
+    const k = hero.scale;
+    const feetY = e.y + 0.15;
+    const ox = f.ox * k;
+    const oy = f.oy * k;
+
+    g.save();
+    g.translate(e.x, feetY);
+    if (flip) g.scale(-1, 1);
+    g.imageSmoothingEnabled = false;
+    if (dead) {
+      g.drawImage(this.tintFrame(sheet.atlas, f.sx, f.sy, f.w, f.h, 'source-atop', 'rgba(8, 6, 14, 0.35)'), 0, 0, f.w, f.h, ox, oy, f.w * k, f.h * k);
+    } else {
+      if (rolling) {
+        // A dash: two fading after-images trail behind (above when running toward the viewer).
+        const trail = facing === 'side' ? [-1, 0] : facing === 'front' ? [0, -1] : [0, 1];
+        for (const [back, a] of [[1.1, 0.18], [0.55, 0.32]] as const) {
+          g.globalAlpha = a;
+          g.drawImage(sheet.atlas, f.sx, f.sy, f.w, f.h, ox + trail[0]! * back, oy + trail[1]! * back * 0.7, f.w * k, f.h * k);
+        }
+        g.globalAlpha = 1;
+      }
+      g.drawImage(sheet.atlas, f.sx, f.sy, f.w, f.h, ox, oy, f.w * k, f.h * k);
+      if (flash > 0) {
+        g.globalAlpha *= flash;
+        g.drawImage(this.whiteFrame(sheet.atlas, f.sx, f.sy, f.w, f.h), 0, 0, f.w, f.h, ox, oy, f.w * k, f.h * k);
+      }
+    }
+    g.restore();
+
+    // Name tags and picking follow the standing figure (its idle pose in this view), or the fallen one.
+    const body = (dead ? f : sheet.frames.idle[0]) ?? f;
+    const left = flip ? -(body.ox + body.w) : body.ox;
+    this.tops.set(e.id, feetY + body.oy * k);
+    this.hitBoxes.set(e.id, { x0: e.x + left * k, x1: e.x + (left + body.w) * k, y0: feetY + body.oy * k, y1: e.y + 0.3 });
   }
 
   /**
@@ -1179,6 +1266,11 @@ export class Renderer {
 
   /** One atlas frame as a white silhouette, for the hit flash. */
   private whiteFrame(atlas: HTMLCanvasElement, fx: number, fy: number, fw: number, fh: number): HTMLCanvasElement {
+    return this.tintFrame(atlas, fx, fy, fw, fh, 'source-in', '#fff');
+  }
+
+  /** One atlas frame, at the scratch canvas's top-left, filled with `color` composited by `op`. */
+  private tintFrame(atlas: HTMLCanvasElement, fx: number, fy: number, fw: number, fh: number, op: GlobalCompositeOperation, color: string): HTMLCanvasElement {
     let c = this.flashCanvas;
     if (!c) {
       c = document.createElement('canvas');
@@ -1191,8 +1283,8 @@ export class Renderer {
     const g = c.getContext('2d') as CanvasRenderingContext2D;
     g.globalCompositeOperation = 'copy';
     g.drawImage(atlas, fx, fy, fw, fh, 0, 0, fw, fh);
-    g.globalCompositeOperation = 'source-in';
-    g.fillStyle = '#fff';
+    g.globalCompositeOperation = op;
+    g.fillStyle = color;
     g.fillRect(0, 0, fw, fh);
     g.globalCompositeOperation = 'source-over';
     return c;

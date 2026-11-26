@@ -22,6 +22,19 @@ export interface ClientEntity {
   ghostHp: number;
 }
 
+/** An attack or skill as the client keeps it, for animation. */
+export interface Act {
+  /** When it began (client seconds). */
+  at: number;
+  k: 'atk' | 'sk';
+  /** Wind-up seconds. */
+  d: number;
+  /** The skill used. */
+  s?: string;
+  /** Which hit of the basic attack's combo (0-2). */
+  c?: number;
+}
+
 export class World {
   readonly instanceId: string;
   readonly map: TileMap;
@@ -38,8 +51,20 @@ export class World {
   lastHit = new Map<number, number>();
   /** Each hero's latest weapon swing, for the swing animation. */
   swings = new Map<number, { at: number; kind: 'arc' | 'thrust'; a: number }>();
-  /** Each actor's latest attack or skill (seconds on the client clock), for animation. */
-  acts = new Map<number, { at: number; k: 'atk' | 'sk'; d: number }>();
+  /**
+   * Each actor's latest attack or skill (seconds on the client clock), for animation: how long it
+   * winds up, and for heroes the skill used or which hit of the combo it is.
+   */
+  acts = new Map<number, Act>();
+  /** When each party member last took a blow that got through a shield or barrier, for the flinch. */
+  hurtAt = new Map<number, number>();
+  /**
+   * When each knocked-out hero went down (client seconds), to play their fall. A hero already down
+   * when we first saw them has no entry; standing heroes have none either.
+   */
+  downAt = new Map<number, number>();
+  /** When the dungeon was completed (client seconds), for the victory pose. */
+  completedAt: number | null = null;
   readonly meId: number;
   readonly hotbar: string[];
   me: MeSnap | null = null;
@@ -91,11 +116,17 @@ export class World {
     for (const s of ents) {
       const e = this.ents.get(s.i);
       if (!e) continue;
-      if (e.samples.length === 0) {
+      const first = e.samples.length === 0;
+      if (first) {
         e.x = s.x;
         e.y = s.y;
         e.f = s.f;
         e.ghostHp = s.hp;
+      }
+      if (e.spawn.kind === 'player') {
+        // Going down while we watch starts the fall; a hero already down when first seen just lies there.
+        if (!s.d) this.downAt.delete(e.id);
+        else if (!first && !e.snap.d && !this.downAt.has(e.id)) this.downAt.set(e.id, performance.now() / 1000);
       }
       e.snap = s;
       e.samples.push({ t: time, x: s.x, y: s.y, f: s.f });

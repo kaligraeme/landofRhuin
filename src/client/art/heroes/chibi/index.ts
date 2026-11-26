@@ -130,7 +130,8 @@ const STUB_FROM: Record<ChibiClip, HeroClip> = {
 const stubDesign = HERO_DESIGNS['hero-tank-male'];
 const stubClips = heroClips(stubDesign.moveset);
 
-const stubDarkKnight: ChibiHero = {
+/** The stub Dark Knight (not registered: the game keeps the old painter until the chibi one lands). */
+export const stubDarkKnight: ChibiHero = {
   id: 'hero-tank-male',
   frame: {
     side: { w: FRAME_W, h: FRAME_H, ax: ANCHOR_X, ay: GROUND_Y },
@@ -149,6 +150,4 @@ const stubDarkKnight: ChibiHero = {
 };
 
 /** The heroes drawn by the chibi painter, by sprite id. Others use the older painter. */
-export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
-  'hero-tank-male': stubDarkKnight,
-};
+export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {};

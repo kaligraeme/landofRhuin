@@ -1,0 +1,118 @@
+/**
+ * Which clip, and which frame of it, a chibi hero shows: a pure function of what the hero is
+ * doing, so the choice can be tested without a browser. In order of priority: knocked out, the
+ * victory pose once the dungeon is cleared, an attack or skill playing out, a dodge roll,
+ * running, a flinch, kneeling at low health, then a battle stance near a fight or idling.
+ */
+import { COMBO_CLIPS, SKILL_CLIPS, type ChibiClip, type ClipTiming } from '../art/heroes/chibi/index.js';
+
+/** How long a flinch shows after a blow gets through (seconds). */
+export const HURT_TIME = 0.3;
+/** Below this share of their health a hero drops to one knee. */
+export const KNEEL_BELOW = 0.25;
+/** Seconds each wind-up frame takes when the server times no wind-up. */
+export const WINDUP_FRAME = 0.06;
+
+/** An attack or skill: when it began, its kind, the server's wind-up, the skill and the combo hit. */
+export interface ChibiAct {
+  at: number;
+  k: 'atk' | 'sk';
+  d: number;
+  s?: string;
+  c?: number;
+}
+
+export interface ChibiInput {
+  timing: Readonly<Record<ChibiClip, ClipTiming>>;
+  /** The client clock (seconds); every other time is on the same clock. */
+  now: number;
+  /** The entity id: staggers the loops so a party does not breathe in step. */
+  id: number;
+  /** Knocked out, and when they went down (null when unknown, e.g. they were down when we joined). */
+  down: boolean;
+  downAt: number | null;
+  /** The dungeon is complete, and since when (null when unknown). */
+  complete: boolean;
+  completeAt: number | null;
+  /** Their latest attack or skill, if any. */
+  act: ChibiAct | null;
+  /** Mid dodge roll. */
+  rolling: boolean;
+  moving: boolean;
+  /** Stride phase (radians): the move clip runs through once every 2π. */
+  phase: number;
+  /** When a blow last got through to them (null if never). */
+  hurtAt: number | null;
+  hp: number;
+  maxHp: number;
+  /** A fight is on nearby. */
+  fighting: boolean;
+}
+
+export interface ChibiPick {
+  clip: ChibiClip;
+  frame: number;
+}
+
+const mod = (a: number, n: number): number => ((a % n) + n) % n;
+const lastFrame = (t: ClipTiming): number => Math.max(0, t.frames - 1);
+
+/** A clip played once from `elapsed` seconds ago, holding its last frame after; null elapsed shows the last frame. */
+function held(t: ClipTiming, elapsed: number | null): number {
+  if (elapsed === null) return lastFrame(t);
+  if (elapsed <= 0) return 0;
+  return Math.min(lastFrame(t), Math.floor((elapsed / t.seconds) * t.frames));
+}
+
+/** A looping clip, offset per hero. */
+function looped(t: ClipTiming, now: number, id: number): number {
+  const frames = Math.max(1, t.frames);
+  return mod(Math.floor((now / t.seconds + id * 0.37) * frames), frames);
+}
+
+/** The move clip by stride phase. */
+function stride(t: ClipTiming, phase: number): number {
+  const frames = Math.max(1, t.frames);
+  return mod(Math.floor((phase / (Math.PI * 2)) * frames), frames);
+}
+
+/** The clip an attack or skill plays: the combo hit for the basic attack, the skill's own clip, or a generic cast. */
+export function actClip(act: Pick<ChibiAct, 'k' | 's' | 'c'>): ChibiClip {
+  if (act.k === 'atk') return COMBO_CLIPS[mod(act.c ?? 0, COMBO_CLIPS.length)] ?? 'atk1';
+  return act.s !== undefined && Object.hasOwn(SKILL_CLIPS, act.s) ? (SKILL_CLIPS[act.s] as ChibiClip) : 'cast';
+}
+
+/**
+ * The frame of an act's clip `elapsed` seconds in, or null once it has played out. The wind-up
+ * frames are stretched over the server's wind-up `d` (or take WINDUP_FRAME each without one); the
+ * rest play over the clip's seconds.
+ */
+export function actFrame(t: ClipTiming, elapsed: number, d: number): number | null {
+  const wind = Math.min(Math.max(0, t.windup), t.frames);
+  const windTime = d > 0 ? d : wind * WINDUP_FRAME;
+  const at = Math.max(0, elapsed);
+  if (at < windTime) return wind > 0 ? Math.min(wind - 1, Math.floor((at / windTime) * wind)) : 0;
+  const rest = t.frames - wind;
+  const r = (at - windTime) / t.seconds;
+  if (rest <= 0 || r >= 1) return null;
+  return wind + Math.min(rest - 1, Math.floor(r * rest));
+}
+
+/** Which clip and frame a chibi hero shows now. */
+export function chibiClip(input: ChibiInput): ChibiPick {
+  const { timing: T, now } = input;
+  if (input.down) return { clip: 'ko', frame: held(T.ko, input.downAt === null ? null : now - input.downAt) };
+  if (input.complete) return { clip: 'victory', frame: held(T.victory, input.completeAt === null ? null : now - input.completeAt) };
+  if (input.act) {
+    const clip = actClip(input.act);
+    const frame = actFrame(T[clip], now - input.act.at, input.act.d);
+    if (frame !== null) return { clip, frame };
+  }
+  if (input.rolling || input.moving) return { clip: 'move', frame: stride(T.move, input.phase) };
+  if (input.hurtAt !== null && now - input.hurtAt >= 0 && now - input.hurtAt < HURT_TIME) {
+    return { clip: 'hurt', frame: held(T.hurt, now - input.hurtAt) };
+  }
+  if (input.maxHp > 0 && input.hp / input.maxHp < KNEEL_BELOW) return { clip: 'kneel', frame: looped(T.kneel, now, input.id) };
+  if (input.fighting) return { clip: 'battle', frame: looped(T.battle, now, input.id) };
+  return { clip: 'idle', frame: looped(T.idle, now, input.id) };
+}

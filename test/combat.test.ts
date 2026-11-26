@@ -6,6 +6,7 @@ import { startAbility } from '../src/server/sim/mechanics.js';
 import type { Monster } from '../src/server/sim/types.js';
 import { DEFAULT_LOOK, hotbarFor, ROLES, SKILLS, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
 import { STATUSES } from '../src/shared/content/statuses.js';
+import type { GameEvent } from '../src/shared/protocol.js';
 
 const seats: Seat[] = [
   { ownerId: 'h1', name: 'Warrior', role: 'tank', weapon: 'tank_greatsword' },
@@ -398,11 +399,42 @@ describe('animation events', () => {
     const { inst, melee, mage } = setup();
     inst.drainEvents();
     basicAttack(inst, melee);
-    expect(inst.drainEvents()).toContainEqual({ e: 'act', i: melee.id, k: 'atk' });
+    expect(inst.drainEvents()).toContainEqual({ e: 'act', i: melee.id, k: 'atk', c: 0 });
     expect(useSkill(inst, mage, 'mendingLight', { x: mage.x + 2, y: mage.y })).toBeNull();
     const act = inst.drainEvents().find((ev) => ev.e === 'act' && ev.i === mage.id);
-    expect(act).toMatchObject({ k: 'sk' });
+    expect(act).toMatchObject({ k: 'sk', s: 'mendingLight' });
     expect((act as { d?: number }).d).toBeGreaterThan(0.2);
+  });
+
+  it('names the skill used and which hit of the combo each swing is', () => {
+    const { inst, tank, dummy } = setup();
+    const acts = () => inst.drainEvents().filter((ev): ev is Extract<GameEvent, { e: 'act' }> => ev.e === 'act' && ev.i === tank.id);
+    tank.aim = { x: dummy.x, y: dummy.y };
+    inst.drainEvents();
+    // The greatsword's three-hit combo, then round again.
+    const hits: (number | undefined)[] = [];
+    for (let i = 0; i < 4; i++) {
+      basicAttack(inst, tank);
+      hits.push(...acts().map((a) => a.c));
+      inst.now += 0.5;
+    }
+    expect(hits).toEqual([0, 1, 2, 0]);
+    // A pause long enough to drop the combo starts it over.
+    basicAttack(inst, tank);
+    inst.now += 5;
+    basicAttack(inst, tank);
+    expect(acts().map((a) => a.c)).toEqual([1, 0]);
+    // Instant skills, and skills with a wind-up, name themselves.
+    for (const id of ['parry', 'stalwartCharge', 'eclipse', 'drain', 'ruination', 'challenge']) {
+      tank.lockUntil = 0;
+      tank.cast = null;
+      tank.mp = tank.maxMp;
+      tank.hp = tank.maxHp;
+      expect(useSkill(inst, tank, id, { x: dummy.x, y: dummy.y })).toBeNull();
+      const [act] = acts();
+      expect(act).toMatchObject({ k: 'sk', s: id });
+      expect(act?.c).toBeUndefined();
+    }
   });
 
   it('tells clients when monsters wind up their attacks', () => {
@@ -414,5 +446,8 @@ describe('animation events', () => {
     const acts = inst.drainEvents().filter((ev) => ev.e === 'act' && ev.i === brute.id);
     expect(acts.length).toBeGreaterThan(0);
     expect(acts[0]).toMatchObject({ k: 'atk' });
+    // Monsters have no combo or skill ids to tell.
+    for (const a of acts) expect(a).not.toHaveProperty('c');
+    for (const a of acts) expect(a).not.toHaveProperty('s');
   });
 });

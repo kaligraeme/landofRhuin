@@ -145,6 +145,7 @@ export class Game {
       case 'death': {
         const e = w.ents.get(ev.i);
         if (e) e.diedAt = now;
+        if (e?.spawn.kind === 'player' && !w.downAt.has(ev.i)) w.downAt.set(ev.i, now);
         if (e?.spawn.kind === 'boss') this.renderer.shake(1.4);
         if (e?.spawn.team === 'enemy' && this.targetId === ev.i) this.targetId = null;
         break;
@@ -152,6 +153,7 @@ export class Game {
       case 'raise': {
         const e = w.ents.get(ev.i);
         if (e) e.diedAt = null;
+        w.downAt.delete(ev.i);
         const p = pos(ev.i);
         if (p) this.fx.add({ kind: 'buff', x: p.x, y: p.y, x2: 0, y2: 0, follow: ev.i, hue: 50, r: 1, life: 1.2 });
         break;
@@ -169,6 +171,7 @@ export class Game {
           if (taken <= 0) {
             if (ev.t === w.meId || ev.v > 1500) this.fx.text('Blocked', t.x, t.y, '#9fc3ff', ev.t === w.meId ? 14 : 11);
           } else {
+            w.hurtAt.set(ev.t, now);
             if (ev.t === w.meId || taken > 1500) this.fx.text(`-${taken}`, t.x, t.y, '#ff6b5b', ev.t === w.meId ? 15 : 12);
             if (ev.t === w.meId && taken > 1500) this.renderer.shake(0.6);
           }
@@ -190,7 +193,7 @@ export class Game {
         this.onFx(ev, pos);
         break;
       case 'act':
-        w.acts.set(ev.i, { at: performance.now() / 1000, k: ev.k, d: ev.d ?? 0 });
+        w.acts.set(ev.i, { at: performance.now() / 1000, k: ev.k, d: ev.d ?? 0, s: ev.s, c: ev.c });
         break;
       case 'gate':
         w.setGate(ev.id, ev.open);
@@ -212,6 +215,7 @@ export class Game {
         break;
       case 'complete':
         this.finished = true;
+        w.completedAt = now;
         music.stinger('victory', 'title');
         setTimeout(() => this.hud.showResults(ev.results, ev.time, ev.wipes, () => this.net.send({ t: 'instance.leave' })), 3500);
         break;
