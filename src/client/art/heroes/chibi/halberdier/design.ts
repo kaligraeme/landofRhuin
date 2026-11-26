@@ -11,7 +11,7 @@
  * moves-*.ts files beside it, and hero.ts puts him together.
  */
 import { hex } from '../../paint.js';
-import type { BodyDesign, ChibiDesign, Lock } from '../design.js';
+import type { BodyDesign, ChibiDesign, FaceStyle, Lock } from '../design.js';
 import { FACE_SHARP } from '../head.js';
 import { plates, scarf, skirt } from '../pieces.js';
 import { pole, type PoleSpec } from '../pole.js';
@@ -26,7 +26,7 @@ const SKIN = mat4('#f8d6b2', '#e6ae84', '#c4865e', '#8e553a', '#57291c', 0.14);
 const HAIR = mat4('#5a6a88', '#2e3446', '#1c2030', '#0e1018', '#06070c', -0.04);
 // The scarf: the brightest colour on him.
 const SCARF = { ...mat4('#ff7f82', '#de4a50', '#a8242e', '#64121a', '#36070e', 0.06), gain: 0.75 };
-const SCARF_IN = mat4('#b23a42', '#8a1e28', '#5e1018', '#3a0810', '#200408');
+const SCARF_IN = mat4('#d24a52', '#a82a34', '#741822', '#460c14', '#200408');
 // Light gunmetal plate with pale steel edges: mostly its base tone, so the red scarf and the teal stay the brightest colours on him.
 const ARMOUR = { ...mat4('#c4ccd8', '#8a96a8', '#5c6678', '#363d4a', '#171a22', -0.28), clear: 1.2, gain: 0.8 };
 const ARMOUR_RIDGE = mat4('#d6dce6', '#a4aebe', '#76808f', '#4a5260', '#171a22', 0.12);
@@ -83,13 +83,37 @@ const LOCKS: Lock[] = [
   L(40, 40, [-1, 0.2, -0.2], 10.5, 4, [-0.1, -0.25, -0.1], 0.5, 0.4),
   L(-40, 40, [-1, 0.2, 0.2], 10.5, 4, [-0.1, -0.25, 0.1], 0.5, 0.4),
   // Loose locks falling over the forehead: one long over his left brow, a shorter pair.
-  L(-14, 42, [0.55, -1, -0.2], 8.4, 2.8, [0.2, 0, -0.14], 0.45, 0.3),
-  L(12, 44, [0.6, -1, 0.18], 6.6, 2.5, [0.18, 0, 0.12], 0.45, 0.3),
-  L(36, 34, [0.35, -1, 0.45], 5.2, 2.2, [0.1, 0, 0.15], 0.4),
+  L(-14, 42, [0.55, -1, -0.2], 7, 2.8, [0.2, 0, -0.14], 0.45, 0.3),
+  L(12, 44, [0.6, -1, 0.18], 5.2, 2.5, [0.18, 0, 0.12], 0.45, 0.3),
+  L(36, 34, [0.35, -1, 0.45], 4.4, 2.2, [0.1, 0, 0.15], 0.4),
   // Sideburns in front of the ears.
   L(70, 4, [0.1, -1, 0.3], 5, 2.1, [0.1, 0, 0.1], 0.3),
   L(-70, 4, [0.1, -1, -0.3], 5, 2.1, [0.1, 0, -0.1], 0.3),
 ];
+
+// ── His face: the sharp style, with each eye kept to itself ──────────────────────────────────
+
+/**
+ * The sharp style (FACE_SHARP: narrow eyes under a heavy lid that sweeps up to the outer corner, a
+ * slit of amber iris with a bright shine, straight brows, a lopsided smirk) with the inner corners
+ * of the eyes and brows pulled back from the nose, so toward the viewer his two eyes and brows
+ * stay apart instead of running together across the bridge of his nose. Shouting, the eye opens a
+ * row higher but keeps no dark lower lash, so it never closes into a dark-framed band.
+ */
+const FACE_HALBERDIER: FaceStyle = {
+  ...FACE_SHARP,
+  eyes: {
+    ...FACE_SHARP.eyes,
+    full: { rows: ['..KKK', 'KKhIK', '.iIIW', '..ll.'], ax: 2, ay: 1 },
+    mid: { rows: ['..KKK', '.KhIK', '.iIIK', '..l..'], ax: 2, ay: 1 },
+    wide: { rows: ['.KKKK', 'KhIIK', '.iIIW', '..ll.'], ax: 2, ay: 1 },
+  },
+  brows: {
+    full: { rows: ['..BBB', 'BBB..'], ax: 2, ay: 1 },
+    mid: { rows: ['..BBB', 'BBB..'], ax: 2, ay: 1 },
+    narrow: { rows: ['.BB', 'BB.'], ax: 1, ay: 1 },
+  },
+};
 
 // ── The torso: belt, breastplate, the teal tunic at the sides and back under leather straps ─
 
@@ -131,7 +155,7 @@ const BODY: BodyDesign = {
   cuff: { mat: ARMOUR, r: 3.1, at: 0.12, rim: ARMOUR_RIDGE },
   hand: { mat: GLOVE, r: 3, knuckle: ARMOUR_RIDGE },
   neck: { mat: SKIN, r: 2.4 },
-  hips: [{ c: [0, 3, 0], r: [5, 5.4, 6.5], id: 1 }],
+  hips: [{ c: [0, 3.6, 0], r: [4.8, 4.6, 6.3], id: 1 }],
   chest: [
     { c: [0, 8.5, 0], r: [4.6, 5, 6.1], id: 1 },
     { c: [0.4, 15, 0], r: [5.5, 8.8, 7.8], id: 1 },
@@ -142,12 +166,15 @@ const BODY: BodyDesign = {
 const SCARF_PIECES = scarf({
   mat: SCARF,
   inner: SCARF_IN,
-  wrap: { u: 23.6, r: [6.1, 6.9], h: 2.9, muffle: 0.75 },
+  wrap: { u: 23.6, r: [6.1, 6.9], h: 2.9, muffle: 0.45 },
   knot: 205,
+  // Two long tails of different lengths, narrowing to forked ends. Blown away from the viewer
+  // they climb behind his shoulders rather than standing out to his side.
   tails: [
-    { len: 44, w: 2.9, fork: 1.6 },
-    { len: 36, w: 2.6, fork: 1.6 },
+    { len: 44, w: 3.1, fork: 1.6, taper: 0.5, climb: 0.95 },
+    { len: 35, w: 2.7, fork: 1.4, taper: 0.5, climb: 0.45 },
   ],
+  ripple: 2.6,
   over: { chest: BODY.chest, hips: BODY.hips, pad: 1.6 },
 });
 
@@ -208,9 +235,9 @@ const HALBERDIER: ChibiDesign = {
       brow: hex('#141822'),
       browUp: 3.2,
       mouth: hex('#5a2018'),
-      mouthAt: [9.8, -5.8],
+      mouthAt: [9.8, -6.1],
       noseAt: [10.3, -3.9],
-      style: FACE_SHARP,
+      style: FACE_HALBERDIER,
       rest: 'smirk',
     },
   },
@@ -235,15 +262,18 @@ const HALBERDIER: ChibiDesign = {
       ring: [5.6, 7.1],
       aline: 0.32,
       fan: 0.85,
+      // Heavier than the scarf: the wind flutters the flaps round his hips without lifting them
+      // off him, so the teal keeps its place between the breastplate and the legs.
+      give: 0.5,
       folds: true,
       legs: 4.2,
-      // Split into five flaps to mid-thigh (a narrow one at the front): it flaps as he moves.
+      // Split into five flaps to mid-thigh, the front one hanging over his crotch: it flaps as he moves.
       panels: [
-        { from: -15, to: 15, len: 13, jag: 1.2 },
-        { from: 22, to: 82, len: 15, jag: 1.6 },
+        { from: -26, to: 26, len: 15, jag: 1.4, taper: 0.85 },
+        { from: 30, to: 84, len: 15, jag: 1.6 },
         { from: 92, to: 172, len: 16, jag: 2.2, kick: 0.1 },
         { from: 188, to: 268, len: 16, jag: 2.2, kick: 0.1 },
-        { from: 278, to: 338, len: 15, jag: 1.6 },
+        { from: 276, to: 330, len: 15, jag: 1.6 },
       ],
     }),
     SCARF_PIECES.tails,
