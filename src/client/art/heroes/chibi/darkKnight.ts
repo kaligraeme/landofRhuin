@@ -69,6 +69,9 @@ const LOCKS: Lock[] = [
   // Over the ears, raked back.
   L(78, 20, [-0.95, 0, 0.3], 9.5, 4.4, [-0.1, 0.15, 0.1], 1, 0.4),
   L(-78, 22, [-0.95, 0.05, -0.2], 9, 4.2, [-0.1, 0.15, -0.05], 1, 0.4),
+  // Behind his left ear: one clump flaring out sideways, so seen from behind the mop's outline
+  // breaks into a lock instead of a round mass (one only: a pair would read as cat ears front on).
+  L(-136, 14, [-0.55, 0.06, -0.84], 11.5, 4.6, [-0.2, 0.25, -0.05], 1, 0.35),
   // The crown: clumps standing up off it toward the back.
   L(124, 24, [-0.9, 0.1, 0.45], 11, 5, [-0.1, 0.12, 0.1], 1, 0.4),
   L(176, 44, [-0.92, 0.32, 0.05], 11.5, 5, [-0.15, 0.2, 0], 1, 0.4),

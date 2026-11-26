@@ -13,7 +13,8 @@
  *               swung onto his shoulder: chin up, a smirk, the coat streaming
  *
  * The effects these clips paint for themselves (the parry's flash and sparks, the sweat, the
- * glint, the dust of his fall) are `fx.extra` painters defined beside them.
+ * glint, the dust of his fall) are `fx.extra` painters defined beside them. The guard's wind-up
+ * comes up from the battle stance, and the flinch ends most of the way back into it (`settle`).
  */
 import { AT_EASE, GUARD_STANCE, settle } from './moves-core.js';
 import type { RGB } from '../paint.js';

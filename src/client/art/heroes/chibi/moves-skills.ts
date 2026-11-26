@@ -21,6 +21,11 @@
  *                 ahead; the blows land on frames 4, 7 and 10 and the ground slam on 13 (they
  *                 show from 0.33, 0.66, 0.98 and 1.30 s; the server lands them at 0.4, 0.7, 1.0
  *                 and 1.3 s)
+ *
+ * The poses build on GUARD_STANCE (the blade forward on his right); each clip's last frames ease
+ * into the battle loop's stance with moves-core's `settle`, so the blade is already where the loop
+ * holds it when it takes over. Raised sword hands go out beside his head and the blade is cocked
+ * tip up behind him, never hanging down his back with the pommel at his face.
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
