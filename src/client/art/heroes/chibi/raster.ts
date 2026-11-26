@@ -26,8 +26,19 @@ export interface Mat {
   line: RGB;
   /** Added to the light: skin and pale trims read brighter than steel. */
   bias?: number;
+  /**
+   * Scales the light before the bias (default 1): below 1 the middle tone spans more of the
+   * surface, so a cloth reads as one colour with its light tone only on the folds that catch it.
+   */
+  gain?: number;
   /** One flat colour with no rim and no lines (eyes, scars, runes). */
   flat?: boolean;
+  /**
+   * How far a shape of this material must stand in front of another of the same material for a
+   * line between them (default EDGE_DEPTH_SAME): locks of hair use less, so each clump is parted
+   * from the clumps behind it.
+   */
+  clear?: number;
 }
 
 export function mat4(hi: string, light: string, base: string, shadow: string, line: string, bias = 0): Mat {
@@ -65,6 +76,11 @@ const EDGE_DEPTH_SAME = 3.2;
 
 export function toneOf(light: number): number {
   return light >= T_HI ? 0 : light >= T_LIGHT ? 1 : light >= T_BASE ? 2 : 3;
+}
+
+/** A light value that a material paints in the given tone (0 highlight to 3 shadow), before rim light. */
+export function toneLight(m: Mat, tone: number): number {
+  return (([1.1, 0.6, 0.2, -0.4][tone] as number) - (m.bias ?? 0)) / (m.gain ?? 1);
 }
 
 interface Scratch {
@@ -183,7 +199,7 @@ export class Part {
     if (s.mat[i] === 0) s.touched[this.n++] = i;
     else if (!force && (s.z[i] as number) > z) return;
     s.mat[i] = this.matIndex(m);
-    s.light[i] = light + (m.bias ?? 0);
+    s.light[i] = light * (m.gain ?? 1) + (m.bias ?? 0);
     s.z[i] = z;
     s.id[i] = id;
   }
@@ -358,7 +374,7 @@ export class Part {
         const j = i + (nb[q] as number);
         if (j < 0 || j >= s.mat.length || s.mat[j] === 0 || s.id[j] === s.id[i]) continue;
         const mj = mats[(s.mat[j] as number) - 1] as Mat;
-        if (mj.flat || (s.z[j] as number) <= (s.z[i] as number) + (s.mat[j] === s.mat[i] ? EDGE_DEPTH_SAME : EDGE_DEPTH)) continue;
+        if (mj.flat || (s.z[j] as number) <= (s.z[i] as number) + (s.mat[j] === s.mat[i] ? (mj.clear ?? EDGE_DEPTH_SAME) : EDGE_DEPTH)) continue;
         set(i, mj.line);
         s.lined[i] = 1;
         break;

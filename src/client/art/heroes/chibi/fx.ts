@@ -7,19 +7,21 @@
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import type { ChibiDesign, PieceContext } from './design.js';
+import { type ChibiDesign, HEAD_TAG, type PieceContext } from './design.js';
 import { hash } from './pieces.js';
 import { scanPoly } from './raster.js';
-import { add3, type ChibiFx, clamp, cross3, dot3, type FxContext, len3, lerp, norm3, rad, TO_CAMERA, type V3, weaponAxes } from './rig.js';
+import { add3, type ChibiFx, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, norm3, rad, TO_CAMERA, type V3, weaponAxes } from './rig.js';
 
 const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
 const WHITE: RGB = [255, 255, 255];
 const DUST: RGB = [196, 182, 160];
 const DUST_DARK: RGB = [120, 108, 92];
 
-/** Fills a screen polygon on an effects layer. */
-function glowPoly(c: Canvas, pts: readonly Vec[], col: RGB, a: number, under: boolean): void {
-  scanPoly(pts, c.w, c.h, (x, y) => c.glow(x, y, col, a, under));
+/** Fills a screen polygon on an effects layer, leaving alone the pixels `skip` rejects. */
+function glowPoly(c: Canvas, pts: readonly Vec[], col: RGB, a: number, under: boolean, skip?: (x: number, y: number) => boolean): void {
+  scanPoly(pts, c.w, c.h, (x, y) => {
+    if (!skip?.(x, y)) c.glow(x, y, col, a, under);
+  });
 }
 
 /** A soft round puff. */
@@ -35,8 +37,8 @@ function puff(c: Canvas, x: number, y: number, r: number, col: RGB, a: number, u
 
 /**
  * A swoosh: a crescent swept between two sets of blade directions about the grip, white-hot along
- * its outer (cutting) edge, through the aura's colours to a thin violet inner edge, fading toward
- * its tail. `dirs` gives the blade's axis at each step from tail (0) to head (1).
+ * its outer (cutting) edge, through crimson to a faint inner edge with a hint of violet, fading
+ * toward its tail. `dirs` gives the blade's axis at each step from tail (0) to head (1).
  */
 function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOut: number, thick: number, alpha: number, behindZ: number, level = false): void {
   const { c } = ctx;
@@ -47,9 +49,11 @@ function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOu
   const bands: [number, number, RGB, number][] = [
     [0, 0.14, d.aura.hot, 1],
     [0.14, 0.34, mixc(d.aura.hot, d.aura.core, 0.45), 0.92],
-    [0.34, 0.68, d.aura.core, 0.78],
-    [0.68, 1, d.aura.edge, 0.42],
+    [0.34, 0.8, d.aura.core, 0.78],
+    [0.8, 1, mixc(d.aura.core, d.aura.edge, 0.4), 0.3],
   ];
+  // A blade's arc never covers his head: the face and hair stay readable through the swing.
+  const onHead = level ? undefined : (x: number, y: number): boolean => ctx.owner[y * c.w + x] === HEAD_TAG;
   // The arc stops at the ground.
   const at = (dir: V3, r: number): Vec => {
     const p = add3(centre, dir, r);
@@ -69,15 +73,17 @@ function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOu
       const pb0 = at(db, rOut - f0 * th(k1));
       const pb1 = at(db, rOut - f1 * th(k1));
       const pa1 = at(da, rOut - f1 * th(k0));
-      glowPoly(c, [pa0, pb0, pb1, pa1], col, a * alpha * fade, under);
+      glowPoly(c, [pa0, pb0, pb1, pa1], col, a * alpha * fade, under, onHead);
     }
   }
 }
 
 /**
  * A swing seen edge on (a cut straight at the viewer) would smear into a sliver. As sprite artists
- * do, turn the arc's plane about the blade's final direction (so the arc still ends on the blade)
- * until it shows at least half its face to the viewer.
+ * do, open it up on screen: the arc runs from where the blade started to where it ended as seen,
+ * round the grip at full reach, the way the swing turns on screen (or, when it passes straight
+ * through the grip, over the top for a falling cut and under for a rising one). Its depth runs from
+ * the start's to the end's, so the parts behind him still go behind.
  */
 function faceCamera(ctx: PieceContext, dirs: V3[]): V3[] {
   const end = dirs[dirs.length - 1] as V3;
@@ -86,42 +92,46 @@ function faceCamera(ctx: PieceContext, dirs: V3[]): V3[] {
   if (len3(nrm) < 0.05) nrm = cross3(dirs[Math.floor(dirs.length / 2)] as V3, end);
   if (len3(nrm) < 0.05) return dirs;
   nrm = norm3(nrm);
-  const cam = norm3(ctx.cam.local(TO_CAMERA));
-  const side = cross3(end, nrm);
-  const a = dot3(nrm, cam);
-  const b = dot3(side, cam);
-  const want = 0.55;
-  const reach = Math.hypot(a, b);
-  if (Math.abs(a) >= want || reach < 1e-3) return dirs;
-  // The smallest turn that brings the facing up to `want` (or as near as it can get).
-  const phase = Math.atan2(b, a);
-  const target = Math.min(want, reach * 0.999);
-  const sign = a >= 0 ? 1 : -1;
-  const base = Math.acos(clamp((sign * target) / reach, -1, 1));
-  const turn = (beta: number): V3[] => {
-    const cb = Math.cos(beta);
-    const sb = Math.sin(beta);
-    // Rodrigues: turn each direction about `end`.
-    return dirs.map((v) => {
-      const kv = cross3(end, v);
-      const kd = dot3(end, v);
-      return [v[0] * cb + kv[0] * sb + end[0] * kd * (1 - cb), v[1] * cb + kv[1] * sb + end[1] * kd * (1 - cb), v[2] * cb + kv[2] * sb + end[2] * kd * (1 - cb)];
-    });
-  };
-  // Of the two turns that will do, keep the one whose arc starts where the blade came from on screen.
-  const from = ctx.cam.vec(start);
-  let best: V3[] = dirs;
-  let bestD = Infinity;
-  for (const beta of [phase + base, phase - base]) {
-    const t = turn(Math.atan2(Math.sin(beta), Math.cos(beta)));
-    const s0 = ctx.cam.vec(t[0] as V3);
-    const dd = Math.hypot(s0[0] - from[0], s0[1] - from[1]);
-    if (dd < bestD) {
-      bestD = dd;
-      best = t;
+  const cam = ctx.cam;
+  if (Math.abs(dot3(nrm, norm3(cam.local(TO_CAMERA)))) >= 0.55) return dirs;
+  // The swing as seen: its angles round the grip and its reach.
+  const seen = dirs.map((d) => cam.vec(d));
+  const rs = seen.map((v) => Math.hypot(v[0], v[1]));
+  const rMax = Math.max(...rs);
+  const S = seen[0] as Vec;
+  const E = seen[seen.length - 1] as Vec;
+  const aS = Math.atan2(S[1], S[0]);
+  let sweep = Math.atan2(Math.sin(Math.atan2(E[1], E[0]) - aS), Math.cos(Math.atan2(E[1], E[0]) - aS));
+  const other = sweep - Math.sign(sweep || 1) * Math.PI * 2;
+  if (Math.min(...rs) > rMax * 0.35) {
+    // It turns round the grip on screen: follow it.
+    let turned = 0;
+    for (let i = 1; i < seen.length; i++) {
+      const a = seen[i - 1] as Vec;
+      const b = seen[i] as Vec;
+      turned += Math.atan2(a[0] * b[1] - a[1] * b[0], a[0] * b[0] + a[1] * b[1]);
     }
+    if (Math.sign(turned) !== Math.sign(sweep)) sweep = other;
+  } else {
+    // It passes through the grip: a falling cut goes over the top (screen y grows downward).
+    const midY = (sw: number): number => Math.sin(aS + sw / 2);
+    const falling = E[1] > S[1];
+    if (falling === midY(other) < midY(sweep)) sweep = other;
   }
-  return best;
+  const zS = cam.world(start)[2];
+  const zE = cam.world(end)[2];
+  const rS = rs[0] as number;
+  const rE = rs[rs.length - 1] as number;
+  return dirs.map((_, i) => {
+    const t = i / (dirs.length - 1);
+    const a = aS + sweep * t;
+    const r = Math.max(lerp(rS, rE, t), rMax * (0.55 + 0.45 * Math.sin(Math.PI * t)));
+    const Z = lerp(zS, zE, t);
+    const sx = Math.cos(a) * r;
+    const sy = Math.sin(a) * r;
+    // Back from the screen to hero space: screen x is world X, screen y is -Y + Z * DEPTH.
+    return cam.local([sx, Z * DEPTH - sy, Z]);
+  });
 }
 
 /** A starburst: four long rays, four short ones, a white core and a coloured fringe. */
@@ -145,16 +155,38 @@ export function starburst(c: Canvas, p: Vec, size: number, core: RGB, fringe: RG
   for (let dy = -Math.ceil(cr); dy <= Math.ceil(cr); dy++) for (let dx = -Math.ceil(cr); dx <= Math.ceil(cr); dx++) if (dx * dx + dy * dy <= cr * cr) c.glow(p[0] + dx, p[1] + dy, WHITE, a, under);
 }
 
-/** A two-colour rim of light around the figure: the core hugging it, the edge colour outside. */
-export function rim(c: Canvas, core: RGB, edge: RGB, k: number): void {
+/**
+ * A rim of light around the figure: hot crimson hugging it, crimson beyond, and the edge colour
+ * (violet) only as a faint outermost ring.
+ */
+export function rim(c: Canvas, core: RGB, edge: RGB, k: number, hot: RGB = core): void {
   const w = c.w;
   const h = c.h;
   const dist = new Uint8Array(w * h).fill(9);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (c.opaque(x, y)) dist[y * w + x] = 0;
-  // Two passes of a chessboard distance, out to 3 pixels.
+  // The figure's bounds: the rim reaches 3 pixels past them.
+  let x0 = w;
+  let y0 = h;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!c.opaque(x, y)) continue;
+      dist[y * w + x] = 0;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return;
+  x0 = Math.max(0, x0 - 3);
+  y0 = Math.max(0, y0 - 3);
+  x1 = Math.min(w - 1, x1 + 3);
+  y1 = Math.min(h - 1, y1 + 3);
+  // Three passes of a chessboard distance, out to 3 pixels.
   for (let pass = 1; pass <= 3; pass++) {
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
         if ((dist[y * w + x] as number) <= pass) continue;
         let near = false;
         for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1 && !near; dx++) {
@@ -166,12 +198,12 @@ export function rim(c: Canvas, core: RGB, edge: RGB, k: number): void {
       }
     }
   }
-  for (let i = 0; i < w * h; i++) {
-    const dd = dist[i] as number;
-    if (dd === 0 || dd > 3) continue;
-    const x = i % w;
-    const y = (i / w) | 0;
-    c.glow(x, y, dd === 1 ? core : edge, k * (dd === 1 ? 0.85 : dd === 2 ? 0.55 : 0.22));
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const dd = dist[y * w + x] as number;
+      if (dd === 0 || dd > 3) continue;
+      c.glow(x, y, dd === 1 ? mixc(core, hot, 0.25) : dd === 2 ? core : edge, k * (dd === 1 ? 0.9 : dd === 2 ? 0.6 : 0.28));
+    }
   }
 }
 
@@ -184,8 +216,8 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   const aura = d.aura;
   const ground = (p: V3): V3 => [p[0], 0, p[2]];
 
-  // Glowing runes on the blade (always faintly).
-  if (d.weapon.glow) d.weapon.glow(ctx, clamp(0.35 + (fx.rune ?? 0) * 0.9 + (fx.aura ?? 0) * 0.3, 0, 1.4));
+  // The blade's rune: barely a glow at rest, blazing as the pose calls on it.
+  if (d.weapon.glow) d.weapon.glow(ctx, clamp(0.06 + (fx.rune ?? 0) * 1.1 + (fx.aura ?? 0) * 0.35, 0, 1.4));
 
   if (fx.circle) {
     const g = ground(rig.pelvis.o);
@@ -331,7 +363,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
         const a = pts[s] as Vec;
         const b = pts[s + 1] as Vec;
         const fade = 1 - s / pts.length;
-        const col = s === 0 ? aura.hot : s < 3 ? aura.core : aura.edge;
+        const col = s === 0 ? aura.hot : s < 6 ? aura.core : aura.edge;
         const behind = (deep[s] as number) < centreZ - 4;
         glowLine(c, a, b, col, 0.9 * fade * Math.min(1, t * 4 + 0.3), behind);
         if (s < 5) glowLine(c, [a[0], a[1] + 1], [b[0], b[1] + 1], s < 2 ? aura.core : [70, 8, 22], 0.75 * fade, behind);
@@ -342,6 +374,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
 
   if (fx.blood) {
     const k = clamp(fx.blood, 0, 1);
+    const head = ctx.proj(rig.head.o);
     for (let i = 0; i < 34; i++) {
       const th = hash(i, 41) * Math.PI * 2;
       const rr = 6 + hash(i, 42) * 24 * (0.6 + k * 0.6);
@@ -353,7 +386,8 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
       const r = 2 + hash(i, 44) * 3.5 * k;
       const col: RGB = i % 3 === 0 ? [150, 10, 26] : i % 3 === 1 ? [96, 6, 18] : [190, 24, 40];
       puff(c, p[0], p[1], r, col, (0.35 + 0.35 * hash(i, 45)) * k, behind);
-      if (i % 2 === 0) {
+      // Droplets fly in front of him, but never across his face.
+      if (i % 2 === 0 && Math.hypot(p[0] + 2 - head[0], p[1] - 3 - head[1]) > 13) {
         c.glow(p[0] + 2, p[1] - 3, [236, 44, 60], 0.95 * k);
         c.glow(p[0] + 2, p[1] - 2, [140, 8, 24], 0.8 * k);
       }
@@ -381,11 +415,13 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
     for (let y = 0; y < c.h; y++) for (let x = 0; x < c.w; x++) if (c.opaque(x, y) && (x + y) % 2 === 0) c.glow(x, y, aura.core, 0.18 * fx.glow);
   }
   if (fx.aura) {
-    rim(c, aura.core, aura.edge, clamp(fx.aura, 0, 1));
-    // Embers drifting up off him.
+    rim(c, aura.core, aura.edge, clamp(fx.aura, 0, 1), aura.hot);
+    // Embers drifting up off him, from his knees to above his head: placed from the pelvis, so
+    // they rise with him in a leap rather than hanging below his feet.
+    const hip = rig.pelvis.o;
     for (let i = 0; i < 8; i++) {
-      const p = ctx.proj([rig.pelvis.o[0] + (hash(i, 61) - 0.5) * 30, 20 + hash(i, 62) * 60, (hash(i, 63) - 0.5) * 20]);
-      c.glow(p[0], p[1], i % 2 ? aura.core : aura.edge, 0.9 * fx.aura);
+      const p = ctx.proj([hip[0] + (hash(i, 61) - 0.5) * 30, hip[1] - 8 + hash(i, 62) * 60, hip[2] + (hash(i, 63) - 0.5) * 20]);
+      c.glow(p[0], p[1], i % 4 === 3 ? aura.edge : aura.core, 0.9 * fx.aura);
       c.glow(p[0], p[1] - 1, aura.hot, 0.5 * fx.aura);
     }
   }

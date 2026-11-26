@@ -8,7 +8,7 @@ import type { Vec } from '../skeleton.js';
 import type { Blob, Hit, Mat, Part } from './raster.js';
 import type { Build, Camera, ChibiPose, Frame3, Rig, V3 } from './rig.js';
 
-/** A lock of hair (a spike, a strand of the fringe, a tuft at the nape). */
+/** A lock of hair: a clump raked over the head, a strand of the fringe, a lock at the nape. */
 export interface Lock {
   /** Where it grows from on the hair's shell: degrees around the head (0 the face, 90 his right, 180 the back) and up from the ears' level. */
   yaw: number;
@@ -21,6 +21,8 @@ export interface Lock {
   curl?: V3;
   /** How much it streams back in the wind (default 1). */
   give?: number;
+  /** Where along it (0 root to 1 tip) the clump is widest (default 0.3). */
+  belly?: number;
 }
 
 /** Eyes, brows and the rest of a face, in head space (the right eye; the left mirrors it). */
@@ -62,6 +64,14 @@ export interface HeadDesign {
    */
   hairline: { faceYaw: number; brow: number; temple: number; nape: number; ear: number };
   locks: readonly Lock[];
+  /** The coloured line that parts a lock from the hair behind it (default: a shade under the hair's darkest tone). */
+  lockLine?: RGB;
+  /**
+   * Clumps painted on the shell, fanning out from the crown's whorl (where on the shell, as a
+   * lock's root is given), out to `reach` degrees from it: how many there are round it and how
+   * far they twist as they fall (radians of turn per radian out).
+   */
+  whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number };
   face: FaceDesign;
 }
 
@@ -81,9 +91,10 @@ export interface BodyDesign {
   knee?: { mat: Mat; r: number };
   upperArm: LimbLook;
   foreArm: LimbLook;
-  /** A gauntlet's flared cuff, `at` that share of the forearm from the elbow. */
-  cuff?: { mat: Mat; r: number; at: number };
-  hand: { mat: Mat; r: number };
+  /** A gauntlet's flared cuff, `at` that share of the forearm from the elbow, and the band of a paler metal round its wide end. */
+  cuff?: { mat: Mat; r: number; at: number; rim?: Mat };
+  /** The hand (a fist), and the plates over its knuckles in a paler metal. */
+  hand: { mat: Mat; r: number; knuckle?: Mat };
   neck: { mat: Mat; r: number };
   /**
    * The torso: ellipsoids in the pelvis frame and in the chest frame (both with their origin at
@@ -103,7 +114,7 @@ export interface PieceContext {
   build: Build;
   /** Starts a part (a set of shapes committed together) on the frame's canvas; `tag` marks its pixels in `owner`. */
   part: (tag?: number) => Part;
-  /** Which tagged part painted each pixel last (0 untagged): the weapon is WEAPON_TAG. */
+  /** Which tagged part painted each pixel last (0 untagged): the weapon is WEAPON_TAG, the head HEAD_TAG. */
   owner: Int16Array;
   /** Hero space to frame pixels, and to depth toward the viewer. */
   proj: (p: V3) => Vec;
@@ -114,6 +125,8 @@ export interface PieceContext {
 
 /** The owner tag of the weapon's pixels. */
 export const WEAPON_TAG = 1;
+/** The owner tag of the head's pixels (with its hair and collar). */
+export const HEAD_TAG = 2;
 
 /** Something to paint at a depth (bigger is nearer the viewer). */
 export interface DrawItem {

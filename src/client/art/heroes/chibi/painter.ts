@@ -7,7 +7,8 @@
  * Depth order: each part sorts by its depth toward the viewer. The legs and the cloth that hangs
  * among them sort by their true depths; the torso always goes on after the legs (its hips cover
  * the tops of the thighs), and everything above it (arms, head, pauldrons, the weapon) is moved by
- * the same amount, so the upper body keeps its own order.
+ * the same amount, so the upper body keeps its own order. An arm wholly on the far side keeps its
+ * true depth, so it stays behind the cloth hanging on the near side.
  */
 import { Canvas, INK, type Raster } from '../paint.js';
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
@@ -84,8 +85,11 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   });
 
   // Head (with the collar and the neck, in one depth-tested part).
+  // Side on, the head turns a little further toward the viewer, but not while he spins (it would
+  // turn ahead of the body): the cheat fades out as the body turns away from its side-on yaw.
   let headFr = rig.head;
-  if (view === 'side') headFr = rotate(headFr, 0, 0, SIDE_LOOK);
+  const turn = Math.abs(((((pose.turn ?? 0) + 180) % 360) + 360) % 360 - 180);
+  if (view === 'side') headFr = rotate(headFr, 0, 0, SIDE_LOOK * Math.max(0, 1 - turn / 45));
   const headZ = torsoZ + 1;
   items.push({
     z: headZ,
@@ -102,7 +106,8 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   const wZ = depth(add3(w.o, w.u, d.weapon.reach[1] * 0.3)) + up;
   for (const [arm, side] of [[rig.armR, 1], [rig.armL, -1]] as const) {
     const far = farSide(arm.mid) && farSide(arm.end);
-    const zArm = depth(lerp3(arm.mid, arm.end, 0.4)) * 0.6 + depth(arm.root) * 0.4 + up;
+    // An arm on the far side sorts by its true depth, so a coat flap hanging nearer the viewer stays in front of it.
+    const zArm = depth(lerp3(arm.mid, arm.end, 0.4)) * 0.6 + depth(arm.root) * 0.4 + (far ? 0 : up);
     items.push({ z: zArm, draw: () => paintArm(ctx, d, arm, far) });
     const holds = side === 1 ? !pose.drop : rig.twoHanded;
     const zHand = holds && farSide(arm.end) === farSide(add3(w.o, w.u, 12)) ? Math.max(zArm, wZ) + 0.05 : zArm + 0.05;
@@ -129,10 +134,28 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
 
 /** Fills one-pixel pinholes and notches left between outlined parts with ink, so the silhouette stays clean. */
 function closePinholes(c: Canvas): void {
+  // Only within the figure's bounds.
+  let x0 = c.w;
+  let y0 = c.h;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < c.h; y++) {
+    for (let x = 0; x < c.w; x++) {
+      if ((c.data[(y * c.w + x) * 4 + 3] as number) === 0) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  x0 = Math.max(1, x0);
+  y0 = Math.max(1, y0);
+  x1 = Math.min(c.w - 2, x1);
+  y1 = Math.min(c.h - 2, y1);
   for (let pass = 0; pass < 2; pass++) {
     const fill: number[] = [];
-    for (let y = 1; y < c.h - 1; y++) {
-      for (let x = 1; x < c.w - 1; x++) {
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
         if (c.opaque(x, y)) continue;
         const n = (c.opaque(x - 1, y) ? 1 : 0) + (c.opaque(x + 1, y) ? 1 : 0) + (c.opaque(x, y - 1) ? 1 : 0) + (c.opaque(x, y + 1) ? 1 : 0);
         if (n >= 3) fill.push(x, y);
@@ -190,7 +213,15 @@ function paintArm(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): v
   if (B.cuff) {
     const a = lerp3(arm.mid, arm.end, B.cuff.at);
     const b = lerp3(arm.mid, arm.end, Math.min(0.98, B.cuff.at + 0.42));
-    part.capsule(proj(a), proj(b), B.cuff.r, B.cuff.r * 0.85, k(B.cuff.mat), bias + 0.05, depth(a) + 0.8, depth(b) + 0.8, 3);
+    if (B.cuff.rim) {
+      // A pale rim round the cuff's wide end, then the cuff a little slimmer beyond it: side on a
+      // rimmed flare, end on a pale ring round the steel.
+      const e = lerp3(a, b, 0.2);
+      part.capsule(proj(a), proj(e), B.cuff.r, B.cuff.r * 0.97, k(B.cuff.rim), bias + 0.05, depth(a) + 0.8, depth(e) + 0.8, 4);
+      part.capsule(proj(e), proj(b), B.cuff.r * 0.8, B.cuff.r * 0.74, k(B.cuff.mat), bias + 0.05, depth(e) + 0.8, depth(b) + 0.8, 3);
+    } else {
+      part.capsule(proj(a), proj(b), B.cuff.r, B.cuff.r * 0.85, k(B.cuff.mat), bias + 0.05, depth(a) + 0.8, depth(b) + 0.8, 3);
+    }
   }
   part.commit();
 }
@@ -203,8 +234,8 @@ function paintHand(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): 
   part.ellipse(p[0], p[1], B.hand.r, B.hand.r * 0.92, m, far ? FAR : 0.05, ctx.depth(arm.end), 1);
   // Knuckle plates catch the light.
   const kn: Vec = [p[0] - 1, p[1] - B.hand.r * 0.45];
-  part.plot(kn[0], kn[1], m, 0.9, ctx.depth(arm.end) + 3, 1, true);
-  part.plot(kn[0] + 1, kn[1], m, 0.9, ctx.depth(arm.end) + 3, 1, true);
+  const km = B.hand.knuckle ? (far ? dim(B.hand.knuckle, -0.12) : B.hand.knuckle) : m;
+  for (const dx of [-1, 0, 1]) part.plot(kn[0] + dx, kn[1], km, dx ? 0.45 : 0.9, ctx.depth(arm.end) + 3, 1, true);
   part.commit();
 }
 

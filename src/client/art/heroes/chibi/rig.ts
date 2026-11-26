@@ -110,7 +110,8 @@ export interface FxContext {
  *    `from` is the weapon angle it swept from (same convention as `weapon`), `roll`/`yaw` that
  *    angle's plane (they default to the pose's), `width` how far down the blade the arc reaches
  *    (0 to 1, default 0.55), `alpha` its strength. The arc is white-hot along the cutting edge,
- *    fading through the aura colour to nothing; parts of it behind the body show only around it.
+ *    fading through the aura colour to nothing; parts of it behind the body show only around it,
+ *    and it never covers the head.
  *  - `ring`: a level ring around him at blade height, for spins: `from` and `to` are angles round
  *    him in degrees in the same frame as `turn` (0 is the way he faces at `turn: 0`, 90 his right
  *    there), so a ring stays put in the world while he spins inside it. It runs from its faint
@@ -127,7 +128,8 @@ export interface FxContext {
  *    `shockAt` moves its centre (hero space, on the ground; default under the blade's tip).
  *  - `wisps`: dark crimson wisps drawn in toward him from all around: 0 far out, 1 arrived.
  *  - `blood`: a red mist of blood around him (Ruination's price), 0 to 1.
- *  - `rune`: how brightly the blade's rune channel glows (it always glows a little).
+ *  - `rune`: how brightly the blade's rune channel glows: at 0 it smoulders a deep red with barely a
+ *    glow, toward 1 it blazes (an aura makes it glow a little too).
  *  - `glow`: the body glows from within (Drain), 0 to 1.
  *  - `extra`: paints anything else, after the built-in effects, from the choreography's own file.
  */
@@ -203,7 +205,8 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    `weapon`/`roll`/`yaw` as usual.
  *
  * Cloth and hair
- *  - `wind`: coat tails and hair stream back (0 hanging, 1 flying flat behind him).
+ *  - `wind`: coat tails and hair stream back (0 hanging, 1 flying flat behind him). Down to
+ *    -0.8 flicks the coat tails forward instead (a flinch thrown back); the hair stays put.
  *  - `lift`: an updraft: tails rise and spread (falling, leaping, a burst of power), -1 to 1.
  *  - `flare`: tails swing out around him (spins), 0 to 1.
  *  - `sway`: tails and hair swing sideways, -1 (to his left) to 1 (to his right).
@@ -465,7 +468,11 @@ export const DEPTH = 0.32;
 /** Side on, the figure faces right and this far toward the viewer. */
 export const SIDE_YAW = 32;
 const VIEW_YAW: Record<ChibiView, number> = { side: SIDE_YAW, front: 90, back: -90 };
-/** Side on, heads turn a little further toward the viewer than the body, as sprite heads do. */
+/**
+ * Side on, heads turn a little further toward the viewer than the body, as sprite heads do. The
+ * cheat fades out as a pose's `turn` grows (gone by 45 degrees), so a spinning head keeps pace with
+ * the body.
+ */
 export const SIDE_LOOK = 20;
 
 /** The light: from the upper left, a little in front (world axes: X right, Y up, Z toward the viewer). */

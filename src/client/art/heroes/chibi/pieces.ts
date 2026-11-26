@@ -5,8 +5,8 @@
  * ripple, flare and lift with the pose's wind.
  */
 import type { HeadPiece, Piece, PieceContext } from './design.js';
-import { dim, type Hit, type Mat } from './raster.js';
-import { add3, at3, clamp, cross3, dirIn, dot3, type Frame3, lerp, mul3, norm3, rad, rotate, sub3, type V3 } from './rig.js';
+import { dim, type Hit, type Mat, toneLight } from './raster.js';
+import { add3, at3, clamp, cross3, dirIn, dot3, type Frame3, lerp, mul3, norm3, rad, rotate, sub3, TO_CAMERA, type V3 } from './rig.js';
 import type { Vec } from '../skeleton.js';
 
 // ── Shoulder plates ──────────────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export function plates(spec: PlatesSpec): Piece {
               // The inner face toward the body stays hidden.
               if ((h.p[2] - pl.c[2]) / pl.r[2] < -0.55) return null;
               if (h.back) return { m: spec.mat, light: -0.9 };
-              return { m: k < cut + 0.22 ? spec.rim : spec.mat };
+              return { m: k < cut + 0.3 ? spec.rim : spec.mat };
             });
           });
           part.commit();
@@ -103,7 +103,7 @@ export interface Panel {
   /** Where it hangs from, in degrees around the waist (0 the front, 90 his right, 180 the back). */
   from: number;
   to: number;
-  /** Its length, how ragged its hem is (pixels), and how it narrows (<1) or widens (>1) to the hem. */
+  /** Its length, how deep the fork in its hem is (pixels: a swallowtail, its corners hanging longer than its middle), and how it narrows (<1) or widens (>1) to the hem. */
   len: number;
   jag?: number;
   taper?: number;
@@ -128,12 +128,20 @@ export interface SkirtSpec {
   fan?: number;
   /** How readily the panels stream in the wind (1 normal). */
   give?: number;
-  /** Fold lines on the outside, in a darker hue. */
+  /**
+   * Folds: the cloth is pleated across its width, a little deeper toward the hem, so it shades in
+   * bands two or three pixels wide (lit folds and shaded ones) with a short crease up from the hem
+   * in each hollow.
+   */
   folds?: boolean;
 }
 
 const COLS = 4;
 const ROWS = 7;
+/** How deep the pleats of a folded panel are at its hem (pixels). */
+const PLEAT = 1.3;
+/** However a panel turns, it shows at least this breadth on screen: at its top and at its hem. */
+const MIN_W: readonly [number, number] = [2.5, 5.5];
 
 /** A tiny seeded hash in [0, 1). */
 export function hash(a: number, b = 0): number {
@@ -147,13 +155,16 @@ export function skirt(spec: SkirtSpec): Piece {
   return (ctx: PieceContext) => {
     const { rig, pose } = ctx;
     const pf = rig.pelvis;
-    const wind = clamp(pose.wind ?? 0, 0, 1.3) * (spec.give ?? 1);
+    // Negative wind flicks the tails forward (a flinch): the same bend, the other way.
+    const blow = clamp(pose.wind ?? 0, -0.8, 1.3);
+    const wind = Math.abs(blow) * (spec.give ?? 1);
     const lift = pose.lift ?? 0;
     const flare = pose.flare ?? 0;
     const sway = pose.sway ?? 0;
     const phase = (pose.phase ?? 0) * Math.PI * 2;
     const down: V3 = [0, -1, 0];
-    const windDir = norm3([-1, 0.06 + lift * 0.5, sway * 0.5]);
+    const windDir = norm3([blow < 0 ? 1 : -1, 0.06 + lift * 0.5, sway * 0.5]);
+    const toCam = norm3(ctx.cam.local(TO_CAMERA));
     const fan = spec.fan ?? 0.8;
     const items = spec.panels.map((pn, pi) => {
       const grid: V3[][] = [];
@@ -168,13 +179,22 @@ export function skirt(spec: SkirtSpec): Piece {
         const thigh = norm3(sub3(leg.mid, leg.root));
         const front = clamp(Math.cos(phi), 0, 1) * clamp(Math.abs(Math.sin(phi)) * 1.6, 0.3, 1);
         let d0 = norm3(add3(add3(add3(down, out, spec.aline ?? 0.3), dirIn(pf, -1, 0, 0), pn.kick ?? 0), thigh, front * 0.9));
+        // Cloth streaming straight at the viewer would fold into a pile of slivers: as a sprite
+        // artist would, some of the wind carrying it at the viewer carries it out to its own side
+        // instead, so the tails open out.
+        let wd = windDir;
+        const atCam = dot3(wd, toCam);
+        if (atCam > 0) {
+          const side = sub3(out, mul3(toCam, dot3(out, toCam)));
+          wd = norm3(add3(add3(wd, toCam, -atCam * 0.55), side, atCam * 0.4));
+        }
         const col: V3[] = [top];
         let p = top;
         const seg = pn.len / ROWS;
         for (let j = 1; j <= ROWS; j++) {
           const t = j / ROWS;
           const bend = clamp(wind * (0.3 + 0.75 * t), 0, 1);
-          let d = norm3(add3(mul3(d0, 1 - bend), windDir, bend));
+          let d = norm3(add3(mul3(d0, 1 - bend), wd, bend));
           d = add3(d, [0, 1, 0], backness * fan * bend * 1.2);
           d = add3(d, out, flare * (0.6 + t));
           d = add3(d, [0, 1, 0], Math.max(0, lift) * t * 0.9);
@@ -185,8 +205,8 @@ export function skirt(spec: SkirtSpec): Piece {
           const across = norm3(cross3(d, out));
           const normal = norm3(cross3(across, d));
           p = add3(add3(p, d, seg), add3(mul3(normal, wave * 0.55), across, wave * 0.18 * (k - COLS / 2)));
-          // Taper: pull the panel's columns toward its middle (or spread them) down its length.
-          col.push(p);
+          // Pleats: alternate columns stand out and sink in, deeper toward the hem.
+          col.push(spec.folds ? add3(p, normal, (k % 2 ? 1 : -1) * PLEAT * (0.3 + 0.7 * t)) : p);
           if (j === 1) d0 = d;
         }
         grid.push(col);
@@ -221,7 +241,38 @@ function drawPanel(ctx: PieceContext, spec: SkirtSpec, pn: Panel, pi: number, gr
   const { cam } = ctx;
   const part = ctx.part();
   const P = grid.map((c) => c.map((p) => ctx.proj(p)));
-  const jag = pn.jag ?? 0;
+  // A panel turned edge on keeps some breadth, as a sprite artist would draw it, rather than
+  // thinning to a ribbon: its columns are pushed apart across its run down the screen.
+  for (let j = 1; j <= ROWS; j++) {
+    const mid = (P[COLS >> 1] as Vec[])[j] as Vec;
+    const up = (P[COLS >> 1] as Vec[])[j - 1] as Vec;
+    const dl = Math.hypot(mid[0] - up[0], mid[1] - up[1]) || 1;
+    const perp: Vec = [-(mid[1] - up[1]) / dl, (mid[0] - up[0]) / dl];
+    const a = (P[0] as Vec[])[j] as Vec;
+    const b = (P[COLS] as Vec[])[j] as Vec;
+    const w = (b[0] - a[0]) * perp[0] + (b[1] - a[1]) * perp[1];
+    const want = lerp(MIN_W[0], MIN_W[1], j / ROWS);
+    if (Math.abs(w) >= want) continue;
+    const grow = (w >= 0 ? want : -want) - w;
+    for (let k = 0; k <= COLS; k++) {
+      const p = (P[k] as Vec[])[j] as Vec;
+      (P[k] as Vec[])[j] = [p[0] + perp[0] * grow * (k / COLS - 0.5), p[1] + perp[1] * grow * (k / COLS - 0.5)];
+    }
+  }
+  // The hem: a clean swallowtail, its corners hanging longer than its middle.
+  const fork = pn.jag ?? 0;
+  const hem: Vec[] = [];
+  for (let k = 0; k <= COLS; k++) {
+    const a = (grid[k] as V3[])[ROWS - 1] as V3;
+    const b = (grid[k] as V3[])[ROWS] as V3;
+    const p = add3(b, norm3(sub3(b, a)), fork * Math.pow(Math.abs((2 * k) / COLS - 1), 1.4));
+    const ground = ctx.proj(p[1] < 0.3 ? [p[0], 0.3, p[2]] : p);
+    const q = (P[k] as Vec[])[ROWS] as Vec;
+    const o = ctx.proj(b);
+    // Carry over the widening applied to the last row.
+    hem.push([ground[0] + q[0] - o[0], ground[1] + q[1] - o[1]]);
+  }
+  const outerId = 50 + pi * 2;
   for (let k = 0; k < COLS; k++) {
     for (let j = 0; j < ROWS; j++) {
       const a = (grid[k] as V3[])[j] as V3;
@@ -232,45 +283,49 @@ function drawPanel(ctx: PieceContext, spec: SkirtSpec, pn: Panel, pi: number, gr
       let n = norm3(cross3(sub3(d, a), sub3(b, a)));
       const outward = sub3(lerp3s([a, b, c, d]), ctx.rig.pelvis.o);
       if (dot3(n, [outward[0], 0, outward[2]]) < 0) n = mul3(n, -1);
+      // The lining shows only where the cloth clearly turns its inside to the viewer: near edge on
+      // it keeps its outside, so a tail streaming at the viewer does not break into patches.
       const facing = cam.facing(n);
-      const inside = facing < 0;
+      const inside = facing < -0.22;
       const m = inside ? spec.inner : spec.outer;
       const light = inside ? cam.light(mul3(n, -1)) - 0.25 : cam.light(n);
-      const quad: Vec[] = [(P[k] as Vec[])[j] as Vec, (P[k + 1] as Vec[])[j] as Vec, (P[k + 1] as Vec[])[j + 1] as Vec, (P[k] as Vec[])[j + 1] as Vec];
-      // A ragged hem: teeth hang below the last row.
-      if (j === ROWS - 1 && jag > 0) {
-        const cut = (q: number): number => jag * (0.55 + hash(pi * 31 + k * 7 + q, 3) * 0.9);
-        const dirA = norm3(sub3(d, a));
-        const dirB = norm3(sub3(c, b));
-        const tipK = add3(lerp3(c, d, 0.5), norm3(add3(dirA, dirB)), cut(0) * 1.1);
-        const notch = lerp3(c, d, 0.5);
-        // Teeth lying on the floor stay on it.
-        const floor = (p: V3): Vec => ctx.proj(p[1] < 0.3 ? [p[0], 0.3, p[2]] : p);
-        const pd = floor(add3(d, dirA, cut(1) * (k === 0 ? 0.4 : 0.7)));
-        const pc = floor(add3(c, dirB, cut(2) * (k === COLS - 1 ? 0.4 : 0.5)));
-        quad.splice(2, 2, pc, floor(add3(notch, dirA, -0.5)), floor(tipK), floor(lerp3(notch, d, 0.4)), pd);
-      }
+      const last = j === ROWS - 1;
+      const quad: Vec[] = [(P[k] as Vec[])[j] as Vec, (P[k + 1] as Vec[])[j] as Vec, last ? (hem[k + 1] as Vec) : ((P[k + 1] as Vec[])[j + 1] as Vec), last ? (hem[k] as Vec) : ((P[k] as Vec[])[j + 1] as Vec)];
       const z = ctx.depth(lerp3s([a, b, c, d]));
-      part.poly(quad, m, light, z, 50 + pi * 2 + (inside ? 1 : 0));
+      part.poly(quad, m, light, z, outerId + (inside ? 1 : 0));
     }
   }
-  // Fold lines down the outside, in the cloth's shadow tone.
+  // Creases: a short shaded line up from the hem in each hollow of the pleats.
+  const mark = (x: number, y: number, tone: number): void => {
+    const id = part.idAt(x, y);
+    if (id !== outerId && id !== outerId + 1) return;
+    const m = id === outerId ? spec.outer : spec.inner;
+    part.plot(x, y, m, toneLight(m, tone), part.zAt(x, y), id, true);
+  };
   if (spec.folds) {
-    for (let k = 1; k < COLS; k += 2) {
-      for (let j = 1; j < ROWS; j++) {
-        const a = (grid[k] as V3[])[j] as V3;
-        const b = (grid[k] as V3[])[j + 1] as V3;
-        const pa = (P[k] as Vec[])[j] as Vec;
-        const pb = (P[k] as Vec[])[j + 1] as Vec;
-        const z = ctx.depth(lerp3(a, b, 0.5)) + 0.05;
-        const n2 = Math.max(1, Math.ceil(Math.max(Math.abs(pb[0] - pa[0]), Math.abs(pb[1] - pa[1]))));
-        for (let i = 0; i <= n2; i++) {
-          const x = Math.floor(pa[0] + ((pb[0] - pa[0]) * i) / n2);
-          const y = Math.floor(pa[1] + ((pb[1] - pa[1]) * i) / n2);
-          const id = part.idAt(x, y);
-          if (id === 50 + pi * 2 && part.zAt(x, y) <= z + 0.6) part.plot(x, y, spec.outer, -0.9, z, id, true);
-        }
-      }
+    for (let k = 2; k < COLS; k += 2) {
+      const a = hem[k] as Vec;
+      const b = (P[k] as Vec[])[ROWS - 2] as Vec;
+      const n2 = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
+      for (let i = 1; i <= n2; i++) mark(Math.floor(a[0] + ((b[0] - a[0]) * i) / n2), Math.floor(a[1] + ((b[1] - a[1]) * i) / n2), 3);
+    }
+  }
+  // A clean hem line just inside the bottom edge, in the cloth's shadow tone.
+  for (let k = 0; k < COLS; k++) {
+    const a = hem[k] as Vec;
+    const b = hem[k + 1] as Vec;
+    const inA = (P[k] as Vec[])[ROWS - 1] as Vec;
+    const inB = (P[k + 1] as Vec[])[ROWS - 1] as Vec;
+    const n2 = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2));
+    for (let i = 0; i <= n2; i++) {
+      const t = i / n2;
+      const x = a[0] + (b[0] - a[0]) * t;
+      const y = a[1] + (b[1] - a[1]) * t;
+      // Half a pixel back up the cloth from the edge.
+      const ux = inA[0] + (inB[0] - inA[0]) * t - x;
+      const uy = inA[1] + (inB[1] - inA[1]) * t - y;
+      const ul = Math.hypot(ux, uy) || 1;
+      mark(Math.floor(x + (ux / ul) * 0.7), Math.floor(y + (uy / ul) * 0.7), 3);
     }
   }
   part.commit();
