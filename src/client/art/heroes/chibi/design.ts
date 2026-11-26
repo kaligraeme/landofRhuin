@@ -128,6 +128,12 @@ export interface Ponytail {
   give?: number;
   /** The tie round its root: its material, its radius, and how long the two loose ends of a cord hang from it (none if left out). */
   tie: { mat: Mat; r: number; ends?: number };
+  /**
+   * Lifts its lighting (default 0): a tail streaming out behind the head faces away from the
+   * light and paints in its darkest tones; about 0.4 lets its clumps show their lit sides and a
+   * highlight streak, as glossy dark hair does.
+   */
+  sheen?: number;
 }
 
 /**
