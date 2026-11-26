@@ -1,8 +1,9 @@
 /**
  * The Dark Knight's states, in the chibi pose format (rig.ts, ChibiPose).
  *
- *   guard    5  (1 wind-up) Parry: the blade whipped up across his body, flat to the foe, his left
- *               hand braced on it; a crouch, a clang, sparks as he skids back, then a held brace
+ *   special  5  (1 wind-up) Parry, his special (`guard` below): the blade whipped up across his
+ *               body, flat to the foe, his left hand braced on it; a crouch, a clang, sparks as
+ *               he skids back, then a held brace
  *   hurt     3  a flinch: knocked back and sideways, head snapped back, eyes squeezed shut, arms
  *               flung loose, the coat tails flicked forward
  *   kneel    4  (loop) low health: down on his right knee, left knee up, leaning on the blade
@@ -16,9 +17,10 @@
  * glint, the dust of his fall) are `fx.extra` painters defined beside them. The guard's wind-up
  * comes up from the battle stance, and the flinch ends most of the way back into it (`settle`).
  */
-import { AT_EASE, GUARD_STANCE, settle } from './moves-core.js';
-import type { RGB } from '../paint.js';
-import { type ChibiPose, type FxContext, lerp3, pose, wave } from './rig.js';
+import type { RGB } from '../../paint.js';
+import { DUST, DUST_DARK } from '../fx.js';
+import { AT_EASE, fromReady, GUARD_STANCE, settle } from './moves-core.js';
+import { type ChibiPose, type FxContext, lerp3, pose, wave } from '../rig.js';
 
 const S = GUARD_STANCE;
 const WHITE: RGB = [255, 255, 255];
@@ -38,7 +40,6 @@ const BRACE: ChibiPose = pose(S, { x: -1, y: 11, lean: 8, twist: 0, head: 8, loo
 const parried =
   (k: number) =>
   ({ c, rig, tip, proj, hash }: FxContext): void => {
-    if (!tip) return;
     const [x, y] = proj(lerp3(rig.weapon.o, tip, 0.52));
     if (k === 0) {
       for (let i = 0; i < 56; i++) {
@@ -79,11 +80,11 @@ const guard: ChibiPose[] = [
 const hurt: ChibiPose[] = [
   // The blow: thrown back and sideways, head snapped back, the arms flung loose, the coat tails
   // whipped forward past his legs.
-  pose(S, { x: -4, y: 5, lean: -18, twist: -14, tilt: -10, head: -16, look: -10, footF: [12, 0, 6], footB: [-10, -2, 5.5], handF: [8, 16, 13], handB: [-4, 8, 14], weapon: 118, roll: 20, yaw: 10, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
+  pose(S, { x: -4, y: 5, lean: -18, twist: -14, tilt: -10, head: -16, look: -10, footF: [12, 0, 6], footB: [-10, -2, 5.5], handF: [5, 16, 3], handB: [-4, 8, 14], weapon: 40, roll: -16, yaw: -54, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
   // Knocked back a step.
-  pose(S, { x: -6, y: 6, lean: -10, twist: -10, tilt: -6, head: -8, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.5], handF: [7, 15, 11], handB: [-1, 11, 13], weapon: 104, roll: 22, yaw: 4, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
+  pose(S, { x: -6, y: 6, lean: -10, twist: -10, tilt: -6, head: -8, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.5], handF: [5, 16, 4], handB: [-1, 11, 13], weapon: 46, roll: -12, yaw: -50, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
-  settle(pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [8, 12, 9], weapon: 60 }), 0.7, { grip: -6, face: 'grit', wind: 0.15, phase: 0.6 }),
+  settle(pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [6, 14, 6], weapon: 48, roll: -8, yaw: -42 }), 0.7, { grip: -6, face: 'grit', wind: 0.15, phase: 0.6 }),
 ];
 
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────
@@ -210,9 +211,6 @@ const DOWN: ChibiPose = pose(S, {
   lift: -0.4,
 });
 
-const DUST: RGB = [196, 182, 160];
-const DUST_DARK: RGB = [128, 116, 100];
-
 /** Dust thrown up from the floor all along him as he lands flat: puffs beside his hips, his back and his head. */
 const thud = ({ c, rig, proj, hash }: FxContext): void => {
   const along = [rig.pelvis.o, lerp3(rig.pelvis.o, rig.head.o, 0.5), rig.head.o];
@@ -235,9 +233,9 @@ const thud = ({ c, rig, proj, hash }: FxContext): void => {
 
 const ko: ChibiPose[] = [
   // Stagger back.
-  pose(S, { x: -4, y: 5, lean: -14, twist: -10, tilt: -6, head: -16, handF: [4, 14, 8], handB: [-3, 10, 13], weapon: 100, roll: 24, face: 'hurt', sway: -0.4, lift: 0.3 }),
-  // His knees give: down on both, the blade's point striking the floor.
-  pose(S, { x: -2, y: 14, lean: 8, twist: 0, head: 18, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [8, 16, 9], weapon: 150, roll: 20, face: 'hurt', wind: 0, flare: 0.2 }),
+  pose(S, { x: -4, y: 5, lean: -14, twist: -10, tilt: -6, head: -16, handF: [4, 14, 4], handB: [-3, 10, 13], weapon: 60, roll: -10, yaw: -40, face: 'hurt', sway: -0.4, lift: 0.3 }),
+  // His knees give: down on both, the blade's point striking the floor in front of him.
+  pose(S, { x: -2, y: 14, lean: 8, twist: 0, head: 18, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [8, 16, 5], weapon: 150, roll: 0, yaw: -24, face: 'hurt', wind: 0, flare: 0.2 }),
   // He sways back, turning, the blade hanging from his loosening grip.
   pose(S, { x: -2, y: 15, lean: -10, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-6, -1, 5], footB: [-8, -1, 4.6], kneel: 'F', handF: [6, 18, 14], handB: [2, 18, 11], weapon: 160, roll: -10, yaw: 0, face: 'closed', wind: 0, lift: 0.2 }),
   // Toppling back, the coat flying up; the blade has hit the floor.
@@ -256,7 +254,6 @@ const ko: ChibiPose[] = [
 const glint =
   (k: number) =>
   ({ c, tip, proj }: FxContext): void => {
-    if (!tip) return;
     const [x, y] = proj(tip);
     const r = Math.round(7 * k);
     for (let i = -r; i <= r; i++) {
@@ -282,8 +279,8 @@ const TWIRL: ChibiPose = pose(S, { y: 3, lean: -3, twist: 14, tilt: -4, head: -4
 const PROUD: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -3, twist: 10, tilt: 3, head: -6, look: 12, footF: [7, 0, 7], footB: [-6, 0, 6], handF: [4, 5, 8], weapon: -46, face: 'smirk', wind: 0.6, lift: 0.45, sway: -0.7 });
 
 const victory: ChibiPose[] = [
-  // A breath first: the blade trailing low behind him.
-  pose(S, { y: 6, lean: 8, twist: -12, head: 2, look: 4, handF: [2, 15, 11], handB: [1, 14, 11], weapon: 250, roll: 0, yaw: 0, face: 'smirk', wind: 0.25 }),
+  // A breath first: the blade swung down out of his guard, on its way round behind him.
+  fromReady(pose(S, { y: 6, lean: 8, twist: -12, head: 2, look: 4, handF: [2, 15, 11], handB: [1, 14, 11], weapon: 250, roll: 0, yaw: 0, face: 'smirk', wind: 0.25 }), 0.5),
   // The blade wheels up behind him, over the top...
   // (standing nearly upright over his head here: tipped forward it would cross his face side on)...
   pose(TWIRL, { weapon: 372, phase: 0.1, fx: { smear: { from: 250, roll: 0, width: 0.5 }, rune: 0.8 } }),
@@ -300,4 +297,5 @@ const victory: ChibiPose[] = [
   pose(PROUD, { phase: 1 }),
 ];
 
-export const STATE_CLIPS = { guard, hurt, kneel, ko, victory };
+/** The state clips' poses, by clip (Parry is his special, so the guard plays as `special`). */
+export const STATE_MOVES = { special: guard, hurt, kneel, ko, victory };

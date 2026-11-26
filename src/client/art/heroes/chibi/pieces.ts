@@ -76,6 +76,7 @@ export interface CollarSpec {
 
 /** A high collar, open at the front and lined, painted with the head so they sort pixel by pixel. */
 export function collar(spec: CollarSpec): HeadPiece {
+  const rim = dim(spec.outer, 0.12);
   return {
     blobs: (ctx) => [
       {
@@ -90,7 +91,7 @@ export function collar(spec: CollarSpec): HeadPiece {
           if (p[1] > top || p[1] < spec.bottom) return null;
           // A pale-edged rim along the top.
           if (h.back) return { m: spec.lining, id: 31 };
-          return { m: p[1] > top - 1.1 ? dim(spec.outer, 0.12) : spec.outer };
+          return { m: p[1] > top - 1.1 ? rim : spec.outer };
         },
       },
     ],
@@ -331,4 +332,3 @@ function drawPanel(ctx: PieceContext, spec: SkirtSpec, pn: Panel, pi: number, gr
   part.commit();
 }
 
-const lerp3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];

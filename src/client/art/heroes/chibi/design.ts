@@ -43,7 +43,7 @@ export interface FaceDesign {
   mouthAt: readonly [number, number];
   /** A nose tip, [forward, up] (a pixel of shadow). */
   noseAt: readonly [number, number];
-  /** A pale scar on one cheek: its centre and the cheek (1 his right, -1 his left). */
+  /** A pale scar on one cheek: its centre in head space (the sign of its right value picks the cheek) and its colour. */
   scar?: { at: V3; colour: RGB };
 }
 
@@ -64,6 +64,12 @@ export interface HeadDesign {
    */
   hairline: { faceYaw: number; brow: number; temple: number; nape: number; ear: number };
   locks: readonly Lock[];
+  /**
+   * Hair a tone darker overall: the base tone covers the clumps, the light tone runs along their
+   * lit sides and the highlight only on the brightest streaks (by default the light tone covers
+   * them, with highlight streaks along their lit sides).
+   */
+  darkHair?: boolean;
   /** The coloured line that parts a lock from the hair behind it (default: a shade under the hair's darkest tone). */
   lockLine?: RGB;
   /**
@@ -150,7 +156,7 @@ export interface WeaponDesign {
   grip2: number;
   /** The cutting part along the weapon, for smears and impacts. */
   reach: readonly [number, number];
-  /** Paints the weapon into a part (`rune`: how brightly it glows, 0 to 1). */
+  /** Paints the weapon into a part; a glowing channel reads its brightness from the pose (fx.rune, fx.aura; see blade.ts `blaze`). */
   paint: (ctx: PieceContext, part: Part) => void;
   /** Soft glow painted over the figure (a rune channel), 0 to 1 strength. */
   glow?: (ctx: PieceContext, strength: number) => void;
@@ -165,6 +171,6 @@ export interface ChibiDesign {
   headPieces: readonly HeadPiece[];
   outfit: readonly Piece[];
   weapon: WeaponDesign;
-  /** Skill aura: core, edge and the white-hot colour of a smear's cutting edge. */
+  /** Skill aura: core, edge and the white-hot colour of a smear's cutting edge (every effect is painted in these). */
   aura: { core: RGB; edge: RGB; hot: RGB };
 }

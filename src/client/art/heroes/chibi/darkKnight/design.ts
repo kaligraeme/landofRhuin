@@ -3,14 +3,14 @@
  * back and up, blackened plate with dull silver edges over a dark padded suit, a long open oxblood
  * coat with a high collar and split swallowtail tails, and an oversized black greatsword with a
  * pale edge, a saw-toothed back and a crimson rune channel. Everything here is data for the chibi
- * engine; his moves are in the moves-*.ts files.
+ * engine; his moves are in the moves-*.ts files beside it, and hero.ts puts him together.
  */
-import { hex } from '../paint.js';
-import { blade } from './blade.js';
-import type { ChibiDesign, Lock } from './design.js';
-import { collar, plates, skirt } from './pieces.js';
-import { flat, type Hit, type Mat, mat4 } from './raster.js';
-import type { Build } from './rig.js';
+import { hex } from '../../paint.js';
+import { blade } from '../blade.js';
+import type { ChibiDesign, Lock } from '../design.js';
+import { collar, plates, skirt } from '../pieces.js';
+import { flat, type Hit, type Mat, mat4 } from '../raster.js';
+import type { Build } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
@@ -37,6 +37,8 @@ const GUARD = mat4('#b8bcca', '#6c7080', '#40424e', '#25262f', '#111218');
 // Leather bound round the grip, a warm brown so the dark wrap shows across it.
 const GRIP = mat4('#9a6448', '#76482f', '#52301e', '#321c11', '#180c07');
 const GEM = mat4('#ff8a8a', '#e8283c', '#a8101e', '#600812', '#30040a');
+// The belt's lower edge.
+const BELT_EDGE = flat(hex('#24170f'));
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────
 
@@ -101,7 +103,7 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   // A broad belt with a silver buckle.
   if (u < 8.4) {
     if (yaw < 13 && u > 5.6 && u < 7.8) return yaw < 9 && u > 6.2 && u < 7.2 ? LEATHER : SILVER;
-    return u > 7.7 ? flat(hex('#24170f')) : LEATHER;
+    return u > 7.7 ? BELT_EDGE : LEATHER;
   }
   // The coat opens in a V over the breastplate: silver-edged, a ridge down the middle and the
   // edge of a plate across the belly.
@@ -129,6 +131,8 @@ const DARK_KNIGHT: ChibiDesign = {
     shell: { c: [-1.6, 1, 0], r: [11.5, 10.4, 11.3] },
     hairline: { faceYaw: 74, brow: 4, temple: 0, nape: -7.5, ear: -1.6 },
     locks: LOCKS,
+    // Dark chestnut: mostly the base tone, the light tone on the lit side of each clump.
+    darkHair: true,
     lockLine: hex('#341f12'),
     // The back of the head: big clumps fanning from the crown down to the nape.
     whorl: { yaw: 180, pitch: 50, reach: 88, clumps: 7, twist: 0.35 },
@@ -268,5 +272,4 @@ const DARK_KNIGHT: ChibiDesign = {
   aura: { core: hex('#d01a30'), edge: hex('#7a34c8'), hot: hex('#fff2f2') },
 };
 
-export default DARK_KNIGHT;
 export { DARK_KNIGHT };

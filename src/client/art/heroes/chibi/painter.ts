@@ -19,17 +19,10 @@ import { paintHead } from './head.js';
 import { dim, Part } from './raster.js';
 import { add3, at3, camera, type ChibiPose, type ChibiView, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
 
-export interface Box {
-  w: number;
-  h: number;
-  ax: number;
-  ay: number;
-}
-
 const FAR = -0.16;
 
 /** Paints one frame of a chibi hero in a pose, seen from a view. */
-export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box: Box): Raster {
+export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box: FrameBox): Raster {
   const c = new Canvas(box.w, box.h);
   const rig = solveRig(d.build, pose, d.weapon.grip2);
   const cam = camera(view, pose.turn ?? 0, box.ax, box.ay);

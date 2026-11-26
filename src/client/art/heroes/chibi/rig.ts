@@ -16,7 +16,6 @@ import type { Canvas, RGB } from '../paint.js';
 
 export type V3 = readonly [number, number, number];
 
-export const v3 = (a: number, b: number, c: number): V3 => [a, b, c];
 export const add3 = (a: V3, b: V3, k = 1): V3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 export const sub3 = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 export const mul3 = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k];
@@ -52,11 +51,6 @@ export const dirIn = (fr: Frame3, f: number, u: number, r: number): V3 => [
   fr.f[1] * f + fr.u[1] * u + fr.r[1] * r,
   fr.f[2] * f + fr.u[2] * u + fr.r[2] * r,
 ];
-/** A hero-space point in a frame's own axes. */
-export const toFrame = (fr: Frame3, p: V3): V3 => {
-  const d = sub3(p, fr.o);
-  return [dot3(d, fr.f), dot3(d, fr.u), dot3(d, fr.r)];
-};
 
 /** Rotates a frame's axes: pitch about its r axis (+ tips forward), roll about f (+ toward its right), yaw about u (+ turns toward its right). */
 export function rotate(fr: Frame3, pitch: number, roll = 0, yaw = 0): Frame3 {
@@ -95,9 +89,12 @@ export interface FxContext {
   /** Hero space to frame pixels, and to depth toward the viewer. */
   proj: (p: V3) => Vec;
   depth: (p: V3) => number;
-  /** Where the blade's tip and its grip are, in hero space (null without a weapon). */
-  tip: V3 | null;
-  /** The hero's aura colours: core (crimson for the Dark Knight) and edge (violet). */
+  /** Where the weapon's tip is, in hero space (its grip is `rig.weapon.o`). */
+  tip: V3;
+  /**
+   * The hero's aura colours (the design's `aura`): core, edge, and hot, the white-hot of a
+   * smear's cutting edge (crimson, violet and a pale pink-white for the Dark Knight).
+   */
   aura: { core: RGB; edge: RGB; hot: RGB };
   /** A seeded noise in [0, 1): the same arguments always give the same value. */
   hash: (a: number, b?: number) => number;
@@ -109,8 +106,8 @@ export interface FxContext {
  *  - `smear`: a swoosh arc behind the blade, swept from where the blade was to where it is now.
  *    `from` is the weapon angle it swept from (same convention as `weapon`), `roll`/`yaw` that
  *    angle's plane (they default to the pose's), `width` how far down the blade the arc reaches
- *    (0 to 1, default 0.55), `alpha` its strength. The arc is white-hot along the cutting edge,
- *    fading through the aura colour to nothing; parts of it behind the body show only around it,
+ *    (0 to 1, default 0.55), `alpha` its strength. The arc is white-hot (the aura's hot colour)
+ *    along the cutting edge, fading through the aura's core colour to nothing; parts of it behind the body show only around it,
  *    and it never covers the head.
  *  - `ring`: a level ring around him at blade height, for spins: `from` and `to` are angles round
  *    him in degrees in the same frame as `turn` (0 is the way he faces at `turn: 0`, 90 his right
@@ -122,14 +119,15 @@ export interface FxContext {
  *  - `impact`: a starburst at the blade's tip (or at `impactAt`, a hero-space point), size 1 = 10 px.
  *  - `clang`: a guard's clang: a hard white flash and sparks on the blade, 0 to 1.
  *  - `dust`: dust kicked up at the feet. `speed`: speed lines trailing behind him.
- *  - `aura`: a crimson rim of power around the figure with a violet edge.
+ *  - `aura`: a rim of power around the figure in the aura's core colour, with its edge colour
+ *    outermost (crimson and violet for the Dark Knight).
  *  - `circle`: a rune circle on the ground under him (its size grows with the value).
  *  - `shock`: a shockwave ring rolling out along the ground, 0 (just landed) to 1 (spread out).
  *    `shockAt` moves its centre (hero space, on the ground; default under the blade's tip).
- *  - `wisps`: dark crimson wisps drawn in toward him from all around: 0 far out, 1 arrived.
+ *  - `wisps`: wisps in the aura's colours drawn in toward him from all around: 0 far out, 1 arrived.
  *  - `blood`: a red mist of blood around him (Ruination's price), 0 to 1.
- *  - `rune`: how brightly the blade's rune channel glows: at 0 it smoulders a deep red with barely a
- *    glow, toward 1 it blazes (an aura makes it glow a little too).
+ *  - `rune`: how brightly the weapon's rune channel glows: at 0 it smoulders in its rest colour
+ *    with barely a glow, toward 1 it blazes (an aura makes it glow a little too).
  *  - `glow`: the body glows from within (Drain), 0 to 1.
  *  - `extra`: paints anything else, after the built-in effects, from the choreography's own file.
  */
@@ -164,8 +162,9 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *  - `x`, `y`: the pelvis moved from standing: + forward, + down (a crouch); negative y is in the
  *    air (a leap). Standing relaxed is about `y: 1`; a low battle crouch `y: 4` to `6`.
  *  - `lean`: the torso leans forward (+) or back (-) from the hips.
- *  - `twist`: the chest turns on the hips, + toward his right (sword) side: winding a cut up is
- *    about -25 (right shoulder back), the follow-through about +25.
+ *  - `twist`: the chest turns on the hips: + turns it toward his right, taking the right shoulder
+ *    back (as when winding a right-handed cut up behind him); - brings the right shoulder forward
+ *    (the follow-through of such a cut). About 25 either way is a strong turn.
  *  - `tilt`: the torso leans sideways, + toward his right.
  *  - `turn`: the WHOLE body turns about the vertical, + toward his right. Side on, +58 turns him to
  *    face the viewer and 180 turns him to face left; Eclipse spins through 0..360.
@@ -217,20 +216,22 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *  - `fx`: see ChibiFx.
  *
  * Working notes for choreographers
- *  - Every pose is drawn in all three views, so check each clip side on, front and back (the
- *    render script in the scratchpad shows them). Side on he faces right and 32 degrees toward the
+ *  - Every pose is drawn in all three views, so check each clip side on, front and back
+ *    (`npx tsx scripts/chibi-sheet.ts` paints contact sheets of them). Side on he faces right and 32 degrees toward the
  *    viewer: things on his right (+r) are nearer, and a blade pointing ahead is a little
  *    foreshortened; front on, anything held straight ahead points at the viewer, so give swings
  *    a `roll` and keep resting blades out to his right (a third `handF` value of 8 to 10).
- *  - Proportions: standing (`y: 1`) the base of his neck is about 50 px up and his shoulders sit
- *    3.6 below it, 8.6 to either side; arms reach about 18 from the shoulder and legs 24 from the
- *    hip. The greatsword's tip is 64 px from the grip: the part of a blade below the floor is
- *    hidden (it bites into the ground). The tip's height is about
- *    `hand height + 64·cos(weapon)·cos(roll)`: keep it near 0 for a blow that stops at the floor.
+ *  - Proportions come from the design's `build`. For the Dark Knight's (darkKnight/design.ts):
+ *    standing (`y: 1`) the base of his neck is about 50 px up and his shoulders sit 3.6 below it,
+ *    8.6 to either side; arms reach about 18 from the shoulder and legs 24 from the hip. His
+ *    greatsword's tip is 64 px from the grip. The part of a blade below the floor is hidden (it
+ *    bites into the ground); the tip's height is about `hand height + reach·cos(weapon)·cos(roll)`:
+ *    keep it near 0 for a blow that stops at the floor.
  *  - Helpers: `pose(base, changes)` for a variation on a stance, `mix(a, b, t)` for in-betweens,
- *    `wave(i, n)` for a smooth loop. The stances (GUARD_STANCE, AT_EASE) live in moves-core.ts.
- *  - A clip must have exactly as many poses as its timing in index.ts says (the hero factory
- *    throws otherwise); wind-up frames come first.
+ *    `wave(i, n)` for a smooth loop. A hero's stances live in its own moves files (the Dark
+ *    Knight's READY, GUARD_STANCE and AT_EASE in darkKnight/moves-core.ts).
+ *  - A clip must have exactly as many poses as the hero's timing says (the hero factory throws
+ *    otherwise); wind-up frames come first.
  */
 export interface ChibiPose {
   x: number;
@@ -429,15 +430,9 @@ export function solveRig(b: Build, pose: ChibiPose, grip2: number): Rig {
   };
   const elbow = (side: number): V3 => [-0.35, -1, side * 0.75];
   const ax = weaponAxes(pose.weapon, pose.roll ?? 0, pose.yaw ?? 0);
-  let armR: Limb;
-  let gripO: V3;
-  if (pose.drop) {
-    armR = ik(shoulderR, handAt(pose.handF, 1, shoulderR), b.upperArm, b.foreArm, elbow(1));
-    gripO = pose.dropAt ?? [pose.x + 14, 2, 4];
-  } else {
-    armR = ik(shoulderR, handAt(pose.handF, 1, shoulderR), b.upperArm, b.foreArm, elbow(1));
-    gripO = add3(armR.end, ax.u, -(pose.grip ?? 0));
-  }
+  const armR = ik(shoulderR, handAt(pose.handF, 1, shoulderR), b.upperArm, b.foreArm, elbow(1));
+  // A dropped weapon lies where the pose puts it; a held one is in the right hand.
+  const gripO: V3 = pose.drop ? (pose.dropAt ?? [pose.x + 14, 2, 4]) : add3(armR.end, ax.u, -(pose.grip ?? 0));
   const twoHanded = !pose.handB && !pose.drop;
   const targetL = twoHanded ? add3(gripO, ax.u, grip2) : pose.handB ? handAt(pose.handB, -1, shoulderL) : add3(shoulderL, [-1, -(b.upperArm + b.foreArm - 2), -1.5]);
   const armL = ik(shoulderL, targetL, b.upperArm, b.foreArm, elbow(-1));

@@ -2,8 +2,10 @@
  * The chibi effects kit, painted on the soft effects layers of the Canvas after the figure is
  * outlined: swoosh arcs swept by the blade in 3D (and a level ring for spins), impact bursts, a
  * guard's clang, dust, speed lines, a rim of power, rune circles and shockwaves on the ground,
- * wisps drawn in from all around, a mist of blood and the blade's glowing runes. Parts of an
- * effect behind the hero go on the under layer, so the figure hides them.
+ * wisps drawn in from all around, a mist of blood and the blade's glowing runes, all in the
+ * design's aura colours. Parts of an effect behind the hero go on the under layer, so the figure
+ * hides them. `glowLine`, `puff` and the dust colours are exported for a hero's own `fx.extra`
+ * painters.
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
@@ -14,8 +16,9 @@ import { add3, type ChibiFx, clamp, cross3, DEPTH, dot3, type FxContext, len3, l
 
 const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
 const WHITE: RGB = [255, 255, 255];
-const DUST: RGB = [196, 182, 160];
-const DUST_DARK: RGB = [120, 108, 92];
+/** Dust kicked up off the floor: its light and dark puffs. */
+export const DUST: RGB = [196, 182, 160];
+export const DUST_DARK: RGB = [120, 108, 92];
 
 /** Fills a screen polygon on an effects layer, leaving alone the pixels `skip` rejects. */
 function glowPoly(c: Canvas, pts: readonly Vec[], col: RGB, a: number, under: boolean, skip?: (x: number, y: number) => boolean): void {
@@ -24,8 +27,8 @@ function glowPoly(c: Canvas, pts: readonly Vec[], col: RGB, a: number, under: bo
   });
 }
 
-/** A soft round puff. */
-function puff(c: Canvas, x: number, y: number, r: number, col: RGB, a: number, under = false): void {
+/** A soft round puff on an effects layer (`under`: on the layer under the figure). */
+export function puff(c: Canvas, x: number, y: number, r: number, col: RGB, a: number, under = false): void {
   for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
     for (let dx = -Math.ceil(r * 1.3); dx <= Math.ceil(r * 1.3); dx++) {
       const d = Math.hypot(dx / 1.3, dy) / Math.max(0.5, r);
@@ -36,8 +39,9 @@ function puff(c: Canvas, x: number, y: number, r: number, col: RGB, a: number, u
 }
 
 /**
- * A swoosh: a crescent swept between two sets of blade directions about the grip, white-hot along
- * its outer (cutting) edge, through crimson to a faint inner edge with a hint of violet, fading
+ * A swoosh: a crescent swept between two sets of blade directions about the grip, in the design's
+ * aura colours: white-hot (`aura.hot`) along its outer (cutting) edge, through the core colour to a
+ * faint inner edge with a hint of the edge colour (crimson and violet for the Dark Knight), fading
  * toward its tail. `dirs` gives the blade's axis at each step from tail (0) to head (1).
  */
 function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOut: number, thick: number, alpha: number, behindZ: number, level = false): void {
@@ -156,8 +160,9 @@ export function starburst(c: Canvas, p: Vec, size: number, core: RGB, fringe: RG
 }
 
 /**
- * A rim of light around the figure: hot crimson hugging it, crimson beyond, and the edge colour
- * (violet) only as a faint outermost ring.
+ * A rim of light around the figure: the core colour warmed toward `hot` hugging it, the core colour
+ * beyond, and the edge colour only as a faint outermost ring (crimson and violet for the Dark
+ * Knight).
  */
 export function rim(c: Canvas, core: RGB, edge: RGB, k: number, hot: RGB = core): void {
   const w = c.w;
@@ -301,7 +306,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   }
 
   if (fx.shock) {
-    // A ring of crimson force rolling out over the floor, white-hot at its front, with rubble.
+    // A ring of force in the aura's colours rolling out over the floor, hot at its front, with rubble.
     const k = clamp(fx.shock, 0, 1);
     const g = fx.shockAt ? ground(fx.shockAt) : ground(tip);
     const R = 8 + 46 * k;
@@ -366,7 +371,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
         const col = s === 0 ? aura.hot : s < 6 ? aura.core : aura.edge;
         const behind = (deep[s] as number) < centreZ - 4;
         glowLine(c, a, b, col, 0.9 * fade * Math.min(1, t * 4 + 0.3), behind);
-        if (s < 5) glowLine(c, [a[0], a[1] + 1], [b[0], b[1] + 1], s < 2 ? aura.core : [70, 8, 22], 0.75 * fade, behind);
+        if (s < 5) glowLine(c, [a[0], a[1] + 1], [b[0], b[1] + 1], s < 2 ? aura.core : mixc(aura.core, [0, 0, 0], 0.66), 0.75 * fade, behind);
         if (s === 0) puff(c, a[0], a[1], 1.2, aura.hot, 0.9, behind);
       }
     }
@@ -381,11 +386,10 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
       const u = rig.pelvis.o[1] + (hash(i, 43) - 0.3) * 52 + k * 6;
       const p3: V3 = [rig.pelvis.o[0] + Math.cos(th) * rr, u, Math.sin(th) * rr];
       const p = ctx.proj(p3);
-      // The mist hangs around and behind him (the figure hides it); droplets fly in front.
-      const behind = true;
+      // The mist hangs around and behind him (under the figure, which hides it); droplets fly in front.
       const r = 2 + hash(i, 44) * 3.5 * k;
       const col: RGB = i % 3 === 0 ? [150, 10, 26] : i % 3 === 1 ? [96, 6, 18] : [190, 24, 40];
-      puff(c, p[0], p[1], r, col, (0.35 + 0.35 * hash(i, 45)) * k, behind);
+      puff(c, p[0], p[1], r, col, (0.35 + 0.35 * hash(i, 45)) * k, true);
       // Droplets fly in front of him, but never across his face.
       if (i % 2 === 0 && Math.hypot(p[0] + 2 - head[0], p[1] - 3 - head[1]) > 13) {
         c.glow(p[0] + 2, p[1] - 3, [236, 44, 60], 0.95 * k);
@@ -432,7 +436,8 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   }
 }
 
-function glowLine(c: Canvas, a: Vec, b: Vec, col: RGB, alpha: number, under: boolean): void {
+/** A one-pixel line on an effects layer (`under`: on the layer under the figure). */
+export function glowLine(c: Canvas, a: Vec, b: Vec, col: RGB, alpha: number, under = false): void {
   const n = Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]))));
   for (let i = 0; i <= n; i++) c.glow(a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n, col, alpha, under);
 }

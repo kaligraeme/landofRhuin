@@ -10,21 +10,23 @@
  * The engine: rig.ts (the pose format, the 3D skeleton and the camera), raster.ts (the part
  * painter: four-tone shading and coloured inner lines over paint.ts's Canvas), head.ts (heads
  * and hair), pieces.ts (pauldrons, collars, cloth), blade.ts (bladed weapons), fx.ts (effects) and
- * painter.ts (puts a frame together). A hero is a design file (darkKnight.ts) and its moves
- * (moves-core.ts, moves-skills.ts, moves-states.ts), registered below.
+ * painter.ts (puts a frame together). A hero has a folder of its own: a design file, its moves
+ * files and a hero file that puts them together with its timing (see darkKnight/), registered
+ * below.
  */
 import type { Raster } from '../paint.js';
-import { DARK_KNIGHT } from './darkKnight.js';
-import { CORE_CLIPS } from './moves-core.js';
-import { SKILL_CLIPS_DK } from './moves-skills.js';
-import { STATE_CLIPS } from './moves-states.js';
-import { chibiHero } from './painter.js';
+import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
 import type { ChibiView } from './rig.js';
 
 export type { ChibiView } from './rig.js';
 
 export const CHIBI_VIEWS: readonly ChibiView[] = ['side', 'front', 'back'];
 
+/**
+ * Every chibi hero has all of these clips. The weapon skills' clips are named after the hotbar
+ * slot of the skill that plays them (see SLOT_CLIPS), so every hero shares one list whatever its
+ * weapon's skills are called.
+ */
 export const CHIBI_CLIPS = [
   'idle',
   'battle',
@@ -32,31 +34,31 @@ export const CHIBI_CLIPS = [
   'atk1',
   'atk2',
   'atk3',
-  'guard',
+  'special',
+  'q',
+  'e',
+  'r',
+  'ult',
+  'cast',
   'hurt',
   'kneel',
   'ko',
   'victory',
-  'cast',
-  'charge',
-  'eclipse',
-  'drain',
-  'ruination',
 ] as const;
 export type ChibiClip = (typeof CHIBI_CLIPS)[number];
 
 /**
- * How a clip plays.
- *  - loop: cycles every `seconds` (idle, battle, kneel); `move` instead advances with distance run.
- *  - once: plays through in `seconds` after any wind-up, then the hero returns to a stance.
- *  - hold: plays through in `seconds`, then holds its last frame (ko, victory).
- * `windup` frames at the start cover a wind-up the server times (the `d` of the act event); they
- * are stretched over it, and the rest plays in `seconds`. With no server wind-up they take
- * `windup * 0.06` seconds.
+ * How long a clip takes. How it plays is fixed by the game for each clip (game/chibiState.ts):
+ * idle, battle and kneel loop every `seconds`; move advances with the distance run; ko and victory
+ * play through once and hold their last frame; the rest (the combo, the skills and the flinch)
+ * play once and give way to whatever the hero is doing.
+ *
+ * `windup` frames at the start of an attack or skill cover a wind-up the server times (the `d` of
+ * the act event): they are stretched over it, and the rest plays in `seconds`. With no server
+ * wind-up they take `windup * 0.06` seconds.
  */
 export interface ClipTiming {
   frames: number;
-  mode: 'loop' | 'once' | 'hold';
   seconds: number;
   windup: number;
 }
@@ -80,53 +82,15 @@ export interface ChibiHero {
   paint(clip: ChibiClip, frame: number, view: ChibiView): Raster;
 }
 
-/** Which clip a skill plays, by skill id; any other skill (role skills) plays `cast`. */
-export const SKILL_CLIPS: Readonly<Record<string, ChibiClip>> = {
-  parry: 'guard',
-  stalwartCharge: 'charge',
-  eclipse: 'eclipse',
-  drain: 'drain',
-  ruination: 'ruination',
-};
+/**
+ * The weapon skills' clips, named after their hotbar slots (SkillDef.slot in classes.ts): every
+ * weapon has one skill in each, so a skill plays the clip of its slot. Role skills and items (the
+ * Elixir) play `cast`.
+ */
+export const SLOT_CLIPS: readonly ChibiClip[] = ['special', 'q', 'e', 'r', 'ult'];
 
 /** The basic attack's hits in order (the act event's chain index picks one). */
 export const COMBO_CLIPS: readonly ChibiClip[] = ['atk1', 'atk2', 'atk3'];
-
-// ── The heroes ───────────────────────────────────────────────────────────────────────────────
-
-/** The Dark Knight's clip timing (frame counts match his moves files). */
-const DARK_KNIGHT_TIMING: Record<ChibiClip, ClipTiming> = {
-  idle: { frames: 8, mode: 'loop', seconds: 1.6, windup: 0 },
-  battle: { frames: 8, mode: 'loop', seconds: 0.9, windup: 0 },
-  move: { frames: 8, mode: 'loop', seconds: 0.6, windup: 0 },
-  atk1: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
-  atk2: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
-  atk3: { frames: 9, mode: 'once', seconds: 0.62, windup: 2 },
-  guard: { frames: 5, mode: 'once', seconds: 1, windup: 1 },
-  hurt: { frames: 3, mode: 'once', seconds: 0.3, windup: 0 },
-  kneel: { frames: 4, mode: 'loop', seconds: 1.6, windup: 0 },
-  ko: { frames: 6, mode: 'hold', seconds: 0.9, windup: 0 },
-  victory: { frames: 8, mode: 'hold', seconds: 1.6, windup: 0 },
-  cast: { frames: 8, mode: 'once', seconds: 0.6, windup: 2 },
-  charge: { frames: 8, mode: 'once', seconds: 0.45, windup: 1 },
-  eclipse: { frames: 10, mode: 'once', seconds: 0.55, windup: 1 },
-  drain: { frames: 10, mode: 'once', seconds: 0.8, windup: 2 },
-  ruination: { frames: 16, mode: 'once', seconds: 1.5, windup: 2 },
-};
-
-/**
- * Frames: side on there is room ahead of him for the blade and behind for his coat tails and
- * Drain's wisps; toward and away from the viewer he stands centred. All are tall enough for
- * Ruination's leap (about 145 px above the ground at the blade's tip) and deep enough below the
- * ground point for the shockwaves of atk3 and Ruination's slam, which roll out toward the viewer
- * (about 41 px below it side on, 55 front on). The game crops every frame to what is painted, so
- * the spare room costs nothing there. He stands about 84 px tall, 2.1 tiles in game.
- */
-export const DARK_KNIGHT_HERO: ChibiHero = chibiHero(DARK_KNIGHT, { ...CORE_CLIPS, ...SKILL_CLIPS_DK, ...STATE_CLIPS }, DARK_KNIGHT_TIMING, {
-  side: { w: 256, h: 232, ax: 112, ay: 180 },
-  front: { w: 224, h: 240, ax: 112, ay: 172 },
-  back: { w: 224, h: 240, ax: 112, ay: 172 },
-}, 2.1 / 84);
 
 /** The heroes drawn by the chibi painter, by sprite id. Others use the older painter. */
 export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {

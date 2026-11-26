@@ -1,13 +1,15 @@
 /**
  * Which clip, and which frame of it, a chibi hero shows: a pure function of what the hero is
- * doing, so the choice can be tested without a browser. In order of priority: knocked out, the
- * victory pose once the dungeon is cleared, an attack or skill playing out, a dodge roll,
- * running, a flinch, kneeling at low health, then a battle stance near a fight or idling.
+ * doing, so the choice can be tested without a browser. In order of priority: knocked out, an
+ * attack or skill playing out, a dodge roll, running, the victory pose once the dungeon is
+ * cleared, a flinch, kneeling at low health, then a battle stance near a fight or idling.
+ *
+ * How each clip plays is fixed here: idle, battle and kneel loop; move follows the stride; ko and
+ * victory play once and hold their last frame; the combo, the skills and the flinch play once.
  */
-import { COMBO_CLIPS, SKILL_CLIPS, type ChibiClip, type ClipTiming } from '../art/heroes/chibi/index.js';
+import { SKILLS } from '../../shared/content/classes.js';
+import { COMBO_CLIPS, SLOT_CLIPS, type ChibiClip, type ClipTiming } from '../art/heroes/chibi/index.js';
 
-/** How long a flinch shows after a blow gets through (seconds). */
-export const HURT_TIME = 0.3;
 /** Below this share of their health a hero drops to one knee. */
 export const KNEEL_BELOW = 0.25;
 /** Seconds each wind-up frame takes when the server times no wind-up. */
@@ -76,10 +78,14 @@ function stride(t: ClipTiming, phase: number): number {
   return mod(Math.floor((phase / (Math.PI * 2)) * frames), frames);
 }
 
-/** The clip an attack or skill plays: the combo hit for the basic attack, the skill's own clip, or a generic cast. */
+/**
+ * The clip an attack or skill plays: the combo hit for the basic attack, the clip of a weapon
+ * skill's hotbar slot (special, q, e, r, ult), or `cast` for role skills, items and unknown skills.
+ */
 export function actClip(act: Pick<ChibiAct, 'k' | 's' | 'c'>): ChibiClip {
   if (act.k === 'atk') return COMBO_CLIPS[mod(act.c ?? 0, COMBO_CLIPS.length)] ?? 'atk1';
-  return act.s !== undefined && Object.hasOwn(SKILL_CLIPS, act.s) ? (SKILL_CLIPS[act.s] as ChibiClip) : 'cast';
+  const slot = act.s !== undefined && Object.hasOwn(SKILLS, act.s) ? SKILLS[act.s]?.slot : undefined;
+  return SLOT_CLIPS.find((clip) => clip === slot) ?? 'cast';
 }
 
 /**
@@ -102,14 +108,16 @@ export function actFrame(t: ClipTiming, elapsed: number, d: number): number | nu
 export function chibiClip(input: ChibiInput): ChibiPick {
   const { timing: T, now } = input;
   if (input.down) return { clip: 'ko', frame: held(T.ko, input.downAt === null ? null : now - input.downAt) };
-  if (input.complete) return { clip: 'victory', frame: held(T.victory, input.completeAt === null ? null : now - input.completeAt) };
   if (input.act) {
     const clip = actClip(input.act);
     const frame = actFrame(T[clip], now - input.act.at, input.act.d);
     if (frame !== null) return { clip, frame };
   }
   if (input.rolling || input.moving) return { clip: 'move', frame: stride(T.move, input.phase) };
-  if (input.hurtAt !== null && now - input.hurtAt >= 0 && now - input.hurtAt < HURT_TIME) {
+  // Once the dungeon is cleared the hero strikes the victory pose whenever standing still (and
+  // holds its last frame after); attacks and running still show.
+  if (input.complete) return { clip: 'victory', frame: held(T.victory, input.completeAt === null ? null : now - input.completeAt) };
+  if (input.hurtAt !== null && now - input.hurtAt >= 0 && now - input.hurtAt < T.hurt.seconds) {
     return { clip: 'hurt', frame: held(T.hurt, now - input.hurtAt) };
   }
   if (input.maxHp > 0 && input.hp / input.maxHp < KNEEL_BELOW) return { clip: 'kneel', frame: looped(T.kneel, now, input.id) };

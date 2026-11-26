@@ -16,7 +16,7 @@
  */
 import { type Canvas, hex, type RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { type Camera, DEPTH, dirIn, dot3, type Frame3, LIGHT, sub3, type V3 } from './rig.js';
+import { at3, type Camera, DEPTH, dirIn, dot3, type Frame3, LIGHT, sub3, type V3 } from './rig.js';
 
 export type Ramp4 = readonly [RGB, RGB, RGB, RGB];
 
@@ -86,7 +86,8 @@ export function toneLight(m: Mat, tone: number): number {
 interface Scratch {
   w: number;
   h: number;
-  mat: Uint8Array;
+  /** Each pixel's material, as an index into the part's list plus one (0: empty). */
+  mat: Uint16Array;
   id: Uint16Array;
   light: Float32Array;
   z: Float32Array;
@@ -100,7 +101,7 @@ function scratch(w: number, h: number): Scratch {
   const key = `${w}x${h}`;
   let s = SCRATCH.get(key);
   if (!s) {
-    s = { w, h, mat: new Uint8Array(w * h), id: new Uint16Array(w * h), light: new Float32Array(w * h), z: new Float32Array(w * h), touched: new Int32Array(w * h), lined: new Uint8Array(w * h) };
+    s = { w, h, mat: new Uint16Array(w * h), id: new Uint16Array(w * h), light: new Float32Array(w * h), z: new Float32Array(w * h), touched: new Int32Array(w * h), lined: new Uint8Array(w * h) };
     SCRATCH.set(key, s);
   }
   return s;
@@ -138,8 +139,8 @@ export function scanPoly(pts: readonly Vec[], w: number, h: number, cb: (x: numb
 }
 
 /**
- * One part being painted. Only one part is open at a time (they share a scratch buffer):
- * `begin`, add shapes, `commit`.
+ * One part being painted. Only one part is open at a time (they share a scratch buffer): start
+ * one with a PieceContext's `part()` (or `new Part`), add shapes, then `commit`.
  */
 export class Part {
   private s: Scratch;
@@ -154,10 +155,15 @@ export class Part {
     this.s = scratch(c.w, c.h);
   }
 
+  /**
+   * The index of a material in this part's list, plus one. Materials match by identity, so a shader
+   * should hand back the same Mat objects rather than make new ones for every pixel it shades.
+   */
   private matIndex(m: Mat): number {
     let i = this.mats.indexOf(m);
     if (i < 0) {
       i = this.mats.length;
+      if (i >= 0xffff) throw new Error('A chibi part uses too many materials: reuse Mat objects rather than making one per pixel');
       this.mats.push(m);
     }
     return i + 1;
@@ -289,7 +295,7 @@ export class Part {
       let x1 = -Infinity;
       let y1 = -Infinity;
       for (let k = 0; k < 8; k++) {
-        const p = cam.proj(atFrame(fr, b.c[0] + (k & 1 ? b.r[0] : -b.r[0]), b.c[1] + (k & 2 ? b.r[1] : -b.r[1]), b.c[2] + (k & 4 ? b.r[2] : -b.r[2])));
+        const p = cam.proj(at3(fr, b.c[0] + (k & 1 ? b.r[0] : -b.r[0]), b.c[1] + (k & 2 ? b.r[1] : -b.r[1]), b.c[2] + (k & 4 ? b.r[2] : -b.r[2])));
         x0 = Math.min(x0, p[0]);
         y0 = Math.min(y0, p[1]);
         x1 = Math.max(x1, p[0]);
@@ -417,8 +423,3 @@ export interface Hit {
   back: boolean;
 }
 
-const atFrame = (fr: Frame3, f: number, u: number, r: number): V3 => [
-  fr.o[0] + fr.f[0] * f + fr.u[0] * u + fr.r[0] * r,
-  fr.o[1] + fr.f[1] * f + fr.u[1] * u + fr.r[1] * r,
-  fr.o[2] + fr.f[2] * f + fr.u[2] * u + fr.r[2] * r,
-];

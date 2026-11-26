@@ -168,7 +168,8 @@ and taunts whatever gets loose.
 ## Heroes and clans
 
 Every role has a man and a woman to choose from in the lobby, each with their own weapon. The
-Warrior wears dark steel and a crimson cape; the Guardian polished plate, a white tabard and a
+Dark Knight (the male Warrior) is a big-headed chibi in blackened plate and a long oxblood coat
+(see [Chibi heroes](#chibi-heroes)); the Guardian wears polished plate, a white tabard and a
 blue cape. The Mages wear embroidered robes, the Rangers green cloaks and quivers, and the
 Duelists light leathers and red scarves. Weapons are part of each hero's animation, held the way
 they are meant to be held: the two-handed greatsword, staff and halberd, the Guardian's sword and
@@ -184,7 +185,8 @@ face down the screen and away from you when they face up it, in every clip.
 
 ### Animation
 
-Every hero, monster and boss is animated through five clips:
+Every hero, monster and boss is animated through five clips (the Dark Knight has sixteen of his
+own: see [Chibi heroes](#chibi-heroes)):
 
 | Clip | When it plays | Heroes |
 | --- | --- | --- |
@@ -234,6 +236,66 @@ across the body. The figure is then drawn from in front or behind through the du
 camera, so whatever is nearer the viewer sits lower on screen. Faces and the backs of heads are
 painted from each hero's hairdo (`heads.ts`): cut, colour, beard and ears. Side-on frames are
 painted first so a hero animates at once; the turned ones follow in the background.
+
+### Chibi heroes
+
+The Dark Knight is the first chibi hero (`heroes/chibi/`): a big-headed pixel hero about 84
+pixels tall, a third of it head and hair, painted in code frame by frame from a 3D rig. He is a
+stern young knight with a messy mop of dark chestnut hair, blackened plate with dull silver
+edges, a long open oxblood coat with a high collar and split tails, and an oversized black
+greatsword with a pale edge, a saw-toothed back and a crimson rune that blazes when he fights.
+His swings leave white-hot arcs that fade through crimson, and his skills burn crimson with a
+violet edge. Every pose is solved in 3D and painted in three views: side on (a three-quarter view,
+mirrored to face left), toward you and away from you. The other heroes still use the skeleton
+painter above.
+
+He has sixteen clips. The server's act event names the skill used (`s`) and the hit of the combo
+(`c`), so everyone sees the right one:
+
+| Clip | Frames | Played by | The Dark Knight |
+| --- | --- | --- | --- |
+| `idle` | 8 | Out of combat | Breathing, the greatsword on his shoulder, the coat swaying |
+| `battle` | 8 | A fight nearby | A low, wide guard, the blade held forward and across, bouncing |
+| `move` | 8 | Running and dodging | A sprint, the blade trailing low behind him, the coat streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | The basic attack's three hits | A diagonal cut, a rising backhand, then a spin, a leap and a slam with a shockwave |
+| `special` | 5 | Parry | The blade up across his body: a clang, sparks, a braced skid |
+| `q` | 8 | Stalwart Charge | A shoulder-first dash with crimson afterimages and a skidding stop |
+| `e` | 10 | Eclipse | A full turn with the blade held out level inside a ring of steel |
+| `r` | 10 | Drain | The blade plunged into the ground, wisps of stolen life drawn into him |
+| `ult` | 16 | Ruination | A mist of blood, a leap, four blows as he falls and a ground slam |
+| `cast` | 8 | Role skills (Challenge, Rallying Bulwark) and the Elixir | A roar, the blade thrown high, an aura burst over a rune circle |
+| `hurt` | 3 | A blow gets through | A flinch, the coat flicked forward |
+| `kneel` | 4 | Below a quarter of his health | Down on one knee, leaning on the planted blade, panting |
+| `ko` | 6 | Knocked out | He staggers, drops to his knees and falls on his back |
+| `victory` | 8 | The dungeon cleared, while he stands still | The blade twirled overhead, then rested on his shoulder with a smirk |
+
+The weapon-skill clips are named after the skill's hotbar slot, so a skill plays the clip of its
+slot whatever its weapon. When several apply (`game/chibiState.ts`), knocked out wins, then an
+attack or skill playing out, then running or dodging, then the victory pose (which holds its last
+frame), a flinch, kneeling, the battle stance and idling. The skill and state clips take the
+blade up from where the battle stance holds it, and those that give way to the stance end in it.
+
+His 375 frames (125 per view) are painted in the background as a dungeon loads, a few
+milliseconds at a time. Each frame is cropped to what is painted and the crops are shelf-packed
+into one atlas per view (`atlas.ts`). Side on comes first; the views toward and away from you
+follow once the rest of the party and the monsters have their frames; until then he is drawn
+side on whichever way he faces.
+
+To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
+
+- a design file: proportions, four-tone materials, the head and its locks of hair, the body,
+  outfit pieces (`pieces.ts`: pauldrons, a collar, a coat's panels), a weapon (`blade.ts`) and
+  aura colours;
+- moves files with a pose for every frame of every clip, in the pose format described on
+  `ChibiPose` in `rig.ts` (the pelvis, lean, twist and turn, side-on hands and feet that the rig
+  lifts into 3D, the weapon's angle, roll and yaw, the cloth's wind and the frame's effects);
+- a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes and
+  scale.
+
+Then register it in `CHIBI_HEROES` (`heroes/chibi/index.ts`) under its sprite id.
+`npx tsx scripts/chibi-sheet.ts --hero <id>` paints contact sheets of every clip in the three
+views, and `test/chibi.test.ts` checks that every frame paints cleanly, stands on the ground and
+fits its frame.
 
 ## Music
 
@@ -333,8 +395,8 @@ src/server/      Node.js server.
   main.ts        HTTP server for the client and the WebSocket at /ws.
 src/client/      Browser client (TypeScript and canvas, no framework).
   ui/            Title screen and lobby.
-  art/           Sprite art: the pixel kit and pixel heroes and weapons, the SVG kit and the
-                 clans' monsters and bosses.
+  art/           Sprite art: the pixel kit and pixel heroes and weapons, the chibi heroes, the SVG
+                 kit and the clans' monsters and bosses.
   game/          World state, renderer, HUD, effects, input and prediction.
   audio/         The music: a note language, the score, synthesized instruments, the director.
 test/            Unit tests and full dungeon runs.
@@ -361,6 +423,7 @@ npm test            # unit tests, plus complete dungeon runs by AI-only parties
 npm run typecheck
 npm run e2e         # builds, then drives two browsers through a party, queue and first room
 npm run simulate -- 42 5   # play 5 dungeons (seeds 42-46) with AI parties and print results
+npx tsx scripts/chibi-sheet.ts   # contact sheets of the chibi Dark Knight's clips in three views
 ```
 
 The simulation tests have four AI parties with different weapons clear entire dungeons. That

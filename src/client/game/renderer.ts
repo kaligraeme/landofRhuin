@@ -95,7 +95,7 @@ export class Renderer {
   private tops = new Map<number, number>();
   /** Clickable sprite bounds (world units), for picking. */
   readonly hitBoxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>();
-  /** The clip and frame each chibi hero showed last frame, and from which view (for tests and the console). */
+  /** The clip and frame each chibi hero showed last frame, and from which view (for debugging from the console). */
   readonly chibiShown = new Map<number, ChibiPick & { view: Facing }>();
 
   constructor(canvas: HTMLCanvasElement) {

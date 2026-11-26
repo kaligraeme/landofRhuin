@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip } from '../src/client/art/heroes/chibi/index.js';
-import { CORE_CLIPS } from '../src/client/art/heroes/chibi/moves-core.js';
-import { SKILL_CLIPS_DK } from '../src/client/art/heroes/chibi/moves-skills.js';
-import { STATE_CLIPS } from '../src/client/art/heroes/chibi/moves-states.js';
-import { DARK_KNIGHT } from '../src/client/art/heroes/chibi/darkKnight.js';
+import { cropRaster, opaqueBounds } from '../src/client/art/atlas.js';
+import { DARK_KNIGHT } from '../src/client/art/heroes/chibi/darkKnight/design.js';
+import { CORE_MOVES } from '../src/client/art/heroes/chibi/darkKnight/moves-core.js';
+import { SKILL_MOVES } from '../src/client/art/heroes/chibi/darkKnight/moves-skills.js';
+import { STATE_MOVES } from '../src/client/art/heroes/chibi/darkKnight/moves-states.js';
 import { paintChibi } from '../src/client/art/heroes/chibi/painter.js';
 import { type ChibiPose, solveRig } from '../src/client/art/heroes/chibi/rig.js';
 import type { Raster } from '../src/client/art/heroes/paint.js';
 
 const hero = CHIBI_HEROES['hero-tank-male']!;
-const POSES = { ...CORE_CLIPS, ...SKILL_CLIPS_DK, ...STATE_CLIPS } as Record<ChibiClip, readonly ChibiPose[]>;
+const POSES: Record<ChibiClip, readonly ChibiPose[]> = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
 
-/** Clips where he stands on the ground in every frame. */
-const STANDING: ChibiClip[] = ['idle', 'battle', 'guard', 'kneel', 'cast'];
+/** Clips where he stands on the ground in every frame (`special` is his Parry). */
+const STANDING: ChibiClip[] = ['idle', 'battle', 'special', 'kneel', 'cast'];
 
 function bounds(r: Raster): { x0: number; y0: number; x1: number; y1: number; n: number } {
   let x0 = r.w;
@@ -67,8 +68,8 @@ describe('the chibi Dark Knight', () => {
       expect(t.windup).toBeLessThan(t.frames);
       expect(t.seconds).toBeGreaterThan(0);
     }
-    expect(hero.timing.ruination.frames).toBe(16);
-    expect(hero.timing.eclipse.frames).toBe(10);
+    expect(hero.timing.ult.frames).toBe(16);
+    expect(hero.timing.e.frames).toBe(10);
   });
 
   it('paints every frame of every clip in every view, the same pixels every time', () => {
@@ -101,7 +102,7 @@ describe('the chibi Dark Knight', () => {
           const lowest = Math.min(rig.legR.end[1], rig.legL.end[1]) - DARK_KNIGHT.build.ankle;
           expect(Math.abs(lowest), `${clip} ${i}: lowest foot ${lowest.toFixed(1)} above the ground`).toBeLessThan(1.2);
           expect(solidIn(r, box.ax - 16, box.ax + 18, box.ay - 1, box.ay + 6), `${clip} ${i} ${view}: boots on the ground`).toBe(true);
-          // Inside the frame with a margin, and centred on the anchor.
+          // Inside the frame with a margin.
           expect(b.x0, `${clip} ${i} ${view}`).toBeGreaterThan(0);
           expect(b.y0, `${clip} ${i} ${view}`).toBeGreaterThan(0);
           expect(b.x1, `${clip} ${i} ${view}`).toBeLessThan(box.w - 1);
@@ -162,11 +163,21 @@ describe('the chibi Dark Knight', () => {
   }, 60_000);
 
   it('shows the three views differently (a real turn, not one sprite)', () => {
-    const side = hero.paint('battle', 0, 'side');
-    const front = hero.paint('battle', 0, 'front');
-    const back = hero.paint('battle', 0, 'back');
-    expect(Buffer.from(side.data).equals(Buffer.from(front.data))).toBe(false);
-    expect(Buffer.from(front.data).equals(Buffer.from(back.data))).toBe(false);
+    // Each view painted into the same box, then cropped to the figure, so like is compared with like.
+    const box = hero.frame.side;
+    const crop = (view: 'side' | 'front' | 'back') => {
+      const r = paintChibi(DARK_KNIGHT, POSES.battle[0] as ChibiPose, view, box);
+      return Buffer.from(cropRaster(r, opaqueBounds(r)).data);
+    };
+    const side = crop('side');
+    const front = crop('front');
+    const back = crop('back');
+    // The comparison can tell frames apart and can match them: the same pose and view matches.
+    const own = hero.paint('battle', 0, 'side');
+    expect(side.equals(Buffer.from(cropRaster(own, opaqueBounds(own)).data))).toBe(true);
+    expect(side.equals(front)).toBe(false);
+    expect(front.equals(back)).toBe(false);
+    expect(side.equals(back)).toBe(false);
   });
 
   it('paints fast enough to build every atlas in the background', () => {

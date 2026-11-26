@@ -2,10 +2,11 @@
  * Loads the cast and builds their animation frames. Monsters animate their artwork (see
  * animation.ts); heroes are painted frame by frame from a skeleton, wielding their weapons, with
  * faces cut from their artwork (see heroes/), side on and also turned toward and away from the
- * viewer. Frames are built in the background a step at a time, so the game never stalls, and
- * packed into an atlas per sprite and facing: a row per clip. Chibi heroes (see heroes/chibi/) are
- * painted the same way, clip by clip and view by view, but each frame is cropped to the figure and
- * its effects and the crops are shelf-packed, an atlas per view.
+ * viewer. Frames are built in the background a little at a time (a few milliseconds per tick), so
+ * the game never stalls, and packed into an atlas per sprite and facing: a row per clip. Chibi
+ * heroes (see heroes/chibi/) are painted frame by frame, side on first; their views toward and
+ * away from the viewer wait until every other queued sprite has its frames. Each chibi frame is
+ * cropped to the figure and its effects and the crops are shelf-packed, an atlas per view.
  */
 import { DEFAULT_LOOK, HERO_LOOKS, type HeroLook, type RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
@@ -75,7 +76,11 @@ export interface ChibiSheet {
   frames: Record<ChibiClip, ChibiFrame[]>;
 }
 
-/** A chibi hero's animation: a sheet per view, each arriving once painted (side on first). */
+/**
+ * A chibi hero's animation: a sheet per view, each arriving once painted. Side on comes first; the
+ * views toward and away from the viewer follow once every other queued sprite has its frames (the
+ * renderer draws him side on meanwhile).
+ */
 export interface ChibiAnim {
   hero: ChibiHero;
   views: Partial<Record<ChibiView, ChibiSheet>>;
@@ -163,10 +168,15 @@ function queue(steps: Iterator<void>): void {
   }
 }
 
-/** Runs one step of the oldest job per tick. */
+/** Milliseconds of building per tick: short enough that a frame of the game is never held up long. */
+const SLICE_MS = 12;
+
+/** Runs steps of the oldest job, then the next, for up to SLICE_MS per tick. */
 function pump(): void {
-  const job = jobs[0];
-  if (job) {
+  const end = performance.now() + SLICE_MS;
+  do {
+    const job = jobs[0];
+    if (!job) break;
     try {
       if (job.next().done) jobs.shift();
     } catch (err) {
@@ -174,7 +184,7 @@ function pump(): void {
       console.warn('Could not build animation frames:', err);
       jobs.shift();
     }
-  }
+  } while (jobs.length && performance.now() < end);
   if (jobs.length) setTimeout(pump, 0);
   else pumping = false;
 }
@@ -273,17 +283,19 @@ function chibiCrop(hero: ChibiHero, clip: ChibiClip, frame: number, view: ChibiV
 }
 
 /**
- * Chibi heroes: paint every frame of every clip, one clip per step, view by view: side on first
- * (the hero animates as soon as that is done), then toward the viewer and away. Each view's crops
- * are shelf-packed into one atlas.
+ * Chibi heroes: paint every frame of every clip, one frame per step, view by view. Side on comes
+ * first (the hero animates as soon as that is done); the views toward and away from the viewer are
+ * queued again behind every other sprite, so the rest of the party and the monsters animate
+ * sooner. Each view's crops are shelf-packed into one atlas.
  */
-function* chibiSteps(sprite: Sprite, hero: ChibiHero): Generator<void> {
-  const anim: ChibiAnim = { hero, views: {} };
-  for (const view of CHIBI_VIEWS) {
+function* chibiSteps(sprite: Sprite, hero: ChibiHero, views: readonly ChibiView[] = CHIBI_VIEWS, anim: ChibiAnim = { hero, views: {} }): Generator<void> {
+  for (const view of views) {
     const crops: { clip: ChibiClip; raster: Raster; ox: number; oy: number }[] = [];
     for (const clip of CHIBI_CLIPS) {
-      yield;
-      for (let i = 0; i < hero.timing[clip].frames; i++) crops.push({ clip, ...chibiCrop(hero, clip, i, view) });
+      for (let i = 0; i < hero.timing[clip].frames; i++) {
+        yield;
+        crops.push({ clip, ...chibiCrop(hero, clip, i, view) });
+      }
     }
     yield;
     const packed = shelfPack(crops.map((c) => c.raster));
@@ -296,6 +308,10 @@ function* chibiSteps(sprite: Sprite, hero: ChibiHero): Generator<void> {
     });
     anim.views[view] = { atlas, frames };
     sprite.chibi = anim;
+    if (view === 'side' && views.length > 1) {
+      queue(chibiSteps(sprite, hero, views.slice(1), anim));
+      return;
+    }
   }
 }
 
@@ -331,21 +347,27 @@ export function preloadClan(clan: ThemeId, heroes: { role: RoleId; look?: HeroLo
 
 const portraits = new Map<string, Promise<string>>();
 
-/** A painted frame cropped to the figure, keeping the feet (`groundY`) on the bottom edge, as an image URL. */
+/**
+ * A painted frame cropped to the figure, as an image URL: the bottom edge sits just under the feet
+ * (`groundY`), or under the lowest painted pixel if that is lower (a chibi hero's near boot is
+ * painted a few pixels below the ground point, as the camera looks down).
+ */
 function portraitOf(f: Raster, groundY: number): string {
   let x0 = f.w;
   let x1 = 0;
   let y0 = f.h;
+  let y1 = 0;
   for (let y = 0; y < f.h; y++) {
     for (let x = 0; x < f.w; x++) {
       if ((f.data[(y * f.w + x) * 4 + 3] as number) === 0) continue;
       x0 = Math.min(x0, x);
       x1 = Math.max(x1, x);
       y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
     }
   }
   const w = x1 - x0 + 3;
-  const h = groundY + 2 - y0 + 2;
+  const h = Math.max(groundY + 2, y1 + 1) - y0 + 2;
   const [c, g] = canvas(w, h);
   g.putImageData(new ImageData(new Uint8ClampedArray(f.data), f.w, f.h), 1 - x0, 1 - y0);
   return c.toDataURL('image/png');

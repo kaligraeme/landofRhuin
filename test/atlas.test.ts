@@ -50,10 +50,16 @@ describe('shelf packing', () => {
   });
 
   it('widens rather than grow past the limit, and refuses what cannot fit', () => {
-    const tall = Array.from({ length: 40 }, () => ({ w: 10, h: 100 }));
-    const p = shelfPack(tall, 300);
+    // At the width it starts from (about the square root of the area) these stack 310 tall.
+    const sizes = [{ w: 10, h: 250 }, ...Array.from({ length: 60 }, () => ({ w: 10, h: 10 }))];
+    const area = sizes.reduce((a, s) => a + s.w * s.h, 0);
+    const p = shelfPack(sizes, 300);
     expect(p.h).toBeLessThanOrEqual(300);
     expect(p.w).toBeLessThanOrEqual(300);
+    expect(p.w).toBeGreaterThan(Math.ceil(Math.sqrt(area * 1.1)));
+    const rects = sizes.map((s, i) => ({ ...s, ...p.at[i]! }));
+    for (const r of rects) expect(r.y + r.h).toBeLessThanOrEqual(p.h);
+    for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) expect(overlaps(rects[i]!, rects[j]!)).toBe(false);
     expect(() => shelfPack(Array.from({ length: 100 }, () => ({ w: 100, h: 100 })), 300)).toThrow();
   });
 

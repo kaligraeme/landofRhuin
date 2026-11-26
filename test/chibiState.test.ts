@@ -1,26 +1,30 @@
 import { describe, expect, it } from 'vitest';
+import { SKILLS, WEAPONS } from '../src/shared/content/classes.js';
 import type { ChibiClip, ClipTiming } from '../src/client/art/heroes/chibi/index.js';
-import { CHIBI_CLIPS, CHIBI_HEROES } from '../src/client/art/heroes/chibi/index.js';
-import { actClip, actFrame, chibiClip, HURT_TIME, type ChibiInput } from '../src/client/game/chibiState.js';
+import { CHIBI_CLIPS, CHIBI_HEROES, SLOT_CLIPS } from '../src/client/art/heroes/chibi/index.js';
+import { actClip, actFrame, chibiClip, type ChibiInput } from '../src/client/game/chibiState.js';
 
-/** A fixed timing table, so the tests do not move when the painter retimes its clips. */
+/**
+ * A fixed timing table, so the tests do not move when the painter retimes its clips. The flinch
+ * takes longer than any hero's does today, so its window is seen to follow the clip's own time.
+ */
 const T: Record<ChibiClip, ClipTiming> = {
-  idle: { frames: 6, mode: 'loop', seconds: 1.6, windup: 0 },
-  battle: { frames: 6, mode: 'loop', seconds: 0.9, windup: 0 },
-  move: { frames: 8, mode: 'loop', seconds: 0.6, windup: 0 },
-  atk1: { frames: 7, mode: 'once', seconds: 0.35, windup: 1 },
-  atk2: { frames: 7, mode: 'once', seconds: 0.35, windup: 1 },
-  atk3: { frames: 9, mode: 'once', seconds: 0.7, windup: 2 },
-  guard: { frames: 4, mode: 'once', seconds: 1, windup: 0 },
-  hurt: { frames: 3, mode: 'once', seconds: 0.3, windup: 0 },
-  kneel: { frames: 4, mode: 'loop', seconds: 1.6, windup: 0 },
-  ko: { frames: 6, mode: 'hold', seconds: 0.9, windup: 0 },
-  victory: { frames: 8, mode: 'hold', seconds: 1.6, windup: 0 },
-  cast: { frames: 8, mode: 'once', seconds: 0.6, windup: 2 },
-  charge: { frames: 8, mode: 'once', seconds: 0.45, windup: 1 },
-  eclipse: { frames: 10, mode: 'once', seconds: 0.55, windup: 1 },
-  drain: { frames: 10, mode: 'once', seconds: 0.8, windup: 2 },
-  ruination: { frames: 16, mode: 'once', seconds: 1.5, windup: 2 },
+  idle: { frames: 6, seconds: 1.6, windup: 0 },
+  battle: { frames: 6, seconds: 0.9, windup: 0 },
+  move: { frames: 8, seconds: 0.6, windup: 0 },
+  atk1: { frames: 7, seconds: 0.35, windup: 1 },
+  atk2: { frames: 7, seconds: 0.35, windup: 1 },
+  atk3: { frames: 9, seconds: 0.7, windup: 2 },
+  special: { frames: 4, seconds: 1, windup: 0 },
+  q: { frames: 8, seconds: 0.45, windup: 1 },
+  e: { frames: 10, seconds: 0.55, windup: 1 },
+  r: { frames: 10, seconds: 0.8, windup: 2 },
+  ult: { frames: 16, seconds: 1.5, windup: 2 },
+  cast: { frames: 8, seconds: 0.6, windup: 2 },
+  hurt: { frames: 3, seconds: 0.45, windup: 0 },
+  kneel: { frames: 4, seconds: 1.6, windup: 0 },
+  ko: { frames: 6, seconds: 0.9, windup: 0 },
+  victory: { frames: 8, seconds: 1.6, windup: 0 },
 };
 
 const NOW = 100;
@@ -75,11 +79,12 @@ describe('chibi stances', () => {
     expect(cycle({ hp: 100 }, T.kneel.seconds)).toEqual(new Set([0, 1, 2, 3]));
   });
 
-  it('flinches for 0.3s after a blow gets through, playing the hurt clip once', () => {
+  it('flinches for as long as its hurt clip lasts after a blow gets through, playing it once', () => {
     expect(chibiClip(input({ hurtAt: NOW }))).toEqual({ clip: 'hurt', frame: 0 });
-    expect(chibiClip(input({ hurtAt: NOW - 0.11 }))).toEqual({ clip: 'hurt', frame: 1 });
-    expect(chibiClip(input({ hurtAt: NOW - 0.21 }))).toEqual({ clip: 'hurt', frame: 2 });
-    expect(clipAt({ hurtAt: NOW - HURT_TIME - 0.01 })).toBe('idle');
+    expect(chibiClip(input({ hurtAt: NOW - 0.16 }))).toEqual({ clip: 'hurt', frame: 1 });
+    expect(chibiClip(input({ hurtAt: NOW - 0.35 }))).toEqual({ clip: 'hurt', frame: 2 });
+    expect(chibiClip(input({ hurtAt: NOW - 0.44 }))).toEqual({ clip: 'hurt', frame: 2 });
+    expect(clipAt({ hurtAt: NOW - 0.46 })).toBe('idle');
     expect(clipAt({ hurtAt: null })).toBe('idle');
   });
 
@@ -102,17 +107,33 @@ describe('chibi attacks and skills', () => {
     expect(clipAt({ act: { at: NOW, k: 'atk', d: 0, c: 2 } })).toBe('atk3');
   });
 
-  it('plays each weapon skill its own clip and role skills a cast', () => {
-    expect(actClip({ k: 'sk', s: 'parry' })).toBe('guard');
-    expect(actClip({ k: 'sk', s: 'stalwartCharge' })).toBe('charge');
-    expect(actClip({ k: 'sk', s: 'eclipse' })).toBe('eclipse');
-    expect(actClip({ k: 'sk', s: 'drain' })).toBe('drain');
-    expect(actClip({ k: 'sk', s: 'ruination' })).toBe('ruination');
+  it("plays each weapon skill its hotbar slot's clip, and role skills and items a cast", () => {
+    expect(actClip({ k: 'sk', s: 'parry' })).toBe('special');
+    expect(actClip({ k: 'sk', s: 'stalwartCharge' })).toBe('q');
+    expect(actClip({ k: 'sk', s: 'eclipse' })).toBe('e');
+    expect(actClip({ k: 'sk', s: 'drain' })).toBe('r');
+    expect(actClip({ k: 'sk', s: 'ruination' })).toBe('ult');
+    // Another weapon's skills play the same slots' clips.
+    expect(actClip({ k: 'sk', s: 'mendingLight' })).toBe('special');
+    expect(actClip({ k: 'sk', s: 'astralCleave' })).toBe('ult');
     expect(actClip({ k: 'sk', s: 'challenge' })).toBe('cast');
     expect(actClip({ k: 'sk', s: 'rallyingBulwark' })).toBe('cast');
+    expect(actClip({ k: 'sk', s: 'elixir' })).toBe('cast');
+    expect(actClip({ k: 'sk', s: 'noSuchSkill' })).toBe('cast');
     expect(actClip({ k: 'sk' })).toBe('cast');
     // A skill id that happens to name an Object property is still just a role skill.
     expect(actClip({ k: 'sk', s: 'toString' })).toBe('cast');
+  });
+
+  it("gives every weapon's five skills a clip of their own", () => {
+    for (const weapon of Object.values(WEAPONS)) {
+      const clips = weapon.skills.map((s) => actClip({ k: 'sk', s }));
+      expect(new Set(clips).size, weapon.id).toBe(5);
+      for (const [i, clip] of clips.entries()) {
+        expect(SLOT_CLIPS, `${weapon.id} ${weapon.skills[i]}`).toContain(clip);
+        expect(clip).toBe(SKILLS[weapon.skills[i] as string]?.slot);
+      }
+    }
   });
 
   it("stretches the wind-up frames over the server's wind-up, then plays the rest in the clip's time", () => {
@@ -141,15 +162,15 @@ describe('chibi attacks and skills', () => {
   });
 
   it('holds the first frame through a server wind-up when the clip has no wind-up frames', () => {
-    expect(actFrame(T.guard, 0.3, 0.4)).toBe(0);
-    expect(actFrame(T.guard, 0.4, 0.4)).toBe(0);
-    expect(actFrame(T.guard, 0.4 + 0.26, 0.4)).toBe(1);
-    expect(actFrame(T.guard, 0.4 + 0.99, 0.4)).toBe(3);
-    expect(actFrame(T.guard, 0.4 + 1.01, 0.4)).toBeNull();
+    expect(actFrame(T.special, 0.3, 0.4)).toBe(0);
+    expect(actFrame(T.special, 0.4, 0.4)).toBe(0);
+    expect(actFrame(T.special, 0.4 + 0.26, 0.4)).toBe(1);
+    expect(actFrame(T.special, 0.4 + 0.99, 0.4)).toBe(3);
+    expect(actFrame(T.special, 0.4 + 1.01, 0.4)).toBeNull();
     // Without one it starts on its first frame and plays straight through.
-    expect(actFrame(T.guard, 0, 0)).toBe(0);
-    expect(actFrame(T.guard, 0.76, 0)).toBe(3);
-    expect(actFrame(T.guard, 1, 0)).toBeNull();
+    expect(actFrame(T.special, 0, 0)).toBe(0);
+    expect(actFrame(T.special, 0.76, 0)).toBe(3);
+    expect(actFrame(T.special, 1, 0)).toBeNull();
   });
 });
 
@@ -171,10 +192,26 @@ describe('chibi knock-outs and victory', () => {
     expect(chibiClip(input({ complete: true, completeAt: NOW - 10 }))).toEqual({ clip: 'victory', frame: 7 });
     expect(chibiClip(input({ complete: true, completeAt: null }))).toEqual({ clip: 'victory', frame: 7 });
   });
+
+  it('still runs, rolls and swings after the dungeon is complete', () => {
+    const done = { complete: true, completeAt: NOW - 5 };
+    const strides = new Set<string>();
+    for (let k = 0; k < 64; k++) {
+      const pick = chibiClip(input({ ...done, moving: true, phase: (k / 64) * Math.PI * 2 }));
+      strides.add(`${pick.clip}:${pick.frame}`);
+    }
+    expect(strides).toEqual(new Set(Array.from({ length: T.move.frames }, (_, i) => `move:${i}`)));
+    expect(clipAt({ ...done, rolling: true })).toBe('move');
+    expect(chibiClip(input({ ...done, act: { at: NOW - 0.2, k: 'atk', d: 0, c: 2 } })).clip).toBe('atk3');
+    // An ultimate still playing out when the last boss falls finishes before the pose.
+    expect(clipAt({ complete: true, completeAt: NOW, act: { at: NOW - 0.5, k: 'sk', d: 0, s: 'ruination' } })).toBe('ult');
+    // Standing still again, he holds the pose.
+    expect(chibiClip(input(done))).toEqual({ clip: 'victory', frame: 7 });
+  });
 });
 
 describe('chibi clip priority', () => {
-  it('ko > victory > act > roll > run > flinch > kneel > battle > idle', () => {
+  it('ko > act > roll > run > victory > flinch > kneel > battle > idle', () => {
     const all: Partial<ChibiInput> = {
       down: true,
       downAt: NOW - 0.1,
@@ -190,10 +227,10 @@ describe('chibi clip priority', () => {
     };
     const order: [ChibiClip, Partial<ChibiInput>][] = [
       ['ko', { down: false }],
-      ['victory', { complete: false }],
-      ['eclipse', { act: null }],
+      ['e', { act: null }],
       ['move', { rolling: false }],
       ['move', { moving: false }],
+      ['victory', { complete: false }],
       ['hurt', { hurtAt: null }],
       ['kneel', { hp: 1000 }],
       ['battle', { fighting: false }],

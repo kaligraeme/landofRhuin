@@ -147,6 +147,8 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
       const c = clump(d, whorl, d.whorl, h.p);
       if (c >= 0) tone = Math.min(3, c + (l < -0.2 ? 1 : 0) + (h.n[1] < -0.55 ? 1 : 0));
     }
+    // Dark hair: the whole mass a tone deeper.
+    if (d.darkHair) tone = Math.min(3, tone + 1);
     return { m: hair, light: toneLight(hair, tone) };
   });
   for (const piece of pieces) for (const b of piece.blobs(ctx)) part.blobs(b.frame, b.blobs, b.shade);
@@ -346,6 +348,9 @@ function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk:
     (x, y) => {
       near(x, y);
       let tone = ma > 0.42 && mt > 0.08 && mt < 0.55 && rootLit > -0.1 ? 0 : ma < -0.28 || mt > 0.78 ? 2 : 1;
+      // Dark hair: the base tone over the clump and the light tone along its lit side, keeping the
+      // highlight for the brightest streaks.
+      if (d.darkHair) tone = tone === 0 && ma > 0.66 && mt < 0.45 && rootLit > 0.2 ? 0 : tone + 1;
       if (rootLit < -0.45) tone = Math.min(3, tone + 1);
       return toneLight(m, tone);
     },

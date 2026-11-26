@@ -22,13 +22,15 @@
  * and out to his right (`handF` about `[-6 to -9, -8 to -10, 13 or 14]`): clear of his face side
  * on and seen from the front.
  */
-import { DARK_KNIGHT } from './darkKnight.js';
-import { add3, type ChibiPose, mix, norm3, pose, rad, solveRig, sub3, type V3, wave } from './rig.js';
+import { DARK_KNIGHT } from './design.js';
+import { add3, type ChibiPose, mix, norm3, pose, rad, solveRig, sub3, type V3, wave } from '../rig.js';
 
 /**
  * The guard the skill and state clips (moves-skills.ts, moves-states.ts) build their poses from:
  * the blade forward and up on his right. The battle loop holds READY below (the blade across to
- * his left), so clips that hand back to it end with `settle`, which eases a pose into READY.
+ * his left), so clips the loop hands over to start from it with `fromReady` (or, like the parry
+ * and Eclipse, start on that side anyway), and clips that hand back to it end with `settle`, which
+ * eases a pose into READY.
  */
 export const GUARD_STANCE: ChibiPose = {
   x: 0,
@@ -128,7 +130,7 @@ const REST: ChibiPose = pose(AT_EASE, { lean: 1, twist: 10, head: -2, look: 3, h
 
 const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
   // A breath: everything above the knees settles exactly one pixel for the second half of the
-  // loop (a whole pixel, so the spiky hair does not shimmer; from nearly straight legs, so the
+  // loop (a whole pixel, so the hair's clumps do not shimmer; from nearly straight legs, so the
   // front of the coat, which follows the thighs, does not swing open), while the coat sways
   // slowly round and he blinks once.
   const out = i >= 4 ? 1 : 0;
@@ -242,6 +244,16 @@ const smear = (start: ChibiPose, p: ChibiPose, width: number, alpha = 1): ChibiP
  */
 export const settle = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => spread(pose(mix(p, battle[0] as ChibiPose, k), { ...over, handB: undefined }));
 
+/**
+ * Out of the battle stance: k of the way from the first battle frame to a pose, then `over` on
+ * top. A skill or state clip that the battle loop hands over to starts with it, so its first frame
+ * carries the blade on from where the loop holds it (across to his left) instead of snapping it to
+ * the other side. Keep k at 0.5 or more: the hands, face and effects then come from the pose. Give
+ * the pose's blade angle on the side the swing goes round (past 180 for a blade swung down through
+ * the front and on behind him), since the angles blend straight.
+ */
+export const fromReady = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => pose(mix(battle[0] as ChibiPose, p, k), over);
+
 // atk1: high behind his right shoulder, down across to low in front on his left.
 const A1_COCK = pose(READY, { x: -2, y: 4, lean: -6, twist: -30, head: -2, look: 2, footF: [10, -1, 5.4], footB: [-11, 0, 5.2], handF: [-9, -8, 13], handB: undefined, grip: 0, weapon: -42, roll: 45, yaw: -6, wind: 0.25, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
 const A1_SWING = pose(READY, { x: 3, y: 4, lean: 10, twist: -4, head: 2, footF: [14, 0, 5.6], handF: [12, 3, 6], handB: undefined, grip: 0, weapon: 72, roll: 40, yaw: 0, wind: 0.45, lift: 0, phase: 0.25, face: 'shout', fx: { rune: 0.8 } });
@@ -298,4 +310,5 @@ const atk3: ChibiPose[] = [
   settle(A3_HOLD, 0.8, { turn: 360, wind: 0.24, lift: 0.1, phase: 1.15, fx: undefined }),
 ];
 
-export const CORE_CLIPS = { idle, battle, move, atk1, atk2, atk3 };
+/** The core clips' poses, by clip. */
+export const CORE_MOVES = { idle, battle, move, atk1, atk2, atk3 };

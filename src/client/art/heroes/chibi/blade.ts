@@ -3,7 +3,7 @@
  * plane (u along it from the grip, v across it toward the cutting edge) and laid onto the screen
  * through the camera. A blade seen edge on keeps at least part of its breadth, as sprite blades
  * do, so a broad sword still reads when swung toward the viewer. A rune channel down the blade
- * smoulders a deep red at rest and blazes (brighter, with its marks and a soft glow) as the pose's
+ * smoulders in its rest colour and blazes (brighter, with its marks and a soft glow) as the pose's
  * `fx.rune` or `fx.aura` rises.
  */
 import type { Canvas, RGB } from '../paint.js';
@@ -15,7 +15,7 @@ import { add3, cross3, norm3 } from './rig.js';
 export interface BladeSpec {
   /** The blade's outline in [u, v] (v + toward the cutting edge), from the guard round to the tip and back. */
   blade: readonly (readonly [number, number])[];
-  /** A pale band inside the cutting edge: its width, from u0 to the tip. */
+  /** A pale band inside the cutting edge: its width, and where along the blade (`from`) it starts, running to the tip. */
   edge: { from: number; width: number; mat: Mat };
   /** A line along the blade's spine catching the light: v and u range. */
   spine?: { v: number; from: number; to: number; mat: Mat };
