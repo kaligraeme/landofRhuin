@@ -213,14 +213,14 @@ function paintArm(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): v
   if (B.cuff) {
     const a = lerp3(arm.mid, arm.end, B.cuff.at);
     const b = lerp3(arm.mid, arm.end, Math.min(0.98, B.cuff.at + 0.42));
-    part.capsule(proj(a), proj(b), B.cuff.r, B.cuff.r * 0.85, k(B.cuff.mat), bias + 0.05, depth(a) + 0.8, depth(b) + 0.8, 3);
-    // A pale band round the cuff's wide end parts it from the arm above it (not when the forearm
-    // points at the viewer: the band would show as a pale disc, not a ring).
-    const pa = proj(a);
-    const pb = proj(b);
-    if (B.cuff.rim && Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) > 3) {
-      const e = lerp3(a, b, 0.18);
-      part.capsule(proj(a), proj(e), B.cuff.r * 1.02, B.cuff.r * 0.98, k(B.cuff.rim), bias + 0.05, depth(a) + 0.9, depth(e) + 0.9, 4);
+    if (B.cuff.rim) {
+      // A pale rim round the cuff's wide end, then the cuff a little slimmer beyond it: side on a
+      // rimmed flare, end on a pale ring round the steel.
+      const e = lerp3(a, b, 0.2);
+      part.capsule(proj(a), proj(e), B.cuff.r, B.cuff.r * 0.97, k(B.cuff.rim), bias + 0.05, depth(a) + 0.8, depth(e) + 0.8, 4);
+      part.capsule(proj(e), proj(b), B.cuff.r * 0.8, B.cuff.r * 0.74, k(B.cuff.mat), bias + 0.05, depth(e) + 0.8, depth(b) + 0.8, 3);
+    } else {
+      part.capsule(proj(a), proj(b), B.cuff.r, B.cuff.r * 0.85, k(B.cuff.mat), bias + 0.05, depth(a) + 0.8, depth(b) + 0.8, 3);
     }
   }
   part.commit();

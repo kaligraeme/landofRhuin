@@ -1,9 +1,9 @@
 /**
- * The Dark Knight, as a chibi: a stern young knight with a mop of spiky chestnut hair, blackened
- * plate with dull silver edges over a dark padded suit, a long open oxblood coat with a high collar
- * and ragged split tails, and an oversized black greatsword with a pale edge, a notched spine and a
- * crimson rune channel. Everything here is data for the chibi engine; his moves are in the
- * moves-*.ts files.
+ * The Dark Knight, as a chibi: a stern young knight with a thick, messy mop of chestnut hair swept
+ * back and up, blackened plate with dull silver edges over a dark padded suit, a long open oxblood
+ * coat with a high collar and split swallowtail tails, and an oversized black greatsword with a
+ * pale edge, a saw-toothed back and a crimson rune channel. Everything here is data for the chibi
+ * engine; his moves are in the moves-*.ts files.
  */
 import { hex } from '../paint.js';
 import { blade } from './blade.js';
@@ -63,22 +63,18 @@ const BUILD: Build = {
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 const LOCKS: Lock[] = [
-  // The back of the head: big clumps falling from the crown to the nape.
-  L(146, 52, [-0.45, -0.85, 0.4], 12, 6.2, [0, 0.1, 0.05], 0.5, 0.4),
-  L(-148, 52, [-0.45, -0.85, -0.4], 12, 6.2, [0, 0.1, -0.05], 0.5, 0.4),
-  L(178, 60, [-0.55, -0.85, 0.05], 13, 6.4, [-0.05, 0.1, 0], 0.5, 0.4),
-  // The nape: full, with locks flicking out behind and to either side.
-  L(160, -10, [-0.8, -0.45, 0.35], 8, 4.6, [-0.1, 0.6, 0.15], 0.6, 0.4),
-  L(-150, -8, [-0.75, -0.4, -0.5], 7.5, 4.2, [-0.1, 0.55, -0.2], 0.6, 0.4),
+  // The nape: locks flicking out behind and to either side.
+  L(162, -8, [-0.8, -0.4, 0.45], 8, 4.4, [-0.1, 0.6, 0.15], 0.6, 0.4),
+  L(-156, -6, [-0.75, -0.4, -0.5], 7.5, 4.2, [-0.1, 0.55, -0.2], 0.6, 0.4),
   // Over the ears, raked back.
   L(78, 20, [-0.95, 0, 0.3], 9.5, 4.4, [-0.1, 0.15, 0.1], 1, 0.4),
   L(-78, 22, [-0.95, 0.05, -0.2], 9, 4.2, [-0.1, 0.15, -0.05], 1, 0.4),
   // The crown: clumps standing up off it toward the back.
-  L(136, 38, [-0.85, 0.35, 0.45], 11, 5, [-0.1, 0.2, 0.1], 1, 0.4),
-  L(-170, 48, [-0.9, 0.45, 0.05], 10.5, 5, [-0.15, 0.25, 0], 1, 0.4),
+  L(124, 24, [-0.9, 0.1, 0.45], 11, 5, [-0.1, 0.12, 0.1], 1, 0.4),
+  L(176, 44, [-0.92, 0.32, 0.05], 11.5, 5, [-0.15, 0.2, 0], 1, 0.4),
   // Big clumps lifting off the brow and raking back over the top, swept toward his right.
-  L(36, 44, [-0.8, 0.35, 0.45], 12, 5.2, [-0.15, -0.05, 0.1], 1, 0.4),
-  L(-34, 48, [-0.85, 0.4, 0.05], 12, 5.2, [-0.15, -0.05, 0.05], 1, 0.4),
+  L(36, 44, [-0.9, 0.18, 0.45], 12, 5.2, [-0.15, -0.15, 0.1], 1, 0.4),
+  L(-34, 48, [-0.92, 0.2, 0.05], 12, 5.2, [-0.15, -0.15, 0.05], 1, 0.4),
   L(2, 54, [-0.8, 0.45, 0.3], 12.5, 5.6, [-0.2, -0.05, 0.05], 1, 0.4),
   // The fringe: four heavier strands over the forehead, uneven (the long one over his left brow).
   L(-16, 38, [0.5, -1, -0.3], 6.4, 3.2, [0.15, 0, -0.1], 0.3, 0.25),
@@ -131,6 +127,8 @@ const DARK_KNIGHT: ChibiDesign = {
     hairline: { faceYaw: 74, brow: 4, temple: 0, nape: -7.5, ear: -1.6 },
     locks: LOCKS,
     lockLine: hex('#341f12'),
+    // The back of the head: big clumps fanning from the crown down to the nape.
+    whorl: { yaw: 180, pitch: 50, reach: 88, clumps: 7, twist: 0.35 },
     face: {
       eye: [8.8, -1.7, 3.9],
       lash: hex('#1e0e10'),

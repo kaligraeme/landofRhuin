@@ -37,7 +37,8 @@ function puff(c: Canvas, x: number, y: number, r: number, col: RGB, a: number, u
 
 /**
  * A swoosh: a crescent swept between two sets of blade directions about the grip, white-hot along
- * its outer (cutting) edge, through crimson to a thin violet inner edge, fading toward its tail. `dirs` gives the blade's axis at each step from tail (0) to head (1).
+ * its outer (cutting) edge, through crimson to a faint inner edge with a hint of violet, fading
+ * toward its tail. `dirs` gives the blade's axis at each step from tail (0) to head (1).
  */
 function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOut: number, thick: number, alpha: number, behindZ: number, level = false): void {
   const { c } = ctx;
@@ -49,7 +50,7 @@ function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOu
     [0, 0.14, d.aura.hot, 1],
     [0.14, 0.34, mixc(d.aura.hot, d.aura.core, 0.45), 0.92],
     [0.34, 0.8, d.aura.core, 0.78],
-    [0.8, 1, d.aura.edge, 0.36],
+    [0.8, 1, mixc(d.aura.core, d.aura.edge, 0.4), 0.3],
   ];
   // A blade's arc never covers his head: the face and hair stay readable through the swing.
   const onHead = level ? undefined : (x: number, y: number): boolean => ctx.owner[y * c.w + x] === HEAD_TAG;

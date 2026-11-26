@@ -1,16 +1,17 @@
 /**
  * Chibi heads: a skull and jaw under a shell of hair, ray-cast through the camera so they turn
- * smoothly through every angle, with locks of hair (spikes, a fringe, tufts at the nape) laid over
- * the shell as tapered, curling ribbons, and the face's features stamped on as small pixel glyphs
- * chosen by how squarely each one faces the viewer. Everything is drawn into one part with a depth
- * test, so locks pass in front of and behind the head as they should, and a coloured line marks
- * each lock where it crosses the hair or face behind it.
+ * smoothly through every angle, with locks of hair (clumps raked over the head, a fringe, locks at
+ * the nape) laid over the shell as leaf-shaped clumps, clumps painted onto the back of the shell
+ * fanning from the crown, and the face's features stamped on as small pixel glyphs chosen by how
+ * squarely each one faces the viewer. Everything is drawn into one part with a depth test, so
+ * locks pass in front of and behind the head as they should, and a coloured line parts each clump
+ * from the hair behind it; a last pass tidies lone pixels out of the hair.
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import { type FaceDesign, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext } from './design.js';
 import { flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
-import { add3, at3, dirIn, dot3, type Face, type Frame3, mul3, norm3, rad, type V3 } from './rig.js';
+import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, mul3, norm3, rad, type V3 } from './rig.js';
 
 /** Shape ids inside the head's part. */
 const SKIN = 1;
@@ -136,11 +137,16 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   const hair: Mat = { ...d.hair, line: d.lockLine ?? shade(d.hair.tones[3], -0.3), clear: 1 };
   part.blobs(fr, [{ c: d.skull.c, r: d.skull.r, id: SKIN }, { c: d.jaw.c, r: d.jaw.r, id: SKIN }], () => ({ m: d.skin }));
   part.blobs(fr, [{ c: d.ear.c, r: d.ear.r, id: EAR }, { c: [d.ear.c[0], d.ear.c[1], -d.ear.c[2]], r: d.ear.r, id: EAR }], () => ({ m: d.skin, light: -0.05 }));
+  const whorl = d.whorl ? norm3(dirIn(HEAD_AXES, Math.cos(rad(d.whorl.yaw)) * Math.cos(rad(d.whorl.pitch)), Math.sin(rad(d.whorl.pitch)), Math.sin(rad(d.whorl.yaw)) * Math.cos(rad(d.whorl.pitch)))) : null;
   part.blobs(fr, [{ c: d.shell.c, r: d.shell.r, id: SHELL }], (h: Hit) => {
     if (h.back) return { m: hair, light: toneLight(hair, 3) };
     if (bare(d, h.p)) return null;
     const l = cam.light(dirIn(fr, h.n[0], h.n[1], h.n[2]));
-    const tone = h.n[1] < -0.5 ? 3 : l > 0.45 ? 1 : l > -0.15 ? 2 : 3;
+    let tone = h.n[1] < -0.5 ? 3 : l > 0.45 ? 1 : l > -0.15 ? 2 : 3;
+    if (whorl && d.whorl) {
+      const c = clump(d, whorl, d.whorl, h.p);
+      if (c >= 0) tone = Math.min(3, c + (l < -0.2 ? 1 : 0) + (h.n[1] < -0.55 ? 1 : 0));
+    }
     return { m: hair, light: toneLight(hair, tone) };
   });
   for (const piece of pieces) for (const b of piece.blobs(ctx)) part.blobs(b.frame, b.blobs, b.shade);
@@ -215,6 +221,32 @@ function despeckle(ctx: PieceContext, tones: readonly RGB[], cx: number, cy: num
   }
 }
 
+const HEAD_AXES: Frame3 = { o: [0, 0, 0], f: [1, 0, 0], u: [0, 1, 0], r: [0, 0, 1] };
+
+/**
+ * The clumps painted on the back of the hair's shell: sectors fanning out from the crown's whorl,
+ * twisting a little as they fall, each with a parting line on one side, a lit band beside it, the
+ * light tone and a darker far side. Gives the tone (0 highlight to 3 shadow) at a point of the
+ * shell (head space), or -1 outside the fan.
+ */
+function clump(d: HeadDesign, w: V3, spec: NonNullable<HeadDesign['whorl']>, p: V3): number {
+  const s = d.shell;
+  const n = norm3([(p[0] - s.c[0]) / s.r[0], (p[1] - s.c[1]) / s.r[1], (p[2] - s.c[2]) / s.r[2]]);
+  const cosT = dot3(n, w);
+  const theta = Math.acos(Math.max(-1, Math.min(1, cosT)));
+  if (theta > rad(spec.reach)) return -1;
+  // The crown itself: a small dark point where the clumps part.
+  if (theta < rad(9)) return 2;
+  // Azimuth round the whorl, measured from the way down the back.
+  const ref = norm3(add3([0, -1, 0], w, cosT === 1 ? 0 : -dot3([0, -1, 0], w)));
+  const side = cross3(w, ref);
+  const phi = Math.atan2(dot3(n, side), dot3(n, ref)) + theta * spec.twist;
+  const k = (((phi / (Math.PI * 2)) * spec.clumps) % 1 + 1) % 1;
+  if (k < 0.1) return 3;
+  if (k < 0.36) return 0;
+  return k < 0.8 ? 1 : 2;
+}
+
 /** Where a lock is widest along its length (0 root to 1 tip) by default. */
 const BELLY = 0.3;
 /** Light falls from the upper left on screen. */
@@ -251,7 +283,7 @@ function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk:
     P = P.map((p, i) => [p[0] + (p0[0] + (dx * i) / n - p[0]) * k, p[1] + (p0[1] + (dy * i) / n - p[1]) * k]);
   }
   const belly = lk.belly ?? BELLY;
-  const width = (t: number): number => lk.w * (t < belly ? 0.8 + (0.2 * t) / belly : Math.pow((1 - t) / (1 - belly), 0.65));
+  const width = (t: number): number => lk.w * (t < belly ? 0.8 + (0.2 * t) / belly : Math.pow((1 - t) / (1 - belly), 0.9));
   // The outline: down one side and back up the other.
   const left: Vec[] = [];
   const right: Vec[] = [];

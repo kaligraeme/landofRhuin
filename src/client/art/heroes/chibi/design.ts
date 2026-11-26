@@ -8,7 +8,7 @@ import type { Vec } from '../skeleton.js';
 import type { Blob, Hit, Mat, Part } from './raster.js';
 import type { Build, Camera, ChibiPose, Frame3, Rig, V3 } from './rig.js';
 
-/** A lock of hair (a spike, a strand of the fringe, a tuft at the nape). */
+/** A lock of hair: a clump raked over the head, a strand of the fringe, a lock at the nape. */
 export interface Lock {
   /** Where it grows from on the hair's shell: degrees around the head (0 the face, 90 his right, 180 the back) and up from the ears' level. */
   yaw: number;
@@ -66,6 +66,12 @@ export interface HeadDesign {
   locks: readonly Lock[];
   /** The coloured line that parts a lock from the hair behind it (default: a shade under the hair's darkest tone). */
   lockLine?: RGB;
+  /**
+   * Clumps painted on the shell, fanning out from the crown's whorl (where on the shell, as a
+   * lock's root is given), out to `reach` degrees from it: how many there are round it and how
+   * far they twist as they fall (radians of turn per radian out).
+   */
+  whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number };
   face: FaceDesign;
 }
 

@@ -6,7 +6,7 @@
  */
 import type { HeadPiece, Piece, PieceContext } from './design.js';
 import { dim, type Hit, type Mat, toneLight } from './raster.js';
-import { add3, at3, clamp, cross3, dirIn, dot3, type Frame3, lerp, mul3, norm3, rad, rotate, sub3, type V3 } from './rig.js';
+import { add3, at3, clamp, cross3, dirIn, dot3, type Frame3, lerp, mul3, norm3, rad, rotate, sub3, TO_CAMERA, type V3 } from './rig.js';
 import type { Vec } from '../skeleton.js';
 
 // ── Shoulder plates ──────────────────────────────────────────────────────────────────────────
@@ -162,6 +162,7 @@ export function skirt(spec: SkirtSpec): Piece {
     const phase = (pose.phase ?? 0) * Math.PI * 2;
     const down: V3 = [0, -1, 0];
     const windDir = norm3([-1, 0.06 + lift * 0.5, sway * 0.5]);
+    const toCam = norm3(ctx.cam.local(TO_CAMERA));
     const fan = spec.fan ?? 0.8;
     const items = spec.panels.map((pn, pi) => {
       const grid: V3[][] = [];
@@ -176,13 +177,22 @@ export function skirt(spec: SkirtSpec): Piece {
         const thigh = norm3(sub3(leg.mid, leg.root));
         const front = clamp(Math.cos(phi), 0, 1) * clamp(Math.abs(Math.sin(phi)) * 1.6, 0.3, 1);
         let d0 = norm3(add3(add3(add3(down, out, spec.aline ?? 0.3), dirIn(pf, -1, 0, 0), pn.kick ?? 0), thigh, front * 0.9));
+        // Cloth streaming straight at the viewer would fold into a pile of slivers: as a sprite
+        // artist would, some of the wind carrying it at the viewer carries it out to its own side
+        // instead, so the tails open out.
+        let wd = windDir;
+        const atCam = dot3(wd, toCam);
+        if (atCam > 0) {
+          const side = sub3(out, mul3(toCam, dot3(out, toCam)));
+          wd = norm3(add3(add3(wd, toCam, -atCam * 0.55), side, atCam * 0.4));
+        }
         const col: V3[] = [top];
         let p = top;
         const seg = pn.len / ROWS;
         for (let j = 1; j <= ROWS; j++) {
           const t = j / ROWS;
           const bend = clamp(wind * (0.3 + 0.75 * t), 0, 1);
-          let d = norm3(add3(mul3(d0, 1 - bend), windDir, bend));
+          let d = norm3(add3(mul3(d0, 1 - bend), wd, bend));
           d = add3(d, [0, 1, 0], backness * fan * bend * 1.2);
           d = add3(d, out, flare * (0.6 + t));
           d = add3(d, [0, 1, 0], Math.max(0, lift) * t * 0.9);
@@ -271,8 +281,10 @@ function drawPanel(ctx: PieceContext, spec: SkirtSpec, pn: Panel, pi: number, gr
       let n = norm3(cross3(sub3(d, a), sub3(b, a)));
       const outward = sub3(lerp3s([a, b, c, d]), ctx.rig.pelvis.o);
       if (dot3(n, [outward[0], 0, outward[2]]) < 0) n = mul3(n, -1);
+      // The lining shows only where the cloth clearly turns its inside to the viewer: near edge on
+      // it keeps its outside, so a tail streaming at the viewer does not break into patches.
       const facing = cam.facing(n);
-      const inside = facing < 0;
+      const inside = facing < -0.22;
       const m = inside ? spec.inner : spec.outer;
       const light = inside ? cam.light(mul3(n, -1)) - 0.25 : cam.light(n);
       const last = j === ROWS - 1;
