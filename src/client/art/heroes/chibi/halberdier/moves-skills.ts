@@ -193,9 +193,9 @@ const planted = (p: ChibiPose, ahead = 3, at?: V3): ChibiPose => {
 const air = (y: number, over: Partial<ChibiPose>): ChibiPose => pose(S, { x: 4, y, lean: 4, twist: 4, head: -2, look: -4, footF: [-4, y - 12, 5], footB: [8, y - 15, 5], wind: 0.7, lift: 0.4, face: 'shout', ...over });
 
 /** Where the point strikes the floor on landing. */
-const STRIKE: V3 = [30, -7, 15];
+const STRIKE: V3 = [24, -7, 12];
 /** The burst on the floor round it. */
-const BURST: V3 = [30, 0, 15];
+const BURST: V3 = [24, 0, 12];
 
 const e: ChibiPose[] = [
   // Wind-up: a quick step in, the halberd swung forward and down beside him, its butt dropping toward the floor.
@@ -209,11 +209,11 @@ const e: ChibiPose[] = [
   // The flip: off the ground, the halberd swung up over and round in front of him, point coming down.
   air(-40, { x: 12, lean: -4, twist: -4, head: -6, footF: [8, -50, 5], footB: [2, -48, 5], handF: [-2, -8, 12], weapon: 100, roll: 10, yaw: 0, grip: 4, grip2: 16, wind: 0.6, lift: 0.2, phase: 0.4, fx: { rune: 1, aura: 0.8, smear: { from: -14, roll: 0, yaw: 0, width: 0.6 } } }),
   // Falling, the point leading, both hands high on the haft.
-  through(air(-32, { x: 13, lean: 12, twist: 0, head: 4, footF: [2, -40, 5], footB: [-6, -38, 5], handF: [6, 2, 12], wind: 0.6, lift: 0.3, phase: 0.5, fx: { rune: 1, aura: 1, smear: { from: 100, roll: 10, yaw: 0, width: 0.5, alpha: 0.5 }, swirl: { k: 0.6, spin: 0.1 } } }), 'tip', [36, 26, 15]),
-  through(air(-16, { x: 10, lean: 20, twist: 0, head: 6, footF: [2, -22, 5], footB: [-6, -20, 5], handF: [7, 6, 12], wind: 0.6, lift: 0.35, phase: 0.6, fx: { rune: 1, aura: 1, swirl: { k: 1, spin: 0.3 } } }), 'tip', [33, 6, 15]),
+  through(air(-32, { x: 13, lean: 12, twist: 0, head: 4, footF: [2, -40, 5], footB: [-6, -38, 5], handF: [6, 2, 14], wind: 0.6, lift: 0.3, phase: 0.5, fx: { rune: 1, aura: 1, smear: { from: 100, roll: 10, yaw: 0, width: 0.5, alpha: 0.5 }, swirl: { k: 0.6, spin: 0.1 } } }), 'tip', [36, 26, 11]),
+  through(air(-16, { x: 10, lean: 20, twist: 0, head: 6, footF: [2, -22, 5], footB: [-6, -20, 5], handF: [7, 6, 14], wind: 0.6, lift: 0.35, phase: 0.6, fx: { rune: 1, aura: 1, swirl: { k: 1, spin: 0.3 } } }), 'tip', [33, 6, 11]),
   // The strike: the point driven into the floor as he lands, a burst of wind.
-  through(pose(S, { x: 6, y: 13, lean: 30, twist: 2, head: 8, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [6, 10, 12], wind: 0.8, lift: 0.4, phase: 0.7, face: 'shout', fx: { rune: 1, aura: 0.8, impact: 1.4, impactAt: BURST, shock: 0.06, shockAt: BURST, dust: 1, extra: gust(0.05, 26) } }), 'tip', STRIKE),
-  through(pose(S, { x: 6, y: 12, lean: 28, twist: 2, head: 7, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [6, 10.5, 12], wind: 0.5, lift: 0.3, phase: 0.8, face: 'grit', fx: { rune: 0.8, aura: 0.4, shock: 0.45, shockAt: BURST, dust: 0.6, extra: gust(0.5, 26) } }), 'tip', STRIKE),
+  through(pose(S, { x: 6, y: 13, lean: 30, twist: 2, head: 8, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [0, 10, 15], wind: 0.8, lift: 0.4, phase: 0.7, face: 'shout', fx: { rune: 1, aura: 0.8, impact: 1.4, impactAt: BURST, shock: 0.06, shockAt: BURST, dust: 1, extra: gust(0.05, 26) } }), 'tip', STRIKE),
+  through(pose(S, { x: 6, y: 12, lean: 28, twist: 2, head: 7, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [0, 10.5, 15], wind: 0.5, lift: 0.3, phase: 0.8, face: 'grit', fx: { rune: 0.8, aura: 0.4, shock: 0.45, shockAt: BURST, dust: 0.6, extra: gust(0.5, 26) } }), 'tip', STRIKE),
   // Pulled free, rising toward the stance as the wind blows out.
   settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, head: 4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [8, 10, 6], weapon: 120, roll: 0, yaw: -10, grip: -12, grip2: 10 }), 0.45, { wind: 0.4, lift: 0.2, phase: 0.9, face: 'stern', fx: { shock: 0.85, shockAt: BURST, extra: gust(0.9, 26) } }),
   settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, handF: [8, 10, 6], weapon: 120, yaw: -10, grip: -12, grip2: 10 }), 0.88, { phase: 1, fx: undefined }),
@@ -305,7 +305,7 @@ const ult: ChibiPose[] = [
 // ── Cast ─────────────────────────────────────────────────────────────────────────────────────
 
 /** Planted upright beside his right foot, his left fist raised, the wind bursting round him. */
-const PLANTED: ChibiPose = pose(S, { x: 0, y: 4, lean: -4, twist: 4, head: -8, look: 4, footF: [-6, 0, 8], footB: [8, 0, 7.5], handF: [-7, 2, 14], handB: [2, -8, 15], weapon: 0, roll: -4, yaw: 0, grip: 10, face: 'shout', wind: 0.6, lift: 0.3, sway: -0.4 });
+const PLANTED: ChibiPose = pose(S, { x: 0, y: 4, lean: -4, twist: 4, head: -8, look: 4, footF: [-6, 0, 8], footB: [8, 0, 7.5], handF: [-11, 2, 13], handB: [2, -8, 15], weapon: 0, roll: -4, yaw: 0, grip: 10, face: 'shout', wind: 0.6, lift: 0.3, sway: -0.4 });
 
 const cast: ChibiPose[] = [
   // Gather: the halberd brought up upright in front of him in both hands.
@@ -315,7 +315,7 @@ const cast: ChibiPose[] = [
   pose(S, { y: 7, lean: 4, twist: 10, head: 1, handF: [8, 9, 10], handB: [4, 12, 8], weapon: 100, roll: 0, yaw: 50, grip: 12, face: 'grit', wind: 0.4, lift: 0.2, phase: 0.1, fx: { rune: 1, aura: 0.6, smear: { from: 12, roll: 0, yaw: 50, width: 0.7 } } }),
   pose(S, { y: 6, lean: 2, twist: 8, head: 0, handF: [8, 7, 11], handB: [4, 12, 8], weapon: 215, roll: 0, yaw: 50, grip: 12, face: 'grit', wind: 0.4, lift: 0.3, phase: 0.2, fx: { rune: 1, aura: 0.8, smear: { from: 100, roll: 0, yaw: 50, width: 0.7 } } }),
   // Planted: the butt struck into the floor, the burst of wind.
-  pose(PLANTED, { phase: 0.3, fx: { rune: 1, aura: 1, circle: 1, impact: 1, impactAt: [-4, 2, 14], shock: 0.08, shockAt: [0, 0, 0], dust: 1, extra: gust(0.1, 24) } }),
+  pose(PLANTED, { phase: 0.3, fx: { rune: 1, aura: 1, circle: 1, impact: 1, impactAt: [-8, 2, 13], shock: 0.08, shockAt: [0, 0, 0], dust: 1, extra: gust(0.1, 24) } }),
   pose(PLANTED, { y: 4.5, lean: -6, head: -9, phase: 0.45, lift: 0.4, fx: { rune: 1, aura: 1, circle: 1, shock: 0.45, shockAt: [0, 0, 0], extra: gust(0.5, 24) } }),
   pose(PLANTED, { y: 4, lean: -5, head: -8, phase: 0.6, lift: 0.3, face: 'smirk', fx: { rune: 0.8, aura: 0.7, circle: 0.8, shock: 0.8, shockAt: [0, 0, 0], extra: gust(0.9, 24) } }),
   // Back into the stance, the circle fading.
