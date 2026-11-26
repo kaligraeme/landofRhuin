@@ -632,8 +632,10 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
   const view = norm3(ctx.cam.local(TO_CAMERA));
   const hair: Mat = { ...d.hair, line: d.lockLine ?? shade(d.hair.tones[3], -0.3), clear: 1 };
   const keys = [...hair.tones, hair.line].map((t) => t[0] * 65536 + t[1] * 256 + t[2]);
-  const solve = (t: { yaw: number; pitch: number; dir: V3; len: number; w: number; stiff?: number; give?: number; taper?: number }, seed: number, out = 0.9): HairStrand => ({
-    pts: strand(pose, { root: hero(onShell(d, t.yaw, t.pitch, out)), dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed, avoid, pad: lie, axis: rig.pelvis.o, view, side: dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw))) }),
+  // `side` is the way it opens out when the wind would carry it straight at the viewer or away
+  // (see StrandSpec): out from the head where it grows, unless given.
+  const solve = (t: { yaw: number; pitch: number; dir: V3; len: number; w: number; stiff?: number; give?: number; taper?: number }, seed: number, out = 0.9, side?: V3): HairStrand => ({
+    pts: strand(pose, { root: hero(onShell(d, t.yaw, t.pitch, out)), dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed, avoid, pad: lie, axis: rig.pelvis.o, view, side: side ?? dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw))) }),
     w: t.w,
     taper: t.taper ?? 0.35,
   });
@@ -689,9 +691,12 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
     const across = norm3(cross3(dirIn(fr, tail.dir[0], tail.dir[1], tail.dir[2]), fr.u));
     // The tie sits on the hair, standing clear of it, so it shows on the head's outline side on.
     const out = 1 + (tail.tie.r * 0.8) / ((d.shell.r[0] + d.shell.r[1] + d.shell.r[2]) / 3);
-    const main = solve(tail, 0.4, out);
+    // A tail at the back of the head would hide behind it from the front as he runs: it flicks
+    // out to one side instead (the same side every frame).
+    const flick = add3(dirIn(fr, Math.cos(rad(tail.yaw)), 0, Math.sin(rad(tail.yaw))), across, 0.8);
+    const main = solve(tail, 0.4, out, flick);
     const side = (k: number, seed: number): HairStrand => {
-      const s = solve({ ...tail, len: tail.len * 0.86, w: tail.w * 0.62 }, seed, out);
+      const s = solve({ ...tail, len: tail.len * 0.86, w: tail.w * 0.62 }, seed, out, flick);
       return { ...s, pts: s.pts.map((p, i) => add3(p, across, k * tail.w * 0.55 * Math.min(1, i / 2))) };
     };
     const strands = [side(-1, 2.2), side(1, 4.1), main];

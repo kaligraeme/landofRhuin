@@ -469,6 +469,11 @@ export interface StrandSpec {
    */
   view?: V3;
   side?: V3;
+  /**
+   * How much higher (+) or lower (-) than the rest it flies as the wind bends it: the middle of a
+   * cape flies higher than its sides, so streaming side on it shows its breadth rather than an edge.
+   */
+  fan?: number;
 }
 
 const DOWN: V3 = [0, -1, 0];
@@ -527,6 +532,7 @@ export function strand(pose: ChibiPose, s: StrandSpec): V3[] {
     if (rise > 0) hang = add3(mul3(hang, 1 - rise), norm3([ox / ol, 1.3, oz / ol]), rise);
     hang = add3(hang, [ox / ol, 0, oz / ol], flare * 1.4 * t * t);
     hang = add3(hang, [0, 0, 1], sway * 0.35 * t);
+    if (s.fan) hang = add3(norm3(hang), [0, 1, 0], s.fan * bend * 1.2);
     const d = norm3(add3(mul3(dir, hold), norm3(hang), 1 - hold));
     // A ripple across it and in and out, stronger toward the tip and in the wind.
     const wave = Math.sin(phase - j * 1.05 + (s.seed ?? 0)) * (0.35 + wind * 1.2 + flare) * t;
@@ -601,7 +607,9 @@ export function cape(spec: CapeSpec): Piece {
         // It leaves the shoulders falling back and a little out over the shoulder blades.
         const out = dirIn(cf, Math.cos(phi), 0, Math.sin(phi));
         const dir = add3(add3(dirIn(cf, 0, -1, 0), out, 0.35), dirIn(cf, -1, 0, 0), 0.15);
-        grid.push(strand(pose, { root: top, dir, len: spec.len, n: ROWS, stiff: 0.2, give: spec.give ?? 0.9, seed: k * 0.8 + pi * 1.7, flick: true, avoid, pad, axis: rig.pelvis.o, view, side: out }));
+        // Streaming, its middle flies higher than its sides (as a skirt panel's back does).
+        const fan = (-Math.cos(phi) - 1) * 0.9;
+        grid.push(strand(pose, { root: top, dir, len: spec.len, n: ROWS, stiff: 0.2, give: spec.give ?? 0.9, seed: k * 0.8 + pi * 1.7, flick: true, avoid, pad, axis: rig.pelvis.o, view, side: out, fan }));
       }
       widen(grid, pn.taper ?? 1);
       const mid = grid[COLS >> 1]?.[ROWS >> 1] as V3;
@@ -626,9 +634,9 @@ function widen(grid: V3[][], taper: number): void {
 // ── A scarf ──────────────────────────────────────────────────────────────────────────────────
 
 export interface ScarfSpec {
-  /** The cloth, and its underside (seen where a tail turns over). */
+  /** The cloth, and its underside where a tail turns over (default the cloth a little darker). */
   mat: Mat;
-  inner: Mat;
+  inner?: Mat;
   /**
    * The wrap round the neck: the height of its middle in the chest frame (a little over the base
    * of the neck), its radii [forward, right] and its half-height. `muffle` raises its front (a
@@ -671,7 +679,7 @@ export function scarf(spec: ScarfSpec): { wrap: HeadPiece; tails: Piece } {
       return [{ frame: ctx.rig.chest, blobs, shade }];
     },
   };
-  const look: SkirtSpec = { outer: spec.mat, inner: spec.inner, waist: 0, ring: [0, 0], panels: [] };
+  const look: SkirtSpec = { outer: spec.mat, inner: spec.inner ?? dim(spec.mat, -0.15), waist: 0, ring: [0, 0], panels: [] };
   const tails: Piece = (ctx: PieceContext) => {
     const { rig, pose } = ctx;
     const cf = rig.chest;
@@ -694,7 +702,10 @@ export function scarf(spec: ScarfSpec): { wrap: HeadPiece; tails: Piece } {
         const run = norm3(sub3(b, a));
         let breadth = sub3(across, mul3(run, dot3(across, run)));
         breadth = Math.hypot(breadth[0], breadth[1], breadth[2]) < 0.2 ? norm3(cross3(run, [0, 1, 0])) : norm3(breadth);
-        faces.push(norm3(cross3(run, breadth)));
+        // Its outside faces away from the body (and up, as it flies).
+        let face = norm3(cross3(run, breadth));
+        if (dot3(face, add3(out, [0, 1, 0])) < 0) face = mul3(face, -1);
+        faces.push(face);
         // A slow twist down the tail with the ripple.
         const twist = Math.sin((pose.phase ?? 0) * Math.PI * 2 - j * 0.7 + ti) * 0.25 * (j / ROWS);
         const bv = norm3(add3(breadth, faces[j] as V3, twist));
