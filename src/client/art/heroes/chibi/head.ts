@@ -11,7 +11,9 @@
  * Long hair (a curtain down the back, locks over the shoulders, a ponytail) hangs from the head
  * but is sorted with the body (`hairItems`, which the painter adds to its list): each tress is a
  * strand (pieces.ts `strand`) that lies over the head and the torso and streams with the pose,
- * painted as a long clump that grows out of the head's hair without a line between them.
+ * painted as a long clump that grows out of the head's hair without a line between them. Short
+ * layers at the nape (`long.nape`) are strands too, but painted with the head in its depth test,
+ * so they lie over a high collar and pass behind the jaw as they should.
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
@@ -25,6 +27,7 @@ const SKIN = 1;
 const EAR = 2;
 const SHELL = 3;
 const LOCK0 = 10;
+const NAPE0 = 200;
 
 /** A direction in hero space, in a frame's own axes. */
 const inFrame = (fr: Frame3, d: V3): V3 => [dot3(d, fr.f), dot3(d, fr.u), dot3(d, fr.r)];
@@ -237,6 +240,9 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   const lift = inFrame(fr, [0, (pose.lift ?? 0) * 0.4, 0]);
   const centre = ctx.proj(hero(d.shell.c));
   d.locks.forEach((lk, li) => paintLock(ctx, part, d, fr, lk, LOCK0 + li, add3(push, lift), hair, centre));
+  // Short layers at the nape: long hair, but painted here in the head's depth test, so they lie
+  // over a high collar (see LongHair.nape), a tone deeper in the shadow of the hair above.
+  d.long?.nape?.forEach((t, i) => paintTress(ctx, part, d, hero(d.shell.c), napeStrand(ctx, d, fr, t, i), hair, NAPE0 + i, 1));
 
   // The fringe casts a shadow on the brow.
   const cx = Math.round(ctx.proj(hero(d.skull.c))[0]);
@@ -581,9 +587,10 @@ interface HairStrand {
  * the last `taper` of it. Its tone comes from how the hair there faces the light (out from the
  * head's upright axis, so a curtain is lit on the side toward the light and in shadow seen from
  * the front, where it hangs behind), a tone lighter along each tress's lit side and darker along
- * its shadowed side and at its tip, with a streak of highlight high up on lit tresses.
+ * its shadowed side and at its tip, with a streak of highlight high up on lit tresses. `deep`
+ * darkens it by that many tones (nape layers lie in the shadow of the hair above them).
  */
-function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: HairStrand, m: Mat, id: number): void {
+function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: HairStrand, m: Mat, id: number, deep = 0): void {
   const pts = s.pts;
   const n = pts.length - 1;
   const P = pts.map((p) => ctx.proj(p));
@@ -607,7 +614,7 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
       let tone = l > 0.62 && t < 0.4 && a > 0 ? 0 : l > 0.28 ? 1 : l > -0.12 ? 2 : 3;
       if (t > 0.88) tone = Math.min(3, tone + 1);
       if (d.darkHair && tone > 0) tone = Math.min(3, tone + 1);
-      return toneLight(m, tone);
+      return toneLight(m, Math.min(3, tone + deep));
     },
     (t, a) => along(Z, t) + (1 - Math.min(1, a * a)) * 0.6,
     id,
@@ -615,11 +622,24 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
 }
 
 /**
+ * A layer at the nape (`long.nape`) in a pose: a strand that grows out of the hair's shell as a
+ * tress does and lies over the head and the jaw. `fr` is the head's frame as painted.
+ */
+function napeStrand(ctx: PieceContext, d: HeadDesign, fr: Frame3, t: Tress, i: number): HairStrand {
+  const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }];
+  const root = at3(fr, ...onShell(d, t.yaw, t.pitch, 0.9));
+  const side = dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw)));
+  const spec = { root, dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed: 0.7 + i * 1.9, avoid, axis: ctx.rig.pelvis.o, view: norm3(ctx.cam.local(TO_CAMERA)), side, flip: t.flip };
+  return { pts: strand(ctx.pose, spec), w: t.w, taper: t.taper ?? 0.35 };
+}
+
+/**
  * The draw items of a head's long hair (`head.long`), for the painter to sort with the body: each
  * tress of the curtain and each lock over the shoulders on its own, and the ponytail (its strands
  * and its tie) as one, each at the depth of its hanging part (sorted with the upper body, as arms
  * are: see `PieceContext.upperZ`). `fr` is the head's frame as painted. Each is solved as strands (pieces.ts `strand`) that
- * grow out of the hair's shell and lie over the head, the jaw and the torso.
+ * grow out of the hair's shell and lie over the head, the jaw and the torso. The nape layers are
+ * not among them: `paintHead` paints those.
  */
 export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr: Frame3): DrawItem[] {
   const long = d.long;
@@ -634,8 +654,8 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
   const keys = [...hair.tones, hair.line].map((t) => t[0] * 65536 + t[1] * 256 + t[2]);
   // `side` is the way it opens out when the wind would carry it straight at the viewer or away
   // (see StrandSpec): out from the head where it grows, unless given.
-  const solve = (t: { yaw: number; pitch: number; dir: V3; len: number; w: number; stiff?: number; give?: number; taper?: number }, seed: number, out = 0.9, side?: V3): HairStrand => ({
-    pts: strand(pose, { root: hero(onShell(d, t.yaw, t.pitch, out)), dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed, avoid, pad: lie, axis: rig.pelvis.o, view, side: side ?? dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw))) }),
+  const solve = (t: { yaw: number; pitch: number; dir: V3; len: number; w: number; stiff?: number; give?: number; taper?: number; flip?: number }, seed: number, out = 0.9, side?: V3): HairStrand => ({
+    pts: strand(pose, { root: hero(onShell(d, t.yaw, t.pitch, out)), dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed, avoid, pad: lie, axis: rig.pelvis.o, view, side: side ?? dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw))), flip: t.flip }),
     w: t.w,
     taper: t.taper ?? 0.35,
   });

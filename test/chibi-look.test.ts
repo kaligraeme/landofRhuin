@@ -7,6 +7,8 @@ import { pushOut, strand, torsoObstacles } from '../src/client/art/heroes/chibi/
 import { shade } from '../src/client/art/heroes/chibi/raster.js';
 import { at3, type ChibiPose, type ChibiView, camera, dot3, len3, pose, solveRig, sub3, type V3 } from '../src/client/art/heroes/chibi/rig.js';
 import type { RGB, Raster } from '../src/client/art/heroes/paint.js';
+import { DARK_KNIGHT } from '../src/client/art/heroes/chibi/darkKnight/design.js';
+import { DARK_KNIGHT_HERO } from '../src/client/art/heroes/chibi/darkKnight/hero.js';
 import { BOX, FACES, LANKY, LOOK_CLIPS, MANNEQUINS, ROBED, RUN, SPIN, STAND } from './chibi-mannequins.js';
 
 /** A quick checksum of a frame's pixels. */
@@ -181,6 +183,40 @@ describe('long hair', () => {
     const withTress = paintChibi(one, STAND, 'back', BOX);
     expect(sum(withTress)).not.toBe(sum(paintChibi(bare, STAND, 'back', BOX)));
     expect(count(withTress, line, box)).toBeLessThanOrEqual(count(paintChibi(bare, STAND, 'back', BOX), line, box) + 3);
+  });
+
+  it('flips its ends out to its side with `flip`, and only its ends', () => {
+    const spec = { root: [-10, 40, 0] as V3, dir: [-0.6, -1, 0] as V3, len: 12, n: 6, side: [-1, 0, 0] as V3 };
+    const plain = strand(STAND, { ...spec });
+    const flipped = strand(STAND, { ...spec, flip: 1.2 });
+    const out = (pts: V3[]): number => dot3(sub3(pts[pts.length - 1] as V3, spec.root), spec.side);
+    expect(out(flipped)).toBeGreaterThan(out(plain) + 3);
+    // The first half of it is not moved, and it keeps its length.
+    for (let i = 0; i <= 3; i++) expect(len3(sub3(flipped[i] as V3, plain[i] as V3))).toBeLessThan(1e-9);
+    for (let i = 1; i < flipped.length; i++) expect(len3(sub3(flipped[i] as V3, flipped[i - 1] as V3))).toBeCloseTo(spec.len / spec.n, 1);
+  });
+
+  it('paints short layers at the nape in the head\'s depth test: over a high collar, under what is nearer', () => {
+    // The Dark Knight's nape layers as `nape`, and as tresses down the back sorted with the body.
+    const nape = DARK_KNIGHT.head.long?.nape ?? [];
+    expect(nape.length).toBeGreaterThan(2);
+    const hair = new Set(hairOf(DARK_KNIGHT).map(key));
+    const isHair = (r: Raster, i: number): boolean => (r.data[i * 4 + 3] as number) > 0 && hair.has(key([r.data[i * 4] as number, r.data[i * 4 + 1] as number, r.data[i * 4 + 2] as number]));
+    // How many pixels of the figure that are not hair without the layers are hair with them.
+    const over = (clip: 'idle' | 'battle', view: ChibiView, long: ChibiDesign['head']['long']): number => {
+      const p = DARK_KNIGHT_HERO.poses[clip][0] as ChibiPose;
+      const box = DARK_KNIGHT_HERO.frame[view];
+      const bare = paintChibi(without(DARK_KNIGHT, { long: undefined }), p, view, box);
+      const r = paintChibi(without(DARK_KNIGHT, { long }), p, view, box);
+      let n = 0;
+      for (let i = 0; i < r.w * r.h; i++) if ((bare.data[i * 4 + 3] as number) > 0 && !isHair(bare, i) && isHair(r, i)) n++;
+      return n;
+    };
+    // From behind they lie over his collar.
+    expect(over('idle', 'back', { nape })).toBeGreaterThan(40);
+    // Side on his jaw and collar hide them where they are nearer; sorted with the body, the layer
+    // behind his near ear would sort over his whole head and be painted over them.
+    expect(over('battle', 'side', { nape }) + 5).toBeLessThan(over('battle', 'side', { back: nape }));
   });
 });
 
