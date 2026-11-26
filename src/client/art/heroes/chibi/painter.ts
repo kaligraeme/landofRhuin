@@ -122,8 +122,25 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   items.sort((a, b) => a.z - b.z);
   for (const it of items) it.draw();
   c.outline(INK);
+  closePinholes(c);
   paintFx(ctx, d, pose.fx ?? {}, torsoTrue + up - 3);
   return c.flatten();
+}
+
+/** Fills one-pixel pinholes and notches left between outlined parts with ink, so the silhouette stays clean. */
+function closePinholes(c: Canvas): void {
+  for (let pass = 0; pass < 2; pass++) {
+    const fill: number[] = [];
+    for (let y = 1; y < c.h - 1; y++) {
+      for (let x = 1; x < c.w - 1; x++) {
+        if (c.opaque(x, y)) continue;
+        const n = (c.opaque(x - 1, y) ? 1 : 0) + (c.opaque(x + 1, y) ? 1 : 0) + (c.opaque(x, y - 1) ? 1 : 0) + (c.opaque(x, y + 1) ? 1 : 0);
+        if (n >= 3) fill.push(x, y);
+      }
+    }
+    if (!fill.length) return;
+    for (let i = 0; i < fill.length; i += 2) c.setPx(fill[i] as number, fill[i + 1] as number, INK);
+  }
 }
 
 function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, far: boolean): void {

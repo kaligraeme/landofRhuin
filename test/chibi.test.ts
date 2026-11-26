@@ -118,6 +118,29 @@ describe('the chibi Dark Knight', () => {
     }
   });
 
+  it('paints a clean figure: no stray pixels, hardly a pinhole', () => {
+    let holes = 0;
+    for (const view of CHIBI_VIEWS) {
+      const box = hero.frame[view];
+      for (const clip of CHIBI_CLIPS) {
+        for (let i = 0; i < hero.timing[clip].frames; i += 2) {
+          const r = paintChibi(DARK_KNIGHT, { ...(POSES[clip][i] as ChibiPose), fx: undefined }, view, box);
+          const op = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < r.w && y < r.h && (r.data[(y * r.w + x) * 4 + 3] as number) > 0;
+          for (let y = 0; y < r.h; y++) {
+            for (let x = 0; x < r.w; x++) {
+              if (op(x, y)) {
+                let n = 0;
+                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && op(x + dx, y + dy)) n++;
+                expect(n, `${view} ${clip} ${i}: a stray pixel at ${x},${y}`).toBeGreaterThan(2);
+              } else if (op(x - 1, y) && op(x + 1, y) && op(x, y - 1) && op(x, y + 1)) holes++;
+            }
+          }
+        }
+      }
+    }
+    expect(holes).toBeLessThanOrEqual(6);
+  });
+
   it('shows the three views differently (a real turn, not one sprite)', () => {
     const side = hero.paint('battle', 0, 'side');
     const front = hero.paint('battle', 0, 'front');

@@ -17,6 +17,8 @@ import type { Build } from './rig.js';
 const SKIN = mat4('#f6d0a8', '#e2a67e', '#c2805e', '#8e5442', '#5c2a22', 0.16);
 const HAIR = mat4('#a87650', '#7c5236', '#583822', '#341f12', '#1e1009', -0.2);
 const ARMOUR = mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', -0.36);
+const ARMOUR_RIDGE = mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', 0.15);
+const ARMOUR_SEAM = mat4('#5c6274', '#3a3e4c', '#22242e', '#16171e', '#121319', -0.5);
 const SILVER = mat4('#d2d6e0', '#a4aab8', '#767c8c', '#4a4e5e', '#20222c', 0.1);
 const COAT = mat4('#b33e48', '#8e2a34', '#64161f', '#3a0a12', '#22050b', -0.27);
 const COAT_SEAM = mat4('#64161f', '#4c0f18', '#3a0a12', '#2a060d', '#22050b');
@@ -93,9 +95,15 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
     if (yaw < 13 && u > 5.6 && u < 7.8) return yaw < 9 && u > 6.2 && u < 7.2 ? LEATHER : SILVER;
     return u > 7.7 ? flat(hex('#24170f')) : LEATHER;
   }
-  // The coat opens in a V over the breastplate.
+  // The coat opens in a V over the breastplate: silver-edged, a ridge down the middle and the
+  // edge of a plate across the belly.
   const open = 30 + (u - 8) * 0.9;
-  if (yaw < open) return yaw > open - 4 && u < 21.5 ? SILVER : ARMOUR;
+  if (yaw < open) {
+    if (yaw > open - 6 && u < 21.5) return SILVER;
+    if (Math.abs(u - 13.2) < 0.55) return ARMOUR_SEAM;
+    if (yaw < 3 && u > 9) return ARMOUR_RIDGE;
+    return ARMOUR;
+  }
   // A seam down the middle of the back.
   if (yaw > 176) return COAT_SEAM;
   return COAT;

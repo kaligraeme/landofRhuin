@@ -38,11 +38,12 @@ function puff(c: Canvas, x: number, y: number, r: number, col: RGB, a: number, u
  * its outer (cutting) edge, through the aura's colours to a thin violet inner edge, fading toward
  * its tail. `dirs` gives the blade's axis at each step from tail (0) to head (1).
  */
-function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOut: number, thick: number, alpha: number, behindZ: number): void {
+function crescent(ctx: PieceContext, d: ChibiDesign, centre: V3, dirs: V3[], rOut: number, thick: number, alpha: number, behindZ: number, level = false): void {
   const { c } = ctx;
   const n = dirs.length - 1;
   if (n < 1) return;
-  dirs = faceCamera(ctx, dirs);
+  // A level ring stays level; a blade's swing is turned to show its face.
+  if (!level) dirs = faceCamera(ctx, dirs);
   const bands: [number, number, RGB, number][] = [
     [0, 0.14, d.aura.hot, 1],
     [0.14, 0.34, mixc(d.aura.hot, d.aura.core, 0.45), 0.92],
@@ -236,7 +237,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
       const a = rad(lerp(g.from, g.to, i / n) - turn);
       dirs.push([Math.cos(a), 0, Math.sin(a)]);
     }
-    crescent(ctx, d, centre, dirs, R, R * 0.5, 1, ctx.depth(centre) + ctx.upper - 2);
+    crescent(ctx, d, centre, dirs, R, R * 0.5, 1, ctx.depth(centre) + ctx.upper - 2, true);
   }
 
   if (fx.speed) {
