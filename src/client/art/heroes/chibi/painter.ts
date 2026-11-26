@@ -191,6 +191,14 @@ function paintArm(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): v
     const a = lerp3(arm.mid, arm.end, B.cuff.at);
     const b = lerp3(arm.mid, arm.end, Math.min(0.98, B.cuff.at + 0.42));
     part.capsule(proj(a), proj(b), B.cuff.r, B.cuff.r * 0.85, k(B.cuff.mat), bias + 0.05, depth(a) + 0.8, depth(b) + 0.8, 3);
+    // A pale band round the cuff's wide end parts it from the arm above it (not when the forearm
+    // points at the viewer: the band would show as a pale disc, not a ring).
+    const pa = proj(a);
+    const pb = proj(b);
+    if (B.cuff.rim && Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) > 3) {
+      const e = lerp3(a, b, 0.18);
+      part.capsule(proj(a), proj(e), B.cuff.r * 1.02, B.cuff.r * 0.98, k(B.cuff.rim), bias + 0.05, depth(a) + 0.9, depth(e) + 0.9, 4);
+    }
   }
   part.commit();
 }
@@ -203,8 +211,8 @@ function paintHand(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): 
   part.ellipse(p[0], p[1], B.hand.r, B.hand.r * 0.92, m, far ? FAR : 0.05, ctx.depth(arm.end), 1);
   // Knuckle plates catch the light.
   const kn: Vec = [p[0] - 1, p[1] - B.hand.r * 0.45];
-  part.plot(kn[0], kn[1], m, 0.9, ctx.depth(arm.end) + 3, 1, true);
-  part.plot(kn[0] + 1, kn[1], m, 0.9, ctx.depth(arm.end) + 3, 1, true);
+  const km = B.hand.knuckle ? (far ? dim(B.hand.knuckle, -0.12) : B.hand.knuckle) : m;
+  for (const dx of [-1, 0, 1]) part.plot(kn[0] + dx, kn[1], km, dx ? 0.45 : 0.9, ctx.depth(arm.end) + 3, 1, true);
   part.commit();
 }
 

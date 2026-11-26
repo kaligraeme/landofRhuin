@@ -16,14 +16,19 @@ import type { Build } from './rig.js';
 
 const SKIN = mat4('#f6d0a8', '#e2a67e', '#c2805e', '#8e5442', '#5c2a22', 0.16);
 const HAIR = mat4('#a87650', '#7c5236', '#583822', '#341f12', '#1e1009', -0.2);
-const ARMOUR = mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', -0.36);
+// Overlapping plates of the same steel are parted by a line where one stands clear of the other.
+const ARMOUR = { ...mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', -0.36), clear: 1.2 };
 const ARMOUR_RIDGE = mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', 0.15);
 const ARMOUR_SEAM = mat4('#5c6274', '#3a3e4c', '#22242e', '#16171e', '#121319', -0.5);
 const SILVER = mat4('#d2d6e0', '#a4aab8', '#767c8c', '#4a4e5e', '#20222c', 0.1);
-const COAT = mat4('#b33e48', '#8e2a34', '#64161f', '#3a0a12', '#22050b', -0.27);
+// Dull silver for the edges of plates: paler than the blackened steel, never as bright as the trims.
+const PLATE_EDGE = mat4('#b4b9c6', '#8a90a0', '#646a7c', '#40444f', '#16171d', -0.05);
+// The coat reads as one dark oxblood: its base tone spans most of it, the light tone only on lit folds.
+const COAT = { ...mat4('#b33e48', '#8e2a34', '#64161f', '#3a0a12', '#22050b', -0.04), gain: 0.5 };
 const COAT_SEAM = mat4('#64161f', '#4c0f18', '#3a0a12', '#2a060d', '#22050b');
 const LINING = mat4('#46303a', '#2e1f27', '#1c1218', '#110a0e', '#08050a');
-const SUIT = mat4('#6c6672', '#4e4954', '#36323c', '#221f27', '#141218', -0.15);
+// The padded suit is a step darker and warmer than the plate, so the plates stand out from it.
+const SUIT = mat4('#4c4652', '#35303b', '#25212a', '#16141a', '#0c0b0f', -0.1);
 const LEATHER = mat4('#7c5642', '#5a3c2c', '#3e281c', '#25170f', '#140c07', -0.1);
 const SOLE = mat4('#2a2026', '#1e171c', '#151014', '#0c090b', '#08060a');
 const STEEL = mat4('#80869a', '#505466', '#32343f', '#1c1d25', '#0d0e13');
@@ -49,36 +54,39 @@ const BUILD: Build = {
   headUp: 12,
 };
 
-// ── Hair: thick, spiky and messy, swept back and up, a few strands over the brow ─────────────
+// ── Hair: a thick, messy mop swept back and up ────────────────────────────────────────────
+// Big clumps rake back from the brow and stand up off the crown toward the back, lopsided toward
+// his left; heavier strands fall over the forehead in an uneven fringe; the nape is full, with a
+// couple of locks flicking out. No crown of upright spikes.
 
-const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give });
+const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 const LOCKS: Lock[] = [
-  // The nape and the back: volume that sticks out behind and down.
-  L(180, -22, [-0.7, -0.75, 0], 6.5, 4, [0, 0.15, 0], 0.6),
-  L(128, -14, [-0.45, -0.6, 0.9], 5.5, 3.4, [0, 0.15, 0], 0.6),
-  L(-128, -14, [-0.45, -0.6, -0.9], 5.5, 3.4, [0, 0.15, 0], 0.6),
-  L(150, 10, [-0.75, 0.1, 0.85], 7.5, 4, [0, 0.3, 0]),
-  L(-150, 10, [-0.75, 0.1, -0.85], 7.5, 4, [0, 0.3, 0]),
-  // Over the ears.
-  L(88, 16, [-0.4, 0.25, 1], 5.5, 3.4, [-0.1, 0.2, 0]),
-  L(-88, 16, [-0.4, 0.25, -1], 5.5, 3.4, [-0.1, 0.2, 0]),
-  // The crown: big spikes swept back and up.
-  L(172, 46, [-1, 0.75, 0], 8.5, 4.3, [-0.1, 0.3, 0]),
-  L(118, 44, [-0.65, 0.8, 0.8], 7.5, 3.9, [-0.2, 0.2, 0]),
-  L(-118, 44, [-0.65, 0.8, -0.8], 7.5, 3.9, [-0.2, 0.2, 0]),
-  L(48, 52, [-0.35, 1, 0.6], 7, 3.9, [-0.35, 0, 0]),
-  L(-48, 52, [-0.35, 1, -0.6], 7, 3.9, [-0.35, 0, 0]),
-  // A swept-up forelock at the front of the crown.
-  L(0, 54, [0.1, 1, 0], 7, 4.2, [-0.55, 0, 0]),
-  // The fringe: a few strands falling over the forehead.
-  L(16, 34, [0.5, -1, 0.35], 4.6, 2.9, [0.1, 0, 0.15], 0.4),
-  L(-18, 34, [0.5, -1, -0.2], 4, 2.7, [0.1, 0, -0.1], 0.4),
-  L(46, 26, [0.3, -1, 0.55], 4.4, 2.6, [0.1, 0, 0.2], 0.4),
-  L(-48, 26, [0.3, -1, -0.55], 4, 2.5, [0.1, 0, -0.2], 0.4),
+  // The back of the head: big clumps falling from the crown to the nape.
+  L(146, 52, [-0.45, -0.85, 0.4], 12, 6.2, [0, 0.1, 0.05], 0.5, 0.4),
+  L(-148, 52, [-0.45, -0.85, -0.4], 12, 6.2, [0, 0.1, -0.05], 0.5, 0.4),
+  L(178, 60, [-0.55, -0.85, 0.05], 13, 6.4, [-0.05, 0.1, 0], 0.5, 0.4),
+  // The nape: full, with locks flicking out behind and to either side.
+  L(160, -10, [-0.8, -0.45, 0.35], 8, 4.6, [-0.1, 0.6, 0.15], 0.6, 0.4),
+  L(-150, -8, [-0.75, -0.4, -0.5], 7.5, 4.2, [-0.1, 0.55, -0.2], 0.6, 0.4),
+  // Over the ears, raked back.
+  L(78, 20, [-0.95, 0, 0.3], 9.5, 4.4, [-0.1, 0.15, 0.1], 1, 0.4),
+  L(-78, 22, [-0.95, 0.05, -0.2], 9, 4.2, [-0.1, 0.15, -0.05], 1, 0.4),
+  // The crown: clumps standing up off it toward the back.
+  L(136, 38, [-0.85, 0.35, 0.45], 11, 5, [-0.1, 0.2, 0.1], 1, 0.4),
+  L(-170, 48, [-0.9, 0.45, 0.05], 10.5, 5, [-0.15, 0.25, 0], 1, 0.4),
+  // Big clumps lifting off the brow and raking back over the top, swept toward his right.
+  L(36, 44, [-0.8, 0.35, 0.45], 12, 5.2, [-0.15, -0.05, 0.1], 1, 0.4),
+  L(-34, 48, [-0.85, 0.4, 0.05], 12, 5.2, [-0.15, -0.05, 0.05], 1, 0.4),
+  L(2, 54, [-0.8, 0.45, 0.3], 12.5, 5.6, [-0.2, -0.05, 0.05], 1, 0.4),
+  // The fringe: four heavier strands over the forehead, uneven (the long one over his left brow).
+  L(-16, 38, [0.5, -1, -0.3], 6.4, 3.2, [0.15, 0, -0.1], 0.3, 0.25),
+  L(10, 42, [0.6, -1, 0.1], 4.6, 2.9, [0.15, 0, 0.1], 0.3, 0.25),
+  L(38, 32, [0.35, -1, 0.55], 5.4, 2.8, [0.1, 0, 0.2], 0.3, 0.25),
+  L(-50, 28, [0.25, -1, -0.5], 4, 2.4, [0.1, 0, -0.15], 0.3),
   // Sideburns in front of the ears.
-  L(70, 8, [0.1, -1, 0.3], 5, 2.3, [0.1, 0, 0.1], 0.3),
-  L(-70, 8, [0.1, -1, -0.3], 5, 2.3, [0.1, 0, -0.1], 0.3),
+  L(70, 6, [0.1, -1, 0.3], 4.6, 2.2, [0.1, 0, 0.1], 0.3),
+  L(-70, 6, [0.1, -1, -0.3], 4.6, 2.2, [0.1, 0, -0.1], 0.3),
 ];
 
 // ── The torso: belt, breastplate in the coat's opening, coat over the rest ───────────────────
@@ -118,9 +126,10 @@ const DARK_KNIGHT: ChibiDesign = {
     skull: { c: [0, 0.5, 0], r: [9.4, 9.7, 10.3] },
     jaw: { c: [1.7, -4.1, 0], r: [7.9, 6.8, 8.2] },
     ear: { c: [-0.6, -3.2, 10], r: [2, 2.8, 1.6] },
-    shell: { c: [-0.9, 0.8, 0], r: [10.9, 10.5, 11.5] },
+    shell: { c: [-1.6, 1, 0], r: [11.5, 10.4, 11.3] },
     hairline: { faceYaw: 74, brow: 4, temple: 0, nape: -7.5, ear: -1.6 },
     locks: LOCKS,
+    lockLine: hex('#341f12'),
     face: {
       eye: [8.8, -1.7, 3.9],
       lash: hex('#1e0e10'),
@@ -130,10 +139,10 @@ const DARK_KNIGHT: ChibiDesign = {
       shine: hex('#ffffff'),
       brow: hex('#2c170c'),
       browUp: 3,
-      mouth: hex('#6e2a26'),
+      mouth: hex('#4a1614'),
       mouthAt: [9.8, -6.5],
       noseAt: [10.3, -3.9],
-      scar: { at: [7.2, -5.8, 6], colour: hex('#f8dcc4') },
+      scar: { at: [8.4, -4.6, 4.6], colour: hex('#fbe8d8') },
     },
   },
   body: {
@@ -143,8 +152,8 @@ const DARK_KNIGHT: ChibiDesign = {
     knee: { mat: ARMOUR, r: 3.1 },
     upperArm: { mat: COAT, r0: 3.4, r1: 3.0 },
     foreArm: { mat: ARMOUR, r0: 2.9, r1: 2.7 },
-    cuff: { mat: ARMOUR, r: 3.8, at: 0.04 },
-    hand: { mat: ARMOUR, r: 3.5 },
+    cuff: { mat: ARMOUR, r: 3.8, at: 0.04, rim: PLATE_EDGE },
+    hand: { mat: ARMOUR, r: 3.5, knuckle: SILVER },
     neck: { mat: SKIN, r: 2.6 },
     hips: [{ c: [0, 3.2, 0], r: [5.4, 5.6, 7.2], id: 1 }],
     chest: [
@@ -173,7 +182,7 @@ const DARK_KNIGHT: ChibiDesign = {
         { c: [-0.3, -3, 2.8], r: [4.5, 3.1, 4.2] },
       ],
       mat: ARMOUR,
-      rim: SILVER,
+      rim: PLATE_EDGE,
     }),
     plates({
       side: -1,
@@ -182,7 +191,7 @@ const DARK_KNIGHT: ChibiDesign = {
         { c: [-0.2, -0.6, 1.8], r: [4.1, 3, 4] },
       ],
       mat: ARMOUR,
-      rim: SILVER,
+      rim: PLATE_EDGE,
     }),
     skirt({
       outer: COAT,
