@@ -31,7 +31,7 @@
  */
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
-import { DUST, DUST_DARK, glowLine, puff } from '../fx.js';
+import { afterimages, DUST, DUST_DARK, glowLine, puff } from '../fx.js';
 import { fromReady, GUARD_STANCE, settle } from './moves-core.js';
 import { add3, at3, type ChibiPose, clamp, type FxContext, lerp, type P2, pose, rad, rotate, SIDE_LOOK, type V3 } from '../rig.js';
 
@@ -101,12 +101,10 @@ const rush =
         [20, GHOST_FAR, 0.4],
         [10, aura.core, 0.5],
       ];
-      for (let y = 0; y < c.h; y++) {
-        for (let xx = 0; xx < c.w; xx++) {
-          if (!c.opaque(xx, y)) continue;
-          for (const [off, col, a] of ghosts) c.glow(xx - dir * Math.round(off * k), y, col, a * k, true);
-        }
-      }
+      afterimages(
+        c,
+        ghosts.map(([off, colour, a]) => ({ dx: -dir * Math.round(off * k), dy: 0, colour, alpha: a * k })),
+      );
     } else {
       for (let i = 0; i < 14; i++) {
         const th = (i / 14) * Math.PI * 2 + hash(i, 71) * 0.3;

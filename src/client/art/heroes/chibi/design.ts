@@ -133,6 +133,8 @@ export interface PieceContext {
 export const WEAPON_TAG = 1;
 /** The owner tag of the head's pixels (with its hair and collar). */
 export const HEAD_TAG = 2;
+/** The owner tag of the off-hand item's pixels. */
+export const OFFHAND_TAG = 3;
 
 /** Something to paint at a depth (bigger is nearer the viewer). */
 export interface DrawItem {
@@ -160,6 +162,48 @@ export interface WeaponDesign {
   paint: (ctx: PieceContext, part: Part) => void;
   /** Soft glow painted over the figure (a rune channel), 0 to 1 strength. */
   glow?: (ctx: PieceContext, strength: number) => void;
+  /**
+   * The stretch along it a hand may hold (a pole arm's haft, from near its butt to below its
+   * head): a left hand that cannot reach its place on a two-handed weapon (the pose's `grip2`)
+   * slides along the haft to the nearest place it can reach, so it stays on the weapon. Without
+   * it the hand reaches for its place and may fall short of it, as a sword's hand on a grip would.
+   */
+  haft?: readonly [number, number];
+}
+
+/**
+ * How an item is held in this frame, for its painter: the grip (where the hand holds it and its
+ * axes, as `Rig.weapon` or `Rig.offhand`), how brightly its glowing parts burn (0 smouldering at
+ * rest to 1 ablaze: the pose's `fx.rune` for the main weapon, `fx.runeB` for the off-hand item,
+ * plus a little of `fx.aura`; see blade.ts `blaze`) and the owner tag its pixels carry
+ * (WEAPON_TAG or OFFHAND_TAG), so its glow can keep to its own pixels.
+ */
+export interface Held {
+  grip: Rig['weapon'];
+  blaze: number;
+  tag: number;
+}
+
+/**
+ * Something a hand holds, painted at whichever grip it is given: the builders (blade.ts,
+ * pole.ts, wand.ts) make items that serve as the main weapon or as the off-hand item alike, so
+ * twin blades or a sword and a wand are a design's choice. Its own axes are a grip's: u along it
+ * from where the hand holds it, v across it (toward a blade's cutting edge), n its flat.
+ *
+ * A bow would be one too: held at its middle in the off hand (`reach` running from one limb's tip
+ * below the hand to the other's above it), with its painter stringing it to wherever the main
+ * hand is (`ctx.rig.armR.end`), so a pose draws it by pulling that hand back, and `tip` where an
+ * arrow (or a spell) leaves it.
+ */
+export interface HeldItem {
+  /** Its working part along it from the hand (a blade, a pole arm's head, a wand's crystal), for smears and impacts. */
+  reach: readonly [number, number];
+  /** Where effects leave it (`FxContext.tip`, `tipB`), along it from the hand (default `reach[1]`). */
+  tip?: number;
+  /** Paints it into a part. Without `held` it is the main weapon (`ctx.rig.weapon`, the pose's `fx.rune`, WEAPON_TAG). */
+  paint: (ctx: PieceContext, part: Part, held?: Held) => void;
+  /** A soft glow painted over the figure after it is outlined, 0 to 1 strength (or more), on its own pixels only. */
+  glow?: (ctx: PieceContext, strength: number, held?: Held) => void;
 }
 
 export interface ChibiDesign {
@@ -171,6 +215,13 @@ export interface ChibiDesign {
   headPieces: readonly HeadPiece[];
   outfit: readonly Piece[];
   weapon: WeaponDesign;
+  /**
+   * An item in the off (left) hand: a wand, a second blade, later a bow. With one, the main weapon
+   * is one-handed: the pose gives `handB` and the item's own angles (`weaponB`, `rollB`, `yawB`);
+   * a pose that leaves `handB` out still puts that hand, item and all, on the main weapon's
+   * second grip (a two-handed blow).
+   */
+  offhand?: HeldItem;
   /** Skill aura: core, edge and the white-hot colour of a smear's cutting edge (every effect is painted in these). */
   aura: { core: RGB; edge: RGB; hot: RGB };
 }

@@ -1,8 +1,8 @@
 /**
- * The chibi painter: solves a pose, then paints a design's legs, torso, head, arms, hands, weapon
- * and outfit pieces far to near through the view's camera, outlines the figure in ink and lays the
- * pose's effects over it. Everything a hero looks like comes from its design; everything it does
- * comes from its poses.
+ * The chibi painter: solves a pose, then paints a design's legs, torso, head, arms, hands, weapon,
+ * off-hand item and outfit pieces far to near through the view's camera, outlines the figure in
+ * ink and lays the pose's effects over it. Everything a hero looks like comes from its design;
+ * everything it does comes from its poses.
  *
  * Depth order: each part sorts by its depth toward the viewer. The legs and the cloth that hangs
  * among them sort by their true depths; the torso always goes on after the legs (its hips cover
@@ -13,7 +13,8 @@
 import { Canvas, INK, type Raster } from '../paint.js';
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
 import type { Vec } from '../skeleton.js';
-import { type ChibiDesign, type DrawItem, type PieceContext, WEAPON_TAG } from './design.js';
+import { blaze } from './blade.js';
+import { type ChibiDesign, type DrawItem, OFFHAND_TAG, type PieceContext, WEAPON_TAG } from './design.js';
 import { paintFx } from './fx.js';
 import { paintHead } from './head.js';
 import { dim, Part } from './raster.js';
@@ -24,7 +25,7 @@ const FAR = -0.16;
 /** Paints one frame of a chibi hero in a pose, seen from a view. */
 export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box: FrameBox): Raster {
   const c = new Canvas(box.w, box.h);
-  const rig = solveRig(d.build, pose, d.weapon.grip2);
+  const rig = solveRig(d.build, pose, d.weapon.grip2, d.weapon.haft);
   const cam = camera(view, pose.turn ?? 0, box.ax, box.ay);
   const owner = new Int16Array(box.w * box.h);
   const ctx: PieceContext = {
@@ -94,17 +95,31 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
       }),
   });
 
-  // Arms and hands. A hand on the weapon goes over its grip.
+  // Arms and hands. A hand on the weapon (or on the off-hand item) goes over its grip.
   const w = rig.weapon;
   const wZ = depth(add3(w.o, w.u, d.weapon.reach[1] * 0.3)) + up;
+  const off = d.offhand;
+  const wB = rig.offhand;
+  const bZ = off ? depth(add3(wB.o, wB.u, off.reach[1] * 0.3)) + up : 0;
   for (const [arm, side] of [[rig.armR, 1], [rig.armL, -1]] as const) {
     const far = farSide(arm.mid) && farSide(arm.end);
     // An arm on the far side sorts by its true depth, so a coat flap hanging nearer the viewer stays in front of it.
     const zArm = depth(lerp3(arm.mid, arm.end, 0.4)) * 0.6 + depth(arm.root) * 0.4 + (far ? 0 : up);
     items.push({ z: zArm, draw: () => paintArm(ctx, d, arm, far) });
     const holds = side === 1 ? !pose.drop : rig.twoHanded;
-    const zHand = holds && farSide(arm.end) === farSide(add3(w.o, w.u, 12)) ? Math.max(zArm, wZ) + 0.05 : zArm + 0.05;
+    let zHand = holds && farSide(arm.end) === farSide(add3(w.o, w.u, 12)) ? Math.max(zArm, wZ) + 0.05 : zArm + 0.05;
+    if (side === -1 && off && !pose.dropB && farSide(arm.end) === farSide(add3(wB.o, wB.u, 6))) zHand = Math.max(zHand, bZ + 0.05);
     items.push({ z: zHand, draw: () => paintHand(ctx, d, arm, far) });
+  }
+  if (off) {
+    items.push({
+      z: bZ,
+      draw: () => {
+        const part = ctx.part(OFFHAND_TAG);
+        off.paint(ctx, part, { grip: wB, blaze: blaze(ctx, true), tag: OFFHAND_TAG });
+        part.commit();
+      },
+    });
   }
   items.push({
     z: wZ,

@@ -5,12 +5,15 @@
  * do, so a broad sword still reads when swung toward the viewer. A rune channel down the blade
  * smoulders in its rest colour and blazes (brighter, with its marks and a soft glow) as the pose's
  * `fx.rune` or `fx.aura` rises.
+ *
+ * A blade is a held item (design.ts `HeldItem`): the main weapon, or a second blade or dagger in
+ * the off hand (then it lies along `rig.offhand` and blazes with `fx.runeB`).
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { type PieceContext, WEAPON_TAG, type WeaponDesign } from './design.js';
+import { type Held, type HeldItem, type PieceContext, WEAPON_TAG, type WeaponDesign } from './design.js';
 import { type Mat, type Part } from './raster.js';
-import { add3, cross3, norm3 } from './rig.js';
+import { add3, cross3, type Grip, norm3 } from './rig.js';
 
 export interface BladeSpec {
   /** The blade's outline in [u, v] (v + toward the cutting edge), from the guard round to the tip and back. */
@@ -33,9 +36,12 @@ export interface BladeSpec {
   reach: readonly [number, number];
 }
 
-/** The weapon's screen axes: the grip, along it and across it (with a floor on how thin it looks). */
-export function bladeAxes(ctx: PieceContext): { o: Vec; u: Vec; v: Vec; flip: number } {
-  const w = ctx.rig.weapon;
+/**
+ * A held item's screen axes: the grip, along it and across it (with a floor on how thin it looks).
+ * The main weapon's unless another grip (the off-hand item's) is given.
+ */
+export function bladeAxes(ctx: PieceContext, grip: Grip = ctx.rig.weapon): { o: Vec; u: Vec; v: Vec; flip: number } {
+  const w = grip;
   const o = ctx.proj(w.o);
   const u = ctx.cam.vec(w.u);
   let v = ctx.cam.vec(w.v);
@@ -52,22 +58,78 @@ export function bladeAxes(ctx: PieceContext): { o: Vec; u: Vec; v: Vec; flip: nu
   return { o, u, v, flip };
 }
 
-const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
-
-/** How brightly the rune blazes in a pose (0 smouldering at rest, 1 ablaze). */
-export function blaze(ctx: PieceContext): number {
+/**
+ * How brightly the rune blazes in a pose (0 smouldering at rest, 1 ablaze): the main weapon's from
+ * `fx.rune`, the off-hand item's (`off`) from `fx.runeB`, either a little brighter in an aura.
+ */
+export function blaze(ctx: PieceContext, off = false): number {
   const fx = ctx.pose.fx ?? {};
-  return Math.max(0, Math.min(1, (fx.rune ?? 0) + (fx.aura ?? 0) * 0.35));
+  return Math.max(0, Math.min(1, ((off ? fx.runeB : fx.rune) ?? 0) + (fx.aura ?? 0) * 0.35));
 }
 
-export function blade(spec: BladeSpec): WeaponDesign {
+/** How the main weapon is held when a painter is not told otherwise. */
+export const mainHeld = (ctx: PieceContext): Held => ({ grip: ctx.rig.weapon, blaze: blaze(ctx), tag: WEAPON_TAG });
+
+/** Mixes two colours. */
+export const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
+
+/** A glowing channel's colour as it blazes: its rest colour, through its colour, to its glow's. */
+export const runeColour = (r: { rest: RGB; colour: RGB; glow: RGB }, k: number): RGB => (k < 0.6 ? mixc(r.rest, r.colour, k / 0.6) : mixc(r.colour, r.glow, (k - 0.6) / 0.4));
+
+/**
+ * A soft glow along a channel of a held item (from `from` to `to` along it, `v` across), only
+ * where the item's own pixels show (not through a head or an arm in front of it).
+ */
+export function channelGlow(ctx: PieceContext, held: Held, r: { v: number; from: number; to: number; glow: RGB }, strength: number): void {
+  if (strength <= 0) return;
+  const ax = bladeAxes(ctx, held.grip);
+  const c: Canvas = ctx.c;
+  const at = (u: number, v: number): Vec => [ax.o[0] + ax.u[0] * u + ax.v[0] * v, ax.o[1] + ax.u[1] * u + ax.v[1] * v];
+  const n = Math.ceil(Math.abs(r.to - r.from) * Math.hypot(ax.u[0], ax.u[1]));
+  for (let i = 0; i <= n; i++) {
+    const u = r.from + ((r.to - r.from) * i) / Math.max(1, n);
+    const p = at(u, r.v);
+    const mine = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < c.w && y < c.h && ctx.owner[y * c.w + x] === held.tag;
+    const px = Math.floor(p[0]);
+    const py = Math.floor(p[1]);
+    if (!mine(px, py)) continue;
+    const flick = 0.7 + 0.3 * Math.sin(u * 0.9);
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const d = Math.hypot(dx, dy);
+        if (d > 2.2 || d < 0.5) continue;
+        if (!mine(px + dx, py + dy) && c.opaque(px + dx, py + dy)) continue;
+        c.glow(px + dx, py + dy, r.glow, strength * flick * (0.32 / d));
+      }
+    }
+  }
+}
+
+/**
+ * Clips a part to what of a held item stands above the ground: whatever of it is below the floor
+ * is sunk into it (a blade's point, a planted butt).
+ */
+export function clipToGround(part: Part, ax: { o: Vec; u: Vec; v: Vec }, w: Grip): void {
+  const det = ax.u[0] * ax.v[1] - ax.u[1] * ax.v[0];
+  if (Math.abs(det) > 1e-3) {
+    part.clip = (x, y) => {
+      const px = x + 0.5 - ax.o[0];
+      const py = y + 0.5 - ax.o[1];
+      const a = (px * ax.v[1] - py * ax.v[0]) / det;
+      const b = (ax.u[0] * py - ax.u[1] * px) / det;
+      return w.o[1] + w.u[1] * a + w.v[1] * b > -0.5;
+    };
+  }
+}
+
+export function blade(spec: BladeSpec): WeaponDesign & HeldItem {
   return {
     grip2: spec.grip2,
     reach: spec.reach,
-    paint: (ctx: PieceContext, part: Part) => {
+    paint: (ctx: PieceContext, part: Part, held: Held = mainHeld(ctx)) => {
       const { cam } = ctx;
-      const w = ctx.rig.weapon;
-      const ax = bladeAxes(ctx);
+      const w = held.grip;
+      const ax = bladeAxes(ctx, w);
       const at = (u: number, v: number): Vec => [ax.o[0] + ax.u[0] * u + ax.v[0] * v, ax.o[1] + ax.u[1] * u + ax.v[1] * v];
       const z = (u: number): number => ctx.depth(add3(w.o, w.u, u));
       let n = norm3(cross3(w.u, w.v));
@@ -77,16 +139,7 @@ export function blade(spec: BladeSpec): WeaponDesign {
       const ul2 = ax.u[0] * ax.u[0] + ax.u[1] * ax.u[1] || 1;
       const zAt = (x: number, y: number): number => z(((x + 0.5 - ax.o[0]) * ax.u[0] + (y + 0.5 - ax.o[1]) * ax.u[1]) / ul2) + 0.4;
       // Whatever of the weapon is below the ground is sunk into it.
-      const det = ax.u[0] * ax.v[1] - ax.u[1] * ax.v[0];
-      if (Math.abs(det) > 1e-3) {
-        part.clip = (x, y) => {
-          const px = x + 0.5 - ax.o[0];
-          const py = y + 0.5 - ax.o[1];
-          const a = (px * ax.v[1] - py * ax.v[0]) / det;
-          const b = (ax.u[0] * py - ax.u[1] * px) / det;
-          return w.o[1] + w.u[1] * a + w.v[1] * b > -0.5;
-        };
-      }
+      clipToGround(part, ax, w);
       // Grip and pommel.
       const g0 = at(spec.grip.from, 0);
       const g1 = at(spec.grip.to, 0);
@@ -122,8 +175,8 @@ export function blade(spec: BladeSpec): WeaponDesign {
       if (spec.rune) {
         // A thin channel smouldering at rest; ablaze it brightens toward the glow's colour and its marks show.
         const r = spec.rune;
-        const k = blaze(ctx);
-        const col = k < 0.6 ? mixc(r.rest, r.colour, k / 0.6) : mixc(r.colour, r.glow, (k - 0.6) / 0.4);
+        const k = held.blaze;
+        const col = runeColour(r, k);
         const runeMat: Mat = { tones: [col, col, col, col], line: col, flat: true };
         const n2 = Math.ceil(Math.abs(r.to - r.from) * Math.hypot(ax.u[0], ax.u[1]));
         for (let i = 0; i <= n2; i++) {
@@ -152,31 +205,8 @@ export function blade(spec: BladeSpec): WeaponDesign {
       }
       part.clip = null;
     },
-    glow: (ctx: PieceContext, strength: number) => {
-      const r = spec.rune;
-      if (!r || strength <= 0) return;
-      const ax = bladeAxes(ctx);
-      const c: Canvas = ctx.c;
-      const at = (u: number, v: number): Vec => [ax.o[0] + ax.u[0] * u + ax.v[0] * v, ax.o[1] + ax.u[1] * u + ax.v[1] * v];
-      const n = Math.ceil(Math.abs(r.to - r.from) * Math.hypot(ax.u[0], ax.u[1]));
-      for (let i = 0; i <= n; i++) {
-        const u = r.from + ((r.to - r.from) * i) / Math.max(1, n);
-        const p = at(u, r.v);
-        // Only where the blade shows: not through a head or an arm in front of it.
-        const mine = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < c.w && y < c.h && ctx.owner[y * c.w + x] === WEAPON_TAG;
-        const px = Math.floor(p[0]);
-        const py = Math.floor(p[1]);
-        if (!mine(px, py)) continue;
-        const flick = 0.7 + 0.3 * Math.sin(u * 0.9);
-        for (let dy = -2; dy <= 2; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            const d = Math.hypot(dx, dy);
-            if (d > 2.2 || d < 0.5) continue;
-            if (!mine(px + dx, py + dy) && c.opaque(px + dx, py + dy)) continue;
-            c.glow(px + dx, py + dy, r.glow, strength * flick * (0.32 / d));
-          }
-        }
-      }
+    glow: (ctx: PieceContext, strength: number, held: Held = mainHeld(ctx)) => {
+      if (spec.rune) channelGlow(ctx, held, spec.rune, strength);
     },
   };
 }
