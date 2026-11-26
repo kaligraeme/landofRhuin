@@ -181,7 +181,7 @@ export function skirt(spec: SkirtSpec): Piece {
           d = add3(d, [0, 0, 1], sway * 0.35 * t);
           d = norm3(d);
           // A ripple running down the cloth, stronger toward the hem and in the wind.
-          const wave = Math.sin(phase * 1 - j * 1.05 + k * 0.8 + pi * 1.7) * (0.35 + wind * 1.3 + flare) * t;
+          const wave = Math.sin(phase - j * 1.05 + k * 0.8 + pi * 1.7) * (0.8 + wind * 1.2 + flare) * t;
           const across = norm3(cross3(d, out));
           const normal = norm3(cross3(across, d));
           p = add3(add3(p, d, seg), add3(mul3(normal, wave * 0.55), across, wave * 0.18 * (k - COLS / 2)));

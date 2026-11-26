@@ -111,10 +111,13 @@ export interface FxContext {
  *    angle's plane (they default to the pose's), `width` how far down the blade the arc reaches
  *    (0 to 1, default 0.55), `alpha` its strength. The arc is white-hot along the cutting edge,
  *    fading through the aura colour to nothing; parts of it behind the body show only around it.
- *  - `ring`: a horizontal ring around him at blade height, for spins: `from` and `to` are angles
- *    around him in degrees measured like `turn` (0 ahead of him, 90 to his right), drawn from the
- *    faint tail (`from`) to the bright head (`to`); `height` above the ground (default the grip
- *    height), `radius` (default the blade's reach from his centre).
+ *  - `ring`: a level ring around him at blade height, for spins: `from` and `to` are angles round
+ *    him in degrees in the same frame as `turn` (0 is the way he faces at `turn: 0`, 90 his right
+ *    there), so a ring stays put in the world while he spins inside it. It runs from its faint
+ *    tail (`from`) to its bright head (`to`); a blade held out to his right is at `turn + 90`.
+ *    `height` above the ground (default the grip's), `radius` (default the blade's reach + 4).
+ *    Smears are turned to show their face when a swing comes straight at the viewer; rings are
+ *    not (they stay level).
  *  - `impact`: a starburst at the blade's tip (or at `impactAt`, a hero-space point), size 1 = 10 px.
  *  - `clang`: a guard's clang: a hard white flash and sparks on the blade, 0 to 1.
  *  - `dust`: dust kicked up at the feet. `speed`: speed lines trailing behind him.
@@ -184,10 +187,12 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  * Weapon (in the right hand)
  *  - `weapon`: the blade's angle in the side plane: 0 points up, 90 forward, 180 down, -90 (or
  *    270) back. Angles beyond ±180 are fine (a full swing over the top goes -120 → 0 → 150).
- *  - `roll`: tips the blade's plane about his forward axis, + carrying the tip toward his right:
- *    a diagonal cut from high on his right to low on his left is about `roll: 30`, the reverse
- *    (rising backhand) about `roll: -30`. Seen from the front this is what makes blows sweep
- *    across the body rather than straight at the viewer.
+ *  - `roll`: tips the blade's plane about his forward axis, + carrying the tip toward his right
+ *    when it is up (and toward his left when it is down): a diagonal cut from high on his right
+ *    to low on his left is `weapon` running -70 → 110 with `roll` about 40; a rising backhand back
+ *    up the same diagonal keeps the roll and runs `weapon` the other way; `roll: -40` is the other
+ *    diagonal. Seen from the front this is what makes blows sweep across the body rather than
+ *    straight at the viewer.
  *  - `yaw`: turns the blade about the vertical like `turn` does the body (clockwise seen from
  *    above): a blade pointing ahead swings to his right, one pointing behind him swings to his
  *    left (so a blade resting back over his right shoulder takes a negative yaw to stand clear of
@@ -207,6 +212,22 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *
  * Effects
  *  - `fx`: see ChibiFx.
+ *
+ * Working notes for choreographers
+ *  - Every pose is drawn in all three views, so check each clip side on, front and back (the
+ *    render script in the scratchpad shows them). Side on he faces right and 32 degrees toward the
+ *    viewer: things on his right (+r) are nearer, and a blade pointing ahead is a little
+ *    foreshortened; front on, anything held straight ahead points at the viewer, so give swings
+ *    a `roll` and keep resting blades out to his right (a third `handF` value of 8 to 10).
+ *  - Proportions: standing (`y: 1`) the base of his neck is about 50 px up and his shoulders sit
+ *    3.6 below it, 8.6 to either side; arms reach about 18 from the shoulder and legs 24 from the
+ *    hip. The greatsword's tip is 64 px from the grip: the part of a blade below the floor is
+ *    hidden (it bites into the ground). The tip's height is about
+ *    `hand height + 64·cos(weapon)·cos(roll)`: keep it near 0 for a blow that stops at the floor.
+ *  - Helpers: `pose(base, changes)` for a variation on a stance, `mix(a, b, t)` for in-betweens,
+ *    `wave(i, n)` for a smooth loop. The stances (GUARD_STANCE, AT_EASE) live in moves-core.ts.
+ *  - A clip must have exactly as many poses as its timing in index.ts says (the hero factory
+ *    throws otherwise); wind-up frames come first.
  */
 export interface ChibiPose {
   x: number;
