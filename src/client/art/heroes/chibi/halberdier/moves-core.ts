@@ -15,8 +15,8 @@
  *              streaming
  *   atk1    7  (1 wind-up) a straight, low thrust: drawn back with the point lifted, driven out
  *              with a stamp of the lead foot, the left hand sliding up the haft
- *   atk2    7  (1 wind-up) an overhand thrust: the haft cocked high beside his ear, rear elbow
- *              up, and driven forward and down
+ *   atk2    7  (1 wind-up) an overhand thrust: the haft cocked high by his ear, rear elbow up,
+ *              the point angled down, and driven forward and down
  *   atk3    9  (2 wind-up) a deep coil, then a hop in and a long lunge from the butt end of the
  *              haft for the farthest reach: a flash and a burst of wind at the point, dust
  *
@@ -295,7 +295,7 @@ const battle = Array.from({ length: BOUNCE }, (_, i): ChibiPose => {
     lean: 7 + b * 2.5,
     head: 1 + bounce(i - 1) * 3,
     handF: [-4, 16 + b * 1.2, 7],
-    weapon: 54 + bounce(i - 1) * 6,
+    weapon: 55 + bounce(i - 1) * 6,
     wind: 0.8 + Math.max(0, lag) * 0.15,
     lift: 0.1 + lag * 0.35,
     sway: Math.sin((2 * Math.PI * (i - 1)) / BOUNCE) * 0.2,
@@ -394,15 +394,16 @@ const atk1: ChibiPose[] = [
   settle(A1_HOLD, 0.9, { wind: 0.78, lift: 0.05, phase: 1, fx: undefined }),
 ];
 
-// atk2: an overhand thrust. The haft cocked high beside his right ear, rear elbow up, the point
-// angled down at the foe; then driven forward and down from above.
-const A2_RAISE = pose(READY, { x: -3, y: 4, lean: -2, twist: 18, head: headUp(-2, 1), look: -6, footF: [-12, 0, 5], footB: [10, 0, 5.4], handF: [-7, -11, 13], weapon: 102, roll: 0, yaw: -8, grip: -12, grip2: 12, wind: 0.3, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
+// atk2: an overhand thrust. The haft cocked high by his right ear, rear elbow up, the point
+// angled steeply down at the foe (steeply enough that the haft runs below his face side on and
+// beside it toward the viewer); then driven forward and down from above.
+const A2_RAISE = pose(READY, { x: -3, y: 4, lean: -2, twist: 18, head: headUp(-2, 1), look: -6, footF: [-12, 0, 5], footB: [10, 0, 5.4], handF: [-7, -11, 13], weapon: 58, roll: 0, yaw: -6, grip: -4, grip2: 12, wind: 0.3, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
 const A2_DRIVE = pose(READY, { x: 3, y: 6, lean: 12, twist: 8, head: headUp(12), look: -4, footF: [-12, 0, 5], footB: [15, 0, 5.4], handF: [1, 0, 10], weapon: 104, yaw: -18, grip: -12, grip2: 18, wind: 0.5, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
 const A2_HIT = pose(READY, { x: 7, y: 8, lean: 20, twist: 2, head: headUp(20), look: -2, footF: [-13, 0, 5], footB: [18, 0, 5.6], handF: [8, 6, 8], weapon: 98, yaw: -32, grip: -12, grip2: 26, wind: 0.85, phase: 0.4, face: 'shout', fx: { rune: 1 } });
 const A2_HOLD = pose(A2_HIT, { y: 8.5, lean: 21, head: headUp(21), handF: [8, 6.5, 8], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.7 } });
 
 const atk2: ChibiPose[] = [
-  fromReady(A2_RAISE, 0.8),
+  fromReady(A2_RAISE, 0.9),
   drill(thrust(A2_RAISE, A2_DRIVE, 0.8, 4), 0.7, 0.15, 22),
   drill(withExtra(thrust(A2_RAISE, A2_HIT, 1, 5), flash(1)), 1.3, 0.35, 36, 11),
   drill(thrust(A2_RAISE, A2_HOLD, 0.4, 5), 0.7, 0.6, 36, 11),
@@ -416,7 +417,7 @@ const atk2: ChibiPose[] = [
 // and a burst of wind at the point, a drill of wind, dust.
 const A3_COIL = pose(READY, { x: -6, y: 12, lean: 6, twist: 34, head: headUp(6, 4), look: -8, footF: [-15, 0, 5.2], footB: [8, 0, 5.6], handF: [-14, 16, 8], weapon: 50, yaw: -26, grip: -10, grip2: 10, wind: 0.3, sway: 0.3, face: 'grit', fx: { rune: 0.6 } });
 const A3_COIL2 = pose(A3_COIL, { x: -7, y: 13.5, lean: 8, twist: 38, head: headUp(8, 4), handF: [-15, 16.5, 8], weapon: 46, grip2: 9, wind: 0.35, lift: 0.2, phase: 0.1, fx: { rune: 0.9, aura: 0.3 } });
-const A3_LEAP = pose(READY, { x: 6, y: 0, lean: 16, twist: 10, head: headUp(16), look: -4, footF: [-16, -4, 5], footB: [14, -6, 5.4], handF: [0, 13, 6], weapon: 74, yaw: -34, grip: -22, grip2: 6, wind: 0.9, lift: 0.3, phase: 0.25, face: 'shout', fx: { rune: 1, aura: 0.4, speed: 0.6 } });
+const A3_LEAP = pose(READY, { x: 6, y: 0, lean: 16, twist: 10, head: headUp(16), look: -4, footF: [-16, -4, 5], footB: [14, -6, 5.4], handF: [0, 13, 6], weapon: 74, yaw: -34, grip: -22, grip2: 6, wind: 0.9, lift: 0.35, phase: 0.25, face: 'shout', fx: { rune: 1, aura: 0.4, speed: 0.6 } });
 const A3_LUNGE = pose(READY, { x: 12, y: 11, lean: 24, twist: 2, head: headUp(24), look: -2, footF: [-12, 0, 5], footB: [23, 0, 5.8], handF: [12, 11, 4], weapon: 80, yaw: -36, grip: -26, grip2: 14, wind: 1.1, phase: 0.4, face: 'shout', fx: { rune: 1, aura: 0.3, dust: 1 } });
 const A3_HOLD = pose(A3_LUNGE, { y: 11.5, lean: 25, head: headUp(25), handF: [12, 11.5, 4], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.8, dust: 0.6 } });
 

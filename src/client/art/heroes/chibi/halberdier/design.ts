@@ -122,7 +122,9 @@ const deg = (h: Hit): number => Math.abs((Math.atan2(h.p[2], h.p[0]) * 180) / Ma
 function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   const u = h.p[1];
   const yaw = deg(h);
-  if (where === 'hips') return u > 4.6 ? TEAL : TROUSERS;
+  // The tunic covers his hips all round (its skirt hangs from them), so no dark seat of the
+  // trousers shows between the flaps.
+  if (where === 'hips') return TEAL;
   if (u < 5) return null;
   // A brown leather belt with a silver buckle.
   if (u < 8) {

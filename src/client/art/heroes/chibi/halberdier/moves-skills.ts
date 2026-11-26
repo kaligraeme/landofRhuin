@@ -289,7 +289,7 @@ const r: ChibiPose[] = [
   // The ring closes and the slowing wind rolls out over the floor and blows out, gone before the
   // last frame so the stance takes over cleanly.
   pose(whirl(8), { fx: { ring: { from: (WHIRL[7] as number) + 90 - 320, to: (WHIRL[7] as number) + 90, height: 40 }, rune: 0.8, aura: 0.2, shock: 0.55, shockAt: [0, 0, 0], extra: gust(0.85, 24) } }),
-  settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.85, { turn: 720, flare: 0.3, wind: 0.78, fx: undefined }),
+  settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.85, { turn: 720, flare: 0.3, wind: 0.78, lift: 0.05, fx: undefined }),
 ];
 
 // ── Skewer ───────────────────────────────────────────────────────────────────────────────────
@@ -391,7 +391,7 @@ const ult: ChibiPose[] = [
   pose(COUCH, { x: 6, y: 6, footF: [-18, 0, 5], footB: [14, -7, 5], phase: 0.2, fx: { rune: 1, aura: 0.5, dust: 1, speed: 0.8, ghosts: { k: 0.6, n: 2 }, extra: cone(0.8, 0.1) } }),
   // The charge: long bounding strides, barely touching the floor.
   pose(COUCH, { y: 1, footF: [-16, -10, 5], footB: [24, -4, 5], phase: 0.3, fx: { rune: 1, aura: 0.45, speed: 1, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.25) } }),
-  pose(COUCH, { y: 6, footF: [12, -12, 5], footB: [8, 0, 5], phase: 0.4, fx: { rune: 1, aura: 0.45, speed: 1, dust: 0.7, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.4) } }),
+  pose(COUCH, { y: 6, footF: [12, -12, 5], footB: [8, 0, 5], lift: 0.15, phase: 0.4, fx: { rune: 1, aura: 0.45, speed: 1, dust: 0.7, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.4) } }),
   pose(COUCH, { y: 1, footF: [24, -4, 5], footB: [-16, -10, 5], phase: 0.5, fx: { rune: 1, aura: 0.45, speed: 1, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.55) } }),
   pose(COUCH, { y: 6, footF: [8, 0, 5], footB: [12, -12, 5], phase: 0.6, fx: { rune: 1, aura: 0.45, speed: 1, dust: 0.7, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.7) } }),
   // Skewered: a great burst of wind at the point, a white flash and a ring thrown out round it.
@@ -426,7 +426,7 @@ const cast: ChibiPose[] = [
   twirl(300, 40, { y: 6, phase: 0.2, sway: -0.3 }),
   // Planted: the butt struck into the floor, the burst of wind.
   pose(PLANTED, { phase: 0.3, fx: { rune: 1, aura: 1, circle: 1, impact: 1, impactAt: [-8, 2, 13], shock: 0.08, shockAt: [0, 0, 0], dust: 1, extra: gust(0.1, 24) } }),
-  pose(PLANTED, { y: 4.5, lean: -6, head: -9, phase: 0.45, lift: 0.4, fx: { rune: 1, aura: 1, circle: 0.9, shock: 0.45, shockAt: [0, 0, 0], extra: gust(0.5, 24) } }),
+  pose(PLANTED, { y: 4.7, lean: -6, head: -9, phase: 0.45, lift: 0.4, fx: { rune: 1, aura: 1, circle: 0.9, shock: 0.45, shockAt: [0, 0, 0], extra: gust(0.5, 24) } }),
   pose(PLANTED, { y: 4, lean: -5, head: -8, phase: 0.6, lift: 0.3, face: 'smirk', fx: { rune: 0.8, aura: 0.6, circle: 0.45, shock: 0.8, shockAt: [0, 0, 0], extra: gust(0.9, 24) } }),
   // Back into the stance: the haft swung down across him, the point out past his lead shoulder
   // clear of his face, then into the guard, the wind gone.

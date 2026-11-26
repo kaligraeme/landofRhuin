@@ -198,7 +198,7 @@ const ko: ChibiPose[] = [
   // Toppling back, the scarf flying up; the halberd hits the floor beside him.
   pose(DOWN, { x: -5, y: 18, lean: -45, turn: -45, head: -8, look: 10, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 16], handB: [0, 6, 13], dropAt: [-4, 2.5, 26], weapon: 86, lift: 0.6, fx: { extra: clatter } }),
   // Down: the thud raises dust and bounces his boots.
-  pose(DOWN, { lean: -82, head: -12, footF: [16, -4, 7], footB: [14, -5, 2], lift: 0.2, fx: { dust: 0.9, extra: thud } }),
+  pose(DOWN, { lean: -82, head: -12, footF: [16, -4, 7], footB: [14, -5, 2], lift: 0.25, fx: { dust: 0.9, extra: thud } }),
   pose(DOWN, {}),
 ];
 
@@ -236,16 +236,16 @@ const PROUD: ChibiPose = pose(S, { x: 1.5, y: 1.5, lean: -3, twist: 10, tilt: 7,
 
 const victory: ChibiPose[] = [
   // A breath first: the halberd lifted out of the stance, upright in his right hand.
-  fromReady(pose(TWIRL, { y: 6, lean: 6, twist: 6, head: 1, handF: [5, 10, 13], weapon: 20, roll: 16, yaw: 20, face: 'smirk', wind: 0.4 }), 0.8),
+  fromReady(pose(TWIRL, { y: 6, lean: 6, twist: 6, head: 1, handF: [5, 10, 13.8], weapon: 20, roll: 16, yaw: 20, face: 'smirk', wind: 0.4 }), 0.8),
   // It wheels round beside him, once...
   pose(TWIRL, { weapon: 170, grip: 22, handF: [4, 1, 16], phase: 0.1, fx: { smear: { from: 20, roll: 10, width: 0.6 }, rune: 0.8 } }),
   pose(TWIRL, { weapon: 325, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
   // ...and is swept down and planted beside him with a glint at the point.
-  pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.7, lift: 0.5, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, extra: glint(1) } }),
+  pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.7, lift: 0.55, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, extra: glint(1) } }),
   pose(PROUD, { y: 2, phase: 0.5, wind: 0.65, lift: 0.4, fx: { rune: 0.5, extra: glint(0.5) } }),
   // Settled: chin up, a grin, the scarf still streaming.
   pose(PROUD, { phase: 0.65, wind: 0.6 }),
-  pose(PROUD, { phase: 0.8, wind: 0.57 }),
+  pose(PROUD, { phase: 0.82, wind: 0.57 }),
   pose(PROUD, { phase: 0.95 }),
 ];
 
