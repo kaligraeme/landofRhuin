@@ -59,37 +59,40 @@ const BUILD: Build = {
 };
 
 // ── Hair: a wolf cut ─────────────────────────────────────────────────────────────────────────
-// A shaggy, heavily layered cut, between a shag and a mullet: a big tousled crown of short, choppy
-// pieces pointing every which way, with tufts breaking its top, a wispy fringe parted a little off
-// the middle with longer pieces framing the face, short layers stepping down close round the ears
-// (the shell is narrower there than the crown above it), and longer pointed layers at the back
-// that fall past the nape over the collar and flick out at the ends. Side on, an outer layer's end
-// flicks back past the collar under the crown; from behind, the outline runs wide at the crown,
-// narrower at the ears and nape, and wider again where the outer layers flick out over the collar.
-// In a run or a charge the crown tosses back and the layers lift off the collar.
+// A shaggy, heavily layered cut, between a shag and a mullet: a big tousled crown of broad, choppy
+// pieces pointing every which way, with tufts breaking its top; a wispy fringe parted a little off
+// the middle with longer pieces framing the face; short layers close round the ears; and at the
+// back the crown's lower edge falling in points over longer layers that fall past the nape onto
+// the top of the collar and flick out at the ends. From behind, the outline runs wide at the crown,
+// pulls in at the ears and nape and flares again where the outer layers flick out over the collar,
+// which shows below their points; front on those flicks show under his ears, and side on the near
+// one hangs behind his jaw and kicks back. In a run or a charge the crown tosses back and the
+// layers lift and stream.
 
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 const LOCKS: Lock[] = [
-  // The crown's widest part: choppy pieces all round it, pointing out and down every which way
-  // with their tips flicking out, so its outline is ragged and bumpy rather than a smooth dome.
-  // Those at his sides reach furthest, so from the front and from behind the crown flares out
-  // well past the sides below it; they give least to the wind, so it keeps that breadth in a run
-  // while the pieces behind toss back. Lopsided, so no pair of them reads as ears.
-  L(36, 50, [0.6, -0.4, 0.75], 8, 2.8, [0.1, -0.3, 0.3], 1.3, 0.28),
-  L(86, 52, [-0.1, -0.45, 1.15], 9, 2.8, [-0.1, -0.3, 0.3], 0.6, 0.28),
-  L(138, 48, [-0.75, -0.25, 0.98], 10.5, 3.2, [-0.3, -0.2, 0.2], 1, 0.28),
-  L(178, 50, [-1, -0.3, -0.1], 9.5, 3.2, [-0.35, -0.25, 0.05], 1.3, 0.28),
-  L(-136, 48, [-0.7, -0.3, -0.98], 10.5, 3.2, [-0.2, -0.2, -0.3], 1, 0.28),
-  L(-98, 42, [-0.3, -0.2, -1.3], 11, 3, [-0.1, -0.35, -0.25], 0.6, 0.28),
-  L(-40, 52, [0.55, -0.4, -0.8], 8, 2.8, [0.1, -0.3, -0.3], 1.3, 0.28),
-  // Short layers stepping down round the ears and the back of the head, close to it, so the
-  // outline pulls in under the crown.
+  // The crown's widest part: broad, choppy pieces all round it, pointing out and down every which
+  // way with their tips flicking out, so its outline is ragged and bumpy rather than a smooth dome,
+  // and each has a lit side broad enough to hold at game size. The two at his sides give least to
+  // the wind, so the crown keeps its breadth in a run while the rest toss back; they are lopsided
+  // (his right one tips up, his left one down), so front on and from behind they never sit level
+  // as a brim or a pair of horns.
+  L(36, 50, [0.6, -0.4, 0.75], 8, 4.4, [0.1, -0.3, 0.3], 1.8, 0.28),
+  L(86, 52, [-0.25, 0.25, 1.1], 8, 4.2, [-0.1, -0.3, 0.3], 0.6, 0.28),
+  L(138, 48, [-0.75, 0.15, 0.98], 10, 4.8, [-0.3, -0.2, 0.2], 2.2, 0.28),
+  L(178, 50, [-1, -0.3, -0.1], 9.5, 4.8, [-0.35, -0.25, 0.05], 2.2, 0.28),
+  L(-136, 48, [-0.7, -0.55, -0.98], 11, 4.8, [-0.2, -0.2, -0.3], 2.2, 0.28),
+  L(-98, 42, [-0.3, -0.6, -1.1], 9.5, 4.2, [-0.1, -0.35, -0.25], 0.6, 0.28),
+  L(-40, 52, [0.55, -0.4, -0.8], 8, 4.4, [0.1, -0.3, -0.3], 1.8, 0.28),
+  // Short layers close round the ears, so front on the ears show under the crown.
   L(104, 20, [-0.3, -1, 0.15], 5, 2.4, [-0.05, 0, 0.05], 1, 0.28),
   L(-104, 20, [-0.3, -1, -0.15], 5, 2.4, [-0.05, 0, -0.05], 1, 0.28),
-  L(140, 16, [-0.5, -1, 0.2], 4.8, 2.6, [-0.1, 0, 0.05], 1, 0.28),
-  L(-142, 18, [-0.5, -1, -0.2], 4.8, 2.6, [-0.1, 0, -0.05], 1, 0.28),
-  L(178, 22, [-0.55, -1, 0.05], 5, 2.8, [-0.1, 0, 0], 1, 0.28),
+  // The crown's lower edge at the back: broad pointed clumps falling to about his ears over the
+  // longer layers at the nape, so from behind the cut steps down in layers.
+  L(155, 14, [-0.6, -1, 0.35], 6.5, 3.5, [-0.1, 0, 0.1], 1.4, 0.3),
+  L(180, 10, [-0.6, -1, 0], 7, 3.5, [-0.1, 0, 0], 1.4, 0.3),
+  L(205, 14, [-0.6, -1, -0.35], 6.5, 3.5, [-0.1, 0, -0.1], 1.4, 0.3),
   // The fringe: wispy pointed pieces to the brows, parted a little to his left of the middle and
   // falling away to either side of the part.
   L(-50, 34, [0.35, -1, -0.5], 5, 1.8, [0.1, 0, -0.15], 0.3, 0.25),
@@ -106,34 +109,40 @@ const LOCKS: Lock[] = [
   // the locks' shapes by their places in this list, and from the 21st on those numbers are the
   // collar's too (no line parts shapes of one number), so the locks there must be ones that
   // never touch the collar.
-  L(120, 66, [-0.4, 0.45, 1], 8, 2.7, [0, -0.3, 0], 0.8, 0.3),
-  L(-150, 64, [-0.5, 0.45, -0.95], 8, 2.7, [0, -0.3, 0], 0.8, 0.3),
-  L(60, 72, [0.3, 0.7, 0.8], 7, 2.7, [0, -0.3, 0], 1.3, 0.3),
-  L(-80, 70, [-0.2, 0.7, -0.9], 7, 2.7, [0, -0.3, 0], 1.3, 0.3),
+  L(120, 66, [-0.4, 0.45, 1], 8, 3.8, [0, -0.3, 0], 2.2, 0.3),
+  L(-150, 64, [-0.5, 0.45, -0.95], 8, 3.8, [0, -0.3, 0], 2.2, 0.3),
+  L(60, 72, [0.3, 0.7, 0.8], 7, 3.3, [0, -0.3, 0], 2, 0.3),
+  L(-80, 70, [-0.2, 0.7, -0.9], 7, 3.3, [0, -0.3, 0], 2, 0.3),
   // The top: pieces from the crown tumbling forward over the top and out to either side.
-  L(170, 80, [0.9, 0.15, 0.2], 9, 3, [0.15, -0.5, 0], 1.3, 0.3),
-  L(-20, 76, [-0.3, 0.2, -0.95], 8.5, 3, [0, -0.5, -0.15], 1.3, 0.3),
-  L(50, 76, [-0.55, 0.2, 0.8], 8.5, 3, [-0.1, -0.5, 0.15], 1.3, 0.3),
+  L(170, 80, [0.9, 0.15, 0.2], 9, 4.8, [0.15, -0.5, 0], 2.2, 0.3),
+  L(-20, 76, [-0.3, 0.2, -0.95], 8.5, 4.4, [0, -0.5, -0.15], 2, 0.3),
+  L(50, 76, [-0.55, 0.2, 0.8], 8.5, 4.4, [-0.1, -0.5, 0.15], 2, 0.3),
+  // Two more short tufts, toward the front and the back, so the outline is bumpy all the way
+  // round and from behind has no single peak.
+  L(-28, 60, [0.3, 0.55, -0.85], 6.5, 3.2, [0, -0.3, 0], 2, 0.3),
+  L(152, 60, [-0.6, 0.45, 0.75], 6.5, 3.8, [0, -0.3, 0], 2.2, 0.3),
 ];
 
 /**
- * The longer layers at the back (the soft mullet that makes it a wolf cut): five pointed tresses
- * round the nape, falling back past it onto the top of his collar, their ends flicking out and
- * catching the light, at uneven lengths so the hem is jagged. The outer two are broadest and
- * longest and flick out furthest: side on the near one's end shows past the collar behind his
- * neck, and from behind the two flare out past the head's width at the collar, with the shorter
- * middle ones between them. They are nape layers (`long.nape`), painted with the head, so they
- * lie over the collar (they slide over it, as over the head) and stay behind his jaw where it is
- * nearer, without popping in front of or behind his head from frame to frame; their upper part is
- * a tone deeper, in the shadow of the hair above. They lift off the collar in a run rather than
- * streaming out, and ripple with the pose.
+ * The longer layers at the back (the soft mullet that makes it a wolf cut): six pointed tresses
+ * round the nape, falling past it onto the top of his collar, the collar showing between and below
+ * their points, their ends flicking out and catching the light. The outer two grow from behind
+ * his ears and are the broadest and longest: they hang close, so from behind the cut pulls in at
+ * the ears and nape, then flick out sideways at the top of the collar, past the head's width. Front
+ * on they show as points under his ears beside his neck; side on the near one hangs behind his jaw
+ * and kicks back at its end. The middle ones are shorter and narrower, so the hem is jagged. They
+ * are nape layers (`long.nape`), painted with the head, so they lie over the collar (they slide
+ * over it, as over the head) and stay behind his jaw where it is nearer, without popping in front
+ * of or behind his head from frame to frame; their upper part is a tone deeper, in the shadow of
+ * the hair above. In a run or a charge they lift and stream back, and they ripple with the pose.
  */
 const NAPE: Tress[] = [
-  { yaw: 132, pitch: -24, dir: [-1.3, -1, 1], len: 14, w: 3, stiff: 0.75, give: 0.45, taper: 0.4, flip: 2.5 },
-  { yaw: 158, pitch: -32, dir: [-1.1, -1, 0.16], len: 8, w: 2.1, stiff: 0.75, give: 0.45, taper: 0.7, flip: 0.8 },
-  { yaw: 180, pitch: -34, dir: [-1.1, -1, 0], len: 10, w: 2.1, stiff: 0.75, give: 0.45, taper: 0.7, flip: 0.5 },
-  { yaw: 202, pitch: -32, dir: [-1.1, -1, -0.16], len: 7.5, w: 2.1, stiff: 0.75, give: 0.45, taper: 0.7, flip: 0.8 },
-  { yaw: 228, pitch: -24, dir: [-1.3, -1, -1], len: 14, w: 3, stiff: 0.75, give: 0.45, taper: 0.4, flip: 2.5 },
+  { yaw: 116, pitch: -10, dir: [-0.3, -1.3, 0.65], len: 13.5, w: 3.5, stiff: 0.5, give: 0.8, taper: 0.25, flip: 2.5 },
+  { yaw: 145, pitch: -14, dir: [-0.7, -1.1, 0.45], len: 9, w: 2.4, stiff: 0.5, give: 0.8, taper: 0.65, flip: 2 },
+  { yaw: 168, pitch: -22, dir: [-1, -1, 0.15], len: 6.5, w: 1.8, stiff: 0.5, give: 0.8, taper: 0.75, flip: 1 },
+  { yaw: 192, pitch: -22, dir: [-1, -1, -0.15], len: 6.5, w: 1.8, stiff: 0.5, give: 0.8, taper: 0.75, flip: 1 },
+  { yaw: 215, pitch: -14, dir: [-0.7, -1.1, -0.45], len: 9, w: 2.4, stiff: 0.5, give: 0.8, taper: 0.65, flip: 2 },
+  { yaw: 244, pitch: -10, dir: [-0.3, -1.3, -0.65], len: 13.5, w: 3.5, stiff: 0.5, give: 0.8, taper: 0.25, flip: 2.5 },
 ];
 
 // ── The torso: belt, breastplate in the coat's opening, coat over the rest ───────────────────
@@ -180,8 +189,9 @@ const DARK_KNIGHT: ChibiDesign = {
     // Dark chestnut: mostly the base tone, the light tone on the lit side of each clump.
     darkHair: true,
     lockLine: hex('#341f12'),
-    // The back of the head, between the locks: narrow clumps running straight down from the crown.
-    whorl: { yaw: 180, pitch: 50, reach: 88, clumps: 10, twist: 0 },
+    // The back of the head, between the locks: clumps fanning out from the crown that twist a
+    // little as they fall, so it reads tousled rather than combed.
+    whorl: { yaw: 180, pitch: 50, reach: 88, clumps: 7, twist: 0.28 },
     face: {
       eye: [8.8, -1.7, 3.9],
       lash: hex('#1e0e10'),
