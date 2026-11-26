@@ -268,9 +268,14 @@ export interface DrawItem {
  */
 export type Piece = (ctx: PieceContext) => DrawItem[];
 
-/** A piece painted with the head (inside its depth test): collars, hoods, scarves round the neck. */
+/**
+ * A piece painted with the head (inside its depth test): collars, hoods, scarves round the neck,
+ * and things worn on the head itself (a hairpin, a circlet), which take `head`, the head's frame
+ * as painted (side on it turns a little further toward the viewer than the rig's head: see
+ * SIDE_LOOK in rig.ts), so they stay on the hair.
+ */
 export interface HeadPiece {
-  blobs: (ctx: PieceContext) => { frame: Frame3; blobs: readonly Blob[]; shade: (h: Hit) => { m: Mat; light?: number; id?: number } | null }[];
+  blobs: (ctx: PieceContext, head: Frame3) => { frame: Frame3; blobs: readonly Blob[]; shade: (h: Hit) => { m: Mat; light?: number; id?: number } | null }[];
 }
 
 /**

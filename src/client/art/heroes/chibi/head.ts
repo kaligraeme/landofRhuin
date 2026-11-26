@@ -227,7 +227,7 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     if (d.darkHair) tone = Math.min(3, tone + 1);
     return { m: hair, light: toneLight(hair, tone) };
   });
-  for (const piece of pieces) for (const b of piece.blobs(ctx)) part.blobs(b.frame, b.blobs, b.shade);
+  for (const piece of pieces) for (const b of piece.blobs(ctx, fr)) part.blobs(b.frame, b.blobs, b.shade);
   under?.(part);
 
   // Locks: wind streams them back and sideways, in the head's own axes (never forward: a
