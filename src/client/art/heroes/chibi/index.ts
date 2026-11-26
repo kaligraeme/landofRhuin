@@ -7,17 +7,22 @@
  * This file is the contract between the painter (which fills in `CHIBI_HEROES`) and the game
  * (sprites.ts and the renderer, which build atlases from `paint` and pick clips by `timing`).
  *
- * STUB: until the chibi painter lands, the Dark Knight is drawn with the old skeleton painter,
- * each chibi clip borrowing the nearest old clip, so the game side can be built and tested.
+ * The engine: rig.ts (the pose format, the 3D skeleton and the camera), raster.ts (the part
+ * painter: four-tone shading and coloured inner lines over paint.ts's Canvas), head.ts (heads
+ * and hair), pieces.ts (pauldrons, collars, cloth), blade.ts (bladed weapons), fx.ts (effects) and
+ * painter.ts (puts a frame together). A hero is a design file (darkKnight.ts) and its moves
+ * (moves-core.ts, moves-skills.ts, moves-states.ts), registered below.
  */
 import type { Raster } from '../paint.js';
-import { HERO_DESIGNS } from '../designs.js';
-import { heroClips, type HeroClip } from '../moves.js';
-import { renderHero } from '../render.js';
-import { ANCHOR_X, FRAME_H, FRAME_W, GROUND_Y } from '../skeleton.js';
-import { renderTurned, TURNED_H, TURNED_W, TURNED_X, TURNED_Y } from '../turned.js';
+import { DARK_KNIGHT } from './darkKnight.js';
+import { CORE_CLIPS } from './moves-core.js';
+import { SKILL_CLIPS_DK } from './moves-skills.js';
+import { STATE_CLIPS } from './moves-states.js';
+import { chibiHero } from './painter.js';
+import type { ChibiView } from './rig.js';
 
-export type ChibiView = 'side' | 'front' | 'back';
+export type { ChibiView } from './rig.js';
+
 export const CHIBI_VIEWS: readonly ChibiView[] = ['side', 'front', 'back'];
 
 export const CHIBI_CLIPS = [
@@ -87,67 +92,40 @@ export const SKILL_CLIPS: Readonly<Record<string, ChibiClip>> = {
 /** The basic attack's hits in order (the act event's chain index picks one). */
 export const COMBO_CLIPS: readonly ChibiClip[] = ['atk1', 'atk2', 'atk3'];
 
-// ── STUB (replaced by the chibi painter) ──────────────────────────────────────────────────────
+// ── The heroes ───────────────────────────────────────────────────────────────────────────────
 
-const STUB_TIMING: Record<ChibiClip, ClipTiming> = {
+/** The Dark Knight's clip timing (frame counts match his moves files). */
+const DARK_KNIGHT_TIMING: Record<ChibiClip, ClipTiming> = {
   idle: { frames: 6, mode: 'loop', seconds: 1.6, windup: 0 },
   battle: { frames: 6, mode: 'loop', seconds: 0.9, windup: 0 },
   move: { frames: 8, mode: 'loop', seconds: 0.6, windup: 0 },
-  atk1: { frames: 8, mode: 'once', seconds: 0.4, windup: 2 },
-  atk2: { frames: 8, mode: 'once', seconds: 0.4, windup: 2 },
-  atk3: { frames: 8, mode: 'once', seconds: 0.5, windup: 2 },
-  guard: { frames: 6, mode: 'once', seconds: 1, windup: 0 },
+  atk1: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
+  atk2: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
+  atk3: { frames: 9, mode: 'once', seconds: 0.62, windup: 2 },
+  guard: { frames: 4, mode: 'once', seconds: 1, windup: 0 },
   hurt: { frames: 3, mode: 'once', seconds: 0.3, windup: 0 },
-  kneel: { frames: 6, mode: 'loop', seconds: 1.6, windup: 0 },
+  kneel: { frames: 4, mode: 'loop', seconds: 1.6, windup: 0 },
   ko: { frames: 6, mode: 'hold', seconds: 0.9, windup: 0 },
-  victory: { frames: 6, mode: 'hold', seconds: 1.6, windup: 0 },
-  cast: { frames: 10, mode: 'once', seconds: 0.7, windup: 3 },
-  charge: { frames: 10, mode: 'once', seconds: 0.45, windup: 3 },
-  eclipse: { frames: 10, mode: 'once', seconds: 0.55, windup: 3 },
-  drain: { frames: 10, mode: 'once', seconds: 0.8, windup: 3 },
-  ruination: { frames: 10, mode: 'once', seconds: 1.5, windup: 3 },
+  victory: { frames: 8, mode: 'hold', seconds: 1.6, windup: 0 },
+  cast: { frames: 8, mode: 'once', seconds: 0.6, windup: 2 },
+  charge: { frames: 8, mode: 'once', seconds: 0.45, windup: 1 },
+  eclipse: { frames: 10, mode: 'once', seconds: 0.55, windup: 1 },
+  drain: { frames: 10, mode: 'once', seconds: 0.8, windup: 2 },
+  ruination: { frames: 16, mode: 'once', seconds: 1.5, windup: 2 },
 };
 
-const STUB_FROM: Record<ChibiClip, HeroClip> = {
-  idle: 'idle',
-  battle: 'battle',
-  move: 'move',
-  atk1: 'action',
-  atk2: 'action',
-  atk3: 'action',
-  guard: 'battle',
-  hurt: 'battle',
-  kneel: 'battle',
-  ko: 'idle',
-  victory: 'idle',
-  cast: 'skill',
-  charge: 'skill',
-  eclipse: 'skill',
-  drain: 'skill',
-  ruination: 'skill',
-};
-
-const stubDesign = HERO_DESIGNS['hero-tank-male'];
-const stubClips = heroClips(stubDesign.moveset);
-
-/** The stub Dark Knight (not registered: the game keeps the old painter until the chibi one lands). */
-export const stubDarkKnight: ChibiHero = {
-  id: 'hero-tank-male',
-  frame: {
-    side: { w: FRAME_W, h: FRAME_H, ax: ANCHOR_X, ay: GROUND_Y },
-    front: { w: TURNED_W, h: TURNED_H, ax: TURNED_X, ay: TURNED_Y },
-    back: { w: TURNED_W, h: TURNED_H, ax: TURNED_X, ay: TURNED_Y },
-  },
-  scale: 2.17 / 96,
-  timing: STUB_TIMING,
-  paint(clip, frame, view) {
-    const old = STUB_FROM[clip];
-    const poses = stubClips[old];
-    const pose = poses[Math.min(frame, poses.length - 1)]!;
-    if (view === 'side') return renderHero(stubDesign, pose, null);
-    return renderTurned(stubDesign, pose, view, old === 'action' || old === 'skill');
-  },
-};
+/**
+ * Frames: side on there is room ahead of him for the blade and behind for his coat tails; toward
+ * and away from the viewer he stands centred with room below for blows swung toward the viewer.
+ * Both are tall enough for Ruination's leap. He stands about 84 px tall, 2.1 tiles in game.
+ */
+export const DARK_KNIGHT_HERO: ChibiHero = chibiHero(DARK_KNIGHT, { ...CORE_CLIPS, ...SKILL_CLIPS_DK, ...STATE_CLIPS }, DARK_KNIGHT_TIMING, {
+  side: { w: 240, h: 208, ax: 104, ay: 180 },
+  front: { w: 224, h: 208, ax: 112, ay: 172 },
+  back: { w: 224, h: 208, ax: 112, ay: 172 },
+}, 2.1 / 84);
 
 /** The heroes drawn by the chibi painter, by sprite id. Others use the older painter. */
-export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {};
+export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
+  'hero-tank-male': DARK_KNIGHT_HERO,
+};

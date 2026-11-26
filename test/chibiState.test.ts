@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChibiClip, ClipTiming } from '../src/client/art/heroes/chibi/index.js';
-import { CHIBI_CLIPS, CHIBI_HEROES, stubDarkKnight } from '../src/client/art/heroes/chibi/index.js';
+import { CHIBI_CLIPS, CHIBI_HEROES } from '../src/client/art/heroes/chibi/index.js';
 import { actClip, actFrame, chibiClip, HURT_TIME, type ChibiInput } from '../src/client/game/chibiState.js';
 
 /** A fixed timing table, so the tests do not move when the painter retimes its clips. */
@@ -214,7 +214,7 @@ describe('chibi clip priority', () => {
   });
 
   it("works with the painter's own timing for every clip", () => {
-    const hero = (CHIBI_HEROES['hero-tank-male'] ?? stubDarkKnight);
+    const hero = CHIBI_HEROES['hero-tank-male'];
     expect(hero).toBeDefined();
     for (const clip of CHIBI_CLIPS) {
       const t = hero!.timing[clip];
