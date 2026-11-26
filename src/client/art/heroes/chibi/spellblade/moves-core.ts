@@ -138,17 +138,19 @@ export const AT_EASE: ChibiPose = {
 
 const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
   // A breath: everything above the knees settles one whole pixel for the second half of the loop
-  // (whole pixels, so the hair does not shimmer), while the hair and coat sway slowly round, the
-  // wand rocks in her fingers and she blinks once.
+  // (whole pixels, so the hair does not shimmer), while the hair and coat sway slowly round and
+  // she blinks once. Idly, she twirls the wand once round in her fingers (frames 2 to 5), its
+  // crystal brightening as it turns.
   const out = i >= 4 ? 1 : 0;
+  const twirl = i >= 2 && i <= 5;
   return pose(AT_EASE, {
     y: -0.4 + out,
-    weaponB: 30 + Math.sin((2 * Math.PI * i) / 8) * 14,
+    weaponB: twirl ? 30 + (i - 1) * 90 : 30 + Math.sin((2 * Math.PI * i) / 8) * 10,
     sway: Math.sin((2 * Math.PI * (i + 1)) / 8) * 0.22,
     phase: i / 8,
     wind: 0.06 + wave(i, 8) * 0.06,
     face: i === 6 ? 'closed' : 'stern',
-    fx: { runeB: 0.1 + wave(i, 8) * 0.12 },
+    fx: { runeB: twirl ? 0.35 : 0.12 },
   });
 });
 
@@ -264,7 +266,7 @@ const A2_FOLLOW = pose(A2_HIT, { twist: 26, handF: [6, 9, 15], weapon: 96, yaw: 
  * sword pointed at the start of the swing (`from`, degrees round her: -90 her left, 90 her right)
  * to where it points now, so it stays level in every view instead of folding up edge on.
  */
-const sweep = (p: ChibiPose, from: number): ChibiPose => ({ ...p, fx: { ...p.fx, ring: { from, to: p.yaw ?? 0, height: 33, radius: 40 } } });
+const sweep = (p: ChibiPose, from: number, height = 33): ChibiPose => ({ ...p, fx: { ...p.fx, ring: { from, to: p.yaw ?? 0, height, radius: 40 } } });
 
 const atk2: ChibiPose[] = [
   A2_COCK,
@@ -298,7 +300,7 @@ const crescentWave =
     const side: Vec = [-dir[1], dir[0]];
     const behind = x.behind(o);
     // Its radius grows a little as it flies; seen toward or away from the viewer it is wider than tall.
-    const R = 12 + d * 0.06;
+    const R = 14 + d * 0.08;
     const n = 24;
     const at = (t: number, f: number): Vec => {
       const a = rad(lerp(-72, 72, t));
@@ -374,15 +376,15 @@ const A3_COIL = pose(READY, { x: -2, y: 7, lean: 6, twist: 26, head: 3, look: -4
 const A3_CHARGE = pose(A3_COIL, { y: 8, twist: 30, turn: -8, handF: [-4, 12, 12], yaw: 104, handB: [7, 7, 2], wind: 0.3, lift: 0.2, phase: 0.15, fx: { rune: 1, runeB: 1, aura: 0.35, extra: charge(0.7) } });
 const A3_SWEEP = pose(READY, { x: 5, y: 7, lean: 16, twist: 2, turn: 0, head: 2, look: -2, footF: [15, 0, 5.2], footB: [-11, 0, 4.4], handF: [14, 9, 4], weapon: 92, roll: -4, yaw: 0, handB: [1, 10, 11], weaponB: 200, rollB: 20, yawB: 0, wind: 0.6, phase: 0.3, face: 'shout', fx: { rune: 1, aura: 0.3 } });
 const A3_RELEASE = pose(A3_SWEEP, { x: 8, y: 9, lean: 20, twist: -22, head: 3, look: 2, footF: [18, 0, 5.4], footB: [-12, 0, 4.4], handF: [11, 10, -7], weapon: 94, yaw: -72, handB: [-3, 10, 12], wind: 0.95, lift: 0.1, sway: -0.4, phase: 0.45, fx: { rune: 1, aura: 0.4, dust: 0.6, extra: crescentWave(24, 1) } });
-const A3_FLY = pose(A3_RELEASE, { y: 9.5, lean: 21, twist: -26, handF: [10, 11, -8], yaw: -84, wind: 0.8, lift: 0.3, sway: -0.5, phase: 0.6, face: 'grit', fx: { rune: 0.7, dust: 0.3, extra: crescentWave(54, 0.75) } });
+const A3_FLY = pose(A3_RELEASE, { y: 9.5, lean: 21, twist: -26, handF: [10, 11, -8], yaw: -84, wind: 0.8, lift: 0.3, sway: -0.5, phase: 0.6, face: 'grit', fx: { rune: 0.7, dust: 0.3, extra: crescentWave(54, 0.95) } });
 
 const atk3: ChibiPose[] = [
   A3_COIL,
   A3_CHARGE,
-  smear(A3_CHARGE, A3_SWEEP, 0.6),
-  smear(A3_CHARGE, A3_RELEASE, 0.6),
-  smear(A3_CHARGE, A3_FLY, 0.5, 0.35),
-  pose(A3_FLY, { y: 8, lean: 16, twist: -18, handF: [10, 11, -5], weapon: 88, yaw: -60, roll: 10, wind: 0.5, lift: 0.4, sway: -0.3, phase: 0.75, face: 'stern', fx: { rune: 0.4, extra: crescentWave(82, 0.35) } }),
+  sweep(A3_SWEEP, 104, 30),
+  sweep(A3_RELEASE, 104, 29),
+  sweep(A3_FLY, 30, 29),
+  pose(A3_FLY, { y: 8, lean: 16, twist: -18, handF: [10, 11, -5], weapon: 88, yaw: -60, roll: 10, wind: 0.5, lift: 0.4, sway: -0.3, phase: 0.75, face: 'stern', fx: { rune: 0.4, extra: crescentWave(84, 0.6) } }),
   pose(A3_FLY, { y: 7, lean: 14, twist: -10, handF: [11, 11, 1], weapon: 70, yaw: -30, roll: 24, handB: [3, 10, 10], weaponB: 150, wind: 0.35, lift: 0.3, sway: -0.15, phase: 0.85, face: 'stern', fx: { rune: 0.3 } }),
   settle(A3_FLY, 0.6, { wind: 0.3, lift: 0.15, phase: 0.95, face: 'stern', fx: { runeB: 0.25 } }),
   settle(A3_FLY, 0.9, { wind: 0.24, lift: 0.05, phase: 1.05, fx: { runeB: 0.3 } }),

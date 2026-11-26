@@ -225,10 +225,14 @@ const twirl = (turn: number, phase: number): ChibiPose =>
   pose(S, { x: 0, y: 3, lean: 4, twist: 0, turn, head: -2, look: -10, footF: [3, -2, 4], footB: [-3, 0, 4], handF: [5, 6, 14], weapon: 90, roll: 0, yaw: 70, handB: [4, 6, 14], weaponB: 90, rollB: 0, yawB: 70, face: 'smirk', wind: 0.4, flare: 0.9, sway: -0.6, lift: 0.25, phase, fx: { rune: 0.6, runeB: 0.6 } });
 
 /** Raised high out to her right with a glint at the point, the wand hand on her hip. */
-const RAISED: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -4, twist: 10, tilt: 3, head: -8, look: 10, footF: [6, 0, 5.6], footB: [-5, 0, 5], handF: [-5, -8, 15], weapon: -4, roll: 24, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wind: 0.45, lift: 0.4, sway: 0.4 });
+const RAISED: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -4, twist: 10, tilt: 3, head: -8, look: 10, footF: [6, 0, 5.6], footB: [-5, 0, 5], handF: [-5, -8, 15], weapon: -4, roll: 24, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wind: 0.4, lift: 0.2, sway: 0.3 });
 
-/** The last pose, held: the sword held up and out to her right, head tipped, a smile for the viewer. */
-const SALUTE: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -2, twist: 4, tilt: 4, head: -3, look: 14, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [4, 8, 13], weapon: 14, roll: 38, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wind: 0.3, lift: 0.2, sway: 0.3 });
+/**
+ * The last pose, held: the sword swept down and out to her right in a flourish, the wand hand on
+ * her hip, head tipped, a smile for the viewer. Out and down, the sword shows its length in every
+ * view and stays clear of her face.
+ */
+const SALUTE: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -2, twist: 4, tilt: 4, head: -3, look: 14, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [5, 12, 12], weapon: 124, roll: -32, yaw: 4, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wind: 0.3, lift: 0.2, sway: 0.3 });
 
 const victory: ChibiPose[] = [
   // A breath first, dipping into the twirl.
@@ -237,11 +241,11 @@ const victory: ChibiPose[] = [
   twirl(120, 0.1),
   twirl(240, 0.25),
   // Round to face front again, the sword thrown up high: a glint.
-  pose(RAISED, { turn: 360, phase: 0.4, flare: 0.5, sway: -0.5, wind: 0.5, lift: 0.5, fx: { rune: 1, extra: glint(1) } }),
+  pose(RAISED, { turn: 360, phase: 0.4, flare: 0.35, sway: -0.4, wind: 0.45, lift: 0.25, fx: { rune: 1, extra: glint(1) } }),
   pose(RAISED, { turn: 360, phase: 0.55, flare: 0.2, sway: -0.2, fx: { rune: 0.7, extra: glint(0.6) } }),
   // Brought down into a salute, smiling; the hair settling.
-  pose(SALUTE, { turn: 360, phase: 0.7, wind: 0.35, lift: 0.3, fx: { rune: 0.5 } }),
-  pose(SALUTE, { turn: 360, phase: 0.85, wind: 0.32, lift: 0.22, fx: { rune: 0.4 } }),
+  pose(SALUTE, { turn: 360, phase: 0.7, wind: 0.35, lift: 0.2, fx: { rune: 0.5, smear: { from: 40, roll: 0, width: 0.4, alpha: 0.5 } } }),
+  pose(SALUTE, { turn: 360, phase: 0.85, wind: 0.32, lift: 0.15, fx: { rune: 0.4 } }),
   pose(SALUTE, { turn: 360, phase: 1, fx: { rune: 0.35 } }),
 ];
 

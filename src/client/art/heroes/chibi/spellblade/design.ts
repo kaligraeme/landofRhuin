@@ -22,7 +22,8 @@ import { wand } from '../wand.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
-const SKIN = mat4('#fff0e0', '#f6cfab', '#d8a27c', '#a26c4e', '#6e3c2c', 0.18);
+// Fair: the light tone over most of the face, the base tone only in its shadows.
+const SKIN = mat4('#fff0e0', '#f6cfab', '#d8a27c', '#a26c4e', '#6e3c2c', 0.3);
 const HAIR = mat4('#ffffff', '#f4f2fa', '#c8c4dc', '#8e8aa8', '#5e5a78', 0.05);
 // The robe-coat reads as one violet: its base tone over most of it, the light tone on lit folds.
 const ROBE = { ...mat4('#a884de', '#8c66c8', '#5c3f96', '#35205e', '#1e1238', -0.02), gain: 0.6 };
@@ -37,10 +38,10 @@ const GOLD = mat4('#fff8dc', '#f2e6c0', '#c8b88a', '#7e7050', '#4a4028', 0.12);
 // The sash: a deep violet band, darker than the coat, so the buckle stands out on it.
 const SASH = mat4('#6a4aa6', '#4a3084', '#33205e', '#1e1240', '#0e0820');
 const LEGS = mat4('#6a5878', '#4a3a56', '#30263e', '#1c1626', '#0e0a14', -0.05);
-// Soft suede boots, a dove-grey violet between the leggings and the coat.
-const BOOT = mat4('#b4a6c6', '#8e7ea6', '#665880', '#433858', '#1e1828', -0.02);
+// Soft suede boots, a muted grey-violet a step lighter than the leggings.
+const BOOT = mat4('#9a8ab0', '#76678f', '#54466c', '#352b4a', '#181222', -0.02);
 // The boots' turned-down cuffs show their pale lining.
-const CUFF = mat4('#ffffff', '#ddd6ea', '#aaa0c2', '#746a8e', '#2a2238', 0.05);
+const CUFF = mat4('#f4f0fa', '#cdc6e0', '#a198bc', '#6c6288', '#241c32', 0.02);
 const SOLE = mat4('#3a3044', '#2a2232', '#1c1622', '#100c14', '#08060a');
 const STEEL = mat4('#ffffff', '#dfe3ee', '#aab0c4', '#6e748c', '#2a2c3a', 0.12);
 const EDGE = mat4('#ffffff', '#f4f6fc', '#cfd4e2', '#9aa0b4', '#2a2c3a', 0.15);
@@ -62,10 +63,10 @@ const LOCKS: Lock[] = [
   L(8, 62, [-0.95, -0.25, 0.05], 12, 5.4, [-0.1, -0.4, 0], 0.5, 0.4),
   // The fringe, soft and swept across to her left, longest over her left brow; her right temple
   // is left clear where the crescent pin holds the hair back.
-  L(34, 42, [0.4, -1, -0.55], 6.2, 3.2, [0.1, 0, -0.25], 0.3, 0.3),
-  L(8, 48, [0.45, -1, -0.65], 7.4, 3.5, [0.1, 0, -0.25], 0.3, 0.3),
-  L(-20, 44, [0.35, -1, -0.6], 8, 3.4, [0.1, 0.05, -0.2], 0.3, 0.3),
-  L(-48, 32, [0.2, -1, -0.35], 7, 2.8, [0.1, 0, -0.1], 0.3),
+  L(36, 46, [0.3, -0.7, -0.9], 6, 3, [0.1, -0.15, -0.3], 0.3, 0.3),
+  L(12, 50, [0.4, -0.85, -0.85], 9, 3.4, [0.1, -0.25, -0.3], 0.3, 0.3),
+  L(-14, 46, [0.45, -1, -0.6], 10.5, 3.4, [0.15, -0.1, -0.2], 0.3, 0.3),
+  L(-42, 34, [0.3, -1, -0.3], 10, 2.9, [0.1, 0, -0.1], 0.3),
   // Fine strands falling in front of the ears, into the long locks.
   L(72, 4, [0.15, -1, 0.2], 6, 2.2, [0.1, 0, 0.05], 0.3),
   L(-72, 4, [0.15, -1, -0.2], 6, 2.2, [0.1, 0, -0.05], 0.3),
@@ -74,7 +75,7 @@ const LOCKS: Lock[] = [
 // ── The crescent hairpin ─────────────────────────────────────────────────────────────────────
 
 /** Where the pin sits on the hair (degrees round the head and up, as a lock's root), its size, and the bite out of it that makes the crescent. */
-const PIN = { yaw: 62, pitch: 30, r: 3, bite: [1.3, 0.9] as const, biteR: 2.4 };
+const PIN = { yaw: 54, pitch: 32, r: 3, bite: [1.3, 0.9] as const, biteR: 2.4 };
 
 /**
  * A small gold crescent pinned in her hair above her right temple: a thin gold disk lying on the
@@ -222,8 +223,8 @@ const SPELLBLADE: ChibiDesign = {
       // A curtain to the middle of her back over the cape, and a long lock over each shoulder.
       back: curtain({ from: 122, to: 238, count: 6, pitch: 6, len: 31, w: 3, jag: 0.38, taper: 0.5, seed: 11 }),
       front: [
-        { yaw: 62, pitch: 6, dir: [0.4, -1, 0.05], len: 25, w: 2.5, taper: 0.5 },
-        { yaw: -62, pitch: 6, dir: [0.4, -1, -0.05], len: 25, w: 2.5, taper: 0.5 },
+        { yaw: 70, pitch: 6, dir: [0.3, -1, 0.08], len: 25, w: 2.5, taper: 0.5 },
+        { yaw: -70, pitch: 6, dir: [0.3, -1, -0.08], len: 25, w: 2.5, taper: 0.5 },
       ],
       lie: 2.2,
     },

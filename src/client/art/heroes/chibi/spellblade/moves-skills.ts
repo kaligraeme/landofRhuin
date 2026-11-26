@@ -326,17 +326,17 @@ const skid =
 // ── Runic Ward ───────────────────────────────────────────────────────────────────────────────
 
 /** The wand raised high out to her left (clear of her hair), the sword lowered point down and forward at her right. */
-const WARD_UP: ChibiPose = pose(S, { x: 0, y: 3, lean: -2, twist: 6, head: -6, look: 2, footF: [7, 0, 5], footB: [-7, 0, 4.6], handF: [5, 13, 9], weapon: 150, roll: 10, yaw: 10, handB: [-2, -7, 15], weaponB: -10, rollB: 18, yawB: 0, face: 'closed', wind: 0.25, lift: 0.4 });
+const WARD_UP: ChibiPose = pose(S, { x: 0, y: 3, lean: -2, twist: 6, head: -6, look: 2, footF: [7, 0, 5], footB: [-7, 0, 4.6], handF: [5, 13, 9], weapon: 150, roll: 10, yaw: 10, handB: [-2, -7, 15], weaponB: -10, rollB: 18, yawB: 0, face: 'closed', wind: 0.25, lift: 0.25 });
 
 const runicWard: ChibiPose[] = [
   // Wind-up: the wand drawn in to her chest, its crystal gathering light, the sword lowering.
   fromReady(pose(S, { y: 5, lean: 6, twist: 4, head: 3, look: 0, handF: [6, 13, 9], weapon: 120, roll: 14, yaw: 0, handB: [6, 5, 3], weaponB: 10, rollB: 0, yawB: 0, face: 'closed', fx: { runeB: 0.8, aura: 0.2 } }), 0.6),
   // The wand thrown up high: a flash at its crystal, the runes rising off the floor.
   pose(WARD_UP, { phase: 0.1, fx: { runeB: 1, impactB: 0.7, aura: 0.4, extra: goldWard(0.25, 0) } }),
-  pose(WARD_UP, { y: 2.5, head: -7, lift: 0.5, phase: 0.25, fx: { runeB: 1, aura: 0.5, extra: goldWard(0.6, 30) } }),
-  pose(WARD_UP, { y: 2.5, head: -7, lift: 0.55, phase: 0.4, face: 'stern', fx: { runeB: 1, aura: 0.45, extra: goldWard(0.9, 62) } }),
+  pose(WARD_UP, { y: 2.5, head: -7, lift: 0.32, phase: 0.25, fx: { runeB: 1, aura: 0.5, extra: goldWard(0.6, 30) } }),
+  pose(WARD_UP, { y: 2.5, head: -7, lift: 0.35, phase: 0.4, face: 'stern', fx: { runeB: 1, aura: 0.45, extra: goldWard(0.9, 62) } }),
   // The ring closes over her: a dome of light, the barrier.
-  pose(WARD_UP, { y: 3, head: -5, handB: [0, -5, 14], lift: 0.45, phase: 0.55, face: 'stern', fx: { runeB: 0.8, aura: 0.3, extra: both(goldWard(0.7, 90), goldWard(1, 10, true)) } }),
+  pose(WARD_UP, { y: 3, head: -5, handB: [0, -5, 14], lift: 0.3, phase: 0.55, face: 'stern', fx: { runeB: 0.8, aura: 0.3, extra: both(goldWard(0.7, 90), goldWard(1, 10, true)) } }),
   // Back into her guard, the dome fading round her.
   settle(pose(WARD_UP, { handB: [4, 4, 10], weaponB: 60, handF: [8, 11, 9], weapon: 70 }), 0.5, { lift: 0.3, phase: 0.7, face: 'stern', fx: { runeB: 0.5, extra: goldWard(0.55, 20, true) } }),
   settle(S, 0.9, { phase: 0.85, fx: { runeB: 0.35, extra: goldWard(0.2, 30, true) } }),
@@ -344,8 +344,11 @@ const runicWard: ChibiPose[] = [
 
 // ── Spellblade Rush ──────────────────────────────────────────────────────────────────────────
 
-/** The dash: low and long, the point thrust ahead in her right hand, the wand trailing back in her left. */
-const DASH: ChibiPose = pose(S, { x: 8, y: 5, lean: 30, twist: -14, head: -14, look: -4, handF: [15, 9, 7], weapon: 80, roll: 22, yaw: -12, handB: [-8, 12, 10], weaponB: 215, rollB: 10, yawB: 0, face: 'grit', wind: 1.1, lift: 0.1 });
+/**
+ * The dash: low and long, the point thrust ahead and a little down in her right hand, tipped out to
+ * her right so that toward and away from the viewer it shows beside her; the wand trailing back.
+ */
+const DASH: ChibiPose = pose(S, { x: 8, y: 5, lean: 30, twist: -14, head: -14, look: -4, handF: [15, 10, 8], weapon: 102, roll: -30, yaw: 4, handB: [-8, 12, 10], weaponB: 215, rollB: 10, yawB: 0, face: 'grit', wind: 1.1, lift: 0.1 });
 
 const rush: ChibiPose[] = [
   // Coiled low, the sword drawn back to her hip, point forward, the wand forward to balance.
@@ -387,9 +390,9 @@ const arc: ChibiPose[] = [
 const PLANT = { footF: [8, 0, 6] as P2, footB: [-8, 0, 5.6] as P2 };
 
 /** The sword point down before her, its point touched to the floor; the wand raised high out to her left. */
-const BLOOM: ChibiPose = pose(S, { x: 0, y: 4, lean: 2, twist: 6, head: -4, look: 0, ...PLANT, handF: [8, 15, 5], weapon: 176, roll: 0, yaw: 0, handB: [-1, -7, 15], weaponB: -8, rollB: 16, yawB: 0, face: 'closed', wind: 0.15, lift: 0.35 });
+const BLOOM: ChibiPose = pose(S, { x: 0, y: 4, lean: 2, twist: 6, head: -4, look: 0, ...PLANT, handF: [8, 15, 5], weapon: 176, roll: 0, yaw: 0, handB: [-1, -7, 15], weaponB: -8, rollB: 16, yawB: 0, face: 'closed', wind: 0.15, lift: 0.2 });
 
-const bloom = (k: number, t: number, phase: number): ChibiPose => pose(BLOOM, { phase, lift: 0.35 + k * 0.2, fx: { runeB: 1, rune: 0.6, extra: both(sigil(k, t * 40), petals(t, k)) } });
+const bloom = (k: number, t: number, phase: number): ChibiPose => pose(BLOOM, { phase, lift: 0.18 + k * 0.12, fx: { runeB: 1, rune: 0.6, extra: both(sigil(k, t * 40), petals(t, k)) } });
 
 const lifebinding: ChibiPose[] = [
   // Wind-up: the sword turned point down, the wand drawn up to her chest, a green glow gathering.
