@@ -22,7 +22,7 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
   move: { frames: 8, seconds: 0.55, windup: 0 },
   atk1: { frames: 7, seconds: 0.34, windup: 1 },
   atk2: { frames: 7, seconds: 0.34, windup: 1 },
-  atk3: { frames: 9, seconds: 0.52, windup: 2 },
+  atk3: { frames: 9, seconds: 0.52, windup: 1 },
   special: { frames: 7, seconds: 0.75, windup: 1 },
   q: { frames: 8, seconds: 0.45, windup: 1 },
   e: { frames: 8, seconds: 0.5, windup: 1 },
@@ -36,9 +36,10 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
 };
 
 /**
- * Frames: side on there is room ahead of her for the sword, the crescent wave and Arc Lightning,
- * and behind for her hair and coat; toward and away from the viewer she stands centred. All are
- * tall enough for the astral blade of her ultimate raised overhead. The game crops every frame to
+ * Frames: side on there is room ahead of her for the sword, the crescent wave, Arc Lightning and
+ * the rift of her ultimate, and behind for her hair and coat; toward and away from the viewer she
+ * stands centred, with room below her toward the viewer for the rift running down the screen. All
+ * are tall enough for the astral blade of her ultimate raised overhead. The game crops every frame to
  * what is painted, so the spare room costs nothing there. She stands about 80 px tall: at the Dark
  * Knight's 2.1 tiles per 84 px, 2 tiles in game.
  */
@@ -47,8 +48,8 @@ export const SPELLBLADE_HERO: ChibiHero = chibiHero(
   { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES },
   TIMING,
   {
-    side: { w: 256, h: 232, ax: 112, ay: 180 },
-    front: { w: 224, h: 240, ax: 112, ay: 172 },
+    side: { w: 272, h: 232, ax: 112, ay: 180 },
+    front: { w: 224, h: 260, ax: 112, ay: 172 },
     back: { w: 224, h: 240, ax: 112, ay: 172 },
   },
   2.1 / 84,

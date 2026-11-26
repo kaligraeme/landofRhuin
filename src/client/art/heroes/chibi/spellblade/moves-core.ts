@@ -11,21 +11,23 @@
  *              the wand forward and low out to her left, its crystal pulsing; she bounces on the
  *              balls of her feet, hair, coat and cape a frame behind
  *   move    8  a quick, light sprint, the sword trailing low behind in her right hand and the wand
- *              held ahead in her left, the hair streaming
+ *              held ahead in her left, the hair streaming and swinging from side to side a frame
+ *              behind her shoulders
  *   atk1    7  (1 wind-up) a diagonal cut from high behind her right shoulder to low in front
- *   atk2    7  (1 wind-up) a flat backhand sweep from her left round to her right, the wand flicked
- *              back for balance
- *   atk3    9  (2 wind-up) the wand charges the blade, then a lunging forehand sweep that throws a
- *              crescent wave of violet force forward (the game flies the wave on from there)
+ *   atk2    7  (1 wind-up) coiled with her chest turned away and the blade drawn back high over
+ *              her left shoulder, then a flat backhand sweep from her left round to her right, the
+ *              blade gleaming at the head of its arc, the wand flicked back for balance
+ *   atk3    9  (1 wind-up) the wand charges the blade as she coils, then a lunging forehand sweep
+ *              that throws a crescent wave of violet force off the point; it flies about a tile and
+ *              thins away as the game's own wave flies on
  *
  * Each blow has an anticipation, a smear frame, a hit frame and a recovery into the battle stance,
  * the hair and coat streaming hardest a frame after the blow and floating up as she stops. A cut
  * leaves a swoosh that starts where the sword was (`trail`): the frame before on the smear frame,
  * the start of the swing on the hit frame, so the whole stroke shows as one arc that then fades.
  * A flat sweep (atk2, atk3) leaves a level arc round her instead (`sweep`), which would otherwise
- * fold up edge on. Raised sword
- * hands go beside her head, out to her right (`handF` about `[-7, -7, 12]`), clear of her face
- * side on and from the front.
+ * fold up edge on, with the blade gleaming over it. Raised sword hands go beside her head, out to
+ * her right (`handF` about `[-7, -7, 12]`), clear of her face side on and from the front.
  */
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
@@ -233,7 +235,10 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     yawB: 25,
     wind: 1,
     phase: i / 8,
-    sway: swing * 0.2,
+    // The hair and coat swing from side to side with her shoulders, a frame behind them, so the
+    // hair streams in loose S-curves to one side and then the other rather than standing round her
+    // head in a tent.
+    sway: Math.cos((2 * Math.PI * (i - 1.5)) / 8) * 0.5,
     fx: { speed: 0.7, dust: i % 4 === 0 ? 0.7 : 0, runeB: 0.2 },
   };
 });
@@ -243,7 +248,7 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
 // atk1: high behind her right shoulder, down across to low in front on her left; the wand swings
 // back for balance.
 const A1_COCK = pose(READY, { x: -2, y: 4, lean: -4, twist: -26, head: -2, look: 2, footF: [9, -1, 4.6], footB: [-9, 0, 4.2], handF: [-7, -7, 12], weapon: -40, roll: 42, yaw: -6, handB: [9, 8, 7], weaponB: 70, rollB: 0, yawB: 30, wind: 0.25, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.6, runeB: 0.3 } });
-const A1_SWING = pose(READY, { x: 3, y: 4, lean: 10, twist: -4, head: 2, look: -2, footF: [13, 0, 4.8], handF: [11, 3, 6], weapon: 72, roll: 40, yaw: 0, handB: [5, 11, 9], weaponB: 130, rollB: 0, yawB: 20, wind: 0.45, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
+const A1_SWING = pose(READY, { x: 3, y: 4, lean: 10, twist: -4, head: 2, look: -2, footF: [13, 0, 4.8], handF: [11, 3, 8], weapon: 66, roll: 58, yaw: -6, handB: [5, 11, 9], weaponB: 130, rollB: 0, yawB: 20, wind: 0.45, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
 const A1_HIT = pose(READY, { x: 6, y: 7, lean: 22, twist: 14, head: 1, look: -4, footF: [15, 0, 5], footB: [-11, 0, 4.4], handF: [15, 13, -2], weapon: 116, roll: 40, yaw: 0, handB: [-2, 10, 11], weaponB: 200, rollB: 10, yawB: 0, wind: 0.8, lift: -0.1, phase: 0.4, face: 'shout', fx: { impact: 0.7, dust: 0.5, rune: 1 } });
 const A1_FOLLOW = pose(A1_HIT, { y: 8, lean: 24, twist: 18, head: 2, handF: [14, 15, -3], weapon: 126, wind: 0.85, lift: 0.1, phase: 0.55, face: 'grit', fx: { dust: 0.3, rune: 0.6 } });
 
@@ -258,7 +263,9 @@ const atk1: ChibiPose[] = [
 ];
 
 // atk2: a flat backhand sweep from across on her left, round in front of her to out on her right.
-const A2_COCK = pose(READY, { x: 1, y: 6, lean: 8, twist: -24, head: 1, look: 4, footF: [11, 0, 4.8], footB: [-9, 0, 4.4], handF: [8, 9, -5], weapon: 90, roll: 4, yaw: -96, handB: [-2, 10, 11], weaponB: 190, rollB: 20, yawB: 0, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.6 } });
+// She coils for it with her chest turned away from the foe and the blade drawn back high across
+// her body, up and back over her left shoulder.
+const A2_COCK = pose(READY, { x: 0, y: 6, lean: 4, twist: -36, turn: -8, head: 2, look: 8, footF: [11, 0, 4.8], footB: [-9, 0, 4.4], handF: [0, -1, -7], weapon: -68, roll: -36, yaw: -10, handB: [-2, 10, 11], weaponB: 190, rollB: 20, yawB: 0, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.7 } });
 const A2_SWING = pose(READY, { x: 4, y: 5, lean: 12, twist: 0, head: 2, look: -2, footF: [13, 0, 5], handF: [13, 8, 4], weapon: 90, roll: 4, yaw: -10, handB: [0, 11, 11], weaponB: 200, rollB: 20, yawB: 0, wind: 0.45, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
 const A2_HIT = pose(READY, { x: 5, y: 5, lean: 10, twist: 22, head: 1, look: -6, footF: [14, 0, 5.2], footB: [-10, 0, 4.4], handF: [9, 8, 14], weapon: 92, roll: 0, yaw: 72, handB: [6, 10, 6], weaponB: 120, rollB: 0, yawB: 30, wind: 0.75, lift: 0.1, sway: 0.4, phase: 0.4, face: 'shout', fx: { impact: 0.6, rune: 1 } });
 const A2_FOLLOW = pose(A2_HIT, { twist: 26, handF: [6, 9, 15], weapon: 96, yaw: 92, wind: 0.8, lift: 0.25, sway: 0.5, phase: 0.55, face: 'grit', fx: { rune: 0.6 } });
@@ -266,14 +273,32 @@ const A2_FOLLOW = pose(A2_HIT, { twist: 26, handF: [6, 9, 15], weapon: 96, yaw: 
 /**
  * A flat sweep's swoosh: a level arc round her at the sword's height (fx `ring`), from where the
  * sword pointed at the start of the swing (`from`, degrees round her: -90 her left, 90 her right)
- * to where it points now, so it stays level in every view instead of folding up edge on.
+ * to where it points now, so it stays level in every view instead of folding up edge on. The arc
+ * stops short of the blade's point (`radius`), and the blade itself gleams over it (`gleam`), so
+ * the cut reads as the sword at the arc's leading end rather than a hoop round her.
  */
-const sweep = (p: ChibiPose, from: number, height = 33): ChibiPose => ({ ...p, fx: { ...p.fx, ring: { from, to: p.yaw ?? 0, height, radius: 40 } } });
+const sweep = (p: ChibiPose, from: number, height = 33, radius = 34): ChibiPose => ({ ...p, fx: { ...p.fx, ring: { from, to: p.yaw ?? 0, height, radius }, extra: p.fx?.extra ? both(p.fx.extra, gleam) : gleam } });
+
+/** Runs several effect painters in turn. */
+const both =
+  (...fs: ((x: FxContext) => void)[]) =>
+  (x: FxContext): void => {
+    for (const f of fs) f(x);
+  };
+
+/** The blade's cutting edge gleaming white over a swoosh: a white-hot line down it with the aura's violet beside it. */
+const gleam = (x: FxContext): void => {
+  const w = x.rig.weapon;
+  const a = x.proj(add3(w.o, w.u, 10));
+  const b = x.proj(x.tip);
+  glowLine(x.c, [a[0], a[1] + 1], [b[0], b[1] + 1], x.aura.core, 0.9);
+  glowLine(x.c, a, b, x.aura.hot, 1);
+};
 
 const atk2: ChibiPose[] = [
   A2_COCK,
-  sweep(A2_SWING, -96),
-  sweep(A2_HIT, -96),
+  sweep(A2_SWING, -120),
+  sweep(A2_HIT, -120),
   sweep(A2_FOLLOW, -40),
   pose(A2_FOLLOW, { twist: 20, handF: [7, 9, 13], weapon: 80, yaw: 70, roll: 14, wind: 0.55, lift: 0.3, sway: 0.3, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
   settle(A2_FOLLOW, 0.55, { wind: 0.35, lift: 0.2, phase: 0.85, face: 'stern', fx: { runeB: 0.25 } }),
@@ -283,55 +308,62 @@ const atk2: ChibiPose[] = [
 // ── atk3: the crescent wave ──────────────────────────────────────────────────────────────────
 
 /**
- * A crescent wave of force flying ahead of her, `d` pixels out from her chest at the sword's
- * height `h`, `k` its strength: a crescent bowed the way it flies, with a white-hot leading edge,
- * the aura's violet body and a fringe of its pale edge colour, and streaks trailing behind it. As
- * a sprite artist would, it is drawn opened out on screen (a flat crescent lying level would show
- * only as a sliver): side on it bows ahead of her, toward the viewer it bows down the screen at
- * him, and away from him it bows up the screen, behind her.
+ * A crescent wave of force flying ahead of her, `d` pixels out from her hips, `k` its strength
+ * (1 as it leaves the blade, thinning and shrinking to nothing as it fades: it is never
+ * see-through, so it reads on any floor): a crescent bowed the way it flies, with a white-hot
+ * cutting edge, the aura's violet body and a pale cyan rim, as the game's own wave is drawn. As a
+ * sprite artist would, it is drawn opened out on screen in every view (a flat crescent lying level
+ * would show only as a sliver): side on it bows ahead of her at the sword's height; toward the
+ * viewer it is an arch over her legs, in front of her at hip height; away from the viewer it is a
+ * smaller arch beyond her head. It is always painted over her.
  */
 const crescentWave =
-  (d: number, k: number, h = 26): ((x: FxContext) => void) =>
+  (d: number, k: number): ((x: FxContext) => void) =>
   (x) => {
     const { c, cam, rig, aura } = x;
-    const o: V3 = [rig.pelvis.o[0] + d, h, rig.pelvis.o[2]];
-    const C = x.proj(o);
     const fv = cam.vec([1, 0, 0]);
     const fl = Math.hypot(fv[0], fv[1]);
-    const dir: Vec = fl > 0.45 ? [fv[0] / fl, fv[1] / fl] : [0, fv[1] >= 0 ? 1 : -1];
-    const side: Vec = [-dir[1], dir[0]];
-    const behind = x.behind(o);
-    // Its radius grows a little as it flies; seen toward or away from the viewer it is wider than tall.
-    const R = 14 + d * 0.08;
-    const n = 24;
+    const side = fl > 0.45;
+    const away = !side && fv[1] < 0;
+    // Where it is: side on at the sword's height; toward the viewer kept at her hips as it comes
+    // on (rather than sliding down the screen to her feet); away from him lifted beyond her head.
+    const h = side ? 26 : away ? 58 + d * 0.1 : 22 + d * 0.26;
+    const C = x.proj([rig.pelvis.o[0] + d, h, rig.pelvis.o[2]]);
+    const dir: Vec = side ? [fv[0] / fl, fv[1] / fl] : [0, -1];
+    const across: Vec = [-dir[1], dir[0]];
+    const R = (side ? 15 + d * 0.06 : away ? 13 - d * 0.04 : 15 + d * 0.08) * (0.75 + 0.25 * k);
+    const wide = side ? 1 : 1.35;
+    const thick = 0.35 + 0.65 * k;
     const at = (t: number, f: number): Vec => {
-      const a = rad(lerp(-72, 72, t));
+      const a = rad(lerp(-74, 74, t));
       // f: 0 the leading (outer) edge, 1 the inner edge; the inner arc is smaller and set back.
-      const r = R * (1 - 0.3 * f);
-      const back = R * 0.55 + R * 0.12 * f;
+      const r = R * (1 - 0.32 * f * thick);
+      const back = R * 0.55 + R * 0.12 * f * thick;
       const along = Math.cos(a) * r - back;
-      const across = Math.sin(a) * r * (fl > 0.45 ? 1 : 1.25);
-      return [C[0] + dir[0] * along + side[0] * across, C[1] + dir[1] * along + side[1] * across];
+      const off = Math.sin(a) * r * wide;
+      return [C[0] + dir[0] * along + across[0] * off, C[1] + dir[1] * along + across[1] * off];
     };
-    const bands: [number, number, RGB, number][] = [
-      [0, 0.2, aura.hot, 1],
-      [0.2, 0.45, mixc(aura.hot, aura.core, 0.5), 0.95],
-      [0.45, 0.82, aura.core, 0.85],
-      [0.82, 1, aura.edge, 0.45],
+    const bands: [number, number, RGB][] = [
+      [0, 0.2, aura.hot],
+      [0.2, 0.36, mixc(aura.hot, aura.core, 0.5)],
+      [0.36, 0.8, aura.core],
+      [0.8, 1, aura.edge],
     ];
+    const n = 24;
     for (let i = 0; i < n; i++) {
       const t0 = i / n;
       const t1 = (i + 1) / n;
       // Thickest in the middle, tapering to points at its horns.
       const th = (t: number): number => Math.pow(Math.sin(Math.PI * t), 0.7);
-      for (const [f0, f1, col, a] of bands) fillQuad(c, [at(t0, f0 * th(t0)), at(t1, f0 * th(t1)), at(t1, f1 * th(t1)), at(t0, f1 * th(t0))], col, a * k, behind);
+      for (const [f0, f1, col] of bands) fillQuad(c, [at(t0, f0 * th(t0)), at(t1, f0 * th(t1)), at(t1, f1 * th(t1)), at(t0, f1 * th(t0))], col, 1, false);
     }
-    // Streaks trailing behind it.
-    for (let i = 0; i < 5; i++) {
-      const t = 0.18 + i * 0.16;
-      const p = at(t, 0.9);
-      const len = (8 + (i % 2) * 6) * k;
-      glowLine(c, p, [p[0] - dir[0] * len, p[1] - dir[1] * len], i % 2 ? aura.core : aura.edge, 0.6 * k, behind);
+    // Side on, streaks trail behind it.
+    if (!side) return;
+    for (let i = 0; i < 4; i++) {
+      const t = 0.22 + i * 0.18;
+      const p = at(t, 1);
+      const len = (6 + (i % 2) * 5) * k;
+      glowLine(c, p, [p[0] - dir[0] * len, p[1] - dir[1] * len], i % 2 ? aura.core : aura.edge, 0.9, false);
     }
   };
 
@@ -374,22 +406,24 @@ const charge =
     }
   };
 
-const A3_COIL = pose(READY, { x: -2, y: 7, lean: 6, twist: 26, head: 3, look: -4, footF: [10, 0, 5], footB: [-11, 0, 4.4], handF: [-2, 12, 12], weapon: 100, roll: -6, yaw: 96, handB: [8, 6, 3], weaponB: 70, rollB: 0, yawB: -40, wind: 0.25, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.7, runeB: 0.9, extra: charge(0.2) } });
-const A3_CHARGE = pose(A3_COIL, { y: 8, twist: 30, turn: -8, handF: [-4, 12, 12], yaw: 104, handB: [7, 7, 2], wind: 0.3, lift: 0.2, phase: 0.15, fx: { rune: 1, runeB: 1, aura: 0.35, extra: charge(0.7) } });
-const A3_SWEEP = pose(READY, { x: 5, y: 7, lean: 16, twist: 2, turn: 0, head: 2, look: -2, footF: [15, 0, 5.2], footB: [-11, 0, 4.4], handF: [14, 9, 4], weapon: 92, roll: -4, yaw: 0, handB: [1, 10, 11], weaponB: 200, rollB: 20, yawB: 0, wind: 0.6, phase: 0.3, face: 'shout', fx: { rune: 1, aura: 0.3 } });
-const A3_RELEASE = pose(A3_SWEEP, { x: 8, y: 9, lean: 20, twist: -22, head: 3, look: 2, footF: [18, 0, 5.4], footB: [-12, 0, 4.4], handF: [11, 10, -7], weapon: 94, yaw: -72, handB: [-3, 10, 12], wind: 0.95, lift: 0.1, sway: -0.4, phase: 0.45, fx: { rune: 1, aura: 0.4, dust: 0.6, extra: crescentWave(24, 1) } });
-const A3_FLY = pose(A3_RELEASE, { y: 9.5, lean: 21, twist: -26, handF: [10, 11, -8], yaw: -84, wind: 0.8, lift: 0.3, sway: -0.5, phase: 0.6, face: 'grit', fx: { rune: 0.7, dust: 0.3, extra: crescentWave(54, 0.95) } });
+// One wind-up frame (a basic attack has no wind-up on the server, so the game's own wave flies at
+// once): the wand charges the blade as she coils. Then the sweep, its blade blazing, throws the
+// wave off its point; the wave flies about a tile and thins away as the game's projectile takes over.
+const A3_COIL = pose(READY, { x: -2, y: 7, lean: 6, twist: 28, turn: -6, head: 3, look: -4, footF: [10, 0, 5], footB: [-11, 0, 4.4], handF: [-3, 12, 12], weapon: 100, roll: -6, yaw: 100, handB: [8, 6, 3], weaponB: 70, rollB: 0, yawB: -40, wind: 0.25, lift: 0.15, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 1, runeB: 1, aura: 0.3, extra: charge(0.5) } });
+const A3_SWEEP = pose(READY, { x: 6, y: 8, lean: 18, twist: 0, turn: 0, head: 2, look: -2, footF: [16, 0, 5.2], footB: [-11, 0, 4.4], handF: [14, 9, 2], weapon: 92, roll: -4, yaw: -10, handB: [1, 10, 11], weaponB: 200, rollB: 20, yawB: 0, wind: 0.75, phase: 0.3, face: 'shout', fx: { rune: 1, aura: 0.4, dust: 0.5, extra: crescentWave(46, 1) } });
+const A3_RELEASE = pose(A3_SWEEP, { x: 8, y: 9, lean: 20, twist: -22, head: 3, look: 2, footF: [18, 0, 5.4], footB: [-12, 0, 4.4], handF: [11, 10, -7], weapon: 94, yaw: -72, handB: [-3, 10, 12], wind: 0.9, lift: 0.1, sway: -0.4, phase: 0.45, fx: { rune: 0.9, aura: 0.3, dust: 0.4, extra: crescentWave(64, 0.7) } });
+const A3_FLY = pose(A3_RELEASE, { y: 9.5, lean: 21, twist: -26, handF: [10, 11, -8], yaw: -84, wind: 0.8, lift: 0.3, sway: -0.5, phase: 0.6, face: 'grit', fx: { rune: 0.7, dust: 0.2, extra: crescentWave(80, 0.3) } });
 
 const atk3: ChibiPose[] = [
   A3_COIL,
-  A3_CHARGE,
-  sweep(A3_SWEEP, 104, 30),
-  sweep(A3_RELEASE, 104, 29),
-  sweep(A3_FLY, 30, 29),
-  pose(A3_FLY, { y: 8, lean: 16, twist: -18, handF: [10, 11, -5], weapon: 88, yaw: -60, roll: 10, wind: 0.5, lift: 0.4, sway: -0.3, phase: 0.75, face: 'stern', fx: { rune: 0.4, extra: crescentWave(84, 0.6) } }),
+  sweep(A3_SWEEP, 100, 30),
+  sweep(A3_RELEASE, 100, 29),
+  sweep(A3_FLY, 20, 29),
+  pose(A3_FLY, { y: 8, lean: 16, twist: -18, handF: [10, 11, -5], weapon: 88, yaw: -60, roll: 10, wind: 0.5, lift: 0.4, sway: -0.3, phase: 0.75, face: 'stern', fx: { rune: 0.4 } }),
   pose(A3_FLY, { y: 7, lean: 14, twist: -10, handF: [11, 11, 1], weapon: 70, yaw: -30, roll: 24, handB: [3, 10, 10], weaponB: 150, wind: 0.35, lift: 0.3, sway: -0.15, phase: 0.85, face: 'stern', fx: { rune: 0.3 } }),
-  settle(A3_FLY, 0.6, { wind: 0.3, lift: 0.15, phase: 0.95, face: 'stern', fx: { runeB: 0.25 } }),
-  settle(A3_FLY, 0.9, { wind: 0.24, lift: 0.05, phase: 1.05, fx: { runeB: 0.3 } }),
+  settle(A3_FLY, 0.45, { wind: 0.3, lift: 0.2, phase: 0.95, face: 'stern', fx: { runeB: 0.2 } }),
+  settle(A3_FLY, 0.75, { wind: 0.26, lift: 0.1, phase: 1.05, fx: { runeB: 0.25 } }),
+  settle(A3_FLY, 0.93, { wind: 0.24, lift: 0.05, phase: 1.15, fx: { runeB: 0.3 } }),
 ];
 
 /** The core clips' poses, by clip. */

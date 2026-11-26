@@ -6,14 +6,16 @@
  *   kneel    4  (loop) low health: down on her right knee, the sword planted point down beside it
  *               with her hand on the hilt, the wand hand pressed to her chest; heaving, a bead of
  *               sweat, the hair hanging forward
- *   ko       6  (hold) a stagger, her knees give, and she crumples onto her side, the hair spilling
- *               out over the floor; the sword and the wand let fall beside her
- *   victory  8  (hold) a twirl on the spot with the hair and coat flaring, the sword raised high
- *               with a glint, then swept down and out to her right in a flourish, the wand hand
- *               on her hip and a smile for the viewer
+ *   ko       6  (hold) a stagger, her knees give, and she crumples down, twisted onto her back
+ *               with her knees drawn up, her face turned up and the hair fanned out over the floor
+ *               beyond her head; the sword and the wand let fall beside her
+ *   victory  8  (hold) a twirl on the spot with the hair and coat flaring and the sword's point
+ *               sweeping an arc of light round her, the sword raised high with a glint, then
+ *               held out to her right and a little up in a flourish, the wand hand on her hip,
+ *               her head tipped, a smile and a wink for the viewer
  *
- * The effects these clips paint for themselves (the sweat, the glint, the dust of her fall) are
- * `fx.extra` painters defined beside them. The flinch ends most of the way back into the battle
+ * The effects these clips paint for themselves (the sweat, the glint, the twirl's sparkles, the
+ * dust of her fall) are `fx.extra` painters defined beside them. The flinch ends most of the way back into the battle
  * stance (`settle`), and the victory starts from it (`fromReady`).
  */
 import type { RGB } from '../../paint.js';
@@ -135,9 +137,10 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
 // ── Knocked out ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Lying crumpled on her right side, knees drawn up together, her head turned to the floor and the
- * hair spilling out from it; turned (`turn` -60) so that she lies across the screen in every view.
- * The sword lies dropped in front of her, the wand by her outflung left hand.
+ * Lying crumpled, twisted onto her back with her knees drawn up together, her face turned up and
+ * her hands fallen to the floor, the hair fanned out over the floor beyond her head; turned
+ * (`turn` -60) so that she lies across the screen in every view. The sword lies dropped in front
+ * of her, the wand by her left hand.
  */
 const DOWN: ChibiPose = {
   x: -6,
@@ -150,8 +153,8 @@ const DOWN: ChibiPose = {
   look: 30,
   footF: [12, -2, 4],
   footB: [11, -3, -1],
-  handF: [12, 6, 16],
-  handB: [4, -2, 12],
+  handF: [10, 8, 14],
+  handB: [3, 7, 12],
   drop: true,
   dropAt: [-14, 1.5, 24],
   weapon: 90,
@@ -163,9 +166,11 @@ const DOWN: ChibiPose = {
   rollB: -80,
   yawB: 0,
   face: 'closed',
-  wind: 0,
-  lift: -0.4,
-  flare: 0.5,
+  // The hair fanned out flat over the floor beyond her head (streaming back from it and pressed
+  // down), not hanging in a block below it.
+  wind: 0.9,
+  lift: 0,
+  flare: 0.8,
 };
 
 /** Dust thrown up from the floor along her as she lands: puffs beside her hips and her shoulders. */
@@ -225,27 +230,49 @@ const glint =
 const twirl = (turn: number, phase: number): ChibiPose =>
   pose(S, { x: 0, y: 3, lean: 4, twist: 0, turn, head: -2, look: -10, footF: [3, -2, 4], footB: [-3, 0, 4], handF: [5, 6, 14], weapon: 90, roll: 0, yaw: 70, handB: [4, 6, 14], weaponB: 90, rollB: 0, yawB: 70, face: 'smirk', wind: 0.4, flare: 0.9, sway: -0.6, lift: 0.25, phase, fx: { rune: 0.6, runeB: 0.6 } });
 
+/**
+ * The twirl's arc: a level sweep of light round her at the sword's height from where its point
+ * was (`from`, degrees round her as `turn` is) to where it is, with sparkles shed along it.
+ */
+const twirlArc =
+  (from: number, to: number): ChibiPose['fx'] => ({
+    rune: 0.8,
+    runeB: 0.6,
+    ring: { from, to, height: 36, radius: 36 },
+    extra: ({ c, rig, aura, proj, hash, behind }: FxContext): void => {
+      for (let i = 0; i < 7; i++) {
+        const a = ((from + (to - from) * hash(i, 501) - (rig.pose.turn ?? 0)) * Math.PI) / 180;
+        const r = 30 + hash(i, 502) * 12;
+        const p3: V3 = [rig.pelvis.o[0] + Math.cos(a) * r, 30 + hash(i, 503) * 16, rig.pelvis.o[2] + Math.sin(a) * r];
+        const [x, y] = proj(p3);
+        const under = behind(p3);
+        c.glow(x, y, WHITE, 1, under);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) c.glow(x + dx, y + dy, aura.core, 0.8, under);
+      }
+    },
+  });
+
 /** Raised high out to her right with a glint at the point, the wand hand on her hip. */
 const RAISED: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -4, twist: 10, tilt: 3, head: -8, look: 10, footF: [6, 0, 5.6], footB: [-5, 0, 5], handF: [-5, -8, 15], weapon: -4, roll: 24, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wind: 0.4, lift: 0.2, sway: 0.3 });
 
 /**
- * The last pose, held: the sword swept down and out to her right in a flourish, the wand hand on
- * her hip, head tipped, a smile for the viewer. Out and down, the sword shows its length in every
- * view and stays clear of her face.
+ * The last pose, held: the sword held out to her right and a little up in a flourish, the wand
+ * hand on her hip, her head tipped to one side, a smile and a wink for the viewer.
  */
-const SALUTE: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -2, twist: 4, tilt: 4, head: -3, look: 14, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [5, 12, 12], weapon: 124, roll: -32, yaw: 4, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wind: 0.3, lift: 0.2, sway: 0.3 });
+const SALUTE: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -3, twist: 6, tilt: 8, head: -4, look: 14, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [8, 6, 12], weapon: 50, roll: 32, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wink: 'R', wind: 0.3, lift: 0.2, sway: 0.3 });
 
 const victory: ChibiPose[] = [
   // A breath first, dipping into the twirl.
   fromReady(pose(S, { y: 6, lean: 6, twist: -10, head: 2, look: 4, handF: [6, 9, 12], weapon: 90, roll: 0, yaw: 40, handB: [5, 8, 12], weaponB: 90, rollB: 0, yawB: 40, face: 'smirk', wind: 0.25 }), 0.6),
-  // A full twirl, the hair and coat swinging out and lagging behind her.
-  twirl(120, 0.1),
-  twirl(240, 0.25),
+  // A full twirl, the hair and coat swinging out and lagging behind her, the sword's point
+  // sweeping an arc of light round her.
+  pose(twirl(120, 0.1), { fx: twirlArc(40, 190) }),
+  pose(twirl(240, 0.25), { fx: twirlArc(190, 310) }),
   // Round to face front again, the sword thrown up high: a glint.
   pose(RAISED, { turn: 360, phase: 0.4, flare: 0.35, sway: -0.4, wind: 0.45, lift: 0.25, fx: { rune: 1, extra: glint(1) } }),
-  pose(RAISED, { turn: 360, phase: 0.55, flare: 0.2, sway: -0.2, fx: { rune: 0.7, extra: glint(0.6) } }),
-  // Brought down into a salute, smiling; the hair settling.
-  pose(SALUTE, { turn: 360, phase: 0.7, wind: 0.35, lift: 0.2, fx: { rune: 0.5 } }),
+  pose(RAISED, { turn: 360, phase: 0.6, flare: 0.25, sway: -0.25, handB: [-1, 15, 13], fx: { rune: 0.7, extra: glint(0.6) } }),
+  // Brought down and out into her flourish, a wink and a smile; the hair settling.
+  pose(SALUTE, { turn: 360, phase: 0.7, wind: 0.35, lift: 0.2, fx: { rune: 0.5, extra: glint(0.4) } }),
   pose(SALUTE, { turn: 360, phase: 0.85, wind: 0.32, lift: 0.15, fx: { rune: 0.4 } }),
   pose(SALUTE, { turn: 360, phase: 1, fx: { rune: 0.35 } }),
 ];

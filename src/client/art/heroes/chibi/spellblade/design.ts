@@ -1,29 +1,34 @@
 /**
  * The Spellblade, as a chibi: a slim, quick young mage with long, straight silver-white hair (a
- * lavender shadow in it) falling to the middle of her back, two long locks over her shoulders
- * framing her face, a soft fringe swept to her left held back on the right by a small gold
- * crescent pin. She wears a fitted violet robe-coat with a high gold-edged collar, cut away at the
- * front from the hip over a pale lavender under-dress and falling to the knee behind, a violet
- * sash with a gold buckle, a short deep-violet cape to the hips with a gold hem, dark plum
- * leggings and soft grey-violet boots with turned-down pale cuffs. She fights with a slender sword in
- * her right hand (a violet fuller that glows when she casts) and a short wand with a violet
- * crystal in her left; the two are separate held items, so a spell-bow can replace them later
- * without redrawing her. Her moves are in the moves-*.ts files beside this one, and hero.ts puts
- * her together.
+ * lavender shadow in it, a sheen round the back of her crown) falling to the middle of her back,
+ * gathered in under the nape to her shoulders' width with a lock caught in a small gold clasp, two
+ * long locks over her shoulders framing her face, a soft fringe swept to her left held back on the
+ * right by a small gold crescent pin. She wears a fitted violet robe-coat with a high gold-edged
+ * collar open at the throat, cut away at the front from the hip and falling to the knee behind, a
+ * pale lavender under-dress showing as a narrow front panel to mid-thigh, a sash of the coat's
+ * violet with a gold buckle, a short deep-violet cape to the hips with a gold hem, dark plum
+ * leggings and slim dark grey-violet boots with pointed toes and narrow pale turned-down cuffs. She
+ * fights with a slender sword in her right hand (a violet fuller that glows when she casts) and a
+ * short wand with a violet crystal in her left; the two are separate held items, so a spell-bow can
+ * replace them later without redrawing her. Her moves are in the moves-*.ts files beside this one,
+ * and hero.ts puts her together.
  */
 import { hex } from '../../paint.js';
 import { blade } from '../blade.js';
-import type { BodyDesign, ChibiDesign, DrawItem, HeadPiece, Lock, Piece, PieceContext } from '../design.js';
-import { curtain, FACE_SOFT } from '../head.js';
+import type { BodyDesign, ChibiDesign, DrawItem, HeadPiece, Lock, Piece, PieceContext, Tress } from '../design.js';
+import { FACE_SOFT } from '../head.js';
 import { cape, skirt } from '../pieces.js';
-import { dim, flat, type Hit, type Mat, mat4 } from '../raster.js';
+import { dim, flat, type Hit, type Mat, mat4, toneLight } from '../raster.js';
 import { add3, at3, cross3, dirIn, type Frame3, type Limb, lerp, lerp3, norm3, rad, type V3 } from '../rig.js';
 import { wand } from '../wand.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
-// Fair: the light tone over most of the face, the base tone only in its shadows.
+// Fair skin, for the hands and neck.
 const SKIN = mat4('#fff0e0', '#f6cfab', '#d8a27c', '#a26c4e', '#6e3c2c', 0.3);
+// The face: the light tone over all of it that faces the viewer at all, even pitched down in her
+// crouch, so it reads clean and fair at game size; the base tone only where it turns well away.
+const FACE_SKIN: Mat = { ...SKIN, gain: 0.3, bias: 0.6 };
 const HAIR = mat4('#ffffff', '#f4f2fa', '#c8c4dc', '#8e8aa8', '#5e5a78', 0.05);
 // The robe-coat reads as one violet: its base tone over most of it, the light tone on lit folds.
 const ROBE = { ...mat4('#a884de', '#8c66c8', '#5c3f96', '#35205e', '#1e1238', -0.02), gain: 0.6 };
@@ -35,13 +40,15 @@ const PANEL = mat4('#ffffff', '#e8e2f4', '#b6aed0', '#7c7496', '#4a4460', 0.12);
 // The under-dress below the sash: the same pale cloth, its base tone over most of it.
 const DRESS = { ...PANEL, bias: 0, gain: 0.7 };
 const GOLD = mat4('#fff8dc', '#f2e6c0', '#c8b88a', '#7e7050', '#4a4028', 0.12);
-// The sash: a deep violet band, darker than the coat, so the buckle stands out on it.
-const SASH = mat4('#6a4aa6', '#4a3084', '#33205e', '#1e1240', '#0e0820');
-const LEGS = mat4('#6a5878', '#4a3a56', '#30263e', '#1c1626', '#0e0a14', -0.05);
-// Soft suede boots, a muted grey-violet a step lighter than the leggings.
-const BOOT = mat4('#9a8ab0', '#76678f', '#54466c', '#352b4a', '#181222', -0.02);
-// The boots' turned-down cuffs show their pale lining.
-const CUFF = mat4('#f4f0fa', '#cdc6e0', '#a198bc', '#6c6288', '#241c32', 0.02);
+// The sash: the coat's violet, lit (its light tone over most of it) so it reads as a band of
+// colour at her waist rather than a dark belt, the gold buckle bright on it.
+const SASH = mat4('#a884de', '#8c66c8', '#5c3f96', '#35205e', '#1e1238', 0.25);
+// Dark plum leggings, their base tone over most of them so they read as plum, not black.
+const LEGS = { ...mat4('#6a5878', '#4a3a56', '#30263e', '#1c1626', '#0e0a14', 0.12), gain: 0.75 };
+// Soft suede boots, a dark grey-violet a step lighter than the leggings.
+const BOOT = mat4('#8a7aa2', '#64567e', '#463a5e', '#2c2440', '#120e1a', -0.04);
+// The boots' turned-down cuffs: a narrow band of their pale lining.
+const CUFF = mat4('#f4f0fa', '#d8d2ea', '#aaa2c4', '#6c6288', '#241c32', 0.05);
 const SOLE = mat4('#3a3044', '#2a2232', '#1c1622', '#100c14', '#08060a');
 const STEEL = mat4('#ffffff', '#dfe3ee', '#aab0c4', '#6e748c', '#2a2c3a', 0.12);
 const EDGE = mat4('#ffffff', '#f4f6fc', '#cfd4e2', '#9aa0b4', '#2a2c3a', 0.15);
@@ -59,8 +66,10 @@ const BUILD = { hip: 26.5, thigh: 11.8, shin: 11.6, ankle: 4, torso: 22, neck: 2
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 const LOCKS: Lock[] = [
-  // The crown: big smooth clumps lying back over the head and down toward the curtain.
-  L(8, 60, [-0.9, -0.4, 0.05], 10.5, 5.4, [-0.1, -0.5, 0], 0.5, 0.4),
+  // The crown: smooth clumps lying back over the round of the head, ending above the sheen.
+  L(150, 52, [-0.55, -1, 0.35], 8, 3.6, [0, -0.2, 0.1], 0.4, 0.4),
+  L(180, 58, [-0.6, -1, 0], 8.5, 4, [0, -0.2, 0], 0.4, 0.4),
+  L(210, 52, [-0.55, -1, -0.35], 8, 3.6, [0, -0.2, -0.1], 0.4, 0.4),
   // The fringe, soft and swept across to her left, longest over her left brow; her right temple
   // is left clear where the crescent pin holds the hair back.
   L(36, 46, [0.3, -0.7, -0.9], 6, 3, [0.1, -0.15, -0.3], 0.3, 0.3),
@@ -110,6 +119,37 @@ function hairpin(shell: { c: V3; r: V3 }): HeadPiece {
   };
 }
 
+// ── The sheen on her crown ───────────────────────────────────────────────────────────────────
+
+/** The band of sheen round the back of her crown: how high it runs (degrees up the shell) and how far round from the back. */
+const SHEEN = { lo: 13, mid: 21, hi: 28, round: 100 };
+
+/**
+ * A band of sheen round the back of her crown, as glossy straight hair catches the light: a
+ * bright ring with a band of shadow under it, on a skin just over the hair's shell (over the
+ * clumps painted on it), round the back and sides of the head only, so it never crosses the fringe.
+ */
+function sheen(shell: { c: V3; r: V3 }): HeadPiece {
+  const k = 1.035;
+  return {
+    blobs: (_ctx, head) => [
+      {
+        frame: head,
+        blobs: [{ c: shell.c, r: [shell.r[0] * k, shell.r[1] * k, shell.r[2] * k], id: 71 }],
+        shade: (h: Hit) => {
+          if (h.back) return null;
+          const p = h.p;
+          const q: V3 = [(p[0] - shell.c[0]) / shell.r[0], (p[1] - shell.c[1]) / shell.r[1], (p[2] - shell.c[2]) / shell.r[2]];
+          const pitch = (Math.asin(Math.max(-1, Math.min(1, q[1] / (Math.hypot(q[0], q[1], q[2]) || 1)))) * 180) / Math.PI;
+          const yaw = Math.abs((Math.atan2(q[2], q[0]) * 180) / Math.PI);
+          if (yaw < SHEEN.round || pitch < SHEEN.lo || pitch > SHEEN.hi) return null;
+          return { m: HAIR, light: toneLight(HAIR, pitch > SHEEN.mid ? 0 : pitch > SHEEN.lo + 2.5 ? 2 : 3) };
+        },
+      },
+    ],
+  };
+}
+
 // ── The high collar, gold-edged ──────────────────────────────────────────────────────────────
 
 /** A high collar, open at the front and lined, with a gold band along its top edge (painted with the head, as pieces.ts `collar`). */
@@ -138,8 +178,9 @@ function goldCollar(spec: { c: V3; r: V3; bottom: number; top: { back: number; s
 // ── Boots: soft suede with a turned-down cuff ────────────────────────────────────────────────
 
 /**
- * The turned-down cuff at the top of each boot: a pale band a little wider than the boot, sorted
- * just over its leg (and a step darker on the far leg, as the painter dims a far leg).
+ * The turned-down cuff at the top of each boot: a narrow pale band, two pixels deep, across the
+ * shin a little wider than the boot, sorted just over its leg (and a step darker on the far leg,
+ * as the painter dims a far leg).
  */
 const bootCuffs: Piece = (ctx: PieceContext): DrawItem[] => {
   const { rig, depth, proj } = ctx;
@@ -151,10 +192,32 @@ const bootCuffs: Piece = (ctx: PieceContext): DrawItem[] => {
       z,
       draw: () => {
         const part = ctx.part();
-        const a = lerp3(leg.end, leg.mid, BODY.boot.top + 0.03);
-        const b = lerp3(leg.end, leg.mid, BODY.boot.top - 0.08);
+        const top = lerp3(leg.end, leg.mid, BODY.boot.top);
+        const a = proj(top);
+        const b = proj(lerp3(leg.end, leg.mid, BODY.boot.top - 0.14));
+        // Across the shin on screen, a little wider than the boot; two pixels down it.
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const dl = Math.hypot(dx, dy) || 1;
+        const ux = (dx / dl) * 2.1;
+        const uy = (dy / dl) * 2.1;
+        const w = BODY.boot.r * 1.12;
+        const nx = (-dy / dl) * w;
+        const ny = (dx / dl) * w;
         const m = far ? dim(CUFF, -0.12) : CUFF;
-        part.capsule(proj(a), proj(b), BODY.boot.r * 1.14, BODY.boot.r * 1.1, m, far ? -0.16 : 0, depth(a) + 0.6, depth(b) + 0.6, 1);
+        const zz = depth(top) + 0.6;
+        part.poly(
+          [
+            [a[0] + nx - ux * 0.2, a[1] + ny - uy * 0.2],
+            [a[0] - nx - ux * 0.2, a[1] - ny - uy * 0.2],
+            [a[0] - nx + ux, a[1] - ny + uy],
+            [a[0] + nx + ux, a[1] + ny + uy],
+          ],
+          m,
+          (x) => (far ? 0.25 : 0.55) - ((x - a[0]) / w) * 0.3,
+          zz,
+          1,
+        );
         part.commit();
       },
     };
@@ -170,16 +233,14 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   const u = h.p[1];
   const yaw = deg(h);
   if (where === 'hips') {
-    if (u <= 4.2) return LEGS;
-    // The under-dress shows at the front between the coat's cut-away edges.
-    return yaw < 34 ? PANEL : ROBE;
+    // The under-dress shows at the front, a narrow panel between the coat's cut-away edges that
+    // runs on down into its skirt; either side of it, below the coat, her leggings.
+    if (yaw < 26) return PANEL;
+    return u <= 4.2 ? LEGS : ROBE;
   }
   if (u < 5) return null;
   // The sash, with a gold buckle at the front.
-  if (u < 7.8) {
-    if (yaw < 9 && u > 5.4 && u < 7.4) return yaw < 5 && u > 5.9 && u < 6.9 ? SASH : GOLD;
-    return SASH;
-  }
+  if (u < 7.8) return yaw < 11 && u > 5.4 && u < 7.6 ? GOLD : SASH;
   // The pale bodice down the front, edged in gold, narrowing toward the collar.
   const open = 21 - (u - 8) * 0.35;
   if (yaw < open) return yaw > open - 3.2 ? GOLD : PANEL;
@@ -189,7 +250,8 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
 const BODY: BodyDesign = {
   thigh: { mat: LEGS, r0: 3.3, r1: 2.8 },
   shin: { mat: LEGS, r0: 2.6, r1: 2.4 },
-  boot: { mat: BOOT, r: 3, top: 0.5, toe: 5.4, heel: 2, sole: SOLE },
+  // Soft boots: slim, tapering to a pointed toe.
+  boot: { mat: BOOT, r: 2.7, top: 0.5, toe: 5.6, heel: 2, sole: SOLE, foot: [2.4, 1.5] },
   upperArm: { mat: ROBE, r0: 2.8, r1: 2.5 },
   foreArm: { mat: ROBE, r0: 2.5, r1: 2.6 },
   // A gold band at the wrist of each sleeve.
@@ -204,13 +266,23 @@ const BODY: BodyDesign = {
   torso,
 };
 
-const SHELL = { c: [-1.4, 1.2, 0] as V3, r: [11.2, 10.6, 11.1] as V3 };
+/** The curtain down her back: [yaw, length, half-width] of each tress, drawing in toward the middle as they fall. */
+const CURTAIN: Tress[] = (
+  [
+    [146, 24, 2.8],
+    [163, 31, 3.2],
+    [197, 31, 3.2],
+    [214, 24, 2.8],
+  ] as const
+).map(([yaw, len, w]): Tress => ({ yaw, pitch: 8, dir: [-0.5, -1, -Math.sin(rad(yaw)) * 0.6], len, w, taper: 0.45 }));
+
+const SHELL = { c: [-1.4, 0.8, 0] as V3, r: [11.4, 10.2, 11.8] as V3 };
 
 const SPELLBLADE: ChibiDesign = {
   id: 'hero-mage-female',
   build: BUILD,
   head: {
-    skin: SKIN,
+    skin: FACE_SKIN,
     hair: HAIR,
     skull: { c: [0, 0.5, 0], r: [8.9, 9.4, 9.9] },
     jaw: { c: [1.5, -4, 0], r: [7.4, 6.4, 7.6] },
@@ -220,12 +292,18 @@ const SPELLBLADE: ChibiDesign = {
     locks: LOCKS,
     whorl: { yaw: 180, pitch: 58, reach: 82, clumps: 6, twist: 0.2 },
     long: {
-      // A curtain to the middle of her back over the cape, and a long lock over each shoulder.
-      back: curtain({ from: 122, to: 238, count: 6, pitch: 6, len: 31, w: 3, jag: 0.38, taper: 0.5, seed: 11 }),
+      // A curtain to the middle of her back over the cape, gathered in under the nape to about
+      // the width of her shoulders (so the cape shows either side of it from behind) and falling
+      // in groups that end in points: two long ones either side of a shorter middle tress, and a
+      // shorter one at each edge. And a long lock over each shoulder.
+      back: CURTAIN,
       front: [
         { yaw: 70, pitch: 6, dir: [0.3, -1, 0.08], len: 25, w: 2.5, taper: 0.5 },
         { yaw: -70, pitch: 6, dir: [0.3, -1, -0.08], len: 25, w: 2.5, taper: 0.5 },
       ],
+      // A lock gathered at the nape in a small gold clasp, its cord ends hanging: down the middle
+      // of the curtain, a shorter point between its two long ones.
+      tail: { yaw: 180, pitch: -1, dir: [-0.35, -1, 0], stiff: 0.15, len: 25, w: 2.8, tie: { mat: GOLD, r: 2.2, ends: 6 } },
       lie: 2.2,
     },
     face: {
@@ -238,25 +316,28 @@ const SPELLBLADE: ChibiDesign = {
       shine: hex('#ffffff'),
       brow: hex('#7a7498'),
       browUp: 3.6,
-      mouth: hex('#a8505a'),
+      mouth: hex('#c85a6c'),
       mouthAt: [9.1, -6.6],
       noseAt: [9.7, -4],
       style: FACE_SOFT,
     },
   },
   body: BODY,
-  headPieces: [goldCollar({ c: [-0.8, 29, 0], r: [7.2, 10.5, 8.8], bottom: 19, top: { back: 29.6, side: 27.6, front: 25 }, open: 38 }), hairpin(SHELL)],
+  // The collar stands high behind and at the sides, but is open wide and low at the throat, so
+  // its gold front edges stay well below her jaw.
+  headPieces: [goldCollar({ c: [-0.8, 29, 0], r: [7.2, 10.5, 8.8], bottom: 19, top: { back: 29.6, side: 27.4, front: 23.5 }, open: 44 }), hairpin(SHELL), sheen(SHELL)],
   outfit: [
-    // The under-dress: a short pale skirt at the front, to the middle of her thighs.
+    // The under-dress: a pale front panel hanging between the coat's cut-away edges to the
+    // middle of her thighs, narrow enough that her leggings show either side of it.
     skirt({
       outer: DRESS,
       inner: dim(PANEL, -0.2),
       waist: 4.8,
       ring: [4.9, 6],
-      aline: 0.25,
+      aline: 0.1,
       folds: true,
       legs: 3.7,
-      panels: [{ from: -36, to: 36, len: 11, jag: 1 }],
+      panels: [{ from: -28, to: 28, len: 12, jag: 1.4, taper: 0.8 }],
     }),
     // The robe-coat: cut away at the front from the hip, to the knee behind, gold at the hem.
     skirt({
@@ -279,7 +360,7 @@ const SPELLBLADE: ChibiDesign = {
     }),
     // The short cape, from the shoulders to the hips: wider and longer than the curtain of hair, so
     // its gold hem and edges show below and beside it from behind.
-    cape({ outer: CAPE, inner: CAPE_LINING, top: 19.4, ring: [5.2, 7.6], from: 106, to: 254, len: 21, jag: 2.5, taper: 1.22, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 0.8 } }),
+    cape({ outer: CAPE, inner: CAPE_LINING, top: 19.4, ring: [5.6, 8.8], from: 100, to: 260, len: 22, jag: 2.5, taper: 1.3, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 0.8 } }),
     bootCuffs,
   ],
   // The sword: a slender, straight, double-edged blade about 40 px long, pale steel with a violet
