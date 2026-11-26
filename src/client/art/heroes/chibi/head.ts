@@ -3,15 +3,22 @@
  * smoothly through every angle, with locks of hair (clumps raked over the head, a fringe, locks at
  * the nape) laid over the shell as leaf-shaped clumps, clumps painted onto the back of the shell
  * fanning from the crown, and the face's features stamped on as small pixel glyphs chosen by how
- * squarely each one faces the viewer. Everything is drawn into one part with a depth test, so
- * locks pass in front of and behind the head as they should, and a coloured line parts each clump
- * from the hair behind it; a last pass tidies lone pixels out of the hair.
+ * squarely each one faces the viewer, from the design's face style (FACE_PLAIN, FACE_SOFT,
+ * FACE_SHARP or its own). Everything is drawn into one part with a depth test, so locks pass in
+ * front of and behind the head as they should, and a coloured line parts each clump from the hair
+ * behind it; a last pass tidies lone pixels out of the hair.
+ *
+ * Long hair (a curtain down the back, locks over the shoulders, a ponytail) hangs from the head
+ * but is sorted with the body (`hairItems`, which the painter adds to its list): each tress is a
+ * strand (pieces.ts `strand`) that lies over the head and the torso and streams with the pose,
+ * painted as a long clump that grows out of the head's hair without a line between them.
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { type FaceDesign, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext } from './design.js';
+import { type BodyDesign, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
+import { hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
 import { flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
-import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, mul3, norm3, rad, type V3 } from './rig.js';
+import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, TO_CAMERA, type V3 } from './rig.js';
 
 /** Shape ids inside the head's part. */
 const SKIN = 1;
@@ -39,45 +46,114 @@ function bare(d: HeadDesign, p: V3): boolean {
 
 // ── Face glyphs ──────────────────────────────────────────────────────────────────────────────
 // Rows of cells, the inner corner (toward the nose) on the left; mirrored for the other side.
-// K lash, I iris, i iris (light), W white, h shine, l lid crease (skin shadow), B brow, M mouth,
-// r mouth inside, T teeth.
+// K lash, I iris, i iris (light), D iris (deep), W white, h shine, l lid crease (skin shadow),
+// B brow, M mouth, r mouth inside, T teeth (see FaceGlyph in design.ts).
 
-interface Glyph {
-  rows: readonly string[];
-  /** The cell that sits on the anchor. */
-  ax: number;
-  ay: number;
-}
+type Glyph = FaceGlyph;
 
-const EYES: Record<'full' | 'mid' | 'narrow' | 'closed' | 'squeeze' | 'wide', Glyph> = {
-  full: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '..ii.'], ax: 2, ay: 1 },
-  mid: { rows: ['KKKK', 'IhIW', 'iIIK', '.ii.'], ax: 1, ay: 1 },
-  narrow: { rows: ['KKK', 'IhK', 'iIK', 'i..'], ax: 1, ay: 1 },
-  // A blink: the lid shut in a line at the eye's middle, a lash at its outer corner, the crease under it.
-  closed: { rows: ['KKKKK', '.lllK'], ax: 2, ay: 0 },
-  // Squeezed shut in pain: a chevron pointing in toward the nose.
-  squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
-  wide: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '.KKK.'], ax: 2, ay: 1 },
+/**
+ * The plain style (the default): small, level eyes under a heavy brow that slants down toward the
+ * nose, and a firm, straight mouth: a stern young man's face.
+ */
+export const FACE_PLAIN: FaceStyle = {
+  eyes: {
+    full: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '..ii.'], ax: 2, ay: 1 },
+    mid: { rows: ['KKKK', 'IhIW', 'iIIK', '.ii.'], ax: 1, ay: 1 },
+    narrow: { rows: ['KKK', 'IhK', 'iIK', 'i..'], ax: 1, ay: 1 },
+    // A blink: the lid shut in a line at the eye's middle, a lash at its outer corner, the crease under it.
+    closed: { rows: ['KKKKK', '.lllK'], ax: 2, ay: 0 },
+    // Squeezed shut in pain: a chevron pointing in toward the nose.
+    squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
+    wide: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '.KKK.'], ax: 2, ay: 1 },
+  },
+  brows: {
+    full: { rows: ['..BBB', 'BBB..'], ax: 2, ay: 1 },
+    mid: { rows: ['.BBB', 'BB..'], ax: 1, ay: 1 },
+    narrow: { rows: ['.BB', 'BB.'], ax: 1, ay: 1 },
+  },
+  // Brows knitted up at their inner ends (pain).
+  browsUp: {
+    full: { rows: ['BB...', '.BBBB'], ax: 2, ay: 1 },
+    mid: { rows: ['BB..', '.BBB'], ax: 1, ay: 1 },
+    narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
+  },
+  // Mouths are laid out across the face (left to right on screen), centred on the anchor.
+  mouths: {
+    stern: { rows: ['MMM'], ax: 1, ay: 0 },
+    shout: { rows: ['MMM', 'MrM', '.M.'], ax: 1, ay: 0 },
+    grit: { rows: ['MTTM'], ax: 2, ay: 0 },
+    hurt: { rows: ['.MMM.', 'MTTTM', 'MrrrM', '.MMM.'], ax: 2, ay: 1 },
+    closed: { rows: ['MM'], ax: 1, ay: 0 },
+    smirk: { rows: ['..M', 'MM.'], ax: 1, ay: 0 },
+  },
 };
-const BROWS: Record<'full' | 'mid' | 'narrow', Glyph> = {
-  full: { rows: ['..BBB', 'BBB..'], ax: 2, ay: 1 },
-  mid: { rows: ['.BBB', 'BB..'], ax: 1, ay: 1 },
-  narrow: { rows: ['.BB', 'BB.'], ax: 1, ay: 1 },
+
+/**
+ * The soft style: large eyes, mostly iris (deep at the top, light at the bottom, a big shine),
+ * under a heavy upper lash that flicks out past the outer corner, with a short lower lash; thin,
+ * gently arched brows; a small mouth. Calm when closed (a curved lash line), with a smile for a smirk.
+ */
+export const FACE_SOFT: FaceStyle = {
+  eyes: {
+    full: { rows: ['.KKKKK', 'KDhDDK', 'KIhIIW', 'KiIIiW', '.liil.'], ax: 2, ay: 2 },
+    mid: { rows: ['KKKKK', 'DhDDK', 'IhIIW', 'iIIiK', '.lil.'], ax: 1, ay: 2 },
+    narrow: { rows: ['KKKK', 'DhDK', 'IIiK', 'il..'], ax: 1, ay: 2 },
+    // Closed: a curved lash line, its outer end flicking out, and a lash crease under it.
+    closed: { rows: ['.....K', 'KKKKK.', '.lll..'], ax: 2, ay: 1 },
+    squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
+    wide: { rows: ['.KKKKK', 'KDhDDK', 'KIhIIW', 'KiIIiW', '.KKKK.'], ax: 2, ay: 2 },
+  },
+  brows: {
+    full: { rows: ['.BBB.', 'B...B'], ax: 2, ay: 1 },
+    mid: { rows: ['.BBB', 'B...'], ax: 1, ay: 1 },
+    narrow: { rows: ['BBB'], ax: 1, ay: 0 },
+  },
+  browsUp: {
+    full: { rows: ['BB...', '..BBB'], ax: 2, ay: 1 },
+    mid: { rows: ['BB..', '..BB'], ax: 1, ay: 1 },
+    narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
+  },
+  mouths: {
+    stern: { rows: ['MM'], ax: 1, ay: 0 },
+    shout: { rows: ['.MM.', 'MrrM', '.MM.'], ax: 2, ay: 1 },
+    grit: { rows: ['MTTM'], ax: 2, ay: 0 },
+    hurt: { rows: ['.MM.', 'MrrM', 'M..M'], ax: 2, ay: 1 },
+    closed: { rows: ['M.M', '.M.'], ax: 1, ay: 0 },
+    smirk: { rows: ['M..M', '.MM.'], ax: 2, ay: 0 },
+  },
 };
-/** Brows knitted up at their inner ends (pain). */
-const BROWS_UP: Record<'full' | 'mid' | 'narrow', Glyph> = {
-  full: { rows: ['BB...', '.BBBB'], ax: 2, ay: 1 },
-  mid: { rows: ['BB..', '.BBB'], ax: 1, ay: 1 },
-  narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
-};
-// Mouths are laid out across the face (left to right on screen), centred on the anchor.
-const MOUTHS: Record<Face, Glyph> = {
-  stern: { rows: ['MMM'], ax: 1, ay: 0 },
-  shout: { rows: ['MMM', 'MrM', '.M.'], ax: 1, ay: 0 },
-  grit: { rows: ['MTTM'], ax: 2, ay: 0 },
-  hurt: { rows: ['.MMM.', 'MTTTM', 'MrrrM', '.MMM.'], ax: 2, ay: 1 },
-  closed: { rows: ['MM'], ax: 1, ay: 0 },
-  smirk: { rows: ['..M', 'MM.'], ax: 1, ay: 0 },
+
+/**
+ * The sharp style: narrow eyes under a heavy lid that sweeps up to the outer corner, a slit of
+ * iris with a bright shine; straight brows angled down a little toward the nose; a lopsided smirk.
+ */
+export const FACE_SHARP: FaceStyle = {
+  eyes: {
+    full: { rows: ['...KKK', 'KKKhIK', '.KiIIW', '...ll.'], ax: 3, ay: 1 },
+    mid: { rows: ['..KKK', 'KKhIK', '.iIIK', '..l..'], ax: 2, ay: 1 },
+    narrow: { rows: ['.KKK', 'KhIK', 'iIK.'], ax: 1, ay: 1 },
+    closed: { rows: ['...KKK', 'KKKK..'], ax: 3, ay: 1 },
+    squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
+    wide: { rows: ['..KKKK', 'KKhIIK', 'KiIIIW', '.KKKK.'], ax: 3, ay: 1 },
+  },
+  brows: {
+    full: { rows: ['...BBB', 'BBBB..'], ax: 3, ay: 1 },
+    mid: { rows: ['..BBB', 'BBB..'], ax: 2, ay: 1 },
+    narrow: { rows: ['.BB', 'BB.'], ax: 1, ay: 1 },
+  },
+  browsUp: {
+    full: { rows: ['BB....', '.BBBBB'], ax: 3, ay: 1 },
+    mid: { rows: ['BB...', '.BBBB'], ax: 2, ay: 1 },
+    narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
+  },
+  mouths: {
+    stern: { rows: ['MMM'], ax: 1, ay: 0 },
+    shout: { rows: ['MMMM', 'MrrM', '.MM.'], ax: 2, ay: 0 },
+    grit: { rows: ['MTTTM'], ax: 2, ay: 0 },
+    hurt: { rows: ['.MMM.', 'MTTTM', '.MMM.'], ax: 2, ay: 1 },
+    closed: { rows: ['MM.'], ax: 1, ay: 0 },
+    smirk: { rows: ['...M', 'MMM.'], ax: 1, ay: 0 },
+  },
 };
 
 /** Stamps a glyph into the part where the face shows (not over hair), mirrored when `dir` is -1. */
@@ -174,25 +250,26 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     }
   }
 
-  paintFace(ctx, part, d.face, d.skin, fr, pose.face ?? 'stern');
+  paintFace(ctx, part, d.face, d.skin, fr, pose.face ?? d.face.rest ?? 'stern');
   part.commit();
-  despeckle(ctx, [...hair.tones, hair.line], cx, cy, 24);
+  despeckle(ctx, [...hair.tones, hair.line], cx - 24, cy - 24, cx + 24, cy + 24, HEAD_TAG);
 }
 
 /**
  * Tidies the hair once it is painted: a pixel of one hair tone with at most one neighbour of its
  * own tone (a lone speck, or the stub end of a line) takes the tone most of its hair neighbours
- * have, so the clumps read as a few clean shapes.
+ * have, so the clumps read as a few clean shapes. Only pixels in the box that the part tagged
+ * `tag` painted are hair.
  */
-function despeckle(ctx: PieceContext, tones: readonly RGB[], cx: number, cy: number, r: number): void {
+function despeckle(ctx: PieceContext, tones: readonly RGB[], x0: number, y0: number, x1: number, y1: number, tag: number): void {
   const { c, owner } = ctx;
   const w = c.w;
   const key = (i: number): number => (c.data[i * 4] as number) * 65536 + (c.data[i * 4 + 1] as number) * 256 + (c.data[i * 4 + 2] as number);
   const hairKeys = tones.map((t) => t[0] * 65536 + t[1] * 256 + t[2]);
-  const isHair = (i: number): boolean => owner[i] === HEAD_TAG && (c.data[i * 4 + 3] as number) > 0 && hairKeys.includes(key(i));
+  const isHair = (i: number): boolean => owner[i] === tag && (c.data[i * 4 + 3] as number) > 0 && hairKeys.includes(key(i));
   const fix: number[] = [];
-  for (let y = Math.max(1, cy - r); y <= Math.min(c.h - 2, cy + r); y++) {
-    for (let x = Math.max(1, cx - r); x <= Math.min(w - 2, cx + r); x++) {
+  for (let y = Math.max(1, y0); y <= Math.min(c.h - 2, y1); y++) {
+    for (let x = Math.max(1, x0); x <= Math.min(w - 2, x1); x++) {
       const i = y * w + x;
       if (!isHair(i)) continue;
       const k = key(i);
@@ -287,6 +364,40 @@ function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk:
   }
   const belly = lk.belly ?? BELLY;
   const width = (t: number): number => lk.w * (t < belly ? 0.8 + (0.2 * t) / belly : Math.pow((1 - t) / (1 - belly), 0.9));
+  // How squarely the lock's root faces the light: locks on the shadowed side of the head are a tone darker.
+  const rootN = norm3(dirIn(fr, Math.cos(rad(lk.yaw)) * Math.cos(rad(lk.pitch)), Math.sin(rad(lk.pitch)), Math.sin(rad(lk.yaw)) * Math.cos(rad(lk.pitch))));
+  const rootLit = ctx.cam.light(rootN);
+  const zAt = (t: number): number => {
+    const f = t * n;
+    const i = Math.min(n - 1, Math.floor(f));
+    return (Z[i] as number) + ((Z[i + 1] as number) - (Z[i] as number)) * (f - i);
+  };
+  leaf(
+    part,
+    P,
+    width,
+    m,
+    (mt, ma) => {
+      let tone = ma > 0.42 && mt > 0.08 && mt < 0.55 && rootLit > -0.1 ? 0 : ma < -0.28 || mt > 0.78 ? 2 : 1;
+      // Dark hair: the base tone over the clump and the light tone along its lit side, keeping the
+      // highlight for the brightest streaks.
+      if (d.darkHair) tone = tone === 0 && ma > 0.66 && mt < 0.45 && rootLit > 0.2 ? 0 : tone + 1;
+      if (rootLit < -0.45) tone = Math.min(3, tone + 1);
+      return toneLight(m, tone);
+    },
+    (mt, ma) => zAt(mt) - 0.6 + 3 * Math.min(1, mt * 1.4) + (1 - Math.min(1, ma * ma)) * 0.6,
+    id,
+  );
+}
+
+/**
+ * Paints a leaf-shaped clump along a spine of screen points, `width(t)` either side of it (t from
+ * 0 at the root to 1 at the tip). Each pixel's light and depth come from `light` and `z`, given
+ * how far along the spine its nearest point is (t) and how far across it toward its lit side (a,
+ * -1 to 1, the lit side facing the upper left of the screen).
+ */
+function leaf(part: Part, P: readonly Vec[], width: (t: number) => number, m: Mat, light: (t: number, a: number) => number, z: (t: number, a: number) => number, id: number): void {
+  const n = P.length - 1;
   // The outline: down one side and back up the other.
   const left: Vec[] = [];
   const right: Vec[] = [];
@@ -301,11 +412,8 @@ function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk:
     left.push([p[0] + nx * w, p[1] + ny * w]);
     right.push([p[0] - nx * w, p[1] - ny * w]);
   }
-  // How squarely the lock's root faces the light: locks on the shadowed side of the head are a tone darker.
-  const rootN = norm3(dirIn(fr, Math.cos(rad(lk.yaw)) * Math.cos(rad(lk.pitch)), Math.sin(rad(lk.pitch)), Math.sin(rad(lk.yaw)) * Math.cos(rad(lk.pitch))));
-  const rootLit = ctx.cam.light(rootN);
-  // The nearest point on the lock's spine to a pixel: how far along it (0 to 1) and how far across
-  // it toward its lit side (-1 to 1).
+  // The nearest point on the spine to a pixel: how far along it (0 to 1) and how far across it
+  // toward its lit side (-1 to 1).
   let mx = -1;
   let my = -1;
   let mt = 0;
@@ -337,26 +445,16 @@ function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk:
       }
     }
   };
-  const zAt = (t: number): number => {
-    const f = t * n;
-    const i = Math.min(n - 1, Math.floor(f));
-    return (Z[i] as number) + ((Z[i + 1] as number) - (Z[i] as number)) * (f - i);
-  };
   part.poly(
     [...left, ...right.reverse()],
     m,
     (x, y) => {
       near(x, y);
-      let tone = ma > 0.42 && mt > 0.08 && mt < 0.55 && rootLit > -0.1 ? 0 : ma < -0.28 || mt > 0.78 ? 2 : 1;
-      // Dark hair: the base tone over the clump and the light tone along its lit side, keeping the
-      // highlight for the brightest streaks.
-      if (d.darkHair) tone = tone === 0 && ma > 0.66 && mt < 0.45 && rootLit > 0.2 ? 0 : tone + 1;
-      if (rootLit < -0.45) tone = Math.min(3, tone + 1);
-      return toneLight(m, tone);
+      return light(mt, ma);
     },
     (x, y) => {
       near(x, y);
-      return zAt(mt) - 0.6 + 3 * Math.min(1, mt * 1.4) + (1 - Math.min(1, ma * ma)) * 0.6;
+      return z(mt, ma);
     },
     id,
   );
@@ -368,7 +466,8 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
   // Which way his right is on screen.
   const rightX = Math.sign(cam.vec(fr.r)[0]) || 1;
   const m = (c: RGB): Mat => flat(c);
-  const eyeCols: Record<string, Mat> = { K: m(f.lash), I: m(f.iris), i: m(f.irisLight), W: m(f.white), h: m(f.shine), l: m(skin.tones[3]) };
+  const style = f.style ?? FACE_PLAIN;
+  const eyeCols: Record<string, Mat> = { K: m(f.lash), I: m(f.iris), i: m(f.irisLight), D: m(f.irisDeep ?? shade(f.iris, -0.35)), W: m(f.white), h: m(f.shine), l: m(skin.tones[3]) };
   const browCols: Record<string, Mat> = { B: m(f.brow) };
   const onFace = (id: number): boolean => id === SKIN;
   for (const side of [1, -1]) {
@@ -380,9 +479,9 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
     const z = ctx.depth(hero(at)) + 0.4;
     const dir = side * rightX;
     const kind = facing > 0.7 ? 'full' : facing > 0.42 ? 'mid' : 'narrow';
-    const eye = face === 'closed' ? EYES.closed : face === 'hurt' ? EYES.squeeze : face === 'shout' && kind === 'full' ? EYES.wide : EYES[kind];
+    const eye = face === 'closed' ? style.eyes.closed : face === 'hurt' ? style.eyes.squeeze : face === 'shout' && kind === 'full' ? style.eyes.wide : style.eyes[kind];
     stamp(part, eye, p[0], p[1], dir, eyeCols, z, onFace);
-    const brow = (face === 'hurt' ? BROWS_UP : BROWS)[kind];
+    const brow = (face === 'hurt' ? style.browsUp : style.brows)[kind];
     const lift = face === 'hurt' || face === 'shout' ? 1 : face === 'smirk' && side === 1 ? 1 : 0;
     // Brows show through the fringe, as drawn brows do.
     stamp(part, brow, p[0], p[1] - f.browUp - lift, dir, browCols, z + 20, (id) => id >= 0 && id !== EAR);
@@ -392,7 +491,7 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
   const mf = cam.facing(mouthN);
   if (mf > 0.05) {
     const mp = ctx.proj(hero([f.mouthAt[0], f.mouthAt[1], 0]));
-    const glyph = MOUTHS[face];
+    const glyph = style.mouths[face];
     const shrink = mf < 0.5 && glyph.rows[0]!.length > 2 ? { rows: glyph.rows.map((r) => r.slice(0, -1)), ax: Math.max(0, glyph.ax - 1), ay: glyph.ay } : glyph;
     stamp(part, shrink, mp[0], mp[1], rightX > 0 ? -1 : 1, { M: m(f.mouth), r: m([70, 16, 20]), T: m([236, 226, 214]) }, ctx.depth(hero([f.mouthAt[0], f.mouthAt[1], 0])) + 0.4, onFace);
   }
@@ -408,4 +507,207 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
       stamp(part, { rows: ['..s', '.sd', 'sd.'], ax: 1, ay: 1 }, p[0], p[1], dir, { s: m(f.scar.colour), d: m(skin.tones[2]) }, ctx.depth(hero(at)) + 0.4, onFace);
     }
   }
+}
+
+// ── Long hair ────────────────────────────────────────────────────────────────────────────────
+
+/** A point on the hair's shell (head space) at a yaw and pitch, `k` of the way out from its centre. */
+function onShell(d: HeadDesign, yaw: number, pitch: number, k: number): V3 {
+  const s = d.shell;
+  const cp = Math.cos(rad(pitch));
+  return [s.c[0] + Math.cos(rad(yaw)) * cp * s.r[0] * k, s.c[1] + Math.sin(rad(pitch)) * s.r[1] * k, s.c[2] + Math.sin(rad(yaw)) * cp * s.r[2] * k];
+}
+
+/**
+ * A curtain of long hair: `count` tresses rooted in a row round the back of the hair's shell, from
+ * `from` to `to` degrees (as a tress's yaw: 90 the right, 180 the back, 270 the left) at height
+ * `pitch`, falling down the back and a little out toward their own side. They are `len` long, the
+ * middle ones longest (by `jag`, a share of the length, with a seeded raggedness so the ends make
+ * an uneven hem), and `w` wide.
+ */
+export function curtain(o: { from: number; to: number; count: number; pitch: number; len: number; w: number; jag?: number; stiff?: number; give?: number; taper?: number; seed?: number }): Tress[] {
+  const n = Math.max(1, Math.round(o.count));
+  return Array.from({ length: n }, (_, i): Tress => {
+    const k = n === 1 ? 0.5 : i / (n - 1);
+    const yaw = lerp(o.from, o.to, k);
+    const side = Math.sin(rad(yaw));
+    const len = o.len * (1 - (o.jag ?? 0) * (0.6 * Math.abs(2 * k - 1) + 0.4 * hash(i + 1, o.seed ?? 7)));
+    return { yaw, pitch: o.pitch, dir: [-0.5, -1, -side * 0.3], len, w: o.w, stiff: o.stiff, give: o.give, taper: o.taper };
+  });
+}
+
+/** How many segments a strand of hair this long is solved in. */
+const segments = (len: number): number => Math.max(5, Math.min(10, Math.round(len / 3.5)));
+
+/** The shape id of the head's own hair taken into a long-hair part (see `rootIn`). */
+const ROOT = 1;
+const ROOT_MATS = new Map<number, Mat>();
+
+/**
+ * Where long hair grows out of the head's own hair, nothing should part them: the head's hair
+ * pixels are taken into the part as they are (flat, far behind anything the part paints), so no
+ * line or rim of light is drawn between the two. Returns the pixels taken, to hand back to the
+ * head once the part is down.
+ */
+function rootIn(ctx: PieceContext, part: Part, keys: readonly number[], x0: number, y0: number, x1: number, y1: number): number[] {
+  const { c, owner } = ctx;
+  const taken: number[] = [];
+  for (let y = Math.max(0, y0); y <= Math.min(c.h - 1, y1); y++) {
+    for (let x = Math.max(0, x0); x <= Math.min(c.w - 1, x1); x++) {
+      const i = y * c.w + x;
+      if (owner[i] !== HEAD_TAG || (c.data[i * 4 + 3] as number) === 0) continue;
+      const k = (c.data[i * 4] as number) * 65536 + (c.data[i * 4 + 1] as number) * 256 + (c.data[i * 4 + 2] as number);
+      if (!keys.includes(k)) continue;
+      let m = ROOT_MATS.get(k);
+      if (!m) {
+        m = flat([c.data[i * 4] as number, c.data[i * 4 + 1] as number, c.data[i * 4 + 2] as number]);
+        ROOT_MATS.set(k, m);
+      }
+      part.plot(x, y, m, 0, -1e6, ROOT);
+      taken.push(i);
+    }
+  }
+  return taken;
+}
+
+interface HairStrand {
+  pts: V3[];
+  w: number;
+  taper: number;
+}
+
+/**
+ * Paints a tress as a long clump: the breadth of `w` along most of it, narrowing to a point over
+ * the last `taper` of it. Its tone comes from how the hair there faces the light (out from the
+ * head's upright axis, so a curtain is lit on the side toward the light and in shadow seen from
+ * the front, where it hangs behind), a tone lighter along each tress's lit side and darker along
+ * its shadowed side and at its tip, with a streak of highlight high up on lit tresses.
+ */
+function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: HairStrand, m: Mat, id: number): void {
+  const pts = s.pts;
+  const n = pts.length - 1;
+  const P = pts.map((p) => ctx.proj(p));
+  const Z = pts.map((p) => ctx.depth(p));
+  const lit = pts.map((p) => ctx.cam.light(norm3([p[0] - axis[0], 0.35, p[2] - axis[2]])));
+  const along = (arr: readonly number[], t: number): number => {
+    const f = t * n;
+    const i = Math.min(n - 1, Math.floor(f));
+    return (arr[i] as number) + ((arr[i + 1] as number) - (arr[i] as number)) * (f - i);
+  };
+  const taper = s.taper;
+  const width = (t: number): number => s.w * (t < 0.15 ? 0.75 + (0.25 * t) / 0.15 : t < 1 - taper ? 1 : Math.max(0.15, Math.pow((1 - t) / taper, 0.8)));
+  leaf(
+    part,
+    P,
+    width,
+    m,
+    (t, a) => {
+      // Lit where it faces the light, darker down its length and across to its shadowed side.
+      const l = along(lit, t) - 0.4 * t + 0.22 * a;
+      let tone = l > 0.62 && t < 0.4 && a > 0 ? 0 : l > 0.28 ? 1 : l > -0.12 ? 2 : 3;
+      if (t > 0.88) tone = Math.min(3, tone + 1);
+      if (d.darkHair && tone > 0) tone = Math.min(3, tone + 1);
+      return toneLight(m, tone);
+    },
+    (t, a) => along(Z, t) + (1 - Math.min(1, a * a)) * 0.6,
+    id,
+  );
+}
+
+/**
+ * The draw items of a head's long hair (`head.long`), for the painter to sort with the body: the
+ * curtain down the back as one, each lock over the shoulders on its own and the ponytail as one,
+ * each at the depth of its hanging part (with the upper body's lift, as arms are). `fr` is the
+ * head's frame as painted. Each is solved as strands (pieces.ts `strand`) that grow out of the
+ * hair's shell and lie over the head, the jaw and the torso.
+ */
+export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr: Frame3): DrawItem[] {
+  const long = d.long;
+  if (!long) return [];
+  const { rig, pose } = ctx;
+  const hero = (p: V3): V3 => at3(fr, p[0], p[1], p[2]);
+  const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...torsoObstacles(rig, body.chest, body.hips)];
+  const lie = long.lie ?? 1.5;
+  const axis = hero(d.shell.c);
+  const view = norm3(ctx.cam.local(TO_CAMERA));
+  const hair: Mat = { ...d.hair, line: d.lockLine ?? shade(d.hair.tones[3], -0.3), clear: 1 };
+  const keys = [...hair.tones, hair.line].map((t) => t[0] * 65536 + t[1] * 256 + t[2]);
+  const solve = (t: { yaw: number; pitch: number; dir: V3; len: number; w: number; stiff?: number; give?: number; taper?: number }, seed: number, out = 0.9): HairStrand => ({
+    pts: strand(pose, { root: hero(onShell(d, t.yaw, t.pitch, out)), dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed, avoid, pad: lie, axis: rig.pelvis.o, view, side: dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw))) }),
+    w: t.w,
+    taper: t.taper ?? 0.35,
+  });
+  // The head's box on screen, where long hair may grow out of its hair.
+  const hc = ctx.proj(axis);
+  const hr = Math.ceil(Math.max(d.shell.r[0], d.shell.r[1], d.shell.r[2]) + 3);
+  // One item: the strands painted into one part (and anything else `more` adds), sorted at the
+  // depth of their hanging parts.
+  const item = (strands: HairStrand[], more?: (part: Part) => void): DrawItem => {
+    let zs = 0;
+    let zn = 0;
+    for (const s of strands) {
+      for (let i = Math.ceil((s.pts.length - 1) * 0.3); i < s.pts.length; i++) {
+        zs += ctx.depth(s.pts[i] as V3);
+        zn++;
+      }
+    }
+    return {
+      z: zs / Math.max(1, zn) + ctx.upper,
+      draw: () => {
+        const part = ctx.part(HAIR_TAG);
+        const taken = rootIn(ctx, part, keys, Math.round(hc[0]) - hr, Math.round(hc[1]) - hr, Math.round(hc[0]) + hr, Math.round(hc[1]) + hr);
+        strands.forEach((s, i) => paintTress(ctx, part, d, axis, s, hair, 10 + i));
+        more?.(part);
+        const back = taken.filter((i) => part.idAt(i % ctx.c.w, Math.floor(i / ctx.c.w)) === ROOT);
+        part.commit();
+        for (const i of back) ctx.owner[i] = HEAD_TAG;
+        // Tidy the hair, over the box the strands cover.
+        let x0 = Infinity;
+        let y0 = Infinity;
+        let x1 = -Infinity;
+        let y1 = -Infinity;
+        for (const s of strands) {
+          for (const p of s.pts) {
+            const q = ctx.proj(p);
+            x0 = Math.min(x0, q[0] - s.w - 2);
+            y0 = Math.min(y0, q[1] - s.w - 2);
+            x1 = Math.max(x1, q[0] + s.w + 2);
+            y1 = Math.max(y1, q[1] + s.w + 2);
+          }
+        }
+        despeckle(ctx, [...hair.tones, hair.line], Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1), HAIR_TAG);
+      },
+    };
+  };
+  const items: DrawItem[] = [];
+  long.back?.forEach((t, i) => items.push(item([solve(t, i * 1.9)])));
+  long.front?.forEach((t, i) => items.push(item([solve(t, 3.1 + i * 2.3)])));
+  const tail = long.tail;
+  if (tail) {
+    // The tail: a thick tress from the tie with a thinner one either side of it, and the tie
+    // round its root with the cord's loose ends.
+    const across = norm3(cross3(dirIn(fr, tail.dir[0], tail.dir[1], tail.dir[2]), fr.u));
+    const main = solve(tail, 0.4, 1.02);
+    const side = (k: number, seed: number): HairStrand => {
+      const s = solve({ ...tail, len: tail.len * 0.86, w: tail.w * 0.62 }, seed, 1.02);
+      return { ...s, pts: s.pts.map((p, i) => add3(p, across, k * tail.w * 0.55 * Math.min(1, i / 2))) };
+    };
+    const strands = [side(-1, 2.2), side(1, 4.1), main];
+    const root = main.pts[0] as V3;
+    items.push(
+      item(strands, (part) => {
+        const tie = tail.tie;
+        const p = ctx.proj(root);
+        const z = ctx.depth(root) + 6;
+        if (tie.ends) {
+          for (const k of [-1, 1]) {
+            const end = strand(pose, { root, dir: add3(dirIn(fr, 0, -1, 0), across, k * 0.6), len: tie.ends, n: 3, stiff: 0.3, give: 1.2, seed: 5 + k, avoid, pad: lie + 0.5, axis: rig.pelvis.o });
+            leaf(part, end.map((q) => ctx.proj(q)), (t) => (t < 0.8 ? 1.1 : 0.8), tie.mat, () => 0.4, (t) => z - 1 + t, 40 + k);
+          }
+        }
+        part.ellipse(p[0], p[1], tie.r, tie.r * 0.9, tie.mat, 0.15, z, 39);
+      }),
+    );
+  }
+  return items;
 }

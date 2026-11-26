@@ -6,7 +6,7 @@
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import type { Blob, Hit, Mat, Part } from './raster.js';
-import type { Build, Camera, ChibiPose, Frame3, Rig, V3 } from './rig.js';
+import type { Build, Camera, ChibiPose, Face, Frame3, Rig, V3 } from './rig.js';
 
 /** A lock of hair: a clump raked over the head, a strand of the fringe, a lock at the nape. */
 export interface Lock {
@@ -45,6 +45,105 @@ export interface FaceDesign {
   noseAt: readonly [number, number];
   /** A pale scar on one cheek: its centre in head space (the sign of its right value picks the cheek) and its colour. */
   scar?: { at: V3; colour: RGB };
+  /**
+   * The glyphs the eyes, brows and mouth are stamped from (default FACE_PLAIN in head.ts: a
+   * young man's level stare). head.ts also has FACE_SOFT (large lashed eyes, soft brows, a small
+   * mouth) and FACE_SHARP (narrow, sharp eyes under straight brows); a design may draw its own.
+   */
+  style?: FaceStyle;
+  /** The expression when a pose gives none (default 'stern'): a smirk for a cocky face, say. */
+  rest?: Face;
+  /** The deepest iris tone, for a style's `D` cells (default a shade under `iris`). */
+  irisDeep?: RGB;
+}
+
+/**
+ * A face feature drawn as a small pixel glyph: rows of cells, each the key of a colour or `.` for
+ * none. Eyes and brows are drawn with their inner corner (toward the nose) on the left, and
+ * mirrored for the other side; mouths left to right across the face. `ax`, `ay` is the cell that
+ * sits on the anchor (the eye's centre, the brow's place above it, the mouth's centre).
+ *
+ * Keys: K lash and outline, I iris, i iris (light), D iris (deep), W white, h shine, l lid
+ * crease or lower lash (the skin's shadow tone), B brow, M mouth, r the mouth's inside, T teeth.
+ */
+export interface FaceGlyph {
+  rows: readonly string[];
+  ax: number;
+  ay: number;
+}
+
+/**
+ * A face's set of glyphs. Each eye is drawn full, mid or narrow by how squarely it faces the
+ * viewer, or as one of the expression shapes (closed: a blink or calm; squeeze: shut in pain;
+ * wide: a shout, full on). Brows come in the same three widths, level and knitted up at their
+ * inner ends (pain); there is a mouth for every expression. Every expression must work in every
+ * style, so a style fills in all of them.
+ */
+export interface FaceStyle {
+  eyes: Record<'full' | 'mid' | 'narrow' | 'closed' | 'squeeze' | 'wide', FaceGlyph>;
+  brows: Record<'full' | 'mid' | 'narrow', FaceGlyph>;
+  browsUp: Record<'full' | 'mid' | 'narrow', FaceGlyph>;
+  mouths: Record<Face, FaceGlyph>;
+}
+
+/**
+ * A tress of long hair: a clump that grows from the hair's shell (rooted as a lock is), follows
+ * `dir` for a while and then hangs, lying over the back, the shoulders or the chest rather than
+ * passing through them, and streams, lifts, swings and ripples with the pose's `wind`, `lift`,
+ * `sway`, `flare` and `phase` (see LongHair).
+ */
+export interface Tress {
+  /** Where it grows from on the hair's shell: degrees around the head (0 the face, 90 the right, 180 the back) and up from the ears' level. */
+  yaw: number;
+  pitch: number;
+  /** Which way it leaves the head, in head space [forward, up, right] (need not be unit length). */
+  dir: V3;
+  /** Its length, and its half-width where widest, in frame pixels (it keeps that breadth whichever way it is seen). */
+  len: number;
+  w: number;
+  /** The share of its length that keeps to `dir` before it falls (default 0.3). */
+  stiff?: number;
+  /** How readily it streams in the wind (default 1). */
+  give?: number;
+  /** The share of its length over which it narrows to its tip (default 0.35). */
+  taper?: number;
+}
+
+/** A tail of hair tied at a point on the head: a ponytail, or a tail at the nape. */
+export interface Ponytail {
+  /** Where it is tied on the hair's shell, as a tress's root is given. */
+  yaw: number;
+  pitch: number;
+  /** Which way it leaves the tie (head space: up and back for a high tail), and how long it keeps to that (default 0.25 of its length). */
+  dir: V3;
+  stiff?: number;
+  /** Its length and its half-width where widest (frame pixels), and how readily it streams (default 1). */
+  len: number;
+  w: number;
+  give?: number;
+  /** The tie round its root: its material, its radius, and how long the two loose ends of a cord hang from it (none if left out). */
+  tie: { mat: Mat; r: number; ends?: number };
+}
+
+/**
+ * Hair that hangs past the shoulders, painted with the head's hair material (head.ts
+ * `hairItems`). Each part of it is sorted with the body on its own, so a curtain down the back
+ * hangs behind her seen from the front and over her back (and a cape) seen from behind, and where
+ * it grows out of the head's own hair no line parts them. It hangs from the head, then falls
+ * and lies over the body; the pose's `wind` streams it back (a negative wind leaves it be),
+ * `lift` raises it, `flare` swings it out around her in a spin and `sway` swings it to a side,
+ * and `phase` runs a ripple down it. To make it lag behind a turn, sway it against the turn (a
+ * turn toward his right sways it to his left) and give it some wind.
+ */
+export interface LongHair {
+  /** Tresses down the back, painted together as one curtain (head.ts `curtain` lays out a row of them). */
+  back?: readonly Tress[];
+  /** Locks over the shoulders that frame the face, each painted on its own, so the near one can lie over the chest while the far one hangs behind. */
+  front?: readonly Tress[];
+  /** A tied tail. */
+  tail?: Ponytail;
+  /** How far clear of the body the hair lies (default 1.5): more over a cape or a high collar. */
+  lie?: number;
 }
 
 export interface HeadDesign {
@@ -79,6 +178,8 @@ export interface HeadDesign {
    */
   whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number };
   face: FaceDesign;
+  /** Hair longer than the locks: a curtain down the back, locks over the shoulders, a ponytail. */
+  long?: LongHair;
 }
 
 /** A limb's look: material and radii at its root and end. */
@@ -150,6 +251,9 @@ export type Piece = (ctx: PieceContext) => DrawItem[];
 export interface HeadPiece {
   blobs: (ctx: PieceContext) => { frame: Frame3; blobs: readonly Blob[]; shade: (h: Hit) => { m: Mat; light?: number; id?: number } | null }[];
 }
+
+/** The owner tag of long hair (a design's `head.long`), painted apart from the head. */
+export const HAIR_TAG = 4;
 
 export interface WeaponDesign {
   /** Where the second hand holds it, along the weapon from the first (negative: toward the pommel). */
