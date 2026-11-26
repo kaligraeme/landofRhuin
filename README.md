@@ -286,17 +286,17 @@ His thrusts leave spiralling drills of jade wind, his sweeps and spins rings of 
 
 | Clip | Frames | The Halberdier |
 | --- | --- | --- |
-| `idle` | 8 | The halberd across his shoulders, wrists draped over it, a smirk |
+| `idle` | 8 | The halberd resting on his shoulder, sloping up behind him, a thumb in his belt, a smirk |
 | `battle` | 8 | A low, bladed spear stance, left side leading, bouncing on his toes |
 | `move` | 8 | A sprint, the halberd trailing behind him, scarf and ponytail streaming |
-| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A straight thrust, an overhand thrust, then a coiled, leaping lunge from the butt end |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A straight, low thrust; an overhand thrust from high by his ear; then a deep coil, a hop and a lunge from the butt end, each landing with a white-hot flash |
 | `special` | 7 | Sweeping Strike: the haft swung round low and wide, a ring of wind, a gust |
 | `q` | 8 | Piercing Thrust: a deep lunge, the front hand sliding up the haft, a long drill of wind |
-| `e` | 11 | Vault Strike: the butt planted, a spring up the haft, a flip and the point driven into the floor |
+| `e` | 11 | Vault Strike: a pole vault, the butt planted well ahead and his legs swung up and over the haft, a flip and the point driven into the floor |
 | `r` | 10 | Whirling Halberd: two fast turns with the haft held level, a ring of wind |
-| `ult` | 12 | Skewer: the lance couched, a charge with jade afterimages and a cone of wind, a skid |
-| `cast` | 8 | The halberd spun once and planted, a burst of wind |
-| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted halberd; a fall, the halberd clattering down; a twirl, then the halberd planted beside him and a grin |
+| `ult` | 12 | Skewer: the lance couched, a charge with jade afterimages behind and a cone of wind ahead of the point, a great burst, a skid |
+| `cast` | 8 | The halberd twirled once round his hips and planted, a burst of wind |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted halberd; a fall, the halberd clattering down; a twirl, then the halberd planted beside him, a hip cocked and a grin |
 
 His 375 frames (125 per view) are painted in the background as a dungeon loads, a few
 milliseconds at a time. Each frame is cropped to what is painted and the crops are shelf-packed
@@ -309,11 +309,13 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 - a design file (`ChibiDesign` in `design.ts`): proportions, four-tone materials, aura colours,
   and:
   - the head (`head.ts`): its locks of hair; long hair if it has any (a curtain down the back laid
-    out with `curtain`, locks over the shoulders, a tied ponytail); and a face style
-    (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a resting expression;
+    out with `curtain`, locks over the shoulders, a tied ponytail with a `sheen` for glossy dark
+    hair); and a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
+    resting expression;
   - the body and outfit pieces (`pieces.ts`): pauldrons, a collar, a skirt of panels (a coat, a
     robe, a split skirt; `legs` keeps a long one clear of striding legs), a cape, a scarf (its
-    wrap with the head pieces, its tails with the outfit), or its own pieces built on `strand`;
+    wrap with the head pieces, its tails with the outfit; they can taper, wave and climb behind
+    the shoulders seen front on), or its own pieces built on `strand`;
   - a weapon for the right hand: a blade (`blade.ts`) or a pole arm (`pole.ts`: haft, point, axe,
     spike, lugs, ribbon and a glowing channel; a pose slides both hands along its haft), and
     optionally an item for the left hand (`offhand`: a wand from `wand.ts`, a second blade, later
