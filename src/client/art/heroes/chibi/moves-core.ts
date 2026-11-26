@@ -26,8 +26,9 @@ import { DARK_KNIGHT } from './darkKnight.js';
 import { add3, type ChibiPose, mix, norm3, pose, rad, solveRig, sub3, type V3, wave } from './rig.js';
 
 /**
- * The battle stance the skill and state clips (moves-skills.ts, moves-states.ts) start from and
- * return to. The core clips use READY below.
+ * The guard the skill and state clips (moves-skills.ts, moves-states.ts) build their poses from:
+ * the blade forward and up on his right. The battle loop holds READY below (the blade across to
+ * his left), so clips that hand back to it end with `settle`, which eases a pose into READY.
  */
 export const GUARD_STANCE: ChibiPose = {
   x: 0,
@@ -232,8 +233,14 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
  */
 const smear = (start: ChibiPose, p: ChibiPose, width: number, alpha = 1): ChibiPose => ({ ...p, fx: { ...p.fx, smear: { ...trail(start, p), width, alpha } } });
 
-/** Back into the stance: k of the way from a pose to the first battle frame, the grip spread again. */
-const settle = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => spread(pose(mix(p, battle[0] as ChibiPose, k), { ...over, handB: undefined }));
+/**
+ * Back into the battle stance: k of the way from a pose to the first battle frame, the grip spread
+ * again, then `over` on top (pass `turn` for a pose that has spun round, and any effects: from
+ * k 0.5 they come from the battle frame, which has none). The combo's recoveries use it, and so do
+ * the skill and state clips that hand back to the battle stance, so the blade is already on the
+ * side the battle loop holds it when that takes over.
+ */
+export const settle = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => spread(pose(mix(p, battle[0] as ChibiPose, k), { ...over, handB: undefined }));
 
 // atk1: high behind his right shoulder, down across to low in front on his left.
 const A1_COCK = pose(READY, { x: -2, y: 4, lean: -6, twist: -30, head: -2, look: 2, footF: [10, -1, 5.4], footB: [-11, 0, 5.2], handF: [-9, -8, 13], handB: undefined, grip: 0, weapon: -42, roll: 45, yaw: -6, wind: 0.25, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });

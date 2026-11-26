@@ -416,9 +416,11 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   }
   if (fx.aura) {
     rim(c, aura.core, aura.edge, clamp(fx.aura, 0, 1), aura.hot);
-    // Embers drifting up off him.
+    // Embers drifting up off him, from his knees to above his head: placed from the pelvis, so
+    // they rise with him in a leap rather than hanging below his feet.
+    const hip = rig.pelvis.o;
     for (let i = 0; i < 8; i++) {
-      const p = ctx.proj([rig.pelvis.o[0] + (hash(i, 61) - 0.5) * 30, 20 + hash(i, 62) * 60, (hash(i, 63) - 0.5) * 20]);
+      const p = ctx.proj([hip[0] + (hash(i, 61) - 0.5) * 30, hip[1] - 8 + hash(i, 62) * 60, hip[2] + (hash(i, 63) - 0.5) * 20]);
       c.glow(p[0], p[1], i % 4 === 3 ? aura.edge : aura.core, 0.9 * fx.aura);
       c.glow(p[0], p[1] - 1, aura.hot, 0.5 * fx.aura);
     }

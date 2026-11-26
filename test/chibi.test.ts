@@ -33,6 +33,13 @@ function bounds(r: Raster): { x0: number; y0: number; x1: number; y1: number; n:
   return { x0, y0, x1, y1, n };
 }
 
+/** A quick checksum of a frame's pixels. */
+function sum(r: Raster): number {
+  let h = 2166136261;
+  for (let i = 0; i < r.data.length; i++) h = Math.imul(h ^ (r.data[i] as number), 16777619);
+  return h >>> 0;
+}
+
 /** Does a solid (fully opaque) pixel lie in this box of the frame? */
 function solidIn(r: Raster, x0: number, x1: number, y0: number, y1: number): boolean {
   for (let y = Math.max(0, y0); y <= Math.min(r.h - 1, y1); y++) {
@@ -104,15 +111,17 @@ describe('the chibi Dark Knight', () => {
     }
   });
 
-  it('keeps even the leaps and swings inside the frame', () => {
+  it('keeps even the leaps, swings and shockwaves inside the frame', () => {
     for (const view of CHIBI_VIEWS) {
       const box = hero.frame[view];
       for (const clip of CHIBI_CLIPS) {
         for (let i = 0; i < hero.timing[clip].frames; i++) {
           const b = bounds(hero.paint(clip, i, view));
-          // The figure and blade may reach the edge with effects, but not lose its body.
-          expect(b.y0, `${clip} ${i} ${view}`).toBeGreaterThanOrEqual(0);
-          expect(b.y1, `${clip} ${i} ${view}`).toBeLessThan(box.h);
+          // Nothing touches an edge, effects included: anything there would have been cut off.
+          expect(b.x0, `${clip} ${i} ${view} left`).toBeGreaterThan(0);
+          expect(b.y0, `${clip} ${i} ${view} top`).toBeGreaterThan(0);
+          expect(b.x1, `${clip} ${i} ${view} right`).toBeLessThan(box.w - 1);
+          expect(b.y1, `${clip} ${i} ${view} bottom`).toBeLessThan(box.h - 1);
         }
       }
     }
@@ -140,6 +149,17 @@ describe('the chibi Dark Knight', () => {
     }
     expect(holes).toBeLessThanOrEqual(6);
   });
+
+  it('changes pose from frame to frame (no clip is a still)', () => {
+    for (const view of CHIBI_VIEWS) {
+      for (const clip of CHIBI_CLIPS) {
+        const sums = Array.from({ length: hero.timing[clip].frames }, (_, i) => sum(hero.paint(clip, i, view)));
+        // No frame repeats the one before it, and most of the clip's frames are distinct.
+        for (let i = 1; i < sums.length; i++) expect(sums[i], `${view} ${clip} ${i}`).not.toBe(sums[i - 1]);
+        expect(new Set(sums).size, `${view} ${clip}`).toBeGreaterThan(Math.min(3, sums.length - 1));
+      }
+    }
+  }, 60_000);
 
   it('shows the three views differently (a real turn, not one sprite)', () => {
     const side = hero.paint('battle', 0, 'side');

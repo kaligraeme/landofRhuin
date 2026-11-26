@@ -15,7 +15,7 @@
  * The effects these clips paint for themselves (the parry's flash and sparks, the sweat, the
  * glint, the dust of his fall) are `fx.extra` painters defined beside them.
  */
-import { AT_EASE, GUARD_STANCE } from './moves-core.js';
+import { AT_EASE, GUARD_STANCE, settle } from './moves-core.js';
 import type { RGB } from '../paint.js';
 import { type ChibiPose, type FxContext, lerp3, pose, wave } from './rig.js';
 
@@ -62,8 +62,8 @@ const parried =
   };
 
 const guard: ChibiPose[] = [
-  // Wind-up (a blink): the blade whipped up from the guard stance.
-  pose(BRACE, { y: 7, lean: 10, handF: [10, 13, 7], handB: [8, 6, 12], weapon: 50, roll: 32, yaw: -45, fx: { rune: 0.5 } }),
+  // Wind-up (a blink): the blade whipped up from the battle stance, still below his chin.
+  pose(BRACE, { y: 7, lean: 10, handF: [9, 15, 6], handB: [10, 10, 10], weapon: 74, roll: 22, yaw: -60, fx: { rune: 0.5 } }),
   // The blow lands on the flat: a clang.
   pose(BRACE, { lean: 5, wind: 0.6, lift: 0.15, phase: 0.2, fx: { clang: 1, rune: 1, extra: parried(0) } }),
   // Driven back a step, boots skidding.
@@ -80,8 +80,8 @@ const hurt: ChibiPose[] = [
   pose(S, { x: -4, y: 5, lean: -18, twist: -14, tilt: -10, head: -16, look: -10, footF: [12, 0, 6], footB: [-10, -2, 5.5], handF: [8, 16, 13], handB: [-4, 8, 14], weapon: 118, roll: 20, yaw: 10, face: 'hurt', wind: 0, lift: 0.6, flare: 0.35, sway: -0.5, phase: 0.2 }),
   // Knocked back a step.
   pose(S, { x: -6, y: 6, lean: -10, twist: -10, tilt: -6, head: -8, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.5], handF: [7, 15, 11], handB: [-1, 11, 13], weapon: 104, roll: 22, yaw: 4, face: 'hurt', wind: 0, lift: 0.35, flare: 0.15, sway: -0.3, phase: 0.4 }),
-  // Recovering into the guard, teeth gritted.
-  pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [8, 12, 9], weapon: 60, face: 'grit', wind: 0.15, phase: 0.6 }),
+  // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
+  settle(pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [8, 12, 9], weapon: 60 }), 0.7, { grip: -6, face: 'grit', wind: 0.15, phase: 0.6 }),
 ];
 
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────

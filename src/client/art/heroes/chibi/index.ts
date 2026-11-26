@@ -115,14 +115,17 @@ const DARK_KNIGHT_TIMING: Record<ChibiClip, ClipTiming> = {
 };
 
 /**
- * Frames: side on there is room ahead of him for the blade and behind for his coat tails; toward
- * and away from the viewer he stands centred with room below for blows swung toward the viewer.
- * Both are tall enough for Ruination's leap. He stands about 84 px tall, 2.1 tiles in game.
+ * Frames: side on there is room ahead of him for the blade and behind for his coat tails and
+ * Drain's wisps; toward and away from the viewer he stands centred. All are tall enough for
+ * Ruination's leap (about 145 px above the ground at the blade's tip) and deep enough below the
+ * ground point for the shockwaves of atk3 and Ruination's slam, which roll out toward the viewer
+ * (about 41 px below it side on, 55 front on). The game crops every frame to what is painted, so
+ * the spare room costs nothing there. He stands about 84 px tall, 2.1 tiles in game.
  */
 export const DARK_KNIGHT_HERO: ChibiHero = chibiHero(DARK_KNIGHT, { ...CORE_CLIPS, ...SKILL_CLIPS_DK, ...STATE_CLIPS }, DARK_KNIGHT_TIMING, {
-  side: { w: 240, h: 208, ax: 104, ay: 180 },
-  front: { w: 224, h: 208, ax: 112, ay: 172 },
-  back: { w: 224, h: 208, ax: 112, ay: 172 },
+  side: { w: 256, h: 232, ax: 112, ay: 180 },
+  front: { w: 224, h: 240, ax: 112, ay: 172 },
+  back: { w: 224, h: 240, ax: 112, ay: 172 },
 }, 2.1 / 84);
 
 /** The heroes drawn by the chibi painter, by sprite id. Others use the older painter. */

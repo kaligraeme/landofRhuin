@@ -24,7 +24,7 @@
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { GUARD_STANCE } from './moves-core.js';
+import { GUARD_STANCE, settle } from './moves-core.js';
 import { add3, at3, type ChibiPose, clamp, type FxContext, lerp, type P2, pose, rad, rotate, SIDE_LOOK, type V3 } from './rig.js';
 
 const S = GUARD_STANCE;
@@ -264,7 +264,7 @@ const ROAR: ChibiPose = pose(S, {
   head: -12,
   look: 0,
   ...PLANT,
-  handF: [-8, -9, 13],
+  handF: [-10, -9, 15],
   handB: [5, 3, 16],
   weapon: -6,
   roll: 18,
@@ -284,8 +284,8 @@ const cast: ChibiPose[] = [
   pose(ROAR, { y: 3, lean: -8, head: -11, phase: 0.5, lift: 0.8, fx: { aura: 0.85, circle: 1, rune: 1, shock: 0.8, shockAt: [0, 0, 0], extra: roar(1) } }),
   // Settle back into the guard, the circle fading.
   pose(S, { y: 5, lean: 2, twist: -4, head: -2, ...PLANT, handF: [4, 6, 12], handB: [7, 10, 7], weapon: 58, roll: 28, face: 'stern', lift: 0.4, wind: 0.3, phase: 0.7, fx: { aura: 0.5, circle: 0.7, rune: 0.6 } }),
-  pose(S, { y: 5, lean: 10, twist: -10, footF: [11, 0, 6], footB: [-10, 0, 5.4], handF: [7, 7, 10], weapon: 44, roll: 26, wind: 0.25, phase: 0.85, fx: { aura: 0.2, circle: 0.35 } }),
-  pose(S, { fx: { circle: 0.12 } }),
+  settle(pose(S, { y: 5, lean: 10, twist: -10, footF: [11, 0, 6], footB: [-10, 0, 5.4], handF: [7, 7, 10], weapon: 44, roll: 26 }), 0.5, { weapon: 84, grip: -4, wind: 0.25, phase: 0.85, fx: { aura: 0.2, circle: 0.35 } }),
+  settle(S, 0.95, { grip: -9, phase: 1, fx: { circle: 0.12 } }),
 ];
 
 // ── Charge ───────────────────────────────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ const charge: ChibiPose[] = [
   // the body thrown back and the blade's point dragged scraping along the floor.
   pose(S, { x: 12, y: 12, lean: -6, twist: 10, head: -2, look: -4, footF: [28, 0, 6], footB: [4, 0, 5.6], handF: [2, 14, 11], handB: [9, 9, 4], weapon: -122, roll: 0, yaw: -28, face: 'grit', wind: 0, lift: 0.4, sway: 0.4, phase: 0.85, fx: { aura: 0.6, dust: 1, speed: 0.3, extra: skid(1) } }),
   pose(S, { x: 9, y: 8, lean: 6, twist: 4, head: 1, footF: [20, 0, 6], footB: [-4, 0, 5.6], handF: [8, 12, 10], weapon: 56, roll: 26, face: 'stern', wind: 0.15, phase: 1, fx: { aura: 0.25, dust: 0.5, extra: skid(0.4) } }),
-  pose(S, { x: 3, y: 5, lean: 12, handF: [8, 11, 9], weapon: 52 }),
+  settle(pose(S, { x: 3, y: 5, lean: 12, handF: [8, 11, 9], weapon: 52 }), 0.85, { grip: -8, phase: 1.1 }),
 ];
 
 // ── Eclipse ──────────────────────────────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ const eclipse: ChibiPose[] = [
   spin(7),
   // The ring closes; the slowing field rolls out over the floor.
   pose(spin(8), { fx: { ring: { from: SPIN_TURNS[7]! + 90 - 330, to: SPIN_TURNS[7]! + 90, height: 36 }, rune: 0.8, aura: 0.4, shock: 0.2, shockAt: [0, 0, 0] } }),
-  pose(S, { y: 6, lean: 10, twist: 4, turn: 360, handF: [8, 11, 8], weapon: 70, roll: 10, flare: 0.4, wind: 0.3, fx: { shock: 0.6, shockAt: [0, 0, 0], aura: 0.15 } }),
+  settle(pose(S, { y: 6, lean: 10, twist: 4, turn: 360, handF: [8, 11, 8], weapon: 70, roll: 10, flare: 0.4, wind: 0.3 }), 0.75, { turn: 360, grip: -7, flare: 0.4, wind: 0.3, fx: { shock: 0.6, shockAt: [0, 0, 0], aura: 0.15 } }),
 ];
 
 // ── Drain ────────────────────────────────────────────────────────────────────────────────────
@@ -399,8 +399,8 @@ const planted = (k: number, phase: number, shock?: number): ChibiPose =>
 
 const drain: ChibiPose[] = [
   // Raise the blade point down at his right side.
-  pose(S, { y: 4, lean: 0, twist: -6, head: -4, footF: [9, 0, 7], footB: [-10, 0, 6.5], handF: [1, -6, 12], handB: [6, 10, 6], weapon: 180, roll: 0, yaw: 0, face: 'grit', fx: { rune: 0.6, aura: 0.3 } }),
-  pose(S, { y: 1, lean: -6, twist: -8, head: -8, footF: [9, 0, 7], footB: [-10, 0, 6.5], handF: [0, -12, 11], handB: [5, 8, 8], weapon: 180, roll: 0, yaw: 0, face: 'shout', lift: 0.3, fx: { rune: 1, aura: 0.6 } }),
+  pose(S, { y: 4, lean: 0, twist: -6, head: -4, footF: [9, 0, 7], footB: [-10, 0, 6.5], handF: [-6, -4, 15], handB: [6, 10, 6], weapon: 180, roll: 0, yaw: 0, face: 'grit', fx: { rune: 0.6, aura: 0.3 } }),
+  pose(S, { y: 1, lean: -6, twist: -8, head: -8, footF: [9, 0, 7], footB: [-10, 0, 6.5], handF: [-7, -9, 15], handB: [5, 8, 8], weapon: 180, roll: 0, yaw: 0, face: 'shout', lift: 0.3, fx: { rune: 1, aura: 0.6 } }),
   // Driven into the ground.
   pose(planted(0, 0), { y: 11, lean: 16, head: 8, handB: [6, 8, 9], face: 'shout', fx: { impact: 1.2, impactAt: [3, 2, 13], shock: 0.08, shockAt: [0, 0, 0], dust: 1, rune: 1, aura: 0.8, circle: 0.5 } }),
   planted(0.15, 0.1, 0.4),
@@ -410,8 +410,8 @@ const drain: ChibiPose[] = [
   planted(0.92, 0.5),
   // Every wisp home: a flash in his chest.
   pose(planted(1, 0.6), { fx: { glow: 1, aura: 1, circle: 1, rune: 1, impact: 0.85, impactAt: [2, 38, 0], extra: climb(1) } }),
-  // Pull it free.
-  pose(S, { y: 6, lean: 8, head: 2, handF: [9, 6, 9], weapon: 120, roll: 10, fx: { aura: 0.4, rune: 0.5, glow: 0.3 } }),
+  // Pull it free, coming up into the battle stance.
+  settle(pose(S, { y: 6, lean: 8, head: 2, handF: [9, 6, 9], weapon: 120, roll: 10 }), 0.55, { grip: -5, fx: { aura: 0.4, rune: 0.5, glow: 0.3 } }),
 ];
 
 // ── Ruination ────────────────────────────────────────────────────────────────────────────────
@@ -449,7 +449,7 @@ const strike = (y: number, phase: number, turn: number): ChibiPose =>
     footF: [11, y - 7, 5],
     footB: [-9, y - 5, 5],
     wind: 0.7,
-    fx: { smear: { from: -112, roll: 28, yaw: -30, width: 0.42 }, impact: 1.1, shock: 0.04, shockAt: AIM, rune: 1, aura: 1, blood: 0.4, extra: blaze(1, phase * 10) },
+    fx: { smear: { from: -48, roll: 36, yaw: -20, width: 0.42 }, impact: 1.1, shock: 0.04, shockAt: AIM, rune: 1, aura: 1, blood: 0.4, extra: blaze(1, phase * 10) },
   });
 
 /**
@@ -461,10 +461,12 @@ const recock = (y: number, phase: number, turn: number, k: number, after = false
     lean: lerp(12, -8, k),
     twist: lerp(4, -16, k),
     head: lerp(2, -4, k),
-    handF: [lerp(6, -8, k), lerp(0, -7, k), lerp(8, 11, k)],
-    weapon: lerp(-20, -112, k),
-    roll: 28,
-    yaw: lerp(0, -30, k),
+    // The fist swings out wide round the side of his head on its way up, so it never crosses his face.
+    handF: [lerp(6, -9, k), lerp(1, -8, k), lerp(10, 14, k) + 3 * Math.sin(Math.PI * k)],
+    // Cocked tip up behind his shoulder (not hanging down his back: the pommel would then point at his face).
+    weapon: lerp(-10, -48, k),
+    roll: lerp(28, 36, k),
+    yaw: lerp(0, -20, k),
     fx: { rune: 1, aura: 1, blood: 0.35, extra: blaze(1, phase * 10), ...(after ? { shock: 0.42, shockAt: AIM } : {}) },
   });
 
@@ -473,7 +475,7 @@ const ruination: ChibiPose[] = [
   pose(S, { y: 9, lean: 18, twist: -10, head: 6, ...PLANT, handF: [6, 14, 7], weapon: 120, roll: 10, face: 'hurt', fx: { blood: 1, aura: 0.5, rune: 0.6 } }),
   pose(S, { y: 13, lean: 24, twist: -14, head: 8, ...PLANT, handF: [4, 15, 7], weapon: 130, roll: 10, face: 'grit', lift: 0.4, fx: { blood: 1, aura: 1, rune: 1, dust: 0.6 } }),
   // The leap: up through his own blood, the blade raised and blazing.
-  pose(AIR(-24, 0.1, 0), { lean: -4, twist: -10, head: -8, footF: [5, -30, 5], footB: [-6, -20, 5], handF: [0, -8, 10], weapon: -30, roll: 24, lift: 1, wind: 0.3, fx: { blood: 0.9, aura: 1, rune: 1, dust: 0.9, extra: blaze(0.8, 1) } }),
+  pose(AIR(-24, 0.1, 0), { lean: -4, twist: -10, head: -8, footF: [5, -30, 5], footB: [-6, -20, 5], handF: [-7, -9, 14], weapon: -30, roll: 24, lift: 1, wind: 0.3, fx: { blood: 0.9, aura: 1, rune: 1, dust: 0.9, extra: blaze(0.8, 1) } }),
   // The top of the leap, the first blow cocked; then four blows as he falls, turning to rain
   // them over the ground ahead.
   recock(-40, 0.2, 0, 1),
@@ -486,11 +488,12 @@ const ruination: ChibiPose[] = [
   strike(-14, 0.9, 18),
   // Falling, the blade swung up over his head for the last blow.
   pose(recock(-9, 1, 6, 0.4, true), { roll: 10 }),
-  pose(recock(-4, 1.1, 0, 1), { handF: [-9, -8, 11], weapon: -118, roll: 8, lean: -10, footF: [9, -9, 5], footB: [-6, -6, 5] }),
+  pose(recock(-4, 1.1, 0, 1), { handF: [-10, -8, 14], weapon: -60, roll: 20, lean: -10, footF: [9, -9, 5], footB: [-6, -6, 5] }),
   // The slam: the blade crashes into the ground, a shockwave.
-  pose(S, { x: 7, y: 11, lean: 34, twist: 4, head: 8, footF: [15, 0, 6], footB: [-12, 0, 5.6], handF: [17, 13, 6], weapon: 128, roll: 8, face: 'shout', wind: 0.8, lift: -0.2, phase: 1.2, fx: { smear: { from: -118, roll: 8, yaw: -30, width: 0.6 }, impact: 1.6, shock: 0.1, dust: 1, rune: 1, aura: 0.9, blood: 0.3 } }),
+  pose(S, { x: 7, y: 11, lean: 34, twist: 4, head: 8, footF: [15, 0, 6], footB: [-12, 0, 5.6], handF: [17, 13, 6], weapon: 128, roll: 8, face: 'shout', wind: 0.8, lift: -0.2, phase: 1.2, fx: { smear: { from: -60, roll: 20, yaw: -20, width: 0.6 }, impact: 1.6, shock: 0.1, dust: 1, rune: 1, aura: 0.9, blood: 0.3 } }),
   pose(S, { x: 7, y: 10, lean: 33, twist: 4, head: 7, footF: [15, 0, 6], footB: [-12, 0, 5.6], handF: [17, 14, 6], weapon: 132, roll: 8, face: 'grit', wind: 0.4, phase: 1.3, fx: { shock: 0.5, dust: 0.7, rune: 0.7, aura: 0.5 } }),
-  pose(S, { x: 6, y: 9, lean: 28, twist: 2, head: 5, footF: [15, 0, 6], footB: [-12, 0, 5.6], handF: [15, 14, 7], weapon: 130, roll: 8, face: 'grit', wind: 0.25, phase: 1.4, fx: { shock: 0.85, dust: 0.3, rune: 0.4 } }),
+  // Rising out of the slam toward the battle stance as the shockwave spreads.
+  settle(pose(S, { x: 6, y: 9, lean: 28, twist: 2, head: 5, footF: [15, 0, 6], footB: [-12, 0, 5.6], handF: [15, 14, 7], weapon: 130, roll: 8 }), 0.45, { grip: -4, face: 'grit', wind: 0.25, phase: 1.4, fx: { shock: 0.85, dust: 0.3, rune: 0.4 } }),
 ];
 
 export const SKILL_CLIPS_DK = { cast, charge, eclipse, drain, ruination };
