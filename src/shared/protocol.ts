@@ -107,7 +107,7 @@ export interface EntitySnap {
   b?: number;
   /** Top enmity target for enemies (whose aggro they hold). */
   a?: number;
-  /** The threat meter: the top aggro holders on an enemy, as [hero id, percent of the top]. */
+  /** The threat meter: the top aggro holders on an enemy, as [hero id, percent of the holder (the hero it is after)]. */
   ag?: [number, number][];
   /** Bot controlled. */
   ai?: 1;
