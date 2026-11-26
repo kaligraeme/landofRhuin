@@ -60,7 +60,7 @@ export const READY: ChibiPose = {
   yaw: -45,
   grip: -8,
   grip2: 14,
-  wind: 0.5,
+  wind: 0.62,
   phase: 0,
 };
 
@@ -221,7 +221,7 @@ const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
     handF: [-8, 4 + out * 0.4, 14],
     sway: Math.sin((2 * Math.PI * (i + 1)) / 8) * 0.25,
     phase: i / 8,
-    wind: 0.1 + wave(i, 8) * 0.1,
+    wind: 0.16 + wave(i, 8) * 0.14,
     face: i === 6 ? 'closed' : 'smirk',
   });
 });
@@ -242,7 +242,7 @@ const battle = Array.from({ length: BOUNCE }, (_, i): ChibiPose => {
     head: 1 + bounce(i - 1) * 3,
     handF: [-4, 16 + b * 1.2, 7],
     weapon: 54 + bounce(i - 1) * 6,
-    wind: 0.5 + Math.max(0, lag) * 0.2,
+    wind: 0.62 + Math.max(0, lag) * 0.2,
     lift: lag * 0.8,
     sway: Math.sin((2 * Math.PI * (i - 1)) / BOUNCE) * 0.2,
     phase: i / BOUNCE,

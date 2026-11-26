@@ -2,7 +2,8 @@
  * The Halberdier's states, in the chibi pose format (rig.ts, ChibiPose).
  *
  *   hurt     3  a flinch: knocked back and sideways, head snapped back, eyes squeezed shut, the
- *               lead hand torn off the haft, the scarf tails flicked forward
+ *               lead hand torn off the haft and the point knocked down, the scarf tails flicked
+ *               forward
  *   kneel    4  (loop) low health: down on his right knee, the left knee up, leaning on the
  *               halberd planted upright beside him, his right hand high on the haft; heaving,
  *               head hung, a bead of sweat
@@ -26,10 +27,10 @@ const WHITE: RGB = [255, 255, 255];
 
 const hurt: ChibiPose[] = [
   // The blow: thrown back and sideways, head snapped back, the lead hand torn off the haft and
-  // flung out, the point jerked up, the scarf tails whipped forward past him.
-  pose(S, { x: -4, y: 6, lean: -16, twist: 8, tilt: -8, head: -14, look: -8, footF: [-13, 0, 5], footB: [9, -2, 5.4], handF: [-6, 15, 9], handB: [-2, 8, 14], weapon: 34, roll: -6, yaw: -30, grip: -8, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
+  // flung out, the point knocked down, the scarf tails whipped forward past him.
+  pose(S, { x: -4, y: 6, lean: -16, twist: 8, tilt: -8, head: -14, look: -8, footF: [-13, 0, 5], footB: [9, -2, 5.4], handF: [-6, 15, 9], handB: [-2, 8, 14], weapon: 118, roll: -6, yaw: -34, grip: -8, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
   // Knocked back a step.
-  pose(S, { x: -6, y: 7, lean: -8, twist: 12, tilt: -5, head: -7, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-5, 16, 8], handB: [2, 11, 12], weapon: 44, roll: -4, yaw: -36, grip: -8, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
+  pose(S, { x: -6, y: 7, lean: -8, twist: 12, tilt: -5, head: -7, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-5, 16, 8], handB: [2, 11, 12], weapon: 100, roll: -4, yaw: -40, grip: -8, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
   settle(pose(S, { x: -3, y: 7, lean: 6, twist: 16, head: 4, handF: [-4, 16, 7], weapon: 50, yaw: -42 }), 0.7, { face: 'grit', wind: 0.2, phase: 0.6 }),
 ];
@@ -185,7 +186,7 @@ const clatter = ({ c, rig, proj, hash }: FxContext): void => {
 
 const ko: ChibiPose[] = [
   // Stagger back, the haft slipping in his grip.
-  pose(S, { x: -4, y: 6, lean: -14, twist: 6, tilt: -6, head: -16, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-4, 14, 8], handB: [-3, 10, 13], weapon: 40, roll: -10, yaw: -30, grip: -8, face: 'hurt', sway: -0.4, lift: 0.3 }),
+  pose(S, { x: -4, y: 6, lean: -14, twist: 6, tilt: -6, head: -16, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-4, 14, 8], handB: [-3, 10, 13], weapon: 116, roll: -10, yaw: -34, grip: -8, face: 'hurt', sway: -0.4, lift: 0.3 }),
   // His knees give: down on both, the halberd's butt striking the floor as it tips.
   pose(S, { x: -2, y: 15, lean: 8, twist: 0, head: 18, footF: [-9, -1, 5], footB: [-10, -1, 4.6], kneel: 'F', handF: [6, 16, 8], weapon: 28, roll: -16, yaw: -20, grip: 4, face: 'hurt', wind: 0, flare: 0.2 }),
   // He sways back, turning, the halberd falling away from his loosening grip.
@@ -229,7 +230,7 @@ const PROUD: ChibiPose = pose(S, { x: 0, y: 1.5, lean: -3, twist: 6, tilt: 3, he
 
 const victory: ChibiPose[] = [
   // A breath first: the halberd lifted out of the stance, upright in his right hand.
-  fromReady(pose(TWIRL, { y: 6, lean: 6, twist: 6, head: 1, handF: [6, 10, 12], weapon: 20, face: 'smirk', wind: 0.3 }), 0.6),
+  fromReady(pose(TWIRL, { y: 6, lean: 6, twist: 6, head: 1, handF: [5, 10, 13], weapon: 20, roll: 16, yaw: 20, face: 'smirk', wind: 0.4 }), 0.8),
   // It wheels round beside him, once...
   pose(TWIRL, { weapon: 170, phase: 0.1, fx: { smear: { from: 20, roll: 10, width: 0.6 }, rune: 0.8 } }),
   pose(TWIRL, { weapon: 330, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
