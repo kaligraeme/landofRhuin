@@ -131,7 +131,7 @@ export const HALBERD_POSES: Record<string, ChibiPose> = {
   thrust: pose(STANCE, { x: 6, y: 8, lean: 20, twist: 16, head: 0, face: 'shout', footF: [19, 0, 5.6], footB: [-15, 0, 5], handF: [-1, 14, 4], weapon: 86, roll: 2, yaw: -10, grip: -14, grip2: 1, wind: 0.6, phase: 0.35, fx: { rune: 1, swirl: { k: 0.7, spin: 0.05 } } }),
   lunge: pose(STANCE, { x: 10, y: 10, lean: 28, twist: 22, head: -2, face: 'shout', footF: [24, 0, 5.8], footB: [-16, 0, 5], handF: [-2, 12, 3], weapon: 88, roll: 0, yaw: -6, grip: -14, grip2: 4, wind: 1, phase: 0.5, fx: { rune: 1, swirl: { k: 1, spin: 0.25 } } }),
   // A low, wide sweep round to his right, its level arc (a ring, which stays level) riding the head's reach.
-  sweep: pose(STANCE, { x: 2, y: 9, lean: 16, twist: -20, head: 2, face: 'shout', footF: [14, 0, 6], footB: [-13, 0, 5.4], handF: [4, 15, 9], weapon: 100, roll: 0, yaw: 60, grip: -6, grip2: 4, wind: 0.7, flare: 0.4, phase: 0.4, fx: { rune: 1, ring: { from: -70, to: 62 }, dust: 0.6 } }),
+  sweep: pose(STANCE, { x: 2, y: 9, lean: 16, twist: -20, head: 2, face: 'shout', footF: [14, 0, 6], footB: [-13, 0, 5.4], handF: [4, 15, 9], weapon: 100, roll: 0, yaw: 60, grip: -6, grip2: -12, wind: 0.7, flare: 0.4, phase: 0.4, fx: { rune: 1, ring: { from: -70, to: 62 }, dust: 0.6 } }),
   // A spin: the haft held level at its middle, both hands close, a ring of wind round him.
   spin: pose(STANCE, { x: 0, y: 3, lean: 4, twist: 0, turn: 120, head: 0, face: 'grit', footF: [7, -3, 5], footB: [-7, -1, 5], handF: [7, 12, 4], weapon: 90, roll: 0, yaw: 88, grip: 6, grip2: -4, wind: 0.8, flare: 1, phase: 0.3, fx: { rune: 0.8, swirl: { k: 1, on: 'body', spin: 0.15 } } }),
   // The butt planted ahead, both hands high up the haft, springing off.

@@ -193,7 +193,8 @@ export interface Held {
  * A bow would be one too: held at its middle in the off hand (`reach` running from one limb's tip
  * below the hand to the other's above it), with its painter stringing it to wherever the main
  * hand is (`ctx.rig.armR.end`), so a pose draws it by pulling that hand back, and `tip` where an
- * arrow (or a spell) leaves it.
+ * arrow (or a spell) leaves it. The main weapon would then be what the drawing hand holds (an
+ * arrow, or a sword for when the bow is not drawn), so neither needs the other redrawn.
  */
 export interface HeldItem {
   /** Its working part along it from the hand (a blade, a pole arm's head, a wand's crystal), for smears and impacts. */

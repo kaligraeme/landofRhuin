@@ -166,8 +166,9 @@ export interface FxContext {
  *    advance it every frame so the streaks run on). Streaks behind the line pass behind whatever is there.
  *  - `ghosts`: afterimages of the whole figure (as painted, before effects) trailing behind a
  *    dash, in the aura's colours, fading with distance: `k` their strength, `n` how many (default
- *    2), `gap` pixels between them on screen (default 10), `dir` the hero-space way they trail
- *    (default behind him). They lie under the figure, so only what sticks out of it shows.
+ *    2), `gap` pixels between them on screen (default 10; down to half that when the dash runs
+ *    toward or away from the viewer), `dir` the hero-space way they trail (default behind him).
+ *    They lie under the figure, so only what sticks out of it shows.
  *  - `extra`: paints anything else, after the built-in effects, from the choreography's own file.
  */
 export interface ChibiFx {

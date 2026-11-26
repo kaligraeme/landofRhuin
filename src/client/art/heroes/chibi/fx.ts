@@ -239,9 +239,11 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
     const g = fx.ghosts;
     const k = clamp(g.k, 0, 1);
     const n = g.n ?? 2;
-    let v = cam.vec(g.dir ?? [-1, 0, 0]);
+    let v = cam.vec(norm3(g.dir ?? [-1, 0, 0]));
     const vl = Math.hypot(v[0], v[1]);
-    v = vl > 1e-3 ? [v[0] / vl, v[1] / vl] : [0, -1];
+    // A dash toward or away from the viewer is foreshortened: its trail is shorter on screen (down to half).
+    const short = clamp(vl / 0.85, 0.5, 1);
+    v = vl > 1e-3 ? [(v[0] / vl) * short, (v[1] / vl) * short] : [0, -short];
     const list: { dx: number; dy: number; colour: RGB; alpha: number }[] = [];
     // The farthest first, so the nearer copies lie over them.
     for (let i = n; i >= 1; i--) {
