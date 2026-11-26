@@ -15,7 +15,7 @@ import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
 import type { Vec } from '../skeleton.js';
 import { type ChibiDesign, type DrawItem, type PieceContext, WEAPON_TAG } from './design.js';
 import { paintFx } from './fx.js';
-import { paintHead } from './head.js';
+import { hairItems, paintHead } from './head.js';
 import { dim, Part } from './raster.js';
 import { add3, at3, camera, type ChibiPose, type ChibiView, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
 
@@ -93,6 +93,8 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
         part.capsule(proj(a), proj(b), B.neck.r, B.neck.r, B.neck.mat, -0.25, depth(a), depth(b), 5);
       }),
   });
+  // Long hair hangs from the head but sorts with the body: behind the back, or over it.
+  for (const it of hairItems(ctx, d.head, B, headFr)) items.push(it);
 
   // Arms and hands. A hand on the weapon goes over its grip.
   const w = rig.weapon;
