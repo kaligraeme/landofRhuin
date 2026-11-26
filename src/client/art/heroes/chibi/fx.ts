@@ -234,7 +234,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   if (d.weapon.glow) d.weapon.glow(ctx, clamp(0.06 + (fx.rune ?? 0) * 1.1 + (fx.aura ?? 0) * 0.35, 0, 1.4));
   if (off?.glow) off.glow(ctx, clamp(0.06 + (fx.runeB ?? 0) * 1.1 + (fx.aura ?? 0) * 0.35, 0, 1.4), heldB);
 
-  if (fx.ghosts) {
+  if (fx.ghosts && fx.ghosts.k > 0) {
     // Copies of the figure trailing behind it on screen (however the dash runs in this view).
     const g = fx.ghosts;
     const k = clamp(g.k, 0, 1);
@@ -282,7 +282,9 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
     const s = fx.smear;
     const from = s.from;
     const to = pose.weapon;
-    const n = Math.max(2, Math.ceil(Math.abs(to - from) / 4));
+    // A step every 4 degrees of the swing, whether it swings by its angle, its roll or its yaw.
+    const turn = Math.max(Math.abs(to - from), Math.abs((pose.roll ?? 0) - (s.roll ?? pose.roll ?? 0)), Math.abs((pose.yaw ?? 0) - (s.yaw ?? pose.yaw ?? 0)));
+    const n = Math.max(2, Math.ceil(turn / 4));
     const dirs: V3[] = [];
     for (let i = 0; i <= n; i++) {
       const k = i / n;
@@ -295,7 +297,8 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
     // The off-hand item's sweep: its angles are mirrored (see weaponB in rig.ts).
     const s = fx.smearB;
     const to = pose.weaponB ?? 160;
-    const n = Math.max(2, Math.ceil(Math.abs(to - s.from) / 4));
+    const turn = Math.max(Math.abs(to - s.from), Math.abs((pose.rollB ?? 0) - (s.roll ?? pose.rollB ?? 0)), Math.abs((pose.yawB ?? 0) - (s.yaw ?? pose.yawB ?? 0)));
+    const n = Math.max(2, Math.ceil(turn / 4));
     const dirs: V3[] = [];
     for (let i = 0; i <= n; i++) {
       const k = i / n;
@@ -307,7 +310,8 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
 
   if (fx.ring) {
     const g = fx.ring;
-    const centre: V3 = [rig.pelvis.o[0], g.height ?? w.o[1], rig.pelvis.o[2]];
+    // By default at the height of the middle of the weapon's reach (a pole arm's head, not its grip).
+    const centre: V3 = [rig.pelvis.o[0], g.height ?? Math.max(2, add3(w.o, w.u, (r0 + r1) / 2)[1]), rig.pelvis.o[2]];
     const R = g.radius ?? r1 + 4;
     const turn = pose.turn ?? 0;
     const n = Math.max(2, Math.ceil(Math.abs(g.to - g.from) / 5));

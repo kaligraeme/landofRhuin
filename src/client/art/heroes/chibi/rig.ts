@@ -126,7 +126,8 @@ export interface FxContext {
  *    him in degrees in the same frame as `turn` (0 is the way he faces at `turn: 0`, 90 his right
  *    there), so a ring stays put in the world while he spins inside it. It runs from its faint
  *    tail (`from`) to its bright head (`to`); a blade held out to his right is at `turn + 90`.
- *    `height` above the ground (default the grip's), `radius` (default the blade's reach + 4).
+ *    `height` above the ground (default the height of the middle of the weapon's reach: the
+ *    blade, or a pole arm's head), `radius` (default the blade's reach + 4).
  *    Smears are turned to show their face when a swing comes straight at the viewer; rings are
  *    not (they stay level).
  *  - `impact`: a starburst at the blade's tip (or at `impactAt`, a hero-space point), size 1 = 10 px.
@@ -293,6 +294,17 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    greatsword's tip is 64 px from the grip. The part of a blade below the floor is hidden (it
  *    bites into the ground); the tip's height is about `hand height + reach·cos(weapon)·cos(roll)`:
  *    keep it near 0 for a blow that stops at the floor.
+ *  - Pole arms (pole.ts): both hands on a haft must be within reach of their shoulders, so the
+ *    haft crosses in front of the body: put the rear (right) hand by the hip, `yaw` the haft
+ *    across toward his left (-15 to -30) and turn the left shoulder forward with a positive
+ *    `twist` for a thrust (the left hand then leads). The rig slides a left hand that cannot reach
+ *    its place toward one it can (`rig.grip2` says where it ended up). A haft pointing straight
+ *    at the viewer shrinks to a stub front on: tip it up, down or across in the poses that must
+ *    read toward the viewer. The head's reach (not the haft's) makes smears, rings and impacts.
+ *  - An off-hand item hides behind the body side on when its hand is on his far (left) side,
+ *    and behind the head when raised close beside it: hold it out (a third `handB` value of 14
+ *    to 16 overhead) or forward where it must show. Spells leave from its tip (`fx.lightning`
+ *    from `'off'`, `FxContext.tipB`).
  *  - Helpers: `pose(base, changes)` for a variation on a stance, `mix(a, b, t)` for in-betweens,
  *    `wave(i, n)` for a smooth loop. A hero's stances live in its own moves files (the Dark
  *    Knight's READY, GUARD_STANCE and AT_EASE in darkKnight/moves-core.ts).
