@@ -167,11 +167,13 @@ and taunts whatever gets loose.
 
 ## Heroes and clans
 
-Every role has a man and a woman to choose from in the lobby, each with their own weapon. The
-Dark Knight (the male Warrior) is a big-headed chibi in blackened plate and a long oxblood coat
-(see [Chibi heroes](#chibi-heroes)); the Guardian wears polished plate, a white tabard and a
-blue cape. The Mages wear embroidered robes, the Rangers green cloaks and quivers, and the
-Duelists light leathers and red scarves. Weapons are part of each hero's animation, held the way
+Every role has a man and a woman to choose from in the lobby, each with their own weapon. Three
+of them are big-headed chibis (see [Chibi heroes](#chibi-heroes)): the Dark Knight (the male
+Warrior) in blackened plate and a long oxblood coat, the Spellblade (the female Mage) in a violet
+robe-coat with long silver-white hair, and the Halberdier (the male Duelist) in gunmetal armour
+over a teal tunic, with a long red scarf. The Guardian wears polished plate, a white tabard and a
+blue cape; the Sage embroidered robes; the Rangers green cloaks and quivers; and the Reaver light
+leathers and a red scarf. Weapons are part of each hero's animation, held the way
 they are meant to be held: the two-handed greatsword, staff and halberd, the Guardian's sword and
 kite shield, the Mage's sword and wand, the Ranger's crossbow and longbow, and the Duelist's
 twin blades.
@@ -185,16 +187,16 @@ face down the screen and away from you when they face up it, in every clip.
 
 ### Animation
 
-Every hero, monster and boss is animated through five clips (the Dark Knight has sixteen of his
-own: see [Chibi heroes](#chibi-heroes)):
+Every monster and boss, and the five heroes not yet chibi, is animated through five clips (the
+three chibi heroes have sixteen of their own: see [Chibi heroes](#chibi-heroes)):
 
 | Clip | When it plays | Heroes |
 | --- | --- | --- |
-| **Idle** | Out of combat | Relaxed, breathing: the greatsword rests on a shoulder, the Guardian's sword hangs point down, the staff is leaned on, the halberd planted |
+| **Idle** | Out of combat | Relaxed, breathing: the Guardian's sword hangs point down, the staff is leaned on |
 | **Battle** | While a fight is on nearby | A low, wide fighting stance, weapon raised and ready (the Guardian's behind her shield), bouncing on the balls of the feet |
 | **Move** | Running | A full sprint: long strides, a hard forward lean, capes, scarves and hair streaming, dust kicked up |
-| **Action** | Basic attacks | A big wind-up, then the weapon's own blow with a motion smear: an overhead cleave, a cut over the shield's rim, a thrust of the staff, a rising slash, a crossbow shot, a drawn and loosed arrow, a lunging sweep, a crossing double cut |
-| **Skill** | Skills and spells | Gathering a glow in the role's colour, then the weapon's signature move: a leaping slam that cracks the ground, a sword raised to gather light and driven into the ground in a burst, a magic circle and a blast of light, a three-bolt volley, arrows loosed at the sky, a spinning halberd, a storm of blades |
+| **Action** | Basic attacks | A big wind-up, then the weapon's own blow with a motion smear: a cut over the shield's rim, a thrust of the staff, a crossbow shot, a drawn and loosed arrow, a crossing double cut |
+| **Skill** | Skills and spells | Gathering a glow in the role's colour, then the weapon's signature move: a sword raised to gather light and driven into the ground in a burst, a magic circle and a blast of light, a three-bolt volley, arrows loosed at the sky, a storm of blades |
 
 Monsters and bosses walk, stand ready, lunge and gather their clan's glow the same way. Dodging
 plays as a dash with after-images.
@@ -225,7 +227,7 @@ The art lives in `src/client/art/`. Monsters and bosses are transparent pixel sp
 (`animation.ts`): each gets a rig (`rigs.ts`) of two legs, a robe, four legs, a hovering form, or a
 rigid object such as a totem, and the rig is posed frame by frame, bending the original artwork.
 
-The heroes are painted frame by frame (`heroes/`): a skeleton is posed for every frame
+The heroes not yet chibi are painted frame by frame (`heroes/`): a skeleton is posed for every frame
 (`moves.ts` holds the choreography), knees and elbows are solved to reach the feet and hands, and
 the body, robes, capes, hair and weapon are drawn on it as outlined, cel-shaded pixel shapes. Side
 on, each hero's face and hair are cut from their artwork in `creatures/`.
@@ -239,18 +241,19 @@ painted first so a hero animates at once; the turned ones follow in the backgrou
 
 ### Chibi heroes
 
-The Dark Knight is the first chibi hero (`heroes/chibi/`): a big-headed pixel hero about 84
-pixels tall, a third of it head and hair, painted in code frame by frame from a 3D rig. He is a
-stern young knight with a messy mop of dark chestnut hair, blackened plate with dull silver
-edges, a long open oxblood coat with a high collar and split tails, and an oversized black
-greatsword with a pale edge, a saw-toothed back and a crimson rune that blazes when he fights.
-His swings leave white-hot arcs that fade through crimson, and his skills burn crimson with a
-violet edge. Every pose is solved in 3D and painted in three views: side on (a three-quarter view,
-mirrored to face left), toward you and away from you. The Halberdier (below) is the second; the
-other heroes still use the skeleton painter above.
+Three heroes are chibis (`heroes/chibi/`): the Dark Knight (the male Warrior), the Spellblade
+(the female Mage) and the Halberdier (the male Duelist). Each is a big-headed pixel hero 80 to 85
+pixels tall, a third of it head and hair, painted in code frame by frame from a 3D rig. Every
+pose is solved in 3D and painted in three views: side on (a three-quarter view, mirrored to face
+left), toward you and away from you. The other five heroes still use the skeleton painter above.
 
-He has sixteen clips. The server's act event names the skill used (`s`) and the hit of the combo
-(`c`), so everyone sees the right one:
+Each has the same sixteen clips. The server's act event names the skill used (`s`) and the hit of
+the combo (`c`), so everyone sees the right one. The Dark Knight is a stern young knight with a
+messy mop of dark chestnut hair, blackened plate with dull silver edges, a long open oxblood coat
+with a high collar and split tails, and an oversized black greatsword with a pale edge, a
+saw-toothed back and a crimson rune that blazes when he fights. His swings leave white-hot arcs
+that fade through crimson, and his skills burn crimson with a violet edge
+(`heroes/chibi/darkKnight/`):
 
 | Clip | Frames | Played by | The Dark Knight |
 | --- | --- | --- | --- |
@@ -273,7 +276,31 @@ The weapon-skill clips are named after the skill's hotbar slot, so a skill plays
 slot whatever its weapon. When several apply (`game/chibiState.ts`), knocked out wins, then an
 attack or skill playing out, then running or dodging, then the victory pose (which holds its last
 frame), a flinch, kneeling, the battle stance and idling. The skill and state clips take the
-blade up from where the battle stance holds it, and those that give way to the stance end in it.
+weapon up from where the battle stance holds it, and those that give way to the stance end in it.
+
+The Spellblade, the female Mage, is a slim, quick young mage about 80 pixels tall with a soft,
+fair face: long, straight silver-white hair to the middle of her back, two long locks framing
+her face and a small gold crescent pin in her side-swept fringe, a fitted violet robe-coat with a
+high gold-edged collar, cut away at the front and falling to the knee behind, over a pale
+lavender under-dress, a violet sash with a gold buckle, a short deep-violet cape, dark plum
+leggings and slim pointed boots. She fights with a slender sword with a violet fuller in her
+right hand and a short wand with a violet crystal in her left. Her blows leave white-edged violet
+arcs; her spells are gold runes, violet lightning and green-gold healing light
+(`heroes/chibi/spellblade/`):
+
+| Clip | Frames | The Spellblade |
+| --- | --- | --- |
+| `idle` | 8 | At ease, weight on her back foot, the sword hanging point down, a blink and a little twirl of the wand |
+| `battle` | 8 | A light fencer's guard side on: the sword up and forward, the wand low and ahead with its crystal pulsing, bouncing on her toes |
+| `move` | 8 | A quick, light sprint, the sword trailing low behind her and the wand held ahead, the hair streaming and swinging |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A diagonal cut from high behind her shoulder; a flat backhand sweep from a coil; then the wand charges the blade and a lunging sweep throws a crescent wave of violet force |
+| `special` | 7 | Runic Ward: the wand raised ahead of her face drawing a circle of light, a ring of her own gold runes spinning up round her and closing over her as a dome |
+| `q` | 8 | Spellblade Rush: coiled low, then a dash with the point thrust ahead, violet afterimages and streaks of speed, a braced skid |
+| `e` | 8 | Arc Lightning: the wand drawn back by her shoulder, then thrust ahead as lightning crackles from its crystal |
+| `r` | 10 | Lifebinding Sigil: the sword driven point down into the floor and she bends over it; a green-gold rosette blooms round her and petals of light spiral up |
+| `ult` | 14 | Astral Cleave: the sword raised high while the wand pours light into it and a great translucent blade grows from its point, then a two-handed cleave that slams it along the floor and a rift of light running on the way she faces |
+| `cast` | 8 | The wand twirled in an arc of light and flung up high in a flourish, a quick spell circle and sparkles spiralling up |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the coat and cape flicked forward; on one knee by the planted sword, the wand hand on her chest, a bead of sweat; a stagger and a crumple onto her back, the hair fanned out over the floor; a twirl with an arc of light, then the sword held out high to her right, a hand on her hip and a wink |
 
 The Halberdier, the male Duelist, is a lean, long-legged young lancer about 85 pixels tall with
 a cocky half-smile: jet-black hair with a blue sheen tied high in a long ponytail with a red cord,
@@ -298,11 +325,12 @@ His thrusts leave spiralling drills of jade wind, his sweeps and spins rings of 
 | `cast` | 8 | The halberd twirled once round his hips and planted, a burst of wind |
 | `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted halberd; a fall, the halberd clattering down; a twirl, then the halberd planted beside him, a hip cocked and a grin |
 
-His 375 frames (125 per view) are painted in the background as a dungeon loads, a few
+A chibi hero's frames (375 for the Dark Knight, 369 for the Spellblade, 372 for the
+Halberdier, a third of them per view) are painted in the background as a dungeon loads, a few
 milliseconds at a time. Each frame is cropped to what is painted and the crops are shelf-packed
-into one atlas per view (`atlas.ts`). Side on comes first; the views toward and away from you
-follow once the rest of the party and the monsters have their frames; until then he is drawn
-side on whichever way he faces.
+into one atlas per view (`atlas.ts`), 800 to 1,200 pixels on a side. Side on comes first; the
+views toward and away from you follow once the rest of the party and the monsters have their
+frames; until then the hero is drawn side on whichever way they face.
 
 To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 
@@ -310,8 +338,10 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
   and:
   - the head (`head.ts`): its locks of hair; long hair if it has any (a curtain down the back laid
     out with `curtain`, locks over the shoulders, a tied ponytail with a `sheen` for glossy dark
-    hair); and a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
-    resting expression;
+    hair); a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
+    resting expression; and anything worn on the head (a hairpin, a circlet) as a head piece,
+    which is given the head's frame as painted so it stays on the hair;
+  - the limbs and boots (`BodyDesign`; a boot's `foot` can taper a soft boot to a point);
   - the body and outfit pieces (`pieces.ts`): pauldrons, a collar, a skirt of panels (a coat, a
     robe, a split skirt; `legs` keeps a long one clear of striding legs), a cape, a scarf (its
     wrap with the head pieces, its tails with the outfit; they can taper, wave and climb behind
@@ -323,8 +353,9 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 - moves files with a pose for every frame of every clip, in the pose format described on
   `ChibiPose` in `rig.ts` (the pelvis, lean, twist and turn, side-on hands and feet that the rig
   lifts into 3D, the weapon's angle, roll and yaw and its grips, the off-hand item's own angles,
-  the wind, lift, flare and sway that move cloth and hair, and the frame's effects: smears, rings,
-  impacts, lightning, wards, swirls of wind, afterimages and more, from `fx.ts`);
+  the expression and a wink, the wind, lift, flare and sway that move cloth and hair, and the
+  frame's effects: smears, rings, impacts, lightning, wards (with the hero's own runes if it
+  has them), swirls of wind, afterimages and more, from `fx.ts`);
 - a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes, scale
   and height.
 
@@ -463,7 +494,7 @@ npm test            # unit tests, plus complete dungeon runs by AI-only parties
 npm run typecheck
 npm run e2e         # builds, then drives two browsers through a party, queue and first room
 npm run simulate -- 42 5   # play 5 dungeons (seeds 42-46) with AI parties and print results
-npx tsx scripts/chibi-sheet.ts   # contact sheets of the chibi Dark Knight's clips in three views
+npx tsx scripts/chibi-sheet.ts   # contact sheets of a chibi hero's clips in three views (--hero <sprite id>)
 ```
 
 The simulation tests have four AI parties with different weapons clear entire dungeons. That
