@@ -19,7 +19,8 @@
  * stops. Its swoosh starts where the blade was (`trail`): the frame before on the smear frame, the
  * start of the swing on the impact frame, so the whole stroke shows as one arc that then fades.
  * The chibi head is too big for the hands to get above it, so raised hands go beside it, behind
- * and out to his right (about `[-6, -10, 14]`): clear of his face side on and seen from the front.
+ * and out to his right (`handF` about `[-6 to -9, -8 to -10, 13 or 14]`): clear of his face side
+ * on and seen from the front.
  */
 import { DARK_KNIGHT } from './darkKnight.js';
 import { add3, type ChibiPose, mix, norm3, pose, rad, solveRig, sub3, type V3, wave } from './rig.js';
@@ -235,7 +236,7 @@ const smear = (start: ChibiPose, p: ChibiPose, width: number, alpha = 1): ChibiP
 const settle = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => spread(pose(mix(p, battle[0] as ChibiPose, k), { ...over, handB: undefined }));
 
 // atk1: high behind his right shoulder, down across to low in front on his left.
-const A1_COCK = pose(READY, { x: -2, y: 4, lean: -6, twist: -30, head: -2, look: 2, footF: [10, -1, 5.4], footB: [-11, 0, 5.2], handF: [-6, -12, 10], handB: undefined, grip: 0, weapon: -38, roll: 45, yaw: -6, wind: 0.25, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
+const A1_COCK = pose(READY, { x: -2, y: 4, lean: -6, twist: -30, head: -2, look: 2, footF: [10, -1, 5.4], footB: [-11, 0, 5.2], handF: [-9, -8, 13], handB: undefined, grip: 0, weapon: -42, roll: 45, yaw: -6, wind: 0.25, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
 const A1_SWING = pose(READY, { x: 3, y: 4, lean: 10, twist: -4, head: 2, footF: [14, 0, 5.6], handF: [12, 3, 6], handB: undefined, grip: 0, weapon: 72, roll: 40, yaw: 0, wind: 0.45, lift: 0, phase: 0.25, face: 'shout', fx: { rune: 0.8 } });
 const A1_HIT = pose(READY, { x: 6, y: 8, lean: 24, twist: 14, head: 1, look: -4, footF: [15, 0, 5.8], footB: [-12, 0, 5.2], handF: [17, 14, -3], handB: undefined, grip: 0, weapon: 114, roll: 40, yaw: 0, wind: 0.8, lift: -0.1, phase: 0.4, face: 'shout', fx: { impact: 0.9, dust: 0.7, rune: 1 } });
 const A1_FOLLOW = pose(A1_HIT, { y: 9, lean: 26, twist: 18, head: 2, handF: [16, 16, -4], weapon: 124, wind: 0.95, lift: 0.2, phase: 0.55, face: 'grit', fx: { dust: 0.4, rune: 0.6 } });
@@ -251,7 +252,7 @@ const atk1: ChibiPose[] = [
 ];
 
 // atk2: from low on his left, up across his body to high on his right.
-const A2_COCK = pose(READY, { x: 2, y: 7, lean: 20, twist: 32, head: 5, look: -6, footF: [12, 0, 5.6], handF: [7, 15, -3], handB: undefined, grip: 0, weapon: 156, roll: 28, yaw: 0, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
+const A2_COCK = pose(READY, { x: 2, y: 8, lean: 8, twist: 30, head: 0, look: -6, footF: [12, 0, 5.6], handF: [7, 15, -3], handB: undefined, grip: 0, weapon: 156, roll: 28, yaw: 0, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
 const A2_SWING = pose(READY, { x: 4, y: 5, lean: 12, twist: 6, head: 2, footF: [14, 0, 5.6], handF: [13, 4, 4], handB: undefined, grip: 0, weapon: 66, roll: 28, yaw: 0, wind: 0.45, lift: -0.2, phase: 0.25, face: 'shout', fx: { rune: 0.8 } });
 const A2_HIT = pose(READY, { x: 6, y: 2, lean: -3, twist: -24, head: -5, look: 2, footF: [15, 0, 5.8], footB: [-11, -1, 5.2], handF: [-6, -10, 14], handB: undefined, grip: 0, weapon: -24, roll: 28, yaw: 0, wind: 0.75, lift: 0.1, phase: 0.4, face: 'shout', fx: { impact: 0.8, rune: 1 } });
 const A2_FOLLOW = pose(A2_HIT, { y: 2, lean: -5, twist: -30, head: -6, handF: [-7, -9, 14], weapon: -44, wind: 0.9, lift: 0.5, phase: 0.55, face: 'grit', fx: { rune: 0.6 } });
@@ -270,7 +271,7 @@ const atk2: ChibiPose[] = [
 
 // atk3: coil, spin round in a hop with the blade held out level, leap with it raised high over
 // his right shoulder, and slam it down in front.
-const A3_COIL = pose(READY, { x: -1, y: 8, lean: 16, twist: -36, head: 5, footF: [11, 0, 6], footB: [-11, 0, 5.6], handF: [-1, 14, 9], handB: undefined, grip: 0, weapon: -118, roll: 10, yaw: 0, wind: 0.3, face: 'grit', fx: { rune: 0.5 } });
+const A3_COIL = pose(READY, { x: -1, y: 8, lean: 16, twist: -36, head: 5, footF: [11, 0, 6], footB: [-11, 0, 5.6], handF: [-1, 14, 9], handB: undefined, grip: 0, weapon: -118, roll: 10, yaw: -25, wind: 0.3, face: 'grit', fx: { rune: 0.5 } });
 const A3_COIL2 = pose(A3_COIL, { y: 9, lean: 18, twist: -44, turn: -28, head: 6, handF: [-3, 13, 9.5], weapon: -126, wind: 0.35, lift: 0.2, phase: 0.1, fx: { rune: 0.7 } });
 const A3_SPIN1 = pose(READY, { x: 0, y: 2, lean: 8, twist: 0, turn: 95, head: 0, footF: [8, -3, 5], footB: [-8, -1, 5], handF: [5, 10, 12], handB: undefined, grip: 0, weapon: 90, roll: 0, yaw: 85, wind: 0.7, flare: 0.8, phase: 0.25, face: 'grit', fx: { ring: { from: 20, to: 185, height: 40 }, rune: 0.8 } });
 const A3_SPIN2 = pose(A3_SPIN1, { y: -4, lean: 2, turn: 215, footF: [6, -6, 5], footB: [-6, -5, 5], handF: [4, 8, 12], weapon: 76, yaw: 80, wind: 0.6, flare: 1, lift: 0.4, phase: 0.4, face: 'shout', fx: { ring: { from: 130, to: 300, height: 46 }, rune: 1 } });
