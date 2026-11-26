@@ -96,8 +96,8 @@ export const COMBO_CLIPS: readonly ChibiClip[] = ['atk1', 'atk2', 'atk3'];
 
 /** The Dark Knight's clip timing (frame counts match his moves files). */
 const DARK_KNIGHT_TIMING: Record<ChibiClip, ClipTiming> = {
-  idle: { frames: 6, mode: 'loop', seconds: 1.6, windup: 0 },
-  battle: { frames: 6, mode: 'loop', seconds: 0.9, windup: 0 },
+  idle: { frames: 8, mode: 'loop', seconds: 1.6, windup: 0 },
+  battle: { frames: 8, mode: 'loop', seconds: 0.9, windup: 0 },
   move: { frames: 8, mode: 'loop', seconds: 0.6, windup: 0 },
   atk1: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
   atk2: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
