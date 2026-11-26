@@ -10,6 +10,9 @@
  * the whole figure: side on he faces right and turns `SIDE_YAW` degrees toward the viewer (his
  * right side, the sword side, is the near side), front on he faces the viewer, back on he faces
  * away. A pose's `turn` adds to that yaw, so one choreography serves all three views.
+ *
+ * A design may also give an item for the left hand (`ChibiDesign.offhand`: a wand, a second
+ * blade); the pose then sets its angles as it does the main weapon's (`weaponB`, `rollB`, `yawB`).
  */
 import type { Vec } from '../skeleton.js';
 import type { Canvas, RGB } from '../paint.js';
@@ -89,8 +92,18 @@ export interface FxContext {
   /** Hero space to frame pixels, and to depth toward the viewer. */
   proj: (p: V3) => Vec;
   depth: (p: V3) => number;
-  /** Where the weapon's tip is, in hero space (its grip is `rig.weapon.o`). */
+  /** Where the main weapon's tip is (its `tip`, or the end of its reach), in hero space (its grip is `rig.weapon.o`). */
   tip: V3;
+  /**
+   * Where the off-hand item's tip is (its grip is `rig.offhand.o`): where its spells leave it. A
+   * design with nothing in the off hand has it at the left hand.
+   */
+  tipB: V3;
+  /**
+   * Is a point behind the figure (farther from the viewer than the middle of the body)? An
+   * effect painted there goes on the canvas's under layer, so the figure hides it.
+   */
+  behind: (p: V3) => boolean;
   /**
    * The hero's aura colours (the design's `aura`): core, edge, and hot, the white-hot of a
    * smear's cutting edge (crimson, violet and a pale pink-white for the Dark Knight).
@@ -113,7 +126,8 @@ export interface FxContext {
  *    him in degrees in the same frame as `turn` (0 is the way he faces at `turn: 0`, 90 his right
  *    there), so a ring stays put in the world while he spins inside it. It runs from its faint
  *    tail (`from`) to its bright head (`to`); a blade held out to his right is at `turn + 90`.
- *    `height` above the ground (default the grip's), `radius` (default the blade's reach + 4).
+ *    `height` above the ground (default the height of the middle of the weapon's reach: the
+ *    blade, or a pole arm's head), `radius` (default the blade's reach + 4).
  *    Smears are turned to show their face when a swing comes straight at the viewer; rings are
  *    not (they stay level).
  *  - `impact`: a starburst at the blade's tip (or at `impactAt`, a hero-space point), size 1 = 10 px.
@@ -129,6 +143,33 @@ export interface FxContext {
  *  - `rune`: how brightly the weapon's rune channel glows: at 0 it smoulders in its rest colour
  *    with barely a glow, toward 1 it blazes (an aura makes it glow a little too).
  *  - `glow`: the body glows from within (Drain), 0 to 1.
+ *  - `smearB`, `runeB`, `impactB`: the same for the off-hand item (the design's `offhand`): a
+ *    smear it sweeps (`from`, `roll` and `yaw` given as `weaponB`, `rollB` and `yawB` are, so
+ *    mirrored), its glow (a wand's crystal) and a starburst at its tip.
+ *  - `lightning`: a jagged, forking bolt with a white-hot core, from the off-hand item's tip
+ *    (`from: 'off'`, the default when the design has one), the main weapon's (`'main'`) or a
+ *    hero-space point, to the point `to`, or `len` (default 56) along `dir` (default the item's
+ *    own axis, so a wand thrust forward throws it forward). `seed` reshapes it (change it every
+ *    frame and it crackles), `forks` is how many branches split off (default 3), `alpha` its
+ *    strength. Bolts going away from the viewer pass behind him.
+ *  - `ward`: a ring of runes round him, `k` from 0 (just rising off the floor, faint) to 1 (at
+ *    full height, bright); `radius` (default 24) and `height` above the ground (default 26), `spin`
+ *    turns the runes round him (degrees: advance it every frame), `runes` how many (default 10),
+ *    `glyphs` the rune shapes (five rows of five cells, `#` lit; default fx.ts's own set).
+ *    `dome: true` makes it a dome of hexagons over him instead, brightest at its rim. The half
+ *    nearer the viewer is painted over him (faintly, so he shows through), the far half behind.
+ *  - `swirl`: a spiral of wind streaks round a line, `k` its strength: a drill of wind along the
+ *    main weapon from its head to well past its tip (`on: 'main'`, the default: a thrust), along
+ *    the off-hand item (`'off'`), or round him from his knees to his chest (`'body'`: a spin).
+ *    `from` and `to` (hero space) set the line outright; `radius` (default 8 along a weapon, 26
+ *    round him), `taper` (the radius at `to` as a share of it at `from`, default 0.3 along a
+ *    weapon, 1 round him), `turns` (default 1.6 along a weapon, 1 round him) and `spin` (turns:
+ *    advance it every frame so the streaks run on). Streaks behind the line pass behind whatever is there.
+ *  - `ghosts`: afterimages of the whole figure (as painted, before effects) trailing behind a
+ *    dash, in the aura's colours, fading with distance: `k` their strength, `n` how many (default
+ *    2), `gap` pixels between them on screen (default 10; down to half that when the dash runs
+ *    toward or away from the viewer), `dir` the hero-space way they trail (default behind him).
+ *    They lie under the figure, so only what sticks out of it shows.
  *  - `extra`: paints anything else, after the built-in effects, from the choreography's own file.
  */
 export interface ChibiFx {
@@ -147,6 +188,13 @@ export interface ChibiFx {
   blood?: number;
   rune?: number;
   glow?: number;
+  smearB?: { from: number; roll?: number; yaw?: number; width?: number; alpha?: number };
+  runeB?: number;
+  impactB?: number;
+  lightning?: { from?: 'main' | 'off' | V3; to?: V3; dir?: V3; len?: number; seed?: number; forks?: number; alpha?: number };
+  ward?: { k: number; radius?: number; height?: number; spin?: number; runes?: number; dome?: boolean; glyphs?: readonly (readonly string[])[] };
+  swirl?: { k: number; on?: 'main' | 'off' | 'body'; from?: V3; to?: V3; radius?: number; taper?: number; turns?: number; spin?: number };
+  ghosts?: { k: number; n?: number; gap?: number; dir?: V3 };
   extra?: (ctx: FxContext) => void;
 }
 
@@ -170,7 +218,8 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    face the viewer and 180 turns him to face left; Eclipse spins through 0..360.
  *  - `head`: the head tips down (+) or up (-). `look`: the head turns, + toward his right (side on,
  *    toward the viewer). The head follows half the torso's lean on its own.
- *  - `face`: the expression (default 'stern').
+ *  - `face`: the expression (default 'stern'). `wink`: 'R' or 'L' shuts his right or left eye
+ *    alone (a wink), whatever the expression.
  *
  * Limbs (side-plane points; the rig moves them out to their side of the body in 3D)
  *  - `footF`, `footB`: his right foot (the near one side on) and his left foot, `[forward, y]`
@@ -202,15 +251,41 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *  - `grip`: slides the right hand along the grip (+ toward the guard); `drop`: the sword is not
  *    held (ko, kneel) and lies where `dropAt` (hero space `[f, u, r]` of the grip) puts it, at
  *    `weapon`/`roll`/`yaw` as usual.
+ *  - `grip2`: where the left hand holds a two-handed weapon, along it from the weapon's origin
+ *    (+ toward the tip; the design's `grip2` when left out). With `grip` it sets both hands'
+ *    places on a pole arm's haft (pole.ts; its origin is where the right hand holds it at rest,
+ *    the butt below at negative values, the head above): a thrust slides the front hand up
+ *    toward the head, a spin holds the haft with both hands near its middle, a vault grips it
+ *    near the butt (`grip` and `grip2` both well below 0, so the weapon reaches far past the
+ *    hands). The weapon still hangs from the right hand at `weapon`/`roll`/`yaw`; the left hand
+ *    reaches for its place, so keep that place within its arm's reach (about 18 from the left
+ *    shoulder) or the hand falls short of the haft.
  *
- * Cloth and hair
- *  - `wind`: coat tails and hair stream back (0 hanging, 1 flying flat behind him). Down to
- *    -0.8 flicks the coat tails forward instead (a flinch thrown back); the hair stays put.
- *  - `lift`: an updraft: tails rise and spread (falling, leaping, a burst of power), -1 to 1.
- *  - `flare`: tails swing out around him (spins), 0 to 1.
- *  - `sway`: tails and hair swing sideways, -1 (to his left) to 1 (to his right).
- *  - `phase`: where the ripple running down the tails is, in turns (advance it ~1/n per frame of
- *    an n-frame loop so the cloth flows; 0 if you do not care).
+ * Off-hand item (in the left hand, when the design has one: a wand, a second blade, later a bow)
+ *  - `weaponB`, `rollB`, `yawB`: its angles, as `weapon`, `roll` and `yaw` are for the main
+ *    weapon but mirrored, so the same numbers in both hands make a symmetrical pose: `weaponB`
+ *    0 points up, 90 forward, 180 down (default 160, hanging forward from a lowered hand);
+ *    `rollB` + carries its tip out to his left when it is up; `yawB` + swings an item pointing
+ *    ahead out to his left. A wand thrust straight ahead is `weaponB: 90` with `handB` reaching
+ *    forward; raised overhead, `weaponB: 0` to `-20`.
+ *  - `handB` is its hand: give it in every pose. Leaving it out puts the left hand (item and all)
+ *    on the main weapon's second grip, as for a two-handed blow: point the item down and back out
+ *    of the way then (`weaponB` about 200).
+ *  - `dropB`, `dropAtB`: the item is not held and lies at `dropAtB` (as `drop` and `dropAt`).
+ *
+ * Cloth and hair (coat tails and skirts, a cape, scarf tails, a pole arm's ribbon, long hair and
+ * a ponytail all answer to these)
+ *  - `wind`: they stream back (0 hanging, 1 flying flat behind him). Down to -0.8 flicks the
+ *    cloth forward instead (a flinch thrown back); the hair stays put. Coat tails, a cape, scarf
+ *    tails and long hair blown straight at or away from the viewer open out a little to their
+ *    side, so they still show their length.
+ *  - `lift`: an updraft: they rise and spread (falling, leaping, a burst of power), -1 to 1.
+ *  - `flare`: they swing out around him (spins), 0 to 1.
+ *  - `sway`: they swing sideways, -1 (to his left) to 1 (to his right). Nothing remembers the
+ *    frame before, so for hair and cloth that lag behind a turn, sway them against the turn (a
+ *    turn toward his right sways them to his left) and give them some wind and flare.
+ *  - `phase`: where the ripple running down them is, in turns (advance it ~1/n per frame of an
+ *    n-frame loop so the cloth flows; 0 if you do not care).
  *
  * Effects
  *  - `fx`: see ChibiFx.
@@ -227,6 +302,17 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    greatsword's tip is 64 px from the grip. The part of a blade below the floor is hidden (it
  *    bites into the ground); the tip's height is about `hand height + reach·cos(weapon)·cos(roll)`:
  *    keep it near 0 for a blow that stops at the floor.
+ *  - Pole arms (pole.ts): both hands on a haft must be within reach of their shoulders, so the
+ *    haft crosses in front of the body: put the rear (right) hand by the hip, `yaw` the haft
+ *    across toward his left (-15 to -30) and turn the left shoulder forward with a positive
+ *    `twist` for a thrust (the left hand then leads). The rig slides a left hand that cannot reach
+ *    its place toward one it can (`rig.grip2` says where it ended up). A haft pointing straight
+ *    at the viewer shrinks to a stub front on: tip it up, down or across in the poses that must
+ *    read toward the viewer. The head's reach (not the haft's) makes smears, rings and impacts.
+ *  - An off-hand item hides behind the body side on when its hand is on his far (left) side,
+ *    and behind the head when raised close beside it: hold it out (a third `handB` value of 14
+ *    to 16 overhead) or forward where it must show. Spells leave from its tip (`fx.lightning`
+ *    from `'off'`, `FxContext.tipB`).
  *  - Helpers: `pose(base, changes)` for a variation on a stance, `mix(a, b, t)` for in-betweens,
  *    `wave(i, n)` for a smooth loop. A hero's stances live in its own moves files (the Dark
  *    Knight's READY, GUARD_STANCE and AT_EASE in darkKnight/moves-core.ts).
@@ -243,6 +329,7 @@ export interface ChibiPose {
   head?: number;
   look?: number;
   face?: Face;
+  wink?: 'R' | 'L';
   footF: P2;
   footB: P2;
   kneel?: 'F' | 'B';
@@ -252,8 +339,14 @@ export interface ChibiPose {
   roll?: number;
   yaw?: number;
   grip?: number;
+  grip2?: number;
   drop?: boolean;
   dropAt?: V3;
+  weaponB?: number;
+  rollB?: number;
+  yawB?: number;
+  dropB?: boolean;
+  dropAtB?: V3;
   wind?: number;
   lift?: number;
   flare?: number;
@@ -274,8 +367,16 @@ export function mix(a: ChibiPose, b: ChibiPose, k: number): ChibiPose {
   // A sideways offset blends only when both points give one.
   const p = (x: P2, y: P2): P2 => (x[2] !== undefined && y[2] !== undefined ? [n(x[0], y[0]), n(x[1], y[1]), n(x[2], y[2])] : [n(x[0], y[0]), n(x[1], y[1])]);
   const near = k < 0.5 ? a : b;
+  // Fields a pose may leave to the design (an off-hand item's angles, the second grip) blend only when both give them.
+  const o = (x: number | undefined, y: number | undefined, nearer: number | undefined): number | undefined => (x !== undefined && y !== undefined ? n(x, y) : nearer);
+  const extra: Partial<ChibiPose> = {};
+  for (const key of ['grip2', 'weaponB', 'rollB', 'yawB'] as const) {
+    const v = o(a[key], b[key], near[key]);
+    if (v !== undefined) extra[key] = v;
+  }
   return {
     ...near,
+    ...extra,
     x: n(a.x, b.x),
     y: n(a.y, b.y),
     lean: n(a.lean, b.lean),
@@ -354,6 +455,10 @@ export interface Rig {
   weapon: Grip;
   /** The left hand is on the weapon's second grip. */
   twoHanded: boolean;
+  /** Where along the weapon that second grip is (the pose's `grip2` or the design's, slid along a haft to within reach). */
+  grip2: number;
+  /** The off-hand item, if the design has one: in the left hand (or where `dropAtB` puts it), at `weaponB`/`rollB`/`yawB`. */
+  offhand: Grip;
 }
 
 /** Two-bone IK in 3D: the joint bends toward `bend`. */
@@ -389,9 +494,11 @@ const HERO: Frame3 = { o: [0, 0, 0], f: [1, 0, 0], u: [0, 1, 0], r: [0, 0, 1] };
 
 /**
  * Solves a pose. `grip2` is where the second hand holds a two-handed weapon, along it from the
- * first hand (negative: toward the pommel).
+ * weapon's origin (negative: toward the pommel); the pose's own `grip2` overrides it. `haft` is
+ * the stretch of a pole arm either hand may hold (the weapon design's `haft`): a left hand that
+ * cannot reach its place there slides along it to the nearest place it can reach.
  */
-export function solveRig(b: Build, pose: ChibiPose, grip2: number): Rig {
+export function solveRig(b: Build, pose: ChibiPose, grip2: number, haft?: readonly [number, number]): Rig {
   const pelvisO: V3 = [pose.x, b.hip - pose.y, 0];
   const pelvis: Frame3 = rotate({ ...HERO, o: pelvisO }, (pose.lean ?? 0) * 0.35, (pose.tilt ?? 0) * 0.3, (pose.twist ?? 0) * 0.25);
   const chest: Frame3 = rotate({ ...HERO, o: pelvisO }, pose.lean, pose.tilt ?? 0, pose.twist ?? 0);
@@ -434,8 +541,29 @@ export function solveRig(b: Build, pose: ChibiPose, grip2: number): Rig {
   // A dropped weapon lies where the pose puts it; a held one is in the right hand.
   const gripO: V3 = pose.drop ? (pose.dropAt ?? [pose.x + 14, 2, 4]) : add3(armR.end, ax.u, -(pose.grip ?? 0));
   const twoHanded = !pose.handB && !pose.drop;
-  const targetL = twoHanded ? add3(gripO, ax.u, grip2) : pose.handB ? handAt(pose.handB, -1, shoulderL) : add3(shoulderL, [-1, -(b.upperArm + b.foreArm - 2), -1.5]);
+  let at2 = pose.grip2 ?? grip2;
+  if (twoHanded && haft) {
+    // Along a haft the left hand slides toward the shoulder until it can reach.
+    const reach = b.upperArm + b.foreArm - 0.3;
+    const far = (u: number): boolean => len3(sub3(add3(gripO, ax.u, u), shoulderL)) > reach;
+    if (far(at2)) {
+      const nearest = clamp(dot3(sub3(shoulderL, gripO), ax.u), haft[0], haft[1]);
+      let to = nearest;
+      for (let i = 1; i <= 32; i++) {
+        const u = lerp(at2, nearest, i / 32);
+        if (!far(u)) {
+          to = u;
+          break;
+        }
+      }
+      at2 = to;
+    }
+  }
+  const targetL = twoHanded ? add3(gripO, ax.u, at2) : pose.handB ? handAt(pose.handB, -1, shoulderL) : add3(shoulderL, [-1, -(b.upperArm + b.foreArm - 2), -1.5]);
   const armL = ik(shoulderL, targetL, b.upperArm, b.foreArm, elbow(-1));
+  // The off-hand item: its angles mirror the main weapon's (roll and yaw + carry it out to his left).
+  const axB = weaponAxes(pose.weaponB ?? 160, -(pose.rollB ?? 0), -(pose.yawB ?? 0));
+  const offO: V3 = pose.dropB ? (pose.dropAtB ?? [pose.x + 10, 1.5, -7]) : armL.end;
   return {
     pose,
     build: b,
@@ -451,6 +579,8 @@ export function solveRig(b: Build, pose: ChibiPose, grip2: number): Rig {
     toeL: toe(legL, -1),
     weapon: { o: gripO, ...ax },
     twoHanded,
+    grip2: at2,
+    offhand: { o: offO, ...axB },
   };
 }
 

@@ -51,4 +51,5 @@ export const DARK_KNIGHT_HERO: ChibiHero = chibiHero(
     back: { w: 224, h: 240, ax: 112, ay: 172 },
   },
   2.1 / 84,
+  84,
 );

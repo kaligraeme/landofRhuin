@@ -53,6 +53,8 @@ export const flat = (c: RGB | string): Mat => {
 
 /** Darkens (k < 0) or lightens (k > 0) a colour. */
 export const shade = (c: RGB, k: number): RGB => c.map((v) => Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k))) as unknown as RGB;
+/** Mixes two colours: `t` of the way from `a` to `b`. */
+export const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
 
 /** The same material a step darker or lighter (far limbs, the inside of a coat). */
 export function dim(m: Mat, k: number): Mat {

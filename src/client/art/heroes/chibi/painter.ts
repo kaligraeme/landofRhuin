@@ -1,21 +1,24 @@
 /**
- * The chibi painter: solves a pose, then paints a design's legs, torso, head, arms, hands, weapon
- * and outfit pieces far to near through the view's camera, outlines the figure in ink and lays the
- * pose's effects over it. Everything a hero looks like comes from its design; everything it does
- * comes from its poses.
+ * The chibi painter: solves a pose, then paints a design's legs, torso, head, arms, hands, weapon,
+ * off-hand item and outfit pieces far to near through the view's camera, outlines the figure in
+ * ink and lays the pose's effects over it. Everything a hero looks like comes from its design;
+ * everything it does comes from its poses.
  *
  * Depth order: each part sorts by its depth toward the viewer. The legs and the cloth that hangs
  * among them sort by their true depths; the torso always goes on after the legs (its hips cover
  * the tops of the thighs), and everything above it (arms, head, pauldrons, the weapon) is moved by
  * the same amount, so the upper body keeps its own order. An arm wholly on the far side keeps its
- * true depth, so it stays behind the cloth hanging on the near side.
+ * true depth, so it stays behind the cloth hanging on the near side; so do a cape, scarf tails,
+ * long hair and an off-hand item on the far side (`PieceContext.upperZ`), so a far arm nearer the
+ * viewer than they are stays in front of them.
  */
 import { Canvas, INK, type Raster } from '../paint.js';
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
 import type { Vec } from '../skeleton.js';
-import { type ChibiDesign, type DrawItem, type PieceContext, WEAPON_TAG } from './design.js';
+import { type ChibiDesign, type DrawItem, OFFHAND_TAG, type PieceContext, WEAPON_TAG } from './design.js';
 import { paintFx } from './fx.js';
-import { paintHead } from './head.js';
+import { hairItems, paintHead } from './head.js';
+import { blaze } from './held.js';
 import { dim, Part } from './raster.js';
 import { add3, at3, camera, type ChibiPose, type ChibiView, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
 
@@ -24,7 +27,7 @@ const FAR = -0.16;
 /** Paints one frame of a chibi hero in a pose, seen from a view. */
 export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box: FrameBox): Raster {
   const c = new Canvas(box.w, box.h);
-  const rig = solveRig(d.build, pose, d.weapon.grip2);
+  const rig = solveRig(d.build, pose, d.weapon.grip2, d.weapon.haft);
   const cam = camera(view, pose.turn ?? 0, box.ax, box.ay);
   const owner = new Int16Array(box.w * box.h);
   const ctx: PieceContext = {
@@ -38,6 +41,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
     proj: cam.proj,
     depth: cam.depth,
     upper: 0,
+    upperZ: (z) => z,
   };
   const { proj, depth } = ctx;
   const B = d.body;
@@ -52,6 +56,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   ctx.upper = torsoZ - torsoTrue;
   const up = ctx.upper;
   const farSide = (p: V3): boolean => depth(p) < torsoTrue - 2;
+  ctx.upperZ = (z) => (z < torsoTrue - 2 ? z : z + up);
 
   const items: DrawItem[] = [];
 
@@ -93,18 +98,34 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
         part.capsule(proj(a), proj(b), B.neck.r, B.neck.r, B.neck.mat, -0.25, depth(a), depth(b), 5);
       }),
   });
+  // Long hair hangs from the head but sorts with the body: behind the back, or over it.
+  for (const it of hairItems(ctx, d.head, B, headFr)) items.push(it);
 
-  // Arms and hands. A hand on the weapon goes over its grip.
+  // Arms and hands. A hand on the weapon (or on the off-hand item) goes over its grip.
   const w = rig.weapon;
   const wZ = depth(add3(w.o, w.u, d.weapon.reach[1] * 0.3)) + up;
+  const off = d.offhand;
+  const wB = rig.offhand;
+  const bZ = off ? ctx.upperZ(depth(add3(wB.o, wB.u, off.reach[1] * 0.3))) : 0;
   for (const [arm, side] of [[rig.armR, 1], [rig.armL, -1]] as const) {
     const far = farSide(arm.mid) && farSide(arm.end);
     // An arm on the far side sorts by its true depth, so a coat flap hanging nearer the viewer stays in front of it.
     const zArm = depth(lerp3(arm.mid, arm.end, 0.4)) * 0.6 + depth(arm.root) * 0.4 + (far ? 0 : up);
     items.push({ z: zArm, draw: () => paintArm(ctx, d, arm, far) });
     const holds = side === 1 ? !pose.drop : rig.twoHanded;
-    const zHand = holds && farSide(arm.end) === farSide(add3(w.o, w.u, 12)) ? Math.max(zArm, wZ) + 0.05 : zArm + 0.05;
+    let zHand = holds && farSide(arm.end) === farSide(add3(w.o, w.u, 12)) ? Math.max(zArm, wZ) + 0.05 : zArm + 0.05;
+    if (side === -1 && off && !pose.dropB && farSide(arm.end) === farSide(add3(wB.o, wB.u, 6))) zHand = Math.max(zHand, bZ + 0.05);
     items.push({ z: zHand, draw: () => paintHand(ctx, d, arm, far) });
+  }
+  if (off) {
+    items.push({
+      z: bZ,
+      draw: () => {
+        const part = ctx.part(OFFHAND_TAG);
+        off.paint(ctx, part, { grip: wB, blaze: blaze(ctx, true), tag: OFFHAND_TAG });
+        part.commit();
+      },
+    });
   }
   items.push({
     z: wZ,
@@ -179,8 +200,9 @@ function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, far: bo
   const heel = sole(add3(ankle, toe, -bt.heel));
   const tip = sole(add3(ankle, toe, bt.toe));
   // The sole, a dark band under the foot.
-  part.capsule(proj(add3(heel, down, 1)), proj(add3(tip, down, 0.9)), 2.3, 2.1, k(bt.sole), bias - 0.3, depth(heel) - 0.2, depth(tip) - 0.2, 4);
-  part.capsule(proj(heel), proj(tip), 2.6, 2.4, k(bt.mat), bias, depth(heel) + 0.3, depth(tip) + 0.3, 3);
+  const [fh, ft] = bt.foot ?? [2.6, 2.4];
+  part.capsule(proj(add3(heel, down, 1)), proj(add3(tip, down, 0.9)), fh - 0.3, ft - 0.3, k(bt.sole), bias - 0.3, depth(heel) - 0.2, depth(tip) - 0.2, 4);
+  part.capsule(proj(heel), proj(tip), fh, ft, k(bt.mat), bias, depth(heel) + 0.3, depth(tip) + 0.3, 3);
   if (bt.cap) {
     const capA = add3(lerp3(heel, tip, 0.62), [0, 0.6, 0]);
     part.capsule(proj(capA), proj(add3(tip, [0, 0.3, 0])), 2.2, 2.0, k(bt.cap), bias + 0.1, depth(capA) + 0.6, depth(tip) + 0.8, 6);
@@ -233,10 +255,11 @@ function paintHand(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): 
 }
 
 /**
- * A chibi hero from a design, its poses clip by clip, its timing, its frames and its scale (tiles
- * per pixel). Every clip must have as many poses as its timing has frames.
+ * A chibi hero from a design, its poses clip by clip, its timing, its frames, its scale (tiles per
+ * pixel) and how tall it stands (frame pixels, hair to soles). Every clip must have as many poses
+ * as its timing has frames.
  */
-export function chibiHero(d: ChibiDesign, clips: Record<ChibiClip, readonly ChibiPose[]>, timing: Record<ChibiClip, ClipTiming>, frame: Record<ChibiView, FrameBox>, scale: number): ChibiHero {
+export function chibiHero(d: ChibiDesign, clips: Record<ChibiClip, readonly ChibiPose[]>, timing: Record<ChibiClip, ClipTiming>, frame: Record<ChibiView, FrameBox>, scale: number, height: number): ChibiHero {
   for (const [clip, t] of Object.entries(timing) as [ChibiClip, ClipTiming][]) {
     const n = clips[clip]?.length ?? 0;
     if (n !== t.frames) throw new Error(`${d.id}: ${clip} has ${n} poses for ${t.frames} frames`);
@@ -245,7 +268,10 @@ export function chibiHero(d: ChibiDesign, clips: Record<ChibiClip, readonly Chib
     id: d.id,
     frame,
     scale,
+    height,
     timing,
+    design: d,
+    poses: clips,
     paint: (clip, i, view) => paintChibi(d, clips[clip][Math.max(0, Math.min(i, clips[clip].length - 1))] as ChibiPose, view, frame[view]),
   };
 }
