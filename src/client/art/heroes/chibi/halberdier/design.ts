@@ -27,8 +27,8 @@ const HAIR = mat4('#5a6a88', '#2e3446', '#1c2030', '#0e1018', '#06070c', -0.04);
 // The scarf: the brightest colour on him.
 const SCARF = { ...mat4('#ff7f82', '#de4a50', '#a8242e', '#64121a', '#36070e', 0.06), gain: 0.75 };
 const SCARF_IN = mat4('#b23a42', '#8a1e28', '#5e1018', '#3a0810', '#200408');
-// Light gunmetal plate with pale steel edges.
-const ARMOUR = { ...mat4('#c4ccd8', '#8a96a8', '#5c6678', '#363d4a', '#171a22', -0.18), clear: 1.2 };
+// Light gunmetal plate with pale steel edges: mostly its base tone, so the red scarf and the teal stay the brightest colours on him.
+const ARMOUR = { ...mat4('#c4ccd8', '#8a96a8', '#5c6678', '#363d4a', '#171a22', -0.28), clear: 1.2, gain: 0.8 };
 const ARMOUR_RIDGE = mat4('#d6dce6', '#a4aebe', '#76808f', '#4a5260', '#171a22', 0.12);
 const STEEL_EDGE = mat4('#f2f5fa', '#d0d6e0', '#a6aebd', '#727b8a', '#262a33', 0.12);
 // Teal cloth: one colour with its light tone only on the folds that catch the light.
@@ -238,8 +238,9 @@ const HALBERDIER: ChibiDesign = {
       fan: 0.85,
       folds: true,
       legs: 4.2,
-      // Split four ways, to mid-thigh: it flaps as he moves.
+      // Split into five flaps to mid-thigh (a narrow one at the front): it flaps as he moves.
       panels: [
+        { from: -15, to: 15, len: 13, jag: 1.2 },
         { from: 22, to: 82, len: 15, jag: 1.6 },
         { from: 92, to: 172, len: 16, jag: 2.2, kick: 0.1 },
         { from: 188, to: 268, len: 16, jag: 2.2, kick: 0.1 },

@@ -96,6 +96,17 @@ export function tipOf(p: ChibiPose): V3 {
 }
 
 /**
+ * A pose with a drill of wind spiralling off its point (`fx.swirl`): from a little behind the
+ * point to `len` past it, `radius` round at its start and narrowing, `k` its strength and `spin`
+ * how far its streaks have run on (advance it frame by frame). A longer drill turns more times.
+ */
+export function drill(p: ChibiPose, k: number, spin: number, len = 34, radius = 7): ChibiPose {
+  const rig = solveRig(BUILD, p, W.grip2, W.haft);
+  const w = rig.weapon;
+  return { ...p, fx: { ...p.fx, swirl: { k, spin, from: add3(w.o, w.u, TIP - 14), to: add3(w.o, w.u, TIP + len), radius, taper: 0.4, turns: 1 + len / 24 } } };
+}
+
+/**
  * Streaks of wind along the path of the point (`from` to `to`, hero space at turn 0, as `tipOf`
  * gives them), `k` their strength: a few thin lines running parallel to the path either side of
  * it, white-hot toward the point, jade behind, fading toward where the point started (each starts
@@ -267,9 +278,9 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     // The halberd trails low behind him in his right hand, held near the butt; the left arm pumps against the legs.
     handF: [-5 - swing * 2, 15 - Math.abs(swing), 9],
     handB: [2 + swing * 7, 12 - Math.abs(swing) * 2.5, 8.5],
-    weapon: -104 + swing * 4,
+    weapon: -94 + swing * 4,
     roll: 0,
-    yaw: -24,
+    yaw: -16,
     grip: -26,
     wind: 1.05,
     phase: i / 8,
@@ -304,15 +315,15 @@ const thrust = (a: ChibiPose, b: ChibiPose, k = 1, width = 3): ChibiPose => {
 // atk1: a straight thrust. Drawn back, weight on the rear foot; then the lead foot stamps forward,
 // the rear hand drives the haft through and the lead hand slides up it.
 const A1_DRAW = pose(READY, { x: -3, y: 6, lean: 2, twist: 26, head: 4, look: -8, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-10, 15, 7.5], weapon: 84, yaw: -26, grip: -8, grip2: 18, wind: 0.3, lift: 0.1, sway: 0.2, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
-const A1_DRIVE = pose(READY, { x: 4, y: 7, lean: 14, twist: 12, head: 1, look: -4, footF: [-12, 0, 5], footB: [16, 0, 5.4], handF: [3, 13, 6], weapon: 86, yaw: -24, grip: -8, grip2: 24, wind: 0.5, phase: 0.25, face: 'shout', fx: { rune: 0.9, swirl: { k: 0.6, spin: 0.1 } } });
-const A1_HIT = pose(READY, { x: 7, y: 8, lean: 20, twist: 6, head: 0, look: -2, footF: [-13, 0, 5], footB: [18, 0, 5.6], handF: [9, 12, 5], weapon: 88, yaw: -22, grip: -8, grip2: 30, wind: 0.8, phase: 0.4, face: 'shout', fx: { rune: 1, impact: 0.6, swirl: { k: 1, spin: 0.3 } } });
-const A1_HOLD = pose(A1_HIT, { y: 8.5, lean: 21, handF: [9, 12.5, 5], wind: 0.9, lift: 0.15, phase: 0.55, face: 'grit', fx: { rune: 0.7, swirl: { k: 0.55, spin: 0.55 } } });
+const A1_DRIVE = pose(READY, { x: 4, y: 7, lean: 14, twist: 12, head: 1, look: -4, footF: [-12, 0, 5], footB: [16, 0, 5.4], handF: [3, 13, 6], weapon: 86, yaw: -24, grip: -8, grip2: 24, wind: 0.5, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
+const A1_HIT = pose(READY, { x: 7, y: 8, lean: 20, twist: 6, head: 0, look: -2, footF: [-13, 0, 5], footB: [18, 0, 5.6], handF: [11, 11.5, 4.5], weapon: 88, yaw: -22, grip: -11, grip2: 30, wind: 0.8, phase: 0.4, face: 'shout', fx: { rune: 1, impact: 0.6 } });
+const A1_HOLD = pose(A1_HIT, { y: 8.5, lean: 21, handF: [11, 12, 4.5], wind: 0.9, lift: 0.15, phase: 0.55, face: 'grit', fx: { rune: 0.7 } });
 
 const atk1: ChibiPose[] = [
   fromReady(A1_DRAW, 0.85),
-  thrust(A1_DRAW, A1_DRIVE, 0.8),
-  thrust(A1_DRAW, A1_HIT),
-  thrust(A1_DRAW, A1_HOLD, 0.35),
+  drill(thrust(A1_DRAW, A1_DRIVE, 0.8), 0.6, 0.1, 22),
+  drill(thrust(A1_DRAW, A1_HIT), 1, 0.3),
+  drill(thrust(A1_DRAW, A1_HOLD, 0.35), 0.5, 0.55),
   pose(A1_HOLD, { x: 5, y: 7.5, lean: 16, handF: [5, 13.5, 6], grip2: 24, wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
   settle(A1_HOLD, 0.6, { wind: 0.4, lift: 0.25, phase: 0.85, face: 'stern', fx: undefined }),
   settle(A1_HOLD, 0.9, { wind: 0.35, lift: 0.05, phase: 1, fx: undefined }),
@@ -321,15 +332,15 @@ const atk1: ChibiPose[] = [
 // atk2: an overhand thrust. The haft swung up to his right shoulder, the point still on the foe,
 // then driven forward and down from above.
 const A2_RAISE = pose(READY, { x: -2, y: 4, lean: -2, twist: 16, head: -1, look: -6, footF: [-12, 0, 5], footB: [10, 0, 5.4], handF: [-8, -4, 12], weapon: 96, roll: 0, yaw: -26, grip: -12, grip2: 16, wind: 0.3, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.5 } });
-const A2_DRIVE = pose(READY, { x: 4, y: 6, lean: 12, twist: 8, head: 1, look: -4, footF: [-12, 0, 5], footB: [15, 0, 5.4], handF: [2, 2, 10], weapon: 102, yaw: -22, grip: -12, grip2: 20, wind: 0.5, phase: 0.25, face: 'shout', fx: { rune: 0.9, swirl: { k: 0.6, spin: 0.15 } } });
-const A2_HIT = pose(READY, { x: 7, y: 8, lean: 22, twist: 2, head: 2, look: -2, footF: [-13, 0, 5], footB: [18, 0, 5.6], handF: [8, 7, 8], weapon: 106, yaw: -20, grip: -12, grip2: 26, wind: 0.85, phase: 0.4, face: 'shout', fx: { rune: 1, impact: 0.65, swirl: { k: 1, spin: 0.35 } } });
-const A2_HOLD = pose(A2_HIT, { y: 8.5, lean: 23, handF: [8, 7.5, 8], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.7, swirl: { k: 0.5, spin: 0.6 } } });
+const A2_DRIVE = pose(READY, { x: 4, y: 6, lean: 12, twist: 8, head: 1, look: -4, footF: [-12, 0, 5], footB: [15, 0, 5.4], handF: [2, 2, 10], weapon: 102, yaw: -22, grip: -12, grip2: 20, wind: 0.5, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
+const A2_HIT = pose(READY, { x: 7, y: 8, lean: 22, twist: 2, head: 2, look: -2, footF: [-13, 0, 5], footB: [18, 0, 5.6], handF: [8, 7, 8], weapon: 106, yaw: -20, grip: -12, grip2: 26, wind: 0.85, phase: 0.4, face: 'shout', fx: { rune: 1, impact: 0.65 } });
+const A2_HOLD = pose(A2_HIT, { y: 8.5, lean: 23, handF: [8, 7.5, 8], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.7 } });
 
 const atk2: ChibiPose[] = [
   fromReady(A2_RAISE, 0.8),
-  thrust(A2_RAISE, A2_DRIVE, 0.8),
-  thrust(A2_RAISE, A2_HIT),
-  thrust(A2_RAISE, A2_HOLD, 0.35),
+  drill(thrust(A2_RAISE, A2_DRIVE, 0.8), 0.6, 0.15, 22),
+  drill(thrust(A2_RAISE, A2_HIT), 1, 0.35),
+  drill(thrust(A2_RAISE, A2_HOLD, 0.35), 0.5, 0.6),
   pose(A2_HOLD, { x: 5, y: 7.5, lean: 15, handF: [4, 10, 8], weapon: 90, grip2: 20, wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
   settle(A2_HOLD, 0.6, { wind: 0.4, lift: 0.25, phase: 0.85, face: 'stern', fx: undefined }),
   settle(A2_HOLD, 0.9, { wind: 0.35, lift: 0.05, phase: 1, fx: undefined }),
@@ -339,17 +350,17 @@ const atk2: ChibiPose[] = [
 // the butt end so the point reaches its farthest; a drill of wind, a burst at the point, dust.
 const A3_COIL = pose(READY, { x: -4, y: 10, lean: 6, twist: 30, head: 6, look: -8, footF: [-14, 0, 5.2], footB: [9, 0, 5.6], handF: [-12, 17, 8], weapon: 80, yaw: -30, grip: -14, grip2: 14, wind: 0.3, sway: 0.3, face: 'grit', fx: { rune: 0.6 } });
 const A3_COIL2 = pose(A3_COIL, { x: -5, y: 11, lean: 8, twist: 34, head: 7, handF: [-13, 17.5, 8], weapon: 82, grip2: 13, wind: 0.35, lift: 0.2, phase: 0.1, fx: { rune: 0.9, aura: 0.3 } });
-const A3_LEAP = pose(READY, { x: 6, y: 0, lean: 18, twist: 10, head: -2, look: -4, footF: [-16, -4, 5], footB: [14, -6, 5.4], handF: [0, 13, 6], weapon: 82, yaw: -32, grip: -22, grip2: 6, wind: 0.9, lift: 0.3, phase: 0.25, face: 'shout', fx: { rune: 1, aura: 0.4, swirl: { k: 0.7, spin: 0.1 }, speed: 0.6 } });
-const A3_LUNGE = pose(READY, { x: 12, y: 11, lean: 26, twist: 2, head: 0, look: -2, footF: [-12, 0, 5], footB: [23, 0, 5.8], handF: [12, 11, 4], weapon: 84, yaw: -26, grip: -26, grip2: 14, wind: 1.1, phase: 0.4, face: 'shout', fx: { rune: 1, aura: 0.3, impact: 1.1, dust: 1, swirl: { k: 1.2, spin: 0.35, radius: 10 } } });
-const A3_HOLD = pose(A3_LUNGE, { y: 11.5, lean: 27, handF: [12, 11.5, 4], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.8, dust: 0.6, swirl: { k: 0.7, spin: 0.6, radius: 10 } } });
+const A3_LEAP = pose(READY, { x: 6, y: 0, lean: 18, twist: 10, head: -2, look: -4, footF: [-16, -4, 5], footB: [14, -6, 5.4], handF: [0, 13, 6], weapon: 82, yaw: -32, grip: -22, grip2: 6, wind: 0.9, lift: 0.3, phase: 0.25, face: 'shout', fx: { rune: 1, aura: 0.4, speed: 0.6 } });
+const A3_LUNGE = pose(READY, { x: 12, y: 11, lean: 26, twist: 2, head: 0, look: -2, footF: [-12, 0, 5], footB: [23, 0, 5.8], handF: [12, 11, 4], weapon: 84, yaw: -26, grip: -26, grip2: 14, wind: 1.1, phase: 0.4, face: 'shout', fx: { rune: 1, aura: 0.3, impact: 1.1, dust: 1 } });
+const A3_HOLD = pose(A3_LUNGE, { y: 11.5, lean: 27, handF: [12, 11.5, 4], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.8, dust: 0.6 } });
 
 const atk3: ChibiPose[] = [
   fromReady(A3_COIL, 0.85),
   A3_COIL2,
-  thrust(A3_COIL2, A3_LEAP, 0.7),
-  thrust(A3_COIL2, A3_LUNGE, 1, 3.6),
-  thrust(A3_COIL2, A3_HOLD, 0.45, 3.6),
-  pose(A3_HOLD, { y: 11, lean: 24, handF: [10, 12, 5], wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4, dust: 0.3, swirl: { k: 0.25, spin: 0.85, radius: 10 } } }),
+  drill(thrust(A3_COIL2, A3_LEAP, 0.7), 0.7, 0.1, 24),
+  drill(thrust(A3_COIL2, A3_LUNGE, 1, 3.6), 1.2, 0.35, 48, 9),
+  drill(thrust(A3_COIL2, A3_HOLD, 0.45, 3.6), 0.7, 0.6, 48, 9),
+  drill(pose(A3_HOLD, { y: 11, lean: 24, handF: [10, 12, 5], wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4, dust: 0.3 } }), 0.25, 0.85, 48, 9),
   pose(A3_HOLD, { x: 9, y: 9.5, lean: 18, handF: [6, 13.5, 6], grip: -18, grip2: 16, wind: 0.45, lift: 0.3, phase: 0.85, face: 'stern', fx: undefined }),
   settle(A3_HOLD, 0.7, { wind: 0.38, lift: 0.15, phase: 1, face: 'stern', fx: undefined }),
   settle(A3_HOLD, 0.92, { wind: 0.35, lift: 0.05, phase: 1.1, fx: undefined }),

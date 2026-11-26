@@ -47,11 +47,11 @@ const KNELT: ChibiPose = {
   twist: 6,
   tilt: 6,
   head: 14,
-  look: 10,
+  look: -8,
   footF: [-12, 0, 6],
   footB: [6, 0, 9],
   kneel: 'F',
-  handF: [0, -4, 16],
+  handF: [-3, -4, 16],
   handB: [3, 19, 9],
   weapon: -4,
   roll: -6,
@@ -115,7 +115,7 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
     lean: 14 + b * 5,
     head: 12 + b * 5,
     // The neck moves about 2 forward and 1.6 down as he slumps: the hands stay put.
-    handF: [0 - 2 * b, -4 - 1.6 * b, 16],
+    handF: [-3 - 2 * b, -4 - 1.6 * b, 16],
     handB: [3 - 2 * b, 19 - 1.6 * b, 9],
     phase: i / 4,
     sway: (b - 0.5) * 0.2,
@@ -225,7 +225,7 @@ const TWIRL: ChibiPose = pose(S, { x: 0, y: 4, lean: -2, twist: 10, tilt: -3, he
  * fist on his hip, chin up, a grin for the viewer, the scarf streaming out on his left, away from
  * the halberd, so it shows beside him toward and away from the viewer.
  */
-const PROUD: ChibiPose = pose(S, { x: 0, y: 1.5, lean: -3, twist: 10, tilt: 3, head: -6, look: 12, footF: [-5, 0, 7], footB: [6, 0, 6], handF: [-4, 0, 15], handB: [1, 14, 11], weapon: 0, roll: -4, yaw: 0, grip: 6, face: 'smirk', wind: 0.7, lift: 0.4, sway: -0.7 });
+const PROUD: ChibiPose = pose(S, { x: 0, y: 1.5, lean: -3, twist: 6, tilt: 3, head: -6, look: 0, footF: [-5, 0, 7], footB: [6, 0, 6], handF: [-9, 0, 14], handB: [1, 14, 11], weapon: 0, roll: -4, yaw: 0, grip: 6, face: 'smirk', wind: 0.7, lift: 0.4, sway: -0.7 });
 
 const victory: ChibiPose[] = [
   // A breath first: the halberd lifted out of the stance, upright in his right hand.
@@ -234,7 +234,7 @@ const victory: ChibiPose[] = [
   pose(TWIRL, { weapon: 170, phase: 0.1, fx: { smear: { from: 20, roll: 10, width: 0.6 }, rune: 0.8 } }),
   pose(TWIRL, { weapon: 330, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
   // ...and is swept down and planted beside him with a glint at the point.
-  pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-3, 2, 15], wind: 0.75, lift: 0.6, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, extra: glint(1) } }),
+  pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.75, lift: 0.6, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, extra: glint(1) } }),
   pose(PROUD, { y: 2, phase: 0.5, wind: 0.75, lift: 0.5, fx: { rune: 0.5, extra: glint(0.5) } }),
   // Settled: chin up, a grin, the scarf still streaming.
   pose(PROUD, { phase: 0.65, wind: 0.72 }),
