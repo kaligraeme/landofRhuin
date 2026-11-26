@@ -42,7 +42,8 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
  * side for the halberd across his shoulders and his sweeps. All are tall enough for the vault
  * (the point about 130 px up) and deep enough below the ground point for the shockwaves, which
  * roll out toward the viewer. The game crops every frame to what is painted, so the spare room
- * costs nothing there. He stands about 87 px tall: 2.1 tiles per 84 px, as the Dark Knight.
+ * costs nothing there. He stands about 85 px tall at ease (87 standing straight): 2.1 tiles per 84
+ * px, as the Dark Knight, so he stands a little taller in game.
  */
 export const HALBERDIER_HERO: ChibiHero = chibiHero(
   HALBERDIER,
@@ -54,5 +55,5 @@ export const HALBERDIER_HERO: ChibiHero = chibiHero(
     back: { w: 256, h: 256, ax: 128, ay: 188 },
   },
   2.1 / 84,
-  87,
+  85,
 );

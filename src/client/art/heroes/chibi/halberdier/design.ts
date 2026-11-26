@@ -143,7 +143,7 @@ const BODY: BodyDesign = {
 const SCARF_PIECES = scarf({
   mat: SCARF,
   inner: SCARF_IN,
-  wrap: { u: 23.8, r: [6.1, 6.9], h: 2.9, muffle: 0.95 },
+  wrap: { u: 23.6, r: [6.1, 6.9], h: 2.9, muffle: 0.75 },
   knot: 205,
   tails: [
     { len: 44, w: 2.9, fork: 1.6 },
@@ -209,7 +209,7 @@ const HALBERDIER: ChibiDesign = {
       brow: hex('#141822'),
       browUp: 3.2,
       mouth: hex('#5a2018'),
-      mouthAt: [9.8, -6.7],
+      mouthAt: [9.8, -5.8],
       noseAt: [10.3, -3.9],
       style: FACE_SHARP,
       rest: 'smirk',
