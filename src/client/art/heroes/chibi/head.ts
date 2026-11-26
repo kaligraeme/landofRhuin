@@ -687,9 +687,11 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
     // The tail: a thick tress from the tie with a thinner one either side of it, and the tie
     // round its root with the cord's loose ends.
     const across = norm3(cross3(dirIn(fr, tail.dir[0], tail.dir[1], tail.dir[2]), fr.u));
-    const main = solve(tail, 0.4, 1.02);
+    // The tie sits on the hair, standing clear of it, so it shows on the head's outline side on.
+    const out = 1 + (tail.tie.r * 0.8) / ((d.shell.r[0] + d.shell.r[1] + d.shell.r[2]) / 3);
+    const main = solve(tail, 0.4, out);
     const side = (k: number, seed: number): HairStrand => {
-      const s = solve({ ...tail, len: tail.len * 0.86, w: tail.w * 0.62 }, seed, 1.02);
+      const s = solve({ ...tail, len: tail.len * 0.86, w: tail.w * 0.62 }, seed, out);
       return { ...s, pts: s.pts.map((p, i) => add3(p, across, k * tail.w * 0.55 * Math.min(1, i / 2))) };
     };
     const strands = [side(-1, 2.2), side(1, 4.1), main];

@@ -534,7 +534,12 @@ export function strand(pose: ChibiPose, s: StrandSpec): V3[] {
     across = Math.hypot(across[0], across[1], across[2]) < 0.2 ? norm3(cross3(d, [1, 0, 0])) : norm3(across);
     const normal = norm3(cross3(across, d));
     let q = add3(add3(p, d, seg), add3(mul3(normal, wave * 0.55), across, wave * 0.3));
-    if (s.avoid) q = pushOut(q, s.avoid, pad);
+    if (s.avoid) {
+      // Out of the way, then back to its length along the new way, so it slides over the body
+      // rather than bunching up against it.
+      q = pushOut(q, s.avoid, pad);
+      q = pushOut(add3(p, norm3(sub3(q, p)), seg), s.avoid, pad);
+    }
     if (q[1] < 0.6) q = [q[0], 0.6, q[2]];
     pts.push(q);
     p = q;
