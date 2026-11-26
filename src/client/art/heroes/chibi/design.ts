@@ -109,12 +109,17 @@ export interface Tress {
   taper?: number;
 }
 
-/** A tail of hair tied at a point on the head: a ponytail, or a tail at the nape. */
+/**
+ * A tail of hair tied at a point on the head: a ponytail, or a tail at the nape. It is a thick
+ * tress with a thinner one either side of it, the tie standing clear of the hair at its root so
+ * it shows on the head's outline side on. Streaming straight away from the viewer (running, seen
+ * from the front) it flicks out to one side of the head rather than hiding behind it.
+ */
 export interface Ponytail {
   /** Where it is tied on the hair's shell, as a tress's root is given. */
   yaw: number;
   pitch: number;
-  /** Which way it leaves the tie (head space: up and back for a high tail), and how long it keeps to that (default 0.25 of its length). */
+  /** Which way it leaves the tie (head space: up and back for a high tail), and how long it keeps to that (default 0.3 of its length). */
   dir: V3;
   stiff?: number;
   /** Its length and its half-width where widest (frame pixels), and how readily it streams (default 1). */
@@ -136,7 +141,11 @@ export interface Ponytail {
  * turn toward his right sways it to his left) and give it some wind.
  */
 export interface LongHair {
-  /** Tresses down the back, painted together as one curtain (head.ts `curtain` lays out a row of them). */
+  /**
+   * Tresses down the back, a curtain (head.ts `curtain` lays out a row of them). Each is painted
+   * and sorted on its own, so side on the near ones lie over a cape while the far ones hang
+   * behind it, and a coloured line parts one from the next.
+   */
   back?: readonly Tress[];
   /** Locks over the shoulders that frame the face, each painted on its own, so the near one can lie over the chest while the far one hangs behind. */
   front?: readonly Tress[];

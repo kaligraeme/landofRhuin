@@ -521,7 +521,7 @@ function onShell(d: HeadDesign, yaw: number, pitch: number, k: number): V3 {
 /**
  * A curtain of long hair: `count` tresses rooted in a row round the back of the hair's shell, from
  * `from` to `to` degrees (as a tress's yaw: 90 the right, 180 the back, 270 the left) at height
- * `pitch`, falling down the back and a little out toward their own side. They are `len` long, the
+ * `pitch`, falling down the back and drawing in a little toward its middle. They are `len` long, the
  * middle ones longest (by `jag`, a share of the length, with a seeded raggedness so the ends make
  * an uneven hem), and `w` wide.
  */
@@ -615,11 +615,11 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
 }
 
 /**
- * The draw items of a head's long hair (`head.long`), for the painter to sort with the body: the
- * curtain down the back as one, each lock over the shoulders on its own and the ponytail as one,
- * each at the depth of its hanging part (with the upper body's lift, as arms are). `fr` is the
- * head's frame as painted. Each is solved as strands (pieces.ts `strand`) that grow out of the
- * hair's shell and lie over the head, the jaw and the torso.
+ * The draw items of a head's long hair (`head.long`), for the painter to sort with the body: each
+ * tress of the curtain and each lock over the shoulders on its own, and the ponytail (its strands
+ * and its tie) as one, each at the depth of its hanging part (with the upper body's lift, as arms
+ * are). `fr` is the head's frame as painted. Each is solved as strands (pieces.ts `strand`) that
+ * grow out of the hair's shell and lie over the head, the jaw and the torso.
  */
 export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr: Frame3): DrawItem[] {
   const long = d.long;
