@@ -244,7 +244,7 @@ const victory: ChibiPose[] = [
   pose(RAISED, { turn: 360, phase: 0.4, flare: 0.35, sway: -0.4, wind: 0.45, lift: 0.25, fx: { rune: 1, extra: glint(1) } }),
   pose(RAISED, { turn: 360, phase: 0.55, flare: 0.2, sway: -0.2, fx: { rune: 0.7, extra: glint(0.6) } }),
   // Brought down into a salute, smiling; the hair settling.
-  pose(SALUTE, { turn: 360, phase: 0.7, wind: 0.35, lift: 0.2, fx: { rune: 0.5, smear: { from: 40, roll: 0, width: 0.4, alpha: 0.5 } } }),
+  pose(SALUTE, { turn: 360, phase: 0.7, wind: 0.35, lift: 0.2, fx: { rune: 0.5 } }),
   pose(SALUTE, { turn: 360, phase: 0.85, wind: 0.32, lift: 0.15, fx: { rune: 0.4 } }),
   pose(SALUTE, { turn: 360, phase: 1, fx: { rune: 0.35 } }),
 ];
