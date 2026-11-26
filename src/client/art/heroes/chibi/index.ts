@@ -8,15 +8,19 @@
  * (sprites.ts and the renderer, which build atlases from `paint` and pick clips by `timing`).
  *
  * The engine: rig.ts (the pose format, the 3D skeleton and the camera), raster.ts (the part
- * painter: four-tone shading and coloured inner lines over paint.ts's Canvas), head.ts (heads
- * and hair), pieces.ts (pauldrons, collars, cloth), blade.ts (bladed weapons), fx.ts (effects) and
- * painter.ts (puts a frame together). A hero has a folder of its own: a design file, its moves
- * files and a hero file that puts them together with its timing (see darkKnight/), registered
- * below.
+ * painter: four-tone shading and coloured inner lines over paint.ts's Canvas), design.ts (what a
+ * design file fills in), head.ts (heads, face styles, locks and long hair: curtains, locks over
+ * the shoulders, ponytails), pieces.ts (pauldrons, collars, skirts and coats, capes, scarves, and
+ * the strands cloth and hair hang as), the held items (blade.ts bladed weapons, pole.ts pole arms,
+ * wand.ts wands, held.ts what they share; a design may also give one for the off hand), fx.ts
+ * (effects) and painter.ts (puts a frame together). A hero has a folder of its own: a design file,
+ * its moves files and a hero file that puts them together with its timing (see darkKnight/),
+ * registered below.
  */
 import type { Raster } from '../paint.js';
 import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
-import type { ChibiView } from './rig.js';
+import type { ChibiDesign } from './design.js';
+import type { ChibiPose, ChibiView } from './rig.js';
 
 export type { ChibiView } from './rig.js';
 
@@ -77,9 +81,18 @@ export interface ChibiHero {
   frame: Record<ChibiView, FrameBox>;
   /** Tiles per frame pixel in game. */
   scale: number;
+  /**
+   * How tall it stands, from the top of its hair to its soles, in frame pixels (about 84 for the
+   * Dark Knight; `height * scale` tiles in game). test/chibi.test.ts checks its first idle frame
+   * side on against it.
+   */
+  height: number;
   timing: Record<ChibiClip, ClipTiming>;
   /** Paints one frame. Pure: the same arguments always give the same pixels. */
   paint(clip: ChibiClip, frame: number, view: ChibiView): Raster;
+  /** Its design and its poses clip by clip, for tools and tests (to paint a frame without its effects, say); the game only calls `paint`. */
+  design: ChibiDesign;
+  poses: Record<ChibiClip, readonly ChibiPose[]>;
 }
 
 /**

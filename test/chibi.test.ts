@@ -1,19 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip } from '../src/client/art/heroes/chibi/index.js';
+import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip, type ChibiHero, type ChibiView } from '../src/client/art/heroes/chibi/index.js';
 import { cropRaster, opaqueBounds } from '../src/client/art/atlas.js';
-import { DARK_KNIGHT } from '../src/client/art/heroes/chibi/darkKnight/design.js';
-import { CORE_MOVES } from '../src/client/art/heroes/chibi/darkKnight/moves-core.js';
-import { SKILL_MOVES } from '../src/client/art/heroes/chibi/darkKnight/moves-skills.js';
-import { STATE_MOVES } from '../src/client/art/heroes/chibi/darkKnight/moves-states.js';
 import { paintChibi } from '../src/client/art/heroes/chibi/painter.js';
 import { type ChibiPose, solveRig } from '../src/client/art/heroes/chibi/rig.js';
 import type { Raster } from '../src/client/art/heroes/paint.js';
 
-const hero = CHIBI_HEROES['hero-tank-male']!;
-const POSES: Record<ChibiClip, readonly ChibiPose[]> = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
+/** Every registered chibi hero: each gets the generic checks below, read from its own data. */
+const HEROES = Object.values(CHIBI_HEROES).filter((h): h is ChibiHero => !!h);
 
-/** Clips where he stands on the ground in every frame (`special` is his Parry). */
-const STANDING: ChibiClip[] = ['idle', 'battle', 'special', 'kneel', 'cast'];
+/** Clips every hero stands on the ground in, in every frame (a hero may add its own: see the Dark Knight's below). */
+const STANDING: ChibiClip[] = ['idle', 'battle', 'kneel'];
 
 function bounds(r: Raster): { x0: number; y0: number; x1: number; y1: number; n: number } {
   let x0 = r.w;
@@ -49,27 +45,49 @@ function solidIn(r: Raster, x0: number, x1: number, y0: number, y1: number): boo
   return false;
 }
 
-describe('the chibi Dark Knight', () => {
-  it('is registered for the male Warrior, about 2.1 tiles tall', () => {
-    expect(hero.id).toBe('hero-tank-male');
+/** A frame of a hero without its effects: the figure alone. */
+const figure = (hero: ChibiHero, clip: ChibiClip, i: number, view: ChibiView): Raster => paintChibi(hero.design, { ...(hero.poses[clip][i] as ChibiPose), fx: undefined }, view, hero.frame[view]);
+
+/** Checks that a hero's planted foot is on the ground and its boots are painted on the ground line, and that the figure fits its frame. */
+function expectStanding(hero: ChibiHero, clip: ChibiClip): void {
+  const d = hero.design;
+  for (const view of CHIBI_VIEWS) {
+    const box = hero.frame[view];
+    for (let i = 0; i < hero.timing[clip].frames; i++) {
+      const r = figure(hero, clip, i, view);
+      const b = bounds(r);
+      // A foot is planted on the ground, and its boot is painted on the ground line under it: at
+      // the anchor's row, or a few pixels below it for a foot nearer the viewer (the camera looks
+      // down a little).
+      const rig = solveRig(d.build, hero.poses[clip][i] as ChibiPose, d.weapon.grip2, d.weapon.haft);
+      const lowest = Math.min(rig.legR.end[1], rig.legL.end[1]) - d.build.ankle;
+      expect(Math.abs(lowest), `${hero.id} ${clip} ${i}: lowest foot ${lowest.toFixed(1)} above the ground`).toBeLessThan(1.2);
+      expect(solidIn(r, box.ax - 16, box.ax + 18, box.ay - 1, box.ay + 6), `${hero.id} ${clip} ${i} ${view}: boots on the ground`).toBe(true);
+      // Inside the frame with a margin.
+      expect(b.x0, `${hero.id} ${clip} ${i} ${view}`).toBeGreaterThan(0);
+      expect(b.y0, `${hero.id} ${clip} ${i} ${view}`).toBeGreaterThan(0);
+      expect(b.x1, `${hero.id} ${clip} ${i} ${view}`).toBeLessThan(box.w - 1);
+      expect(b.y1, `${hero.id} ${clip} ${i} ${view}`).toBeLessThan(box.h - 1);
+    }
+  }
+}
+
+describe.each(HEROES.map((h) => [h.id, h] as const))('chibi hero %s', (_id, hero) => {
+  it('stands as tall as its data says, a hero-sized figure in game', () => {
     const r = hero.paint('idle', 0, 'side');
-    const b = bounds(r);
-    const tall = hero.frame.side.ay - b.y0 + 1;
-    expect(tall).toBeGreaterThan(78);
-    expect(tall).toBeLessThan(96);
-    expect(tall * hero.scale).toBeGreaterThan(1.95);
-    expect(tall * hero.scale).toBeLessThan(2.3);
+    const tall = hero.frame.side.ay - bounds(r).y0 + 1;
+    expect(Math.abs(tall - hero.height), `${tall} px tall, ${hero.height} expected`).toBeLessThanOrEqual(hero.height * 0.08);
+    expect(hero.height * hero.scale).toBeGreaterThan(1.6);
+    expect(hero.height * hero.scale).toBeLessThan(2.6);
   });
 
   it('has a pose for every frame its timing promises', () => {
     for (const clip of CHIBI_CLIPS) {
       const t = hero.timing[clip];
-      expect(POSES[clip]?.length, clip).toBe(t.frames);
+      expect(hero.poses[clip]?.length, clip).toBe(t.frames);
       expect(t.windup).toBeLessThan(t.frames);
       expect(t.seconds).toBeGreaterThan(0);
     }
-    expect(hero.timing.ult.frames).toBe(16);
-    expect(hero.timing.e.frames).toBe(10);
   });
 
   it('paints every frame of every clip in every view, the same pixels every time', () => {
@@ -80,39 +98,19 @@ describe('the chibi Dark Knight', () => {
           const a = hero.paint(clip, i, view);
           expect(a.w).toBe(box.w);
           expect(a.h).toBe(box.h);
-          expect(bounds(a).n, `${clip} ${i} ${view}`).toBeGreaterThan(600);
+          // Something the size of a hero (about 600 pixels for one 84 tall).
+          expect(bounds(a).n, `${clip} ${i} ${view}`).toBeGreaterThan(hero.height * 6);
           if (i % 3 === 0) expect(Buffer.from(hero.paint(clip, i, view).data).equals(Buffer.from(a.data)), `${clip} ${i} ${view}`).toBe(true);
         }
       }
     }
   });
 
-  it('stands on the ground anchor and stays inside the frame in standing clips', () => {
-    for (const view of CHIBI_VIEWS) {
-      const box = hero.frame[view];
-      for (const clip of STANDING) {
-        for (let i = 0; i < hero.timing[clip].frames; i++) {
-          // The figure alone: effects (a rune circle on the floor) may spread past it.
-          const r = paintChibi(DARK_KNIGHT, { ...(POSES[clip][i] as ChibiPose), fx: undefined }, view, box);
-          const b = bounds(r);
-          // A foot is planted on the ground, and its boot is painted on the ground line under him: at
-          // the anchor's row, or a few pixels below it for a foot nearer the viewer (the camera
-          // looks down a little).
-          const rig = solveRig(DARK_KNIGHT.build, POSES[clip][i] as ChibiPose, DARK_KNIGHT.weapon.grip2);
-          const lowest = Math.min(rig.legR.end[1], rig.legL.end[1]) - DARK_KNIGHT.build.ankle;
-          expect(Math.abs(lowest), `${clip} ${i}: lowest foot ${lowest.toFixed(1)} above the ground`).toBeLessThan(1.2);
-          expect(solidIn(r, box.ax - 16, box.ax + 18, box.ay - 1, box.ay + 6), `${clip} ${i} ${view}: boots on the ground`).toBe(true);
-          // Inside the frame with a margin.
-          expect(b.x0, `${clip} ${i} ${view}`).toBeGreaterThan(0);
-          expect(b.y0, `${clip} ${i} ${view}`).toBeGreaterThan(0);
-          expect(b.x1, `${clip} ${i} ${view}`).toBeLessThan(box.w - 1);
-          expect(b.y1, `${clip} ${i} ${view}`).toBeLessThan(box.h - 1);
-        }
-      }
-    }
+  it('stands on the ground anchor and stays inside the frame in its standing clips', () => {
+    for (const clip of STANDING) expectStanding(hero, clip);
   });
 
-  it('keeps even the leaps, swings and shockwaves inside the frame', () => {
+  it('keeps even the leaps, swings and effects inside the frame', () => {
     for (const view of CHIBI_VIEWS) {
       const box = hero.frame[view];
       for (const clip of CHIBI_CLIPS) {
@@ -131,10 +129,9 @@ describe('the chibi Dark Knight', () => {
   it('paints a clean figure: no stray pixels, hardly a pinhole', () => {
     let holes = 0;
     for (const view of CHIBI_VIEWS) {
-      const box = hero.frame[view];
       for (const clip of CHIBI_CLIPS) {
         for (let i = 0; i < hero.timing[clip].frames; i += 2) {
-          const r = paintChibi(DARK_KNIGHT, { ...(POSES[clip][i] as ChibiPose), fx: undefined }, view, box);
+          const r = figure(hero, clip, i, view);
           const op = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < r.w && y < r.h && (r.data[(y * r.w + x) * 4 + 3] as number) > 0;
           for (let y = 0; y < r.h; y++) {
             for (let x = 0; x < r.w; x++) {
@@ -165,8 +162,8 @@ describe('the chibi Dark Knight', () => {
   it('shows the three views differently (a real turn, not one sprite)', () => {
     // Each view painted into the same box, then cropped to the figure, so like is compared with like.
     const box = hero.frame.side;
-    const crop = (view: 'side' | 'front' | 'back') => {
-      const r = paintChibi(DARK_KNIGHT, POSES.battle[0] as ChibiPose, view, box);
+    const crop = (view: ChibiView) => {
+      const r = paintChibi(hero.design, hero.poses.battle[0] as ChibiPose, view, box);
       return Buffer.from(cropRaster(r, opaqueBounds(r)).data);
     };
     const side = crop('side');
@@ -193,5 +190,55 @@ describe('the chibi Dark Knight', () => {
       const ms = (performance.now() - t0) / n;
       expect(ms, `${view}: ${ms.toFixed(2)} ms a frame`).toBeLessThan(20);
     }
+  });
+});
+
+describe('the chibi Dark Knight', () => {
+  const hero = CHIBI_HEROES['hero-tank-male']!;
+
+  it('is registered for the male Warrior, about 2.1 tiles tall', () => {
+    expect(hero.id).toBe('hero-tank-male');
+    const tall = hero.frame.side.ay - bounds(hero.paint('idle', 0, 'side')).y0 + 1;
+    expect(tall).toBeGreaterThan(78);
+    expect(tall).toBeLessThan(96);
+    expect(tall * hero.scale).toBeGreaterThan(1.95);
+    expect(tall * hero.scale).toBeLessThan(2.3);
+  });
+
+  it('has his own clip lengths', () => {
+    expect(hero.timing.ult.frames).toBe(16);
+    expect(hero.timing.e.frames).toBe(10);
+  });
+
+  it('stands on the ground through his parry and his cast as well', () => {
+    expectStanding(hero, 'special');
+    expectStanding(hero, 'cast');
+  });
+
+  it('paints these frames pixel for pixel as he always has', () => {
+    // Checksums of a spread of his frames (every clip, all three views), so engine work for other
+    // heroes cannot change him by accident. If a change to him is meant, update them and say so.
+    const FRAMES: [ChibiClip, number, ChibiView, number][] = [
+      ['idle', 0, 'side', 1886695061],
+      ['battle', 3, 'front', 336219195],
+      ['move', 3, 'front', 965346862],
+      ['atk1', 4, 'side', 3821045740],
+      ['atk2', 3, 'back', 3484555171],
+      ['atk3', 5, 'back', 1412293904],
+      ['atk3', 6, 'back', 326037919],
+      ['special', 2, 'side', 1396846370],
+      ['q', 3, 'side', 3442848922],
+      ['q', 3, 'front', 1823779786],
+      ['e', 4, 'side', 1448222070],
+      ['r', 6, 'front', 3228004353],
+      ['ult', 9, 'back', 2638144137],
+      ['cast', 4, 'side', 3594663198],
+      ['hurt', 1, 'front', 2264542648],
+      ['kneel', 2, 'back', 3707032246],
+      ['ko', 5, 'front', 2280277275],
+      ['victory', 4, 'back', 3458521680],
+      ['victory', 7, 'back', 707703991],
+    ];
+    for (const [clip, i, view, want] of FRAMES) expect(sum(hero.paint(clip, i, view)), `${clip} ${i} ${view}`).toBe(want);
   });
 });

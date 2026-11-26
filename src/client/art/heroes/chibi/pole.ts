@@ -14,8 +14,8 @@
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { bladeAxes, channelGlow, clipToGround, mainHeld, runeColour } from './blade.js';
-import type { Held, HeldItem, PieceContext, WeaponDesign } from './design.js';
+import type { Held, PieceContext, WeaponDesign } from './design.js';
+import { channelGlow, clipToGround, heldAxes, mainHeld, runeColour } from './held.js';
 import { dim, type Mat, type Part } from './raster.js';
 import { add3, clamp, cross3, mul3, norm3, sub3, type V3 } from './rig.js';
 
@@ -89,7 +89,7 @@ function leaf(t: number, base: number, w: number, belly: number): number {
   return w * Math.pow(Math.cos((((t - belly) / (1 - belly)) * Math.PI) / 2), 0.85);
 }
 
-export function pole(spec: PoleSpec): WeaponDesign & HeldItem {
+export function pole(spec: PoleSpec): WeaponDesign {
   const P = spec.point;
   const belly = P.belly ?? 0.32;
   const tipU = P.from + P.len;
@@ -134,7 +134,7 @@ export function pole(spec: PoleSpec): WeaponDesign & HeldItem {
   const paint = (ctx: PieceContext, part: Part, held: Held = mainHeld(ctx)): void => {
     const { cam } = ctx;
     const w = held.grip;
-    const sax = bladeAxes(ctx, w);
+    const sax = heldAxes(ctx, w);
     const at = (u: number, v: number): Vec => [sax.o[0] + sax.u[0] * u + sax.v[0] * v, sax.o[1] + sax.u[1] * u + sax.v[1] * v];
     const z = (u: number): number => ctx.depth(add3(w.o, w.u, u));
     let n = norm3(cross3(w.u, w.v));

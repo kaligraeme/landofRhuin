@@ -11,9 +11,9 @@
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { bladeAxes, mainHeld, mixc } from './blade.js';
 import type { Held, HeldItem, PieceContext } from './design.js';
-import type { Mat, Part, Ramp4 } from './raster.js';
+import { heldAxes, mainHeld } from './held.js';
+import { type Mat, mixc, type Part, type Ramp4 } from './raster.js';
 import { add3, cross3, norm3 } from './rig.js';
 
 export interface WandSpec {
@@ -50,7 +50,7 @@ export function wand(spec: WandSpec): HeldItem {
   const paint = (ctx: PieceContext, part: Part, held: Held = mainHeld(ctx)): void => {
     const { cam } = ctx;
     const w = held.grip;
-    const ax = bladeAxes(ctx, w);
+    const ax = heldAxes(ctx, w);
     const at = (u: number, v: number): Vec => [ax.o[0] + ax.u[0] * u + ax.v[0] * v, ax.o[1] + ax.u[1] * u + ax.v[1] * v];
     const z = (u: number): number => ctx.depth(add3(w.o, w.u, u));
     let n = norm3(cross3(w.u, w.v));
@@ -87,7 +87,7 @@ export function wand(spec: WandSpec): HeldItem {
     glow: (ctx: PieceContext, strength: number, held: Held = mainHeld(ctx)) => {
       if (strength <= 0) return;
       const c = ctx.c;
-      const ax = bladeAxes(ctx, held.grip);
+      const ax = heldAxes(ctx, held.grip);
       const centre: Vec = [ax.o[0] + ax.u[0] * (R.to + C.len * 0.45), ax.o[1] + ax.u[1] * (R.to + C.len * 0.45)];
       const mine = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < c.w && y < c.h && ctx.owner[y * c.w + x] === held.tag;
       // Hidden behind something in front of it (a head, an arm): no halo.

@@ -1,12 +1,12 @@
 /**
- * What a chibi hero is made of: the data a design file fills in (proportions, palette, head and
- * hair, the body's materials, outfit pieces and the weapon) and the shapes the engine paints it
- * with. A new hero is a new design file plus its moves files; nothing here is any one hero's.
+ * What a chibi hero is made of: the data a design file fills in (proportions, palette, head,
+ * hair and face, the body's materials, outfit pieces, the weapon and an off-hand item) and the
+ * shapes the engine paints it with. A new hero is a new design file plus its moves files; nothing here is any one hero's.
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import type { Blob, Hit, Mat, Part } from './raster.js';
-import type { Build, Camera, ChibiPose, Face, Frame3, Rig, V3 } from './rig.js';
+import type { Build, Camera, ChibiPose, Face, Frame3, Grip, Rig, V3 } from './rig.js';
 
 /** A lock of hair: a clump raked over the head, a strand of the fringe, a lock at the nape. */
 export interface Lock {
@@ -133,10 +133,10 @@ export interface Ponytail {
 /**
  * Hair that hangs past the shoulders, painted with the head's hair material (head.ts
  * `hairItems`). Each part of it is sorted with the body on its own, so a curtain down the back
- * hangs behind her seen from the front and over her back (and a cape) seen from behind, and where
- * it grows out of the head's own hair no line parts them. It hangs from the head, then falls
+ * hangs behind the body seen from the front and over the back (and a cape) seen from behind, and
+ * where it grows out of the head's own hair no line parts them. It hangs from the head, then falls
  * and lies over the body; the pose's `wind` streams it back (a negative wind leaves it be),
- * `lift` raises it, `flare` swings it out around her in a spin and `sway` swings it to a side,
+ * `lift` raises it, `flare` swings it out around the body in a spin and `sway` swings it to a side,
  * and `phase` runs a ripple down it. To make it lag behind a turn, sway it against the turn (a
  * turn toward his right sways it to his left) and give it some wind.
  */
@@ -230,13 +230,20 @@ export interface PieceContext {
   build: Build;
   /** Starts a part (a set of shapes committed together) on the frame's canvas; `tag` marks its pixels in `owner`. */
   part: (tag?: number) => Part;
-  /** Which tagged part painted each pixel last (0 untagged): the weapon is WEAPON_TAG, the head HEAD_TAG. */
+  /** Which tagged part painted each pixel last (0 untagged): the weapon is WEAPON_TAG, the head HEAD_TAG, the off-hand item OFFHAND_TAG and long hair HAIR_TAG. */
   owner: Int16Array;
   /** Hero space to frame pixels, and to depth toward the viewer. */
   proj: (p: V3) => Vec;
   depth: (p: V3) => number;
   /** Added to upper-body depths so they sort after the legs and the hips (see painter.ts). */
   upper: number;
+  /**
+   * The depth an upper-body item sorts at, given its true depth: lifted by `upper`, unless it lies
+   * on the far side of the torso (more than 2 px behind its middle), where it keeps its true depth
+   * as an arm there does, so an arm or a coat flap nearer the viewer stays in front of it. Capes,
+   * scarf tails, long hair and the off-hand item sort this way.
+   */
+  upperZ: (z: number) => number;
 }
 
 /** The owner tag of the weapon's pixels. */
@@ -245,6 +252,8 @@ export const WEAPON_TAG = 1;
 export const HEAD_TAG = 2;
 /** The owner tag of the off-hand item's pixels. */
 export const OFFHAND_TAG = 3;
+/** The owner tag of long hair (a design's `head.long`), painted apart from the head. */
+export const HAIR_TAG = 4;
 
 /** Something to paint at a depth (bigger is nearer the viewer). */
 export interface DrawItem {
@@ -254,7 +263,8 @@ export interface DrawItem {
 
 /**
  * An outfit piece: given a solved frame, it says what to paint and at what depths. The engine's
- * pieces (pieces.ts) cover pauldrons, a high collar and coat tails; a design may add its own.
+ * pieces (pieces.ts) cover pauldrons, skirts and coat tails, a cape and a scarf's tails; a design
+ * may add its own (pieces.ts `strand` hangs cloth that lies over the body and streams).
  */
 export type Piece = (ctx: PieceContext) => DrawItem[];
 
@@ -263,36 +273,15 @@ export interface HeadPiece {
   blobs: (ctx: PieceContext) => { frame: Frame3; blobs: readonly Blob[]; shade: (h: Hit) => { m: Mat; light?: number; id?: number } | null }[];
 }
 
-/** The owner tag of long hair (a design's `head.long`), painted apart from the head. */
-export const HAIR_TAG = 4;
-
-export interface WeaponDesign {
-  /** Where the second hand holds it, along the weapon from the first (negative: toward the pommel). */
-  grip2: number;
-  /** The cutting part along the weapon, for smears and impacts. */
-  reach: readonly [number, number];
-  /** Paints the weapon into a part; a glowing channel reads its brightness from the pose (fx.rune, fx.aura; see blade.ts `blaze`). */
-  paint: (ctx: PieceContext, part: Part) => void;
-  /** Soft glow painted over the figure (a rune channel), 0 to 1 strength. */
-  glow?: (ctx: PieceContext, strength: number) => void;
-  /**
-   * The stretch along it a hand may hold (a pole arm's haft, from near its butt to below its
-   * head): a left hand that cannot reach its place on a two-handed weapon (the pose's `grip2`)
-   * slides along the haft to the nearest place it can reach, so it stays on the weapon. Without
-   * it the hand reaches for its place and may fall short of it, as a sword's hand on a grip would.
-   */
-  haft?: readonly [number, number];
-}
-
 /**
  * How an item is held in this frame, for its painter: the grip (where the hand holds it and its
  * axes, as `Rig.weapon` or `Rig.offhand`), how brightly its glowing parts burn (0 smouldering at
  * rest to 1 ablaze: the pose's `fx.rune` for the main weapon, `fx.runeB` for the off-hand item,
- * plus a little of `fx.aura`; see blade.ts `blaze`) and the owner tag its pixels carry
+ * plus a little of `fx.aura`; see held.ts `blaze`) and the owner tag its pixels carry
  * (WEAPON_TAG or OFFHAND_TAG), so its glow can keep to its own pixels.
  */
 export interface Held {
-  grip: Rig['weapon'];
+  grip: Grip;
   blaze: number;
   tag: number;
 }
@@ -300,8 +289,9 @@ export interface Held {
 /**
  * Something a hand holds, painted at whichever grip it is given: the builders (blade.ts,
  * pole.ts, wand.ts) make items that serve as the main weapon or as the off-hand item alike, so
- * twin blades or a sword and a wand are a design's choice. Its own axes are a grip's: u along it
- * from where the hand holds it, v across it (toward a blade's cutting edge), n its flat.
+ * twin blades or a sword and a wand are a design's choice (held.ts has what they share, for an
+ * item a design draws itself). Its own axes are a grip's: u along it from where the hand holds
+ * it, v across it (toward a blade's cutting edge), n its flat.
  *
  * A bow would be one too: held at its middle in the off hand (`reach` running from one limb's tip
  * below the hand to the other's above it), with its painter stringing it to wherever the main
@@ -320,12 +310,29 @@ export interface HeldItem {
   glow?: (ctx: PieceContext, strength: number, held?: Held) => void;
 }
 
+/**
+ * The main weapon, in the right hand: a held item (blade.ts `blade`, pole.ts `pole`, or a
+ * design's own) that both hands may hold. Painted without a `Held`, it lies along `rig.weapon`,
+ * blazes with the pose's `fx.rune` and carries WEAPON_TAG.
+ */
+export interface WeaponDesign extends HeldItem {
+  /** Where the second hand holds it, along the weapon from the first (negative: toward the pommel or the butt); a pose's `grip2` moves it. */
+  grip2: number;
+  /**
+   * The stretch along it a hand may hold (a pole arm's haft, from near its butt to below its
+   * head): a left hand that cannot reach its place on a two-handed weapon (the pose's `grip2`)
+   * slides along the haft to the nearest place it can reach, so it stays on the weapon. Without
+   * it the hand reaches for its place and may fall short of it, as a sword's hand on a grip would.
+   */
+  haft?: readonly [number, number];
+}
+
 export interface ChibiDesign {
   id: string;
   build: Build;
   head: HeadDesign;
   body: BodyDesign;
-  /** Pieces painted with the head (collars) and pieces sorted with the body (pauldrons, coats). */
+  /** Pieces painted with the head (collars, a scarf's wrap) and pieces sorted with the body (pauldrons, coats, capes, a scarf's tails). */
   headPieces: readonly HeadPiece[];
   outfit: readonly Piece[];
   weapon: WeaponDesign;

@@ -10,13 +10,12 @@
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { blaze } from './blade.js';
 import { type ChibiDesign, HEAD_TAG, type Held, OFFHAND_TAG, type PieceContext } from './design.js';
+import { blaze } from './held.js';
 import { hash } from './pieces.js';
-import { scanPoly } from './raster.js';
+import { mixc, scanPoly } from './raster.js';
 import { add3, type ChibiFx, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, lerp3, mul3, norm3, rad, sub3, TO_CAMERA, type V3, weaponAxes } from './rig.js';
 
-const mixc = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
 const WHITE: RGB = [255, 255, 255];
 /** Dust kicked up off the floor: its light and dark puffs. */
 export const DUST: RGB = [196, 182, 160];
@@ -219,7 +218,7 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   const { c, rig, pose, cam } = ctx;
   const w = rig.weapon;
   const [r0, r1] = d.weapon.reach;
-  const tip = add3(w.o, w.u, r1);
+  const tip = add3(w.o, w.u, d.weapon.tip ?? r1);
   const aura = d.aura;
   const ground = (p: V3): V3 => [p[0], 0, p[2]];
   // The off-hand item, and where its spells leave it (the bare hand if it holds nothing).
@@ -798,7 +797,8 @@ function ringLine(x: FxContext, g: V3, R: number, h: number, col: RGB, a: number
  * that at `to` (default 0.3). Along each strand run bright streaks, white-hot at their heads in the
  * aura's hot colour, its core colour behind and fading through its edge colour at their tails;
  * they run on toward `to` as `spin` (turns) advances, and the whole drill brightens toward `to`.
- * The half of it behind the line goes behind whatever is there (the weapon it wraps, the figure).
+ * The half of it behind the line, and any of it behind the figure, goes behind whatever is there
+ * (the weapon it wraps, the figure).
  */
 export function swirl(x: FxContext, from: V3, to: V3, k: number, o: { radius?: number; taper?: number; turns?: number; spin?: number; strands?: number } = {}): void {
   const { c, aura } = x;
@@ -825,7 +825,8 @@ export function swirl(x: FxContext, from: V3, to: V3, k: number, o: { radius?: n
       const r = radius * lerp(1, taper, t);
       const centre = add3(from, ax, L * t);
       const p3 = add3(add3(centre, e1, Math.cos(th) * r), e2, Math.sin(th) * r);
-      const back = x.depth(p3) < x.depth(centre);
+      // Behind the line it wraps, or behind the figure (a drill off a point thrust away from the viewer).
+      const back = x.depth(p3) < x.depth(centre) || x.behind(p3);
       const p = x.proj(p3);
       if (prev) {
         // A streak's head where the run comes round to 1, its tail fading out behind it.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHIBI_HEROES, CHIBI_VIEWS } from '../src/client/art/heroes/chibi/index.js';
+import { CHIBI_VIEWS } from '../src/client/art/heroes/chibi/index.js';
 import type { ChibiDesign, FaceStyle } from '../src/client/art/heroes/chibi/design.js';
 import { FACE_PLAIN, FACE_SHARP, FACE_SOFT } from '../src/client/art/heroes/chibi/head.js';
 import { paintChibi } from '../src/client/art/heroes/chibi/painter.js';
@@ -49,25 +49,6 @@ function onScreen(d: ChibiDesign, p: ChibiPose, view: ChibiView, f: number, u: n
 const hairOf = (d: ChibiDesign): RGB[] => [...d.head.hair.tones, d.head.hair.line];
 /** The design without its long hair (or with other changes). */
 const without = (d: ChibiDesign, over: Partial<ChibiDesign['head']>): ChibiDesign => ({ ...d, head: { ...d.head, ...over } });
-
-describe('the Dark Knight is untouched by the new options', () => {
-  it('paints these frames exactly as before', () => {
-    // Checksums taken before long hair, capes, scarves and face styles were added.
-    const hero = CHIBI_HEROES['hero-tank-male']!;
-    const want: Record<string, number> = {
-      'idle 0 side': 1886695061,
-      'move 3 front': 965346862,
-      'atk3 5 back': 1412293904,
-      'e 4 side': 1448222070,
-      'ko 5 front': 2280277275,
-      'victory 7 back': 707703991,
-    };
-    for (const k of Object.keys(want)) {
-      const [clip, i, view] = k.split(' ') as [Parameters<typeof hero.paint>[0], string, ChibiView];
-      expect(sum(hero.paint(clip, Number(i), view)), k).toBe(want[k]);
-    }
-  });
-});
 
 describe('the look mannequins', () => {
   it('paint every pose in every view, the same pixels every time, inside the frame', () => {

@@ -617,8 +617,8 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
 /**
  * The draw items of a head's long hair (`head.long`), for the painter to sort with the body: each
  * tress of the curtain and each lock over the shoulders on its own, and the ponytail (its strands
- * and its tie) as one, each at the depth of its hanging part (with the upper body's lift, as arms
- * are). `fr` is the head's frame as painted. Each is solved as strands (pieces.ts `strand`) that
+ * and its tie) as one, each at the depth of its hanging part (sorted with the upper body, as arms
+ * are: see `PieceContext.upperZ`). `fr` is the head's frame as painted. Each is solved as strands (pieces.ts `strand`) that
  * grow out of the hair's shell and lie over the head, the jaw and the torso.
  */
 export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr: Frame3): DrawItem[] {
@@ -654,7 +654,7 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
       }
     }
     return {
-      z: zs / Math.max(1, zn) + ctx.upper,
+      z: ctx.upperZ(zs / Math.max(1, zn)),
       draw: () => {
         const part = ctx.part(HAIR_TAG);
         const taken = rootIn(ctx, part, keys, Math.round(hc[0]) - hr, Math.round(hc[1]) - hr, Math.round(hc[0]) + hr, Math.round(hc[1]) + hr);

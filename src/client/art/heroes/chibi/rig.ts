@@ -92,7 +92,7 @@ export interface FxContext {
   /** Hero space to frame pixels, and to depth toward the viewer. */
   proj: (p: V3) => Vec;
   depth: (p: V3) => number;
-  /** Where the weapon's tip is, in hero space (its grip is `rig.weapon.o`). */
+  /** Where the main weapon's tip is (its `tip`, or the end of its reach), in hero space (its grip is `rig.weapon.o`). */
   tip: V3;
   /**
    * Where the off-hand item's tip is (its grip is `rig.offhand.o`): where its spells leave it. A
@@ -271,14 +271,19 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    of the way then (`weaponB` about 200).
  *  - `dropB`, `dropAtB`: the item is not held and lies at `dropAtB` (as `drop` and `dropAt`).
  *
- * Cloth and hair
- *  - `wind`: coat tails and hair stream back (0 hanging, 1 flying flat behind him). Down to
- *    -0.8 flicks the coat tails forward instead (a flinch thrown back); the hair stays put.
- *  - `lift`: an updraft: tails rise and spread (falling, leaping, a burst of power), -1 to 1.
- *  - `flare`: tails swing out around him (spins), 0 to 1.
- *  - `sway`: tails and hair swing sideways, -1 (to his left) to 1 (to his right).
- *  - `phase`: where the ripple running down the tails is, in turns (advance it ~1/n per frame of
- *    an n-frame loop so the cloth flows; 0 if you do not care).
+ * Cloth and hair (coat tails and skirts, a cape, scarf tails, a pole arm's ribbon, long hair and
+ * a ponytail all answer to these)
+ *  - `wind`: they stream back (0 hanging, 1 flying flat behind him). Down to -0.8 flicks the
+ *    cloth forward instead (a flinch thrown back); the hair stays put. Coat tails, a cape, scarf
+ *    tails and long hair blown straight at or away from the viewer open out a little to their
+ *    side, so they still show their length.
+ *  - `lift`: an updraft: they rise and spread (falling, leaping, a burst of power), -1 to 1.
+ *  - `flare`: they swing out around him (spins), 0 to 1.
+ *  - `sway`: they swing sideways, -1 (to his left) to 1 (to his right). Nothing remembers the
+ *    frame before, so for hair and cloth that lag behind a turn, sway them against the turn (a
+ *    turn toward his right sways them to his left) and give them some wind and flare.
+ *  - `phase`: where the ripple running down them is, in turns (advance it ~1/n per frame of an
+ *    n-frame loop so the cloth flows; 0 if you do not care).
  *
  * Effects
  *  - `fx`: see ChibiFx.

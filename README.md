@@ -283,19 +283,34 @@ side on whichever way he faces.
 
 To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 
-- a design file: proportions, four-tone materials, the head and its locks of hair, the body,
-  outfit pieces (`pieces.ts`: pauldrons, a collar, a coat's panels), a weapon (`blade.ts`) and
-  aura colours;
+- a design file (`ChibiDesign` in `design.ts`): proportions, four-tone materials, aura colours,
+  and:
+  - the head (`head.ts`): its locks of hair; long hair if it has any (a curtain down the back laid
+    out with `curtain`, locks over the shoulders, a tied ponytail); and a face style
+    (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a resting expression;
+  - the body and outfit pieces (`pieces.ts`): pauldrons, a collar, a skirt of panels (a coat, a
+    robe, a split skirt; `legs` keeps a long one clear of striding legs), a cape, a scarf (its
+    wrap with the head pieces, its tails with the outfit), or its own pieces built on `strand`;
+  - a weapon for the right hand: a blade (`blade.ts`) or a pole arm (`pole.ts`: haft, point, axe,
+    spike, lugs, ribbon and a glowing channel; a pose slides both hands along its haft), and
+    optionally an item for the left hand (`offhand`: a wand from `wand.ts`, a second blade, later
+    a bow), each a `HeldItem` (`held.ts` has what they share);
 - moves files with a pose for every frame of every clip, in the pose format described on
   `ChibiPose` in `rig.ts` (the pelvis, lean, twist and turn, side-on hands and feet that the rig
-  lifts into 3D, the weapon's angle, roll and yaw, the cloth's wind and the frame's effects);
-- a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes and
-  scale.
+  lifts into 3D, the weapon's angle, roll and yaw and its grips, the off-hand item's own angles,
+  the wind, lift, flare and sway that move cloth and hair, and the frame's effects: smears, rings,
+  impacts, lightning, wards, swirls of wind, afterimages and more, from `fx.ts`);
+- a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes, scale
+  and height.
 
 Then register it in `CHIBI_HEROES` (`heroes/chibi/index.ts`) under its sprite id.
 `npx tsx scripts/chibi-sheet.ts --hero <id>` paints contact sheets of every clip in the three
-views, and `test/chibi.test.ts` checks that every frame paints cleanly, stands on the ground and
-fits its frame.
+views, and `test/chibi.test.ts` checks every registered hero: that every frame paints cleanly
+and the same every time, stands on the ground, fits its frame and changes from frame to frame,
+that it stands as tall as its height says and paints fast enough. It also pins a few of the Dark
+Knight's frames pixel for pixel, so engine work for one hero cannot change another by accident.
+The test mannequins in `test/` (`chibi-mannequins.ts`, `chibi-gear-mannequin.ts`,
+`chibi-combined-mannequins.ts`) show every engine option at work, for checking new ones.
 
 ## Music
 

@@ -8,15 +8,17 @@
  * among them sort by their true depths; the torso always goes on after the legs (its hips cover
  * the tops of the thighs), and everything above it (arms, head, pauldrons, the weapon) is moved by
  * the same amount, so the upper body keeps its own order. An arm wholly on the far side keeps its
- * true depth, so it stays behind the cloth hanging on the near side.
+ * true depth, so it stays behind the cloth hanging on the near side; so do a cape, scarf tails,
+ * long hair and an off-hand item on the far side (`PieceContext.upperZ`), so a far arm nearer the
+ * viewer than they are stays in front of them.
  */
 import { Canvas, INK, type Raster } from '../paint.js';
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
 import type { Vec } from '../skeleton.js';
-import { blaze } from './blade.js';
 import { type ChibiDesign, type DrawItem, OFFHAND_TAG, type PieceContext, WEAPON_TAG } from './design.js';
 import { paintFx } from './fx.js';
 import { hairItems, paintHead } from './head.js';
+import { blaze } from './held.js';
 import { dim, Part } from './raster.js';
 import { add3, at3, camera, type ChibiPose, type ChibiView, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
 
@@ -39,6 +41,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
     proj: cam.proj,
     depth: cam.depth,
     upper: 0,
+    upperZ: (z) => z,
   };
   const { proj, depth } = ctx;
   const B = d.body;
@@ -53,6 +56,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   ctx.upper = torsoZ - torsoTrue;
   const up = ctx.upper;
   const farSide = (p: V3): boolean => depth(p) < torsoTrue - 2;
+  ctx.upperZ = (z) => (z < torsoTrue - 2 ? z : z + up);
 
   const items: DrawItem[] = [];
 
@@ -102,7 +106,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   const wZ = depth(add3(w.o, w.u, d.weapon.reach[1] * 0.3)) + up;
   const off = d.offhand;
   const wB = rig.offhand;
-  const bZ = off ? depth(add3(wB.o, wB.u, off.reach[1] * 0.3)) + up : 0;
+  const bZ = off ? ctx.upperZ(depth(add3(wB.o, wB.u, off.reach[1] * 0.3))) : 0;
   for (const [arm, side] of [[rig.armR, 1], [rig.armL, -1]] as const) {
     const far = farSide(arm.mid) && farSide(arm.end);
     // An arm on the far side sorts by its true depth, so a coat flap hanging nearer the viewer stays in front of it.
@@ -250,10 +254,11 @@ function paintHand(ctx: PieceContext, d: ChibiDesign, arm: Limb, far: boolean): 
 }
 
 /**
- * A chibi hero from a design, its poses clip by clip, its timing, its frames and its scale (tiles
- * per pixel). Every clip must have as many poses as its timing has frames.
+ * A chibi hero from a design, its poses clip by clip, its timing, its frames, its scale (tiles per
+ * pixel) and how tall it stands (frame pixels, hair to soles). Every clip must have as many poses
+ * as its timing has frames.
  */
-export function chibiHero(d: ChibiDesign, clips: Record<ChibiClip, readonly ChibiPose[]>, timing: Record<ChibiClip, ClipTiming>, frame: Record<ChibiView, FrameBox>, scale: number): ChibiHero {
+export function chibiHero(d: ChibiDesign, clips: Record<ChibiClip, readonly ChibiPose[]>, timing: Record<ChibiClip, ClipTiming>, frame: Record<ChibiView, FrameBox>, scale: number, height: number): ChibiHero {
   for (const [clip, t] of Object.entries(timing) as [ChibiClip, ClipTiming][]) {
     const n = clips[clip]?.length ?? 0;
     if (n !== t.frames) throw new Error(`${d.id}: ${clip} has ${n} poses for ${t.frames} frames`);
@@ -262,7 +267,10 @@ export function chibiHero(d: ChibiDesign, clips: Record<ChibiClip, readonly Chib
     id: d.id,
     frame,
     scale,
+    height,
     timing,
+    design: d,
+    poses: clips,
     paint: (clip, i, view) => paintChibi(d, clips[clip][Math.max(0, Math.min(i, clips[clip].length - 1))] as ChibiPose, view, frame[view]),
   };
 }

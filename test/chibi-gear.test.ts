@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip, type ChibiView } from '../src/client/art/heroes/chibi/index.js';
+import { CHIBI_VIEWS, type ChibiView } from '../src/client/art/heroes/chibi/index.js';
 import type { ChibiDesign } from '../src/client/art/heroes/chibi/design.js';
 import { paintChibi } from '../src/client/art/heroes/chibi/painter.js';
 import { add3, camera, type ChibiPose, dot3, type FxContext, len3, mix, pose, solveRig, sub3, type V3 } from '../src/client/art/heroes/chibi/rig.js';
@@ -61,29 +61,6 @@ function fxContext(d: ChibiDesign, p: ChibiPose, view: ChibiView = 'side'): FxCo
 }
 
 const near = (a: V3, b: V3, tol = 1e-6): boolean => len3(sub3(a, b)) < tol;
-
-describe('the Dark Knight is untouched by the new gear', () => {
-  // Checksums of a spread of his frames, taken before the off-hand item, pole arms and the generic
-  // effects were added (his charge's afterimages now go through the generic `afterimages`).
-  const FRAMES: [ChibiClip, number, ChibiView, number][] = [
-    ['idle', 0, 'side', 1886695061],
-    ['battle', 3, 'front', 336219195],
-    ['atk1', 4, 'side', 3821045740],
-    ['atk3', 6, 'back', 326037919],
-    ['q', 3, 'side', 3442848922],
-    ['q', 3, 'front', 1823779786],
-    ['e', 4, 'side', 1448222070],
-    ['r', 6, 'front', 3228004353],
-    ['ult', 9, 'back', 2638144137],
-    ['cast', 4, 'side', 3594663198],
-    ['ko', 5, 'front', 2280277275],
-    ['victory', 4, 'back', 3458521680],
-  ];
-  it('paints these frames pixel for pixel as before', () => {
-    const hero = CHIBI_HEROES['hero-tank-male']!;
-    for (const [clip, i, view, want] of FRAMES) expect(sum(hero.paint(clip, i, view)), `${clip} ${i} ${view}`).toBe(want);
-  });
-});
 
 describe('an off-hand item', () => {
   const D = SPELLBLADE_MANNEQUIN;

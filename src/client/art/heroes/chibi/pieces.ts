@@ -586,7 +586,7 @@ export interface CapeSpec {
 /**
  * A cape hung from the shoulders: a sheet of cloth (or a few panels) down the back that lies over
  * the back and shoulders, hangs behind the arms, and streams, ripples, flares and lifts with the
- * pose's cloth fields as the coat's tails do. It sorts with the upper body.
+ * pose's cloth fields as the coat's tails do. It sorts with the upper body (`PieceContext.upperZ`).
  */
 export function cape(spec: CapeSpec): Piece {
   const count = Math.max(1, spec.panels ?? 1);
@@ -615,7 +615,7 @@ export function cape(spec: CapeSpec): Piece {
       const mid = grid[COLS >> 1]?.[ROWS >> 1] as V3;
       const topMid = grid[COLS >> 1]?.[0] as V3;
       return {
-        z: ctx.depth(topMid) * 0.4 + ctx.depth(mid) * 0.6 + ctx.upper,
+        z: ctx.upperZ(ctx.depth(topMid) * 0.4 + ctx.depth(mid) * 0.6),
         draw: () => drawPanel(ctx, look, pn, 20 + pi, grid),
       };
     });
@@ -714,7 +714,7 @@ export function scarf(spec: ScarfSpec): { wrap: HeadPiece; tails: Piece } {
       const pn: Panel = { from: 0, to: 0, len: tl.len, jag: tl.fork ?? 0 };
       const mid = spine[ROWS >> 1] as V3;
       return {
-        z: ctx.depth(spine[1] as V3) * 0.4 + ctx.depth(mid) * 0.6 + ctx.upper,
+        z: ctx.upperZ(ctx.depth(spine[1] as V3) * 0.4 + ctx.depth(mid) * 0.6),
         draw: () => drawPanel(ctx, look, pn, 24 + ti, grid, (j) => faces[Math.min(ROWS, j)] as V3),
       };
     });
