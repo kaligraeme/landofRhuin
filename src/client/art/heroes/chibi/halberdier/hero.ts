@@ -39,7 +39,7 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
  * Frames: side on there is room ahead of him for the point of his thrusts and the drill of wind
  * off it, and behind for the halberd trailing as he runs, the scarf tails, the ponytail and the
  * afterimages of his charge; toward and away from the viewer he stands centred, with room either
- * side for the halberd across his shoulders and his sweeps. All are tall enough for the vault
+ * side for the halberd on his shoulder and his sweeps. All are tall enough for the vault
  * (the point about 130 px up) and deep enough below the ground point for the shockwaves, which
  * roll out toward the viewer. The game crops every frame to what is painted, so the spare room
  * costs nothing there. He stands about 85 px tall at ease (87 standing straight): 2.1 tiles per 84
