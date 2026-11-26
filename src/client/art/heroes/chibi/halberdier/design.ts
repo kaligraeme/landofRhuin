@@ -207,7 +207,8 @@ const HALBERDIER: ChibiDesign = {
     hair: HAIR,
     skull: { c: [0, 0.5, 0], r: [9.2, 9.6, 10] },
     jaw: { c: [1.6, -4.2, 0], r: [7.6, 6.8, 7.7] },
-    ear: { c: [-0.6, -3.2, 9.7], r: [2, 2.8, 1.6] },
+    // Small, round ears, tucked in under the hair.
+    ear: { c: [-0.6, -3.4, 9.5], r: [1.7, 2.2, 1.4] },
     shell: { c: [-1.6, 1.2, 0], r: [11.2, 10.4, 11] },
     hairline: { faceYaw: 74, brow: 4, temple: 0, nape: -7, ear: -1.6 },
     locks: LOCKS,
@@ -216,7 +217,7 @@ const HALBERDIER: ChibiDesign = {
     whorl: { yaw: 180, pitch: 42, reach: 110, clumps: 7, twist: 0 },
     long: {
       // Tied high at the back of the head, falling past his shoulder blades.
-      tail: { yaw: 180, pitch: 42, dir: [-1, 0.55, 0], stiff: 0.28, len: 46, w: 3, give: 1.1, tie: { mat: CORD, r: 2.6, ends: 7 } },
+      tail: { yaw: 180, pitch: 42, dir: [-1, 0.55, 0], stiff: 0.28, len: 46, w: 3, give: 1.1, tie: { mat: CORD, r: 2.6, ends: 7 }, sheen: 0.45 },
       // Two loose locks framing his face.
       front: [
         { yaw: 60, pitch: 16, dir: [0.4, -1, 0.15], len: 13, w: 2.3, taper: 0.5, give: 0.6 },

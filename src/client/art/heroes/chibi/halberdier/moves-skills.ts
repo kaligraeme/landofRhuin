@@ -108,9 +108,11 @@ const burstAt =
 // ── Sweeping Strike ──────────────────────────────────────────────────────────────────────────
 
 /**
- * The sweep: the haft held low and level in both hands, its head out at shin height; `sweep` is
- * where the head points, in degrees round him in the turn-0 frame (90 his right, 0 ahead, -90 his
- * left). The body turns into it and the haft's yaw does the rest.
+ * The sweep: the haft held low and nearly level in both hands, its head out at shin height, the
+ * hands far enough up the haft that seen end on (coming at the viewer) the point stays by his feet
+ * rather than dipping below them; `sweep` is where the head points, in degrees round him in the
+ * turn-0 frame (90 his right, 0 ahead, -90 his left). The body turns into it and the haft's yaw
+ * does the rest.
  */
 const sweepPose = (sweep: number, turn: number, over: Partial<ChibiPose> = {}): ChibiPose =>
   pose(S, {
@@ -124,11 +126,11 @@ const sweepPose = (sweep: number, turn: number, over: Partial<ChibiPose> = {}): 
     footF: [-13, 0, 6.5],
     footB: [12, 0, 7],
     handF: [3, 18, 8],
-    weapon: 104,
+    weapon: 97,
     roll: 0,
     yaw: sweep - turn,
-    grip: -16,
-    grip2: 2,
+    grip: -3,
+    grip2: 11,
     wind: 0.6,
     flare: 0.5,
     face: 'shout',
@@ -138,11 +140,11 @@ const sweepPose = (sweep: number, turn: number, over: Partial<ChibiPose> = {}): 
 const special: ChibiPose[] = [
   // Wound up: the haft drawn back round to his right, low, the head behind him.
   fromReady(sweepPose(128, 40, { y: 9, lean: 10, twist: 20, handF: [0, 17, 10], wind: 0.3, flare: 0, sway: 0.4, face: 'grit', fx: { rune: 0.6 } }), 0.85),
-  sweepPose(60, 20, { phase: 0.15, sway: 0.3, fx: { rune: 1, ring: { from: 128, to: 60, height: 14 }, dust: 0.4 } }),
-  sweepPose(-15, -10, { phase: 0.3, wind: 0.8, sway: -0.2, fx: { rune: 1, ring: { from: 128, to: -15, height: 14 }, dust: 0.8, extra: gust(0.1) } }),
-  sweepPose(-72, -30, { phase: 0.45, wind: 0.9, flare: 0.8, sway: -0.5, fx: { rune: 1, ring: { from: 60, to: -72, height: 14 }, dust: 1, extra: gust(0.45) } }),
+  sweepPose(60, 20, { phase: 0.15, sway: 0.3, fx: { rune: 1, ring: { from: 128, to: 60, height: 16 }, dust: 0.4 } }),
+  sweepPose(-15, -10, { phase: 0.3, wind: 0.8, sway: -0.2, fx: { rune: 1, ring: { from: 128, to: -15, height: 16 }, dust: 0.8, extra: gust(0.1) } }),
+  sweepPose(-72, -30, { phase: 0.45, wind: 0.9, flare: 0.8, sway: -0.5, fx: { rune: 1, ring: { from: 60, to: -72, height: 16 }, dust: 1, extra: gust(0.45) } }),
   // Follow-through, the gust blowing out.
-  sweepPose(-96, -34, { y: 10, lean: 12, phase: 0.6, wind: 0.6, flare: 0.6, sway: -0.6, face: 'grit', fx: { rune: 0.6, ring: { from: -40, to: -96, height: 14 }, extra: gust(0.8) } }),
+  sweepPose(-96, -34, { y: 10, lean: 12, phase: 0.6, wind: 0.6, flare: 0.6, sway: -0.6, face: 'grit', fx: { rune: 0.6, ring: { from: -40, to: -96, height: 16 }, extra: gust(0.8) } }),
   settle(sweepPose(-90, -30, { y: 9, face: 'stern', wind: 0.4, flare: 0.3 }), 0.55, { turn: -14, phase: 0.8, face: 'stern', fx: { extra: gust(1) } }),
   settle(sweepPose(-90, -30), 0.9, { turn: -3, phase: 1, wind: 0.78, fx: undefined }),
 ];
@@ -284,9 +286,10 @@ const r: ChibiPose[] = [
   whirl(5),
   whirl(6),
   whirl(7),
-  // The ring closes; the slowing wind rolls out over the floor.
-  pose(whirl(8), { fx: { ring: { from: (WHIRL[7] as number) + 90 - 320, to: (WHIRL[7] as number) + 90, height: 40 }, rune: 0.8, aura: 0.2, shock: 0.25, shockAt: [0, 0, 0], extra: gust(0.3, 24) } }),
-  settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.85, { turn: 720, flare: 0.3, wind: 0.78, fx: { shock: 0.6, shockAt: [0, 0, 0], extra: gust(0.8, 24) } }),
+  // The ring closes and the slowing wind rolls out over the floor and blows out, gone before the
+  // last frame so the stance takes over cleanly.
+  pose(whirl(8), { fx: { ring: { from: (WHIRL[7] as number) + 90 - 320, to: (WHIRL[7] as number) + 90, height: 40 }, rune: 0.8, aura: 0.2, shock: 0.55, shockAt: [0, 0, 0], extra: gust(0.85, 24) } }),
+  settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.85, { turn: 720, flare: 0.3, wind: 0.78, fx: undefined }),
 ];
 
 // ── Skewer ───────────────────────────────────────────────────────────────────────────────────
