@@ -484,7 +484,7 @@ export interface StrandSpec {
 
 const DOWN: V3 = [0, -1, 0];
 /** Where along a strand (0 root to 1 tip) its `flip` starts. */
-const FLIP_FROM = 0.6;
+export const FLIP_FROM = 0.6;
 const smooth = (x: number): number => x * x * (3 - 2 * x);
 
 /**

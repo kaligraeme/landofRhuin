@@ -18,7 +18,7 @@
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import { type BodyDesign, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
-import { hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
+import { FLIP_FROM, hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
 import { flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
 import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, TO_CAMERA, type V3 } from './rig.js';
 
@@ -28,6 +28,8 @@ const EAR = 2;
 const SHELL = 3;
 const LOCK0 = 10;
 const NAPE0 = 200;
+/** How far down a nape layer (0 root to 1 tip) the shadow of the hair above it reaches. */
+const NAPE_SHADE = 0.45;
 
 /** A direction in hero space, in a frame's own axes. */
 const inFrame = (fr: Frame3, d: V3): V3 => [dot3(d, fr.f), dot3(d, fr.u), dot3(d, fr.r)];
@@ -230,7 +232,8 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     if (d.darkHair) tone = Math.min(3, tone + 1);
     return { m: hair, light: toneLight(hair, tone) };
   });
-  for (const piece of pieces) for (const b of piece.blobs(ctx)) part.blobs(b.frame, b.blobs, b.shade);
+  const held = pieces.flatMap((piece) => piece.blobs(ctx));
+  for (const b of held) part.blobs(b.frame, b.blobs, b.shade);
   under?.(part);
 
   // Locks: wind streams them back and sideways, in the head's own axes (never forward: a
@@ -241,8 +244,13 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   const centre = ctx.proj(hero(d.shell.c));
   d.locks.forEach((lk, li) => paintLock(ctx, part, d, fr, lk, LOCK0 + li, add3(push, lift), hair, centre));
   // Short layers at the nape: long hair, but painted here in the head's depth test, so they lie
-  // over a high collar (see LongHair.nape), a tone deeper in the shadow of the hair above.
-  d.long?.nape?.forEach((t, i) => paintTress(ctx, part, d, hero(d.shell.c), napeStrand(ctx, d, fr, t, i), hair, NAPE0 + i, 1));
+  // over a high collar (see LongHair.nape), by default a tone deeper where they grow out from under
+  // the hair above, in its shadow.
+  const long = d.long;
+  if (long?.nape) {
+    const over = held.flatMap((b) => b.blobs.map((o): Obstacle => ({ fr: b.frame, c: o.c, r: o.r, pad: long.lie ?? 1.5 })));
+    long.nape.forEach((t, i) => paintTress(ctx, part, d, hero(d.shell.c), napeStrand(ctx, d, fr, t, i, over), hair, NAPE0 + i, long.napeDeep ?? 1, NAPE_SHADE));
+  }
 
   // The fringe casts a shadow on the brow.
   const cx = Math.round(ctx.proj(hero(d.skull.c))[0]);
@@ -580,6 +588,8 @@ interface HairStrand {
   pts: V3[];
   w: number;
   taper: number;
+  /** How far its end flips out (Tress.flip). */
+  flip?: number;
 }
 
 /**
@@ -588,9 +598,11 @@ interface HairStrand {
  * head's upright axis, so a curtain is lit on the side toward the light and in shadow seen from
  * the front, where it hangs behind), a tone lighter along each tress's lit side and darker along
  * its shadowed side and at its tip, with a streak of highlight high up on lit tresses. `deep`
- * darkens it by that many tones (nape layers lie in the shadow of the hair above them).
+ * darkens it by that many tones over the first `deepTo` of its length (nape layers grow out from
+ * under the hair above them, in its shadow). A flipped end catches the light where it turns up
+ * (the light tone, a tone darker along its shadowed side) rather than darkening to its tip.
  */
-function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: HairStrand, m: Mat, id: number, deep = 0): void {
+function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: HairStrand, m: Mat, id: number, deep = 0, deepTo = 1): void {
   const pts = s.pts;
   const n = pts.length - 1;
   const P = pts.map((p) => ctx.proj(p));
@@ -603,6 +615,15 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
   };
   const taper = s.taper;
   const width = (t: number): number => s.w * (t < 0.15 ? 0.75 + (0.25 * t) / 0.15 : t < 1 - taper ? 1 : Math.max(0.15, Math.pow((1 - t) / taper, 0.8)));
+  // How far a flipped end has turned up out of the fall there: 0 hanging straight down, 1 level
+  // or rising (only over the flipped part of it).
+  const turn = pts.map((p, i) => {
+    if (!s.flip || i / n <= FLIP_FROM) return 0;
+    const a = pts[Math.max(0, i - 1)] as V3;
+    const b = pts[Math.min(n, i + 1)] as V3;
+    const up = (b[1] - a[1]) / (Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1);
+    return Math.min(1, Math.max(0, 1 + up)) * Math.min(1, s.flip);
+  });
   leaf(
     part,
     P,
@@ -612,9 +633,13 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
       // Lit where it faces the light, darker down its length and across to its shadowed side.
       const l = along(lit, t) - 0.4 * t + 0.22 * a;
       let tone = l > 0.62 && t < 0.4 && a > 0 ? 0 : l > 0.28 ? 1 : l > -0.12 ? 2 : 3;
-      if (t > 0.88) tone = Math.min(3, tone + 1);
+      const up = s.flip ? along(turn, t) : 0;
+      if (t > 0.88 && up < 0.3) tone = Math.min(3, tone + 1);
       if (d.darkHair && tone > 0) tone = Math.min(3, tone + 1);
-      return toneLight(m, Math.min(3, tone + deep));
+      if (t < deepTo) tone = Math.min(3, tone + deep);
+      // A flipped end turning up catches the light.
+      if (up > 0.4) tone = Math.min(tone, a > -0.3 ? 1 : 2);
+      return toneLight(m, tone);
     },
     (t, a) => along(Z, t) + (1 - Math.min(1, a * a)) * 0.6,
     id,
@@ -623,14 +648,15 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
 
 /**
  * A layer at the nape (`long.nape`) in a pose: a strand that grows out of the hair's shell as a
- * tress does and lies over the head and the jaw. `fr` is the head's frame as painted.
+ * tress does and lies over the head, the jaw and `over` (the head's pieces: a high collar). `fr`
+ * is the head's frame as painted.
  */
-function napeStrand(ctx: PieceContext, d: HeadDesign, fr: Frame3, t: Tress, i: number): HairStrand {
-  const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }];
+function napeStrand(ctx: PieceContext, d: HeadDesign, fr: Frame3, t: Tress, i: number, over: readonly Obstacle[]): HairStrand {
+  const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...over];
   const root = at3(fr, ...onShell(d, t.yaw, t.pitch, 0.9));
   const side = dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw)));
   const spec = { root, dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed: 0.7 + i * 1.9, avoid, axis: ctx.rig.pelvis.o, view: norm3(ctx.cam.local(TO_CAMERA)), side, flip: t.flip };
-  return { pts: strand(ctx.pose, spec), w: t.w, taper: t.taper ?? 0.35 };
+  return { pts: strand(ctx.pose, spec), w: t.w, taper: t.taper ?? 0.35, flip: t.flip };
 }
 
 /**
@@ -658,6 +684,7 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
     pts: strand(pose, { root: hero(onShell(d, t.yaw, t.pitch, out)), dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed, avoid, pad: lie, axis: rig.pelvis.o, view, side: side ?? dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw))), flip: t.flip }),
     w: t.w,
     taper: t.taper ?? 0.35,
+    flip: t.flip,
   });
   // The head's box on screen, where long hair may grow out of its hair.
   const hc = ctx.proj(axis);
