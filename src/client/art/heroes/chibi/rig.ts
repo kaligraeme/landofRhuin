@@ -154,7 +154,8 @@ export interface FxContext {
  *    strength. Bolts going away from the viewer pass behind him.
  *  - `ward`: a ring of runes round him, `k` from 0 (just rising off the floor, faint) to 1 (at
  *    full height, bright); `radius` (default 24) and `height` above the ground (default 26), `spin`
- *    turns the runes round him (degrees: advance it every frame), `runes` how many (default 10).
+ *    turns the runes round him (degrees: advance it every frame), `runes` how many (default 10),
+ *    `glyphs` the rune shapes (five rows of five cells, `#` lit; default fx.ts's own set).
  *    `dome: true` makes it a dome of hexagons over him instead, brightest at its rim. The half
  *    nearer the viewer is painted over him (faintly, so he shows through), the far half behind.
  *  - `swirl`: a spiral of wind streaks round a line, `k` its strength: a drill of wind along the
@@ -191,7 +192,7 @@ export interface ChibiFx {
   runeB?: number;
   impactB?: number;
   lightning?: { from?: 'main' | 'off' | V3; to?: V3; dir?: V3; len?: number; seed?: number; forks?: number; alpha?: number };
-  ward?: { k: number; radius?: number; height?: number; spin?: number; runes?: number; dome?: boolean };
+  ward?: { k: number; radius?: number; height?: number; spin?: number; runes?: number; dome?: boolean; glyphs?: readonly (readonly string[])[] };
   swirl?: { k: number; on?: 'main' | 'off' | 'body'; from?: V3; to?: V3; radius?: number; taper?: number; turns?: number; spin?: number };
   ghosts?: { k: number; n?: number; gap?: number; dir?: V3 };
   extra?: (ctx: FxContext) => void;
@@ -217,7 +218,8 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    face the viewer and 180 turns him to face left; Eclipse spins through 0..360.
  *  - `head`: the head tips down (+) or up (-). `look`: the head turns, + toward his right (side on,
  *    toward the viewer). The head follows half the torso's lean on its own.
- *  - `face`: the expression (default 'stern').
+ *  - `face`: the expression (default 'stern'). `wink`: 'R' or 'L' shuts his right or left eye
+ *    alone (a wink), whatever the expression.
  *
  * Limbs (side-plane points; the rig moves them out to their side of the body in 3D)
  *  - `footF`, `footB`: his right foot (the near one side on) and his left foot, `[forward, y]`
@@ -327,6 +329,7 @@ export interface ChibiPose {
   head?: number;
   look?: number;
   face?: Face;
+  wink?: 'R' | 'L';
   footF: P2;
   footB: P2;
   kneel?: 'F' | 'B';

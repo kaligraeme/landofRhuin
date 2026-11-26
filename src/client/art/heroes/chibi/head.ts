@@ -250,7 +250,7 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     }
   }
 
-  paintFace(ctx, part, d.face, d.skin, fr, pose.face ?? d.face.rest ?? 'stern');
+  paintFace(ctx, part, d.face, d.skin, fr, pose.face ?? d.face.rest ?? 'stern', pose.wink);
   part.commit();
   despeckle(ctx, [...hair.tones, hair.line], cx - 24, cy - 24, cx + 24, cy + 24, HEAD_TAG);
 }
@@ -460,7 +460,7 @@ function leaf(part: Part, P: readonly Vec[], width: (t: number) => number, m: Ma
   );
 }
 
-function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: Frame3, face: Face): void {
+function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: Frame3, face: Face, wink?: 'R' | 'L'): void {
   const { cam } = ctx;
   const hero = (p: V3): V3 => at3(fr, p[0], p[1], p[2]);
   // Which way his right is on screen.
@@ -479,7 +479,9 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
     const z = ctx.depth(hero(at)) + 0.4;
     const dir = side * rightX;
     const kind = facing > 0.7 ? 'full' : facing > 0.42 ? 'mid' : 'narrow';
-    const eye = face === 'closed' ? style.eyes.closed : face === 'hurt' ? style.eyes.squeeze : face === 'shout' && kind === 'full' ? style.eyes.wide : style.eyes[kind];
+    // A wink shuts one eye alone (side 1 is his right).
+    const winked = wink !== undefined && (wink === 'R') === (side === 1);
+    const eye = face === 'closed' || winked ? style.eyes.closed : face === 'hurt' ? style.eyes.squeeze : face === 'shout' && kind === 'full' ? style.eyes.wide : style.eyes[kind];
     stamp(part, eye, p[0], p[1], dir, eyeCols, z, onFace);
     const brow = (face === 'hurt' ? style.browsUp : style.brows)[kind];
     const lift = face === 'hurt' || face === 'shout' ? 1 : face === 'smirk' && side === 1 ? 1 : 0;

@@ -200,8 +200,9 @@ function paintLeg(ctx: PieceContext, d: ChibiDesign, leg: Limb, toe: V3, far: bo
   const heel = sole(add3(ankle, toe, -bt.heel));
   const tip = sole(add3(ankle, toe, bt.toe));
   // The sole, a dark band under the foot.
-  part.capsule(proj(add3(heel, down, 1)), proj(add3(tip, down, 0.9)), 2.3, 2.1, k(bt.sole), bias - 0.3, depth(heel) - 0.2, depth(tip) - 0.2, 4);
-  part.capsule(proj(heel), proj(tip), 2.6, 2.4, k(bt.mat), bias, depth(heel) + 0.3, depth(tip) + 0.3, 3);
+  const [fh, ft] = bt.foot ?? [2.6, 2.4];
+  part.capsule(proj(add3(heel, down, 1)), proj(add3(tip, down, 0.9)), fh - 0.3, ft - 0.3, k(bt.sole), bias - 0.3, depth(heel) - 0.2, depth(tip) - 0.2, 4);
+  part.capsule(proj(heel), proj(tip), fh, ft, k(bt.mat), bias, depth(heel) + 0.3, depth(tip) + 0.3, 3);
   if (bt.cap) {
     const capA = add3(lerp3(heel, tip, 0.62), [0, 0.6, 0]);
     part.capsule(proj(capA), proj(add3(tip, [0, 0.3, 0])), 2.2, 2.0, k(bt.cap), bias + 0.1, depth(capA) + 0.6, depth(tip) + 0.8, 6);

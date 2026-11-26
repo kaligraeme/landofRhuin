@@ -701,11 +701,12 @@ const RUNES: readonly (readonly string[])[] = [
  * A ward round the figure, `k` from 0 (just rising off the floor, faint) to 1 (at full height,
  * bright). By default a ring of runes between two bands of light, `radius` out (default 24) and
  * `height` up (default 26), the runes turned `spin` degrees round him (`runes` of them, default
- * 10), with a faint curtain of light between the bands. `dome: true` makes it a dome of hexagons
+ * 10, drawn in turn from `glyphs`, five rows of five cells with `#` lit, or else the set above),
+ * with a faint curtain of light between the bands. `dome: true` makes it a dome of hexagons
  * over him instead, brightest where it curves away at its rim. The half nearer the viewer is
  * painted over him (faintly, so he shows through), the far half behind him.
  */
-export function ward(x: FxContext, k: number, o: { radius?: number; height?: number; spin?: number; runes?: number; dome?: boolean } = {}): void {
+export function ward(x: FxContext, k: number, o: { radius?: number; height?: number; spin?: number; runes?: number; dome?: boolean; glyphs?: readonly (readonly string[])[] } = {}): void {
   const { c, aura, rig } = x;
   k = clamp(k, 0, 1);
   if (k <= 0) return;
@@ -765,7 +766,8 @@ export function ward(x: FxContext, k: number, o: { radius?: number; height?: num
     const back = x.behind(p);
     const face = Math.abs(x.cam.facing([Math.cos(th), 0, Math.sin(th)]));
     const q = x.proj(p);
-    const rows = RUNES[i % RUNES.length] as readonly string[];
+    const set = o.glyphs?.length ? o.glyphs : RUNES;
+    const rows = set[i % set.length] as readonly string[];
     const sx = Math.max(0.35, face);
     for (let ry = 0; ry < 5; ry++) {
       for (let rx = 0; rx < 5; rx++) {

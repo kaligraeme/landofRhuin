@@ -201,8 +201,12 @@ export interface LimbLook {
 export interface BodyDesign {
   thigh: LimbLook;
   shin: LimbLook;
-  /** Boots: over the lower `top` share of the shin, then a foot `toe` long ahead of the ankle and `heel` behind it. */
-  boot: { mat: Mat; r: number; top: number; toe: number; heel: number; sole: Mat; cap?: Mat };
+  /**
+   * Boots: over the lower `top` share of the shin, then a foot `toe` long ahead of the ankle and
+   * `heel` behind it, `foot` thick at the heel and at the toe (radii, default [2.6, 2.4]: a
+   * smaller toe tapers a soft boot to a point) on a sole a little narrower.
+   */
+  boot: { mat: Mat; r: number; top: number; toe: number; heel: number; sole: Mat; cap?: Mat; foot?: readonly [number, number] };
   /** A knee cop over each knee. */
   knee?: { mat: Mat; r: number };
   upperArm: LimbLook;
