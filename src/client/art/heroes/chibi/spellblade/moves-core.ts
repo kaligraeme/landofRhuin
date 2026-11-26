@@ -19,9 +19,11 @@
  *              crescent wave of violet force forward (the game flies the wave on from there)
  *
  * Each blow has an anticipation, a smear frame, a hit frame and a recovery into the battle stance,
- * the hair and coat streaming hardest a frame after the blow and floating up as she stops. Its
- * swoosh starts where the sword was (`trail`): the frame before on the smear frame, the start of
- * the swing on the hit frame, so the whole stroke shows as one arc that then fades. Raised sword
+ * the hair and coat streaming hardest a frame after the blow and floating up as she stops. A cut
+ * leaves a swoosh that starts where the sword was (`trail`): the frame before on the smear frame,
+ * the start of the swing on the hit frame, so the whole stroke shows as one arc that then fades.
+ * A flat sweep (atk2, atk3) leaves a level arc round her instead (`sweep`), which would otherwise
+ * fold up edge on. Raised sword
  * hands go beside her head, out to her right (`handF` about `[-7, -7, 12]`), clear of her face
  * side on and from the front.
  */

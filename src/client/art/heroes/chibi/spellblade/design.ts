@@ -4,8 +4,8 @@
  * framing her face, a soft fringe swept to her left held back on the right by a small gold
  * crescent pin. She wears a fitted violet robe-coat with a high gold-edged collar, cut away at the
  * front from the hip over a pale lavender under-dress and falling to the knee behind, a violet
- * sash with a gold buckle, a short deep-violet cape to the waist with a gold hem, dark plum
- * leggings and soft dove-grey boots with turned-down pale cuffs. She fights with a slender sword in
+ * sash with a gold buckle, a short deep-violet cape to the hips with a gold hem, dark plum
+ * leggings and soft grey-violet boots with turned-down pale cuffs. She fights with a slender sword in
  * her right hand (a violet fuller that glows when she casts) and a short wand with a violet
  * crystal in her left; the two are separate held items, so a spell-bow can replace them later
  * without redrawing her. Her moves are in the moves-*.ts files beside this one, and hero.ts puts

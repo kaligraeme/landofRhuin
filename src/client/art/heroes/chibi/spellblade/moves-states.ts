@@ -9,7 +9,8 @@
  *   ko       6  (hold) a stagger, her knees give, and she crumples onto her side, the hair spilling
  *               out over the floor; the sword and the wand let fall beside her
  *   victory  8  (hold) a twirl on the spot with the hair and coat flaring, the sword raised high
- *               with a glint, then held up before her in a salute, a smile for the viewer
+ *               with a glint, then swept down and out to her right in a flourish, the wand hand
+ *               on her hip and a smile for the viewer
  *
  * The effects these clips paint for themselves (the sweat, the glint, the dust of her fall) are
  * `fx.extra` painters defined beside them. The flinch ends most of the way back into the battle
