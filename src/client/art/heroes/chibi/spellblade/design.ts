@@ -277,8 +277,9 @@ const SPELLBLADE: ChibiDesign = {
         { from: 260, to: 322, len: 16, jag: 1.5 },
       ],
     }),
-    // The short cape, from the shoulders to the waist.
-    cape({ outer: CAPE, inner: CAPE_LINING, top: 19.4, ring: [5.2, 7.6], from: 112, to: 248, len: 17, jag: 2, taper: 1.18, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 0.8 } }),
+    // The short cape, from the shoulders to the hips: wider and longer than the curtain of hair, so
+    // its gold hem and edges show below and beside it from behind.
+    cape({ outer: CAPE, inner: CAPE_LINING, top: 19.4, ring: [5.2, 7.6], from: 106, to: 254, len: 21, jag: 2.5, taper: 1.22, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 0.8 } }),
     bootCuffs,
   ],
   // The sword: a slender, straight, double-edged blade about 40 px long, pale steel with a violet

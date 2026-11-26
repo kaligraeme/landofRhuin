@@ -179,7 +179,8 @@ const astral =
     const { c, rig, aura, tip } = x;
     if (k <= 0 || len <= 0) return;
     const w = rig.weapon;
-    const A = x.proj(add3(w.o, w.u, 8));
+    // From two thirds of the way up the sword (clear of the hand and the face beside it raised).
+    const A = x.proj(add3(w.o, w.u, 26));
     const B = x.proj(tip);
     let dx = B[0] - A[0];
     let dy = B[1] - A[1];
@@ -293,11 +294,14 @@ const rift =
     }
   };
 
-/** Light poured from the wand's crystal into the sword: a thin crackling arc between them (`seed` reshapes it). */
+/**
+ * Light poured from the wand's crystal into the sword's point: a thin crackling arc between them
+ * over her head (`seed` reshapes it), both raised high either side of her so it never crosses her face.
+ */
 const pour =
   (seed: number, a = 0.7): Extra =>
   (x) =>
-    lightning(x, x.tipB, add3(x.rig.weapon.o, x.rig.weapon.u, 22), { seed, forks: 1, alpha: a, jag: 0.25 });
+    lightning(x, x.tipB, x.tip, { seed, forks: 1, alpha: a, jag: 0.25 });
 
 /** A skid (strength k): furrows ploughed behind her boots, and a bank of dust and grit thrown up ahead of them. */
 const skid =
@@ -412,19 +416,22 @@ const lifebinding: ChibiPose[] = [
 
 // ── Astral Cleave ────────────────────────────────────────────────────────────────────────────
 
-/** The sword raised high out to her right, tip up and a little back; the wand turned to it, pouring light into the blade. */
-const RAISE: ChibiPose = pose(S, { x: -1, y: 4, lean: -6, twist: 10, head: -8, look: 4, footF: [9, 0, 5.4], footB: [-10, 0, 5], handF: [-5, -8, 13], weapon: -12, roll: 22, yaw: -6, handB: [8, 2, 2], weaponB: 30, rollB: -30, yawB: -30, face: 'grit', wind: 0.3, lift: 0.5 });
+/**
+ * The sword raised high out to her right, tip up and a little back; the wand raised high on her
+ * left and leaning in toward it, pouring light into the blade over her head.
+ */
+const RAISE: ChibiPose = pose(S, { x: -1, y: 4, lean: -6, twist: 10, head: -6, look: 4, footF: [9, 0, 5.4], footB: [-10, 0, 5], handF: [-7, -9, 13.5], weapon: -16, roll: 26, yaw: -8, handB: [-1, -6, 14], weaponB: -4, rollB: -28, yawB: 0, face: 'grit', wind: 0.3, lift: 0.3 });
 
 /** The cleave lands: both hands on the hilt, low and forward, the astral blade slammed along the floor ahead. */
 const CLEAVE: ChibiPose = pose(S, { x: 8, y: 11, lean: 30, twist: 6, head: 6, look: -2, footF: [17, 0, 5.6], footB: [-12, 0, 5], handF: [15, 13, 5], handB: undefined, grip: 0, weapon: 100, roll: 10, yaw: 22, weaponB: 200, rollB: 20, yawB: 0, face: 'shout', wind: 0.85, lift: -0.1 });
 
 const astralCleave: ChibiPose[] = [
   // Wind-up over the server's half second: the sword swept up high on her right...
-  fromReady(pose(RAISE, { y: 6, lean: 2, handF: [2, 2, 13], weapon: 20, handB: [7, 7, 4], weaponB: 40, face: 'grit', fx: { rune: 0.8, runeB: 0.8, aura: 0.3 } }), 0.6),
+  fromReady(pose(RAISE, { y: 6, lean: 2, handF: [2, 2, 13], weapon: 20, handB: [4, 2, 12], weaponB: 20, rollB: 0, face: 'grit', fx: { rune: 0.8, runeB: 0.8, aura: 0.3 } }), 0.6),
   // ...the wand pours light into it and the astral blade grows from its point...
   pose(RAISE, { phase: 0.1, fx: { rune: 1, runeB: 1, aura: 0.5, extra: both(pour(1), astral(18, 0.7)) } }),
-  pose(RAISE, { y: 5, lean: -8, head: -9, phase: 0.2, lift: 0.6, fx: { rune: 1, runeB: 1, aura: 0.7, extra: both(pour(2), astral(40, 0.85)) } }),
-  pose(RAISE, { y: 6, lean: -10, twist: 14, head: -10, handF: [-6, -7, 13], weapon: -24, phase: 0.3, lift: 0.7, face: 'shout', fx: { rune: 1, runeB: 1, aura: 1, extra: both(pour(3, 0.5), astral(58, 1)) } }),
+  pose(RAISE, { y: 5, lean: -8, head: -7, phase: 0.2, lift: 0.35, fx: { rune: 1, runeB: 1, aura: 0.7, extra: both(pour(2), astral(40, 0.85)) } }),
+  pose(RAISE, { y: 6, lean: -10, twist: 14, head: -8, handF: [-7, -9, 14], weapon: -26, phase: 0.3, lift: 0.38, face: 'shout', fx: { rune: 1, runeB: 1, aura: 1, extra: both(pour(3, 0.5), astral(58, 1)) } }),
   // The cleave: down through the front of her, both hands on the hilt...
   pose(CLEAVE, { x: 4, y: 6, lean: 14, handF: [13, 2, 6], weapon: 40, wind: 0.6, phase: 0.4, fx: { rune: 1, aura: 1, extra: both(greatArc(-24, 96, 0.9), astral(56, 1)) } }),
   // ...and slammed along the floor ahead: the rift runs on from it.
