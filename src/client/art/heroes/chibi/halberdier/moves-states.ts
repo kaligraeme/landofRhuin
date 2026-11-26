@@ -32,7 +32,7 @@ const hurt: ChibiPose[] = [
   // Knocked back a step.
   pose(S, { x: -6, y: 7, lean: -8, twist: 12, tilt: -5, head: -7, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-5, 16, 8], handB: [2, 11, 12], weapon: 100, roll: -4, yaw: -40, grip: -8, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
-  settle(pose(S, { x: -3, y: 7, lean: 6, twist: 16, head: 4, handF: [-4, 16, 7], weapon: 50, yaw: -42 }), 0.7, { face: 'grit', wind: 0.2, phase: 0.6 }),
+  settle(pose(S, { x: -3, y: 7, lean: 6, twist: 16, head: 4, handF: [-4, 16, 7], weapon: 50, yaw: -42 }), 0.7, { face: 'grit', wind: 0.45, phase: 0.6 }),
 ];
 
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ const clatter = ({ c, rig, proj, hash }: FxContext): void => {
 
 const ko: ChibiPose[] = [
   // Stagger back, the haft slipping in his grip.
-  pose(S, { x: -4, y: 6, lean: -14, twist: 6, tilt: -6, head: -16, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-4, 14, 8], handB: [-3, 10, 13], weapon: 116, roll: -10, yaw: -34, grip: -8, face: 'hurt', sway: -0.4, lift: 0.3 }),
+  pose(S, { x: -4, y: 6, lean: -13, twist: 6, tilt: -6, head: -16, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-4, 14, 8], handB: [-3, 9.5, 13.5], weapon: 116, roll: -10, yaw: -34, grip: -8, face: 'hurt', sway: -0.4, lift: 0.3 }),
   // His knees give: down on both, the halberd's butt striking the floor as it tips.
   pose(S, { x: -2, y: 15, lean: 8, twist: 0, head: 18, footF: [-9, -1, 5], footB: [-10, -1, 4.6], kneel: 'F', handF: [6, 16, 8], weapon: 28, roll: -16, yaw: -20, grip: 4, face: 'hurt', wind: 0, flare: 0.2 }),
   // He sways back, turning, the halberd falling away from his loosening grip.
@@ -233,7 +233,7 @@ const victory: ChibiPose[] = [
   fromReady(pose(TWIRL, { y: 6, lean: 6, twist: 6, head: 1, handF: [5, 10, 13], weapon: 20, roll: 16, yaw: 20, face: 'smirk', wind: 0.4 }), 0.8),
   // It wheels round beside him, once...
   pose(TWIRL, { weapon: 170, phase: 0.1, fx: { smear: { from: 20, roll: 10, width: 0.6 }, rune: 0.8 } }),
-  pose(TWIRL, { weapon: 330, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
+  pose(TWIRL, { weapon: 325, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
   // ...and is swept down and planted beside him with a glint at the point.
   pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.75, lift: 0.6, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, extra: glint(1) } }),
   pose(PROUD, { y: 2, phase: 0.5, wind: 0.75, lift: 0.5, fx: { rune: 0.5, extra: glint(0.5) } }),

@@ -324,9 +324,9 @@ const atk1: ChibiPose[] = [
   drill(thrust(A1_DRAW, A1_DRIVE, 0.8), 0.6, 0.1, 22),
   drill(thrust(A1_DRAW, A1_HIT), 1, 0.3),
   drill(thrust(A1_DRAW, A1_HOLD, 0.35), 0.5, 0.55),
-  pose(A1_HOLD, { x: 5, y: 7.5, lean: 16, handF: [5, 13.5, 6], grip2: 24, wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
-  settle(A1_HOLD, 0.6, { wind: 0.4, lift: 0.25, phase: 0.85, face: 'stern', fx: undefined }),
-  settle(A1_HOLD, 0.9, { wind: 0.35, lift: 0.05, phase: 1, fx: undefined }),
+  pose(A1_HOLD, { x: 5, y: 7.5, lean: 16, handF: [6, 13.5, 5.5], grip2: 24, wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
+  settle(A1_HOLD, 0.6, { wind: 0.55, lift: 0.25, phase: 0.85, face: 'stern', fx: undefined }),
+  settle(A1_HOLD, 0.9, { wind: 0.6, lift: 0.05, phase: 1, fx: undefined }),
 ];
 
 // atk2: an overhand thrust. The haft swung up to his right shoulder, the point still on the foe,
@@ -342,8 +342,8 @@ const atk2: ChibiPose[] = [
   drill(thrust(A2_RAISE, A2_HIT), 1, 0.35),
   drill(thrust(A2_RAISE, A2_HOLD, 0.35), 0.5, 0.6),
   pose(A2_HOLD, { x: 5, y: 7.5, lean: 15, handF: [4, 10, 8], weapon: 90, grip2: 20, wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
-  settle(A2_HOLD, 0.6, { wind: 0.4, lift: 0.25, phase: 0.85, face: 'stern', fx: undefined }),
-  settle(A2_HOLD, 0.9, { wind: 0.35, lift: 0.05, phase: 1, fx: undefined }),
+  settle(A2_HOLD, 0.6, { wind: 0.55, lift: 0.25, phase: 0.85, face: 'stern', fx: undefined }),
+  settle(A2_HOLD, 0.9, { wind: 0.6, lift: 0.05, phase: 1, fx: undefined }),
 ];
 
 // atk3: coil low with the haft drawn right back, then a leaping lunge, the right hand sliding to
@@ -362,8 +362,8 @@ const atk3: ChibiPose[] = [
   drill(thrust(A3_COIL2, A3_HOLD, 0.45, 3.6), 0.7, 0.6, 48, 9),
   drill(pose(A3_HOLD, { y: 11, lean: 24, handF: [10, 12, 5], wind: 0.6, lift: 0.4, phase: 0.7, face: 'stern', fx: { rune: 0.4, dust: 0.3 } }), 0.25, 0.85, 48, 9),
   pose(A3_HOLD, { x: 9, y: 9.5, lean: 18, handF: [6, 13.5, 6], grip: -18, grip2: 16, wind: 0.45, lift: 0.3, phase: 0.85, face: 'stern', fx: undefined }),
-  settle(A3_HOLD, 0.7, { wind: 0.38, lift: 0.15, phase: 1, face: 'stern', fx: undefined }),
-  settle(A3_HOLD, 0.92, { wind: 0.35, lift: 0.05, phase: 1.1, fx: undefined }),
+  settle(A3_HOLD, 0.7, { wind: 0.55, lift: 0.15, phase: 1, face: 'stern', fx: undefined }),
+  settle(A3_HOLD, 0.92, { wind: 0.6, lift: 0.05, phase: 1.1, fx: undefined }),
 ];
 
 /** The core clips' poses, by clip. */

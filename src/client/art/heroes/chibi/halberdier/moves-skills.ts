@@ -36,6 +36,7 @@ import { drill, fromReady, gust, READY, settle, streak, tipOf } from './moves-co
 const S = READY;
 const BUILD = HALBERDIER.build;
 const W = HALBERDIER.weapon;
+const TIP = W.tip ?? W.reach[1];
 
 // ── Effects of the skills' own ───────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ const special: ChibiPose[] = [
   // Follow-through, the gust blowing out.
   sweepPose(-96, -34, { y: 10, lean: 12, phase: 0.6, wind: 0.6, flare: 0.6, sway: -0.6, face: 'grit', fx: { rune: 0.6, ring: { from: -40, to: -96, height: 14 }, extra: gust(0.8) } }),
   settle(sweepPose(-90, -30, { y: 9, face: 'stern', wind: 0.4, flare: 0.3 }), 0.55, { turn: -14, phase: 0.8, face: 'stern', fx: { extra: gust(1) } }),
-  settle(sweepPose(-90, -30), 0.9, { turn: -3, phase: 1, wind: 0.36, fx: undefined }),
+  settle(sweepPose(-90, -30), 0.9, { turn: -3, phase: 1, wind: 0.6, fx: undefined }),
 ];
 
 // ── Piercing Thrust ──────────────────────────────────────────────────────────────────────────
@@ -154,33 +155,47 @@ const q: ChibiPose[] = [
   drill(pose(Q_LUNGE, { y: 12.5, lean: 29, wind: 1, lift: 0.15, phase: 0.45, face: 'grit', fx: { rune: 1, aura: 0.4, dust: 0.6, extra: streak(tipOf(Q_COIL), tipOf(Q_LUNGE), 0.4, 3.6) } }), 1.1, 0.45, 70, 9),
   drill(pose(Q_LUNGE, { y: 12, lean: 26, handF: [11, 12, 5], wind: 0.7, lift: 0.35, phase: 0.6, face: 'grit', fx: { rune: 0.7 } }), 0.55, 0.7, 70, 9),
   drill(pose(Q_LUNGE, { x: 9, y: 10, lean: 18, handF: [5, 14, 6], grip: -16, grip2: 26, wind: 0.5, lift: 0.3, phase: 0.75, face: 'stern', fx: { rune: 0.4 } }), 0.2, 0.9, 70, 9),
-  settle(pose(Q_LUNGE, { x: 9, y: 10, lean: 18, handF: [5, 14, 6], grip: -16, grip2: 26 }), 0.75, { wind: 0.38, lift: 0.1, phase: 0.9, face: 'stern', fx: undefined }),
+  settle(pose(Q_LUNGE, { x: 9, y: 10, lean: 18, handF: [5, 14, 6], grip: -16, grip2: 26 }), 0.9, { wind: 0.6, lift: 0.1, phase: 0.9, face: 'stern', fx: undefined }),
 ];
 
 // ── Vault Strike ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sets the haft's angle and the right hand's place along it so that it runs from its butt, planted
- * on the floor `ahead` pixels in front of the right hand (or at `at`, hero space), up through that
- * hand where the pose puts it (`handF`), the left hand a little below: the haft stays planted while
- * the body springs up beside it. Held out on his right (a third `handF` value of 12 or so) the
- * haft passes behind his face side on and beside it toward and away from the viewer.
+ * Sets the haft's angle and the right hand's place along it so that the haft runs through the
+ * right hand where the pose puts it (`handF`) with one end at a point: its butt (`end` 'butt', the
+ * haft rising from there up through the hand, the left hand a little below it) or its point
+ * (`end` 'tip', the point there and the left hand a little above the right). The vault plants the
+ * butt and springs up beside the haft; the strike drives the point into the floor.
  */
-function planted(p: ChibiPose, ahead = 3, at?: V3): ChibiPose {
+function through(p: ChibiPose, end: 'butt' | 'tip', at: V3): ChibiPose {
   const rig = solveRig(BUILD, p, W.grip2, W.haft);
   const h = rig.armR.end;
-  const g: V3 = at ?? [h[0] + ahead, 0, h[2]];
-  const d: V3 = [h[0] - g[0], h[1] - g[1], h[2] - g[2]];
+  // u runs from the butt toward the point.
+  const d: V3 = end === 'butt' ? [h[0] - at[0], h[1] - at[1], h[2] - at[2]] : [at[0] - h[0], at[1] - h[1], at[2] - h[2]];
   const len = Math.hypot(d[0], d[1], d[2]);
+  const u: V3 = [d[0] / len, d[1] / len, d[2] / len];
   const deg = (r: number): number => (r * 180) / Math.PI;
-  return { ...p, weapon: deg(Math.asin(d[0] / len)), roll: deg(Math.atan2(d[2], d[1])), yaw: 0, grip: len + BUTT, grip2: len + BUTT - 9 };
+  const flat = Math.hypot(u[1], u[2]) * (u[1] < 0 ? -1 : 1);
+  const weapon = deg(Math.atan2(u[0], flat));
+  const roll = u[1] < 0 ? deg(Math.atan2(-u[2], -u[1])) : deg(Math.atan2(u[2], u[1]));
+  const grip = end === 'butt' ? len + BUTT : TIP - len;
+  return { ...p, weapon, roll, yaw: 0, grip, grip2: grip + (end === 'butt' ? -9 : 9) };
 }
+
+/** The butt planted on the floor `ahead` pixels in front of the right hand (or at `at`), the haft rising up through the hand. */
+const planted = (p: ChibiPose, ahead = 3, at?: V3): ChibiPose => {
+  const rig = solveRig(BUILD, p, W.grip2, W.haft);
+  const h = rig.armR.end;
+  return through(p, 'butt', at ?? [h[0] + ahead, 0, h[2]]);
+};
 
 /** In the air: the cloth and hair streaming, the face set. */
 const air = (y: number, over: Partial<ChibiPose>): ChibiPose => pose(S, { x: 4, y, lean: 4, twist: 4, head: -2, look: -4, footF: [-4, y - 12, 5], footB: [8, y - 15, 5], wind: 0.7, lift: 0.4, face: 'shout', ...over });
 
 /** Where the point strikes the floor on landing. */
-const STRIKE: V3 = [24, 0, 5];
+const STRIKE: V3 = [30, -7, 15];
+/** The burst on the floor round it. */
+const BURST: V3 = [30, 0, 15];
 
 const e: ChibiPose[] = [
   // Wind-up: a quick step in, the halberd swung forward and down beside him, its butt dropping toward the floor.
@@ -194,13 +209,13 @@ const e: ChibiPose[] = [
   // The flip: off the ground, the halberd swung up over and round in front of him, point coming down.
   air(-40, { x: 12, lean: -4, twist: -4, head: -6, footF: [8, -50, 5], footB: [2, -48, 5], handF: [-2, -8, 12], weapon: 100, roll: 10, yaw: 0, grip: 4, grip2: 16, wind: 0.6, lift: 0.2, phase: 0.4, fx: { rune: 1, aura: 0.8, smear: { from: -14, roll: 0, yaw: 0, width: 0.6 } } }),
   // Falling, the point leading, both hands high on the haft.
-  air(-32, { x: 13, lean: 12, twist: 0, head: 4, footF: [2, -40, 5], footB: [-6, -38, 5], handF: [6, 2, 8], weapon: 158, roll: 4, yaw: 0, grip: -4, grip2: 10, wind: 0.6, lift: 0.3, phase: 0.5, fx: { rune: 1, aura: 1, smear: { from: 100, roll: 10, yaw: 0, width: 0.5, alpha: 0.5 }, swirl: { k: 0.6, spin: 0.1 } } }),
-  air(-16, { x: 10, lean: 20, twist: 0, head: 6, footF: [2, -22, 5], footB: [-6, -20, 5], handF: [8, 6, 6], weapon: 164, roll: 2, yaw: 0, grip: -8, grip2: 8, wind: 0.6, lift: 0.35, phase: 0.6, fx: { rune: 1, aura: 1, swirl: { k: 1, spin: 0.3 } } }),
+  through(air(-32, { x: 13, lean: 12, twist: 0, head: 4, footF: [2, -40, 5], footB: [-6, -38, 5], handF: [6, 2, 12], wind: 0.6, lift: 0.3, phase: 0.5, fx: { rune: 1, aura: 1, smear: { from: 100, roll: 10, yaw: 0, width: 0.5, alpha: 0.5 }, swirl: { k: 0.6, spin: 0.1 } } }), 'tip', [36, 26, 15]),
+  through(air(-16, { x: 10, lean: 20, twist: 0, head: 6, footF: [2, -22, 5], footB: [-6, -20, 5], handF: [7, 6, 12], wind: 0.6, lift: 0.35, phase: 0.6, fx: { rune: 1, aura: 1, swirl: { k: 1, spin: 0.3 } } }), 'tip', [33, 6, 15]),
   // The strike: the point driven into the floor as he lands, a burst of wind.
-  pose(S, { x: 6, y: 13, lean: 30, twist: 2, head: 8, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [13, 14, 5], weapon: 160, roll: 0, yaw: 0, grip: -16, grip2: 6, wind: 0.8, lift: 0.6, phase: 0.7, face: 'shout', fx: { rune: 1, aura: 0.8, impact: 1.4, impactAt: STRIKE, shock: 0.06, shockAt: STRIKE, dust: 1, extra: gust(0.05, 26) } }),
-  pose(S, { x: 6, y: 12, lean: 28, twist: 2, head: 7, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [13, 14.5, 5], weapon: 160, roll: 0, yaw: 0, grip: -16, grip2: 6, wind: 0.5, lift: 0.4, phase: 0.8, face: 'grit', fx: { rune: 0.8, aura: 0.4, shock: 0.45, shockAt: STRIKE, dust: 0.6, extra: gust(0.5, 26) } }),
+  through(pose(S, { x: 6, y: 13, lean: 30, twist: 2, head: 8, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [6, 10, 12], wind: 0.8, lift: 0.4, phase: 0.7, face: 'shout', fx: { rune: 1, aura: 0.8, impact: 1.4, impactAt: BURST, shock: 0.06, shockAt: BURST, dust: 1, extra: gust(0.05, 26) } }), 'tip', STRIKE),
+  through(pose(S, { x: 6, y: 12, lean: 28, twist: 2, head: 7, look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [6, 10.5, 12], wind: 0.5, lift: 0.3, phase: 0.8, face: 'grit', fx: { rune: 0.8, aura: 0.4, shock: 0.45, shockAt: BURST, dust: 0.6, extra: gust(0.5, 26) } }), 'tip', STRIKE),
   // Pulled free, rising toward the stance as the wind blows out.
-  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, head: 4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [8, 10, 6], weapon: 120, roll: 0, yaw: -10, grip: -12, grip2: 10 }), 0.45, { wind: 0.4, lift: 0.2, phase: 0.9, face: 'stern', fx: { shock: 0.85, shockAt: STRIKE, extra: gust(0.9, 26) } }),
+  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, head: 4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [8, 10, 6], weapon: 120, roll: 0, yaw: -10, grip: -12, grip2: 10 }), 0.45, { wind: 0.4, lift: 0.2, phase: 0.9, face: 'stern', fx: { shock: 0.85, shockAt: BURST, extra: gust(0.9, 26) } }),
   settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, handF: [8, 10, 6], weapon: 120, yaw: -10, grip: -12, grip2: 10 }), 0.88, { phase: 1, fx: undefined }),
 ];
 
@@ -251,7 +266,7 @@ const r: ChibiPose[] = [
   whirl(7),
   // The ring closes; the slowing wind rolls out over the floor.
   pose(whirl(8), { fx: { ring: { from: (WHIRL[7] as number) + 90 - 320, to: (WHIRL[7] as number) + 90, height: 40 }, rune: 0.8, aura: 0.2, shock: 0.25, shockAt: [0, 0, 0], extra: gust(0.3, 24) } }),
-  settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.7, { turn: 720, flare: 0.4, wind: 0.4, fx: { shock: 0.6, shockAt: [0, 0, 0], extra: gust(0.8, 24) } }),
+  settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.85, { turn: 720, flare: 0.3, wind: 0.6, fx: { shock: 0.6, shockAt: [0, 0, 0], extra: gust(0.8, 24) } }),
 ];
 
 // ── Skewer ───────────────────────────────────────────────────────────────────────────────────
