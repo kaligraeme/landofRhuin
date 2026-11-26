@@ -149,8 +149,8 @@ const DOWN: ChibiPose = {
   twist: -40,
   tilt: 10,
   turn: -60,
-  head: -10,
-  look: 30,
+  head: -22,
+  look: 55,
   footF: [12, -2, 4],
   footB: [11, -3, -1],
   handF: [10, 8, 14],
@@ -202,7 +202,7 @@ const ko: ChibiPose[] = [
   // Falling, the hair and coat flying up; the sword and wand hit the floor.
   pose(DOWN, { x: -5, y: 17, lean: -50, twist: -24, turn: -45, head: -4, look: 18, footF: [6, -3, 4.6], footB: [5, -2, 0], handF: [8, 4, 15], handB: [3, 2, 11], dropAt: [-12, 3, 22], dropAtB: [-1, 3, -14], lift: 0.7, flare: 0.6 }),
   // Down: the thud raises dust and bounces her boots, the hair spilling out.
-  pose(DOWN, { lean: -80, head: -8, footF: [12, -4, 4], footB: [11, -5, -1], lift: 0.25, flare: 0.7, fx: { dust: 0.8, extra: thud } }),
+  pose(DOWN, { lean: -80, head: -18, look: 45, footF: [12, -4, 4], footB: [11, -5, -1], lift: 0.25, flare: 0.7, fx: { dust: 0.8, extra: thud } }),
   DOWN,
 ];
 
@@ -259,7 +259,7 @@ const RAISED: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -4, twist: 10, tilt: 3, 
  * The last pose, held: the sword held out to her right and a little up in a flourish, the wand
  * hand on her hip, her head tipped to one side, a smile and a wink for the viewer.
  */
-const SALUTE: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -3, twist: 6, tilt: 8, head: -4, look: 14, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [8, 6, 12], weapon: 50, roll: 32, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wink: 'R', wind: 0.3, lift: 0.2, sway: 0.3 });
+const SALUTE: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -3, twist: 6, tilt: 8, head: -4, look: 14, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [14, 6, 8], weapon: 40, roll: 30, yaw: 0, handB: [0, 15, 10], weaponB: 150, rollB: 10, yawB: 20, face: 'smirk', wink: 'L', wind: 0.3, lift: 0.2, sway: 0.3 });
 
 const victory: ChibiPose[] = [
   // A breath first, dipping into the twirl.

@@ -49,6 +49,9 @@ const S = READY;
 
 type Extra = (x: FxContext) => void;
 
+/** A deep violet: the farther of the dash's afterimages, and the inner rim of the ultimate's great arc. */
+const GHOST_FAR: RGB = [74, 44, 140];
+
 /** Runs several extra painters in turn. */
 const both =
   (...fs: Extra[]): Extra =>
@@ -97,7 +100,7 @@ const goldWard =
     ward({ ...x, aura: WARD_AURA }, k, { radius: 22, height: 22, spin, runes: 8, dome, glyphs: SIGNS });
 
 /** Healing light: a soft green-gold, warm at its heart. */
-const LIFE = { core: hex('#cfe388'), edge: hex('#f2d27c'), hot: hex('#fbfff0') };
+const LIFE = { core: hex('#bfe38a'), edge: hex('#f2d27c'), hot: hex('#fbfff0') };
 
 /**
  * The Lifebinding Sigil on the floor round her, `k` from 0 (a spark) to 1 (in full bloom): a
@@ -239,7 +242,8 @@ const astral =
 /**
  * The astral blade's great swoosh: a broad crescent swept about the grip by a blade `reach`
  * pixels long, from the sword's angle `from` to the pose's own (as a smear's are given, in the
- * same roll and yaw), white-hot along its outer edge and violet within, fading toward its tail.
+ * same roll and yaw), white-hot along its outer edge and violet within, deepening toward its
+ * inner rim, near solid, fading a little toward its tail.
  */
 const greatArc =
   (from: number, reach: number, k: number): Extra =>
@@ -260,11 +264,14 @@ const greatArc =
       return [f0 * Math.cos(yaw) - r1 * Math.sin(yaw), u1, f0 * Math.sin(yaw) + r1 * Math.cos(yaw)];
     };
     const n = Math.max(4, Math.ceil(Math.abs(to - from) / 5));
+    // Near solid, so it reads violet rather than a grey smear over a dark floor: a white cutting
+    // edge, the aura's violet, and a deeper violet at its inner rim (a pale cyan there, thinned
+    // over the floor, would read grey).
     const bands: [number, number, RGB, number][] = [
       [0, 0.1, aura.hot, 1],
-      [0.1, 0.3, mixc(aura.hot, aura.core, 0.5), 0.9],
-      [0.3, 0.75, aura.core, 0.7],
-      [0.75, 1, aura.edge, 0.3],
+      [0.1, 0.3, mixc(aura.hot, aura.core, 0.5), 1],
+      [0.3, 0.72, aura.core, 0.92],
+      [0.72, 1, mixc(aura.core, GHOST_FAR, 0.5), 0.7],
     ];
     const at = (deg: number, r: number): Vec => {
       const q = add3(w.o, dir(deg), r);
@@ -274,7 +281,7 @@ const greatArc =
     for (let i = 0; i < n; i++) {
       const a0 = lerp(from, to, i / n);
       const a1 = lerp(from, to, (i + 1) / n);
-      const fade = 0.25 + 0.75 * ((i + 1) / n);
+      const fade = 0.55 + 0.45 * ((i + 1) / n);
       const th = reach * 0.55 * Math.sin(((i + 1) / n) * (Math.PI / 2));
       for (const [f0, f1, col, a] of bands) fill(c, [at(a0, reach - f0 * th), at(a1, reach - f0 * th), at(a1, reach - f1 * th), at(a0, reach - f1 * th)], col, a * k * fade, under);
     }
@@ -400,10 +407,10 @@ const skid =
  * and in front of her head; toward the viewer it rises beside her head on her left), the sword
  * lowered point down and forward at her right, her chin up to watch the crystal.
  */
-const WARD_UP: ChibiPose = pose(S, { x: 0, y: 3, lean: -4, twist: 4, head: -9, look: -4, footF: [8, 0, 5.2], footB: [-7, 0, 4.6], handF: [5, 13, 9], weapon: 150, roll: 10, yaw: 10, handB: [11, -9, 8], weaponB: 22, rollB: 24, yawB: 0, face: 'stern', wind: 0.25, lift: 0.15 });
+const WARD_UP: ChibiPose = pose(S, { x: 0, y: 3, lean: -4, twist: 4, head: -9, look: -4, footF: [8, 0, 5.2], footB: [-7, 0, 4.6], handF: [5, 13, 9], weapon: 150, roll: 10, yaw: 10, handB: [10, -10, 13], weaponB: 22, rollB: 36, yawB: 0, face: 'stern', wind: 0.25, lift: 0.15 });
 
 /** The wand's angles round the circle its tip draws (its middle and how far out), as `weaponB` and `rollB`. */
-const CIRCLE = { w: 16, r: 20, a: 24 };
+const CIRCLE = { w: 16, r: 36, a: 26 };
 /** The wand's angles `t` turns round that circle (0 at its top-forward point). */
 const onCircle = (t: number): Partial<ChibiPose> => ({ weaponB: CIRCLE.w + Math.cos(t * Math.PI * 2) * CIRCLE.a, rollB: CIRCLE.r + Math.sin(t * Math.PI * 2) * CIRCLE.a });
 
@@ -467,9 +474,6 @@ const runicWard: ChibiPose[] = [
 ];
 
 // ── Spellblade Rush ──────────────────────────────────────────────────────────────────────────
-
-/** The farther of the dash's afterimages: a deep violet. */
-const GHOST_FAR: RGB = [74, 44, 140];
 
 /**
  * The rush of the dash (strength k). Side on, violet afterimages of her trail behind (copies of
@@ -588,13 +592,13 @@ const lifebinding: ChibiPose[] = [
  * her face on her left (clear of her hair side on), pouring light from its crystal over her head
  * into the sword's point.
  */
-const RAISE: ChibiPose = pose(S, { x: -1, y: 4, lean: -6, twist: 10, head: -6, look: 4, footF: [9, 0, 5.4], footB: [-10, 0, 5], handF: [-10, -8, 12], weapon: -18, roll: 26, yaw: -8, handB: [11, -8, 8], weaponB: 4, rollB: 12, yawB: 0, face: 'grit', wind: 0.3, lift: 0.18 });
+const RAISE: ChibiPose = pose(S, { x: -1, y: 4, lean: -6, twist: 10, head: -6, look: 4, footF: [9, 0, 5.4], footB: [-10, 0, 5], handF: [-10, -8, 12], weapon: -18, roll: 26, yaw: -8, handB: [9, -11, 15], weaponB: 4, rollB: 38, yawB: 0, face: 'grit', wind: 0.3, lift: 0.18 });
 
 /**
  * The cleave lands: both hands on the hilt, low and forward, the sword's point driven to the floor
  * ahead of her along the way she faces, the astral blade slammed down along the floor beyond it.
  */
-const CLEAVE: ChibiPose = pose(S, { x: 8, y: 11, lean: 30, twist: 6, head: 6, look: -2, footF: [17, 0, 5.6], footB: [-12, 0, 5], handF: [15, 13, 3], handB: undefined, grip: 0, weapon: 124, roll: 0, yaw: 4, weaponB: 200, rollB: 20, yawB: 0, face: 'shout', wind: 0.85, lift: -0.1 });
+const CLEAVE: ChibiPose = pose(S, { x: 8, y: 11, lean: 22, twist: 6, head: 4, look: -2, footF: [17, 0, 5.6], footB: [-12, 0, 5], handF: [15, 13, 3], handB: undefined, grip: 0, weapon: 124, roll: 0, yaw: 4, weaponB: 200, rollB: 20, yawB: 0, face: 'shout', wind: 0.85, lift: -0.1 });
 
 const astralCleave: ChibiPose[] = [
   // Wind-up over the server's half second: the sword swept up high on her right...
@@ -604,13 +608,13 @@ const astralCleave: ChibiPose[] = [
   pose(RAISE, { y: 5, lean: -8, head: -7, phase: 0.2, lift: 0.22, fx: { rune: 1, runeB: 1, aura: 0.7, extra: both(pour(2, 0.9), astral(40, 0.85), beacon(0.9)) } }),
   pose(RAISE, { y: 6, lean: -10, twist: 14, head: -8, handF: [-10, -9, 12.5], weapon: -26, weaponB: 0, phase: 0.3, lift: 0.25, face: 'shout', fx: { rune: 1, runeB: 1, aura: 1, extra: both(pour(3, 0.7), astral(58, 1), beacon(1)) } }),
   // The cleave: down through the front of her, both hands on the hilt...
-  pose(CLEAVE, { x: 4, y: 6, lean: 14, handF: [13, 2, 6], weapon: 40, wind: 0.6, phase: 0.4, fx: { rune: 1, aura: 1, extra: both(greatArc(-24, 96, 0.9), astral(56, 1)) } }),
+  pose(CLEAVE, { x: 4, y: 6, lean: 14, handF: [13, 3, 10], weapon: 40, roll: 30, wind: 0.6, phase: 0.4, fx: { rune: 1, aura: 1, extra: both(greatArc(-24, 96, 0.9), astral(56, 1)) } }),
   // ...and slammed along the floor ahead: the rift runs on from it.
   pose(CLEAVE, { phase: 0.5, fx: { rune: 1, aura: 0.9, impact: 1.4, dust: 1, extra: both(greatArc(-24, 96, 0.7), slam(56, 1), rift(0.1, 1)) } }),
-  pose(CLEAVE, { y: 11.5, lean: 31, phase: 0.6, wind: 0.7, face: 'grit', fx: { rune: 1, aura: 0.7, dust: 0.8, extra: both(slam(54, 0.75), rift(0.4, 1)) } }),
-  pose(CLEAVE, { y: 11, lean: 30, phase: 0.7, wind: 0.5, face: 'grit', fx: { rune: 0.9, aura: 0.5, dust: 0.5, extra: both(slam(46, 0.5), rift(0.7, 0.85)) } }),
-  pose(CLEAVE, { y: 10.5, lean: 28, phase: 0.8, wind: 0.35, fx: { rune: 0.8, aura: 0.3, dust: 0.3, extra: both(slam(34, 0.28), rift(1, 0.6)) } }),
-  pose(CLEAVE, { y: 10, lean: 26, phase: 0.9, wind: 0.25, lift: 0.1, face: 'stern', fx: { rune: 0.6, extra: rift(1, 0.35) } }),
+  pose(CLEAVE, { y: 11.5, lean: 23, phase: 0.6, wind: 0.7, face: 'grit', fx: { rune: 1, aura: 0.7, dust: 0.8, extra: both(slam(54, 0.75), rift(0.4, 1)) } }),
+  pose(CLEAVE, { y: 11, lean: 22, phase: 0.7, wind: 0.5, face: 'grit', fx: { rune: 0.9, aura: 0.5, dust: 0.5, extra: both(slam(46, 0.5), rift(0.7, 0.85)) } }),
+  pose(CLEAVE, { y: 10.5, lean: 21, phase: 0.8, wind: 0.35, fx: { rune: 0.8, aura: 0.3, dust: 0.3, extra: both(slam(34, 0.28), rift(1, 0.6)) } }),
+  pose(CLEAVE, { y: 10, lean: 20, phase: 0.9, wind: 0.25, lift: 0.1, face: 'stern', fx: { rune: 0.6, extra: rift(1, 0.35) } }),
   // Rising out of it, the wand hand letting go of the hilt.
   pose(CLEAVE, { x: 6, y: 8, lean: 20, head: 3, handF: [13, 12, 5], handB: [6, 11, 8], weaponB: 120, rollB: 0, weapon: 96, phase: 1, wind: 0.2, lift: 0.2, face: 'stern', fx: { rune: 0.5, extra: rift(1, 0.15) } }),
   settle(pose(CLEAVE, { x: 4, y: 6, lean: 14, handF: [11, 11, 7], handB: [6, 10, 8], weaponB: 105, weapon: 80, roll: 20 }), 0.4, { phase: 1.1, face: 'stern', fx: { rune: 0.4 } }),
@@ -652,7 +656,7 @@ const twirlArc =
  * A flourish: the wand flung up high ahead of her, her arm at full stretch, the sword hand swept
  * open out behind her, her back arched and her weight on her front foot, the back heel lifted.
  */
-const FLOURISH: ChibiPose = pose(S, { x: 2, y: 2, lean: -8, twist: -6, tilt: -3, head: -10, look: -2, footF: [6, 0, 4.6], footB: [-9, -3, 4.4], handF: [-9, 10, 12], weapon: 228, roll: -20, yaw: 10, handB: [11, -11, 9], weaponB: 8, rollB: 18, yawB: 0, face: 'smirk', wind: 0.35, lift: 0.18 });
+const FLOURISH: ChibiPose = pose(S, { x: 2, y: 2, lean: -8, twist: -6, tilt: -3, head: -10, look: -2, footF: [6, 0, 4.6], footB: [-9, -3, 4.4], handF: [-9, 10, 12], weapon: 228, roll: -20, yaw: 10, handB: [9, -12, 16], weaponB: 8, rollB: 40, yawB: 0, face: 'smirk', wind: 0.35, lift: 0.18 });
 
 const cast: ChibiPose[] = [
   // Wind-up: the wand twirled in close, the sword lowering.
@@ -663,7 +667,7 @@ const cast: ChibiPose[] = [
   pose(FLOURISH, { phase: 0.1, lift: 0.2, fx: { runeB: 1, impactB: 0.8, aura: 0.6, circle: 1, extra: both(twirlArc(-40), sparkles(0, 1)) } }),
   pose(FLOURISH, { y: 1.5, head: -11, lift: 0.18, wind: 0.45, phase: 0.3, fx: { runeB: 1, aura: 0.8, circle: 1, extra: both(sparkles(0.2, 1), beacon(1)) } }),
   pose(FLOURISH, { y: 1.5, head: -11, lift: 0.15, wind: 0.42, phase: 0.5, fx: { runeB: 1, aura: 0.6, circle: 0.9, extra: both(sparkles(0.4, 0.9), beacon(0.8)) } }),
-  pose(FLOURISH, { y: 2.5, head: -8, handB: [11, -8, 9], lift: 0.12, wind: 0.3, phase: 0.7, face: 'stern', fx: { runeB: 0.8, aura: 0.35, circle: 0.7, extra: both(sparkles(0.6, 0.7), beacon(0.5)) } }),
+  pose(FLOURISH, { y: 2.5, head: -8, handB: [9, -9, 16], lift: 0.12, wind: 0.3, phase: 0.7, face: 'stern', fx: { runeB: 0.8, aura: 0.35, circle: 0.7, extra: both(sparkles(0.6, 0.7), beacon(0.5)) } }),
   settle(pose(FLOURISH, { handB: [5, 5, 10], weaponB: 60, handF: [8, 11, 9], weapon: 70, roll: 0 }), 0.5, { lift: 0.2, phase: 0.85, fx: { runeB: 0.5, circle: 0.4, extra: sparkles(0.8, 0.4) } }),
   settle(S, 0.92, { phase: 1, fx: { runeB: 0.35, circle: 0.12 } }),
 ];

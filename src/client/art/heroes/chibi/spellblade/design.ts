@@ -28,7 +28,10 @@ import { wand } from '../wand.js';
 const SKIN = mat4('#fff0e0', '#f6cfab', '#d8a27c', '#a26c4e', '#6e3c2c', 0.3);
 // The face: the light tone over all of it that faces the viewer at all, even pitched down in her
 // crouch, so it reads clean and fair at game size; the base tone only where it turns well away.
-const FACE_SKIN: Mat = { ...SKIN, gain: 0.3, bias: 0.6 };
+// Its outline a soft warm brown, so the line under her chin reads as a crease, not a beard.
+const FACE_SKIN: Mat = { ...SKIN, line: hex('#a8705a'), gain: 0.3, bias: 0.6 };
+// The neck, the little of it that shows under her chin: pale and softly outlined, never a dark band.
+const NECK: Mat = { ...mat4('#fff0e0', '#f6cfab', '#ecbc96', '#e0ae88', '#b47c62', 0.2), gain: 0.4 };
 const HAIR = mat4('#ffffff', '#f4f2fa', '#c8c4dc', '#8e8aa8', '#5e5a78', 0.05);
 // The robe-coat reads as one violet: its base tone over most of it, the light tone on lit folds.
 const ROBE = { ...mat4('#a884de', '#8c66c8', '#5c3f96', '#35205e', '#1e1238', -0.02), gain: 0.6 };
@@ -38,13 +41,18 @@ const CAPE = { ...mat4('#6c4cac', '#4e3288', '#3a2266', '#221244', '#120826', -0
 const CAPE_LINING = mat4('#5a3c8a', '#40286c', '#2c1a50', '#1a0e32', '#0c0618');
 const PANEL = mat4('#ffffff', '#e8e2f4', '#b6aed0', '#7c7496', '#4a4460', 0.12);
 // The under-dress below the sash: the same pale cloth, its base tone over most of it.
-const DRESS = { ...PANEL, bias: 0, gain: 0.7 };
+const DRESS = { ...PANEL, bias: -0.14, gain: 0.6 };
+// Its inside, a step down the same lavender (a plain darkened white would read as grey).
+const DRESS_IN = mat4('#d8d0ea', '#b6aed0', '#8e86aa', '#625a7c', '#3a3450');
 const GOLD = mat4('#fff8dc', '#f2e6c0', '#c8b88a', '#7e7050', '#4a4028', 0.12);
 // The sash: the coat's violet, lit (its light tone over most of it) so it reads as a band of
 // colour at her waist rather than a dark belt, the gold buckle bright on it.
 const SASH = mat4('#a884de', '#8c66c8', '#5c3f96', '#35205e', '#1e1238', 0.25);
 // Dark plum leggings, their base tone over most of them so they read as plum, not black.
 const LEGS = { ...mat4('#6a5878', '#4a3a56', '#30263e', '#1c1626', '#0e0a14', 0.12), gain: 0.75 };
+// The same leggings over her hips, lit flatter, so in her crouch they show plum below the sash
+// rather than a near-black band.
+const HIPS = { ...LEGS, bias: 0.4, gain: 0.45 };
 // Soft suede boots, a dark grey-violet a step lighter than the leggings.
 const BOOT = mat4('#8a7aa2', '#64567e', '#463a5e', '#2c2440', '#120e1a', -0.04);
 // The boots' turned-down cuffs: a narrow band of their pale lining.
@@ -236,11 +244,11 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
     // The under-dress shows at the front, a narrow panel between the coat's cut-away edges that
     // runs on down into its skirt; either side of it, below the coat, her leggings.
     if (yaw < 26) return PANEL;
-    return u <= 4.2 ? LEGS : ROBE;
+    return u <= 4.2 ? HIPS : ROBE;
   }
   if (u < 5) return null;
   // The sash, with a gold buckle at the front.
-  if (u < 7.8) return yaw < 11 && u > 5.4 && u < 7.6 ? GOLD : SASH;
+  if (u < 7.8) return yaw < 17 && u > 5.3 && u < 7.7 ? GOLD : SASH;
   // The pale bodice down the front, edged in gold, narrowing toward the collar.
   const open = 21 - (u - 8) * 0.35;
   if (yaw < open) return yaw > open - 3.2 ? GOLD : PANEL;
@@ -257,7 +265,7 @@ const BODY: BodyDesign = {
   // A gold band at the wrist of each sleeve.
   cuff: { mat: GOLD, r: 2.9, at: 0.66 },
   hand: { mat: SKIN, r: 2.3 },
-  neck: { mat: SKIN, r: 2 },
+  neck: { mat: NECK, r: 2 },
   hips: [{ c: [0, 3, 0], r: [4.6, 5, 6], id: 1 }],
   chest: [
     { c: [0, 8, 0], r: [4.1, 4.6, 5.4], id: 1 },
@@ -331,7 +339,7 @@ const SPELLBLADE: ChibiDesign = {
     // middle of her thighs, narrow enough that her leggings show either side of it.
     skirt({
       outer: DRESS,
-      inner: dim(PANEL, -0.2),
+      inner: DRESS_IN,
       waist: 4.8,
       ring: [4.9, 6],
       aline: 0.1,
