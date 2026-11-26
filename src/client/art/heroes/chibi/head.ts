@@ -574,6 +574,8 @@ interface HairStrand {
   pts: V3[];
   w: number;
   taper: number;
+  /** Lifts its lighting (a ponytail's `sheen`). */
+  sheen?: number;
 }
 
 /**
@@ -603,7 +605,7 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
     m,
     (t, a) => {
       // Lit where it faces the light, darker down its length and across to its shadowed side.
-      const l = along(lit, t) - 0.4 * t + 0.22 * a;
+      const l = along(lit, t) - 0.4 * t + 0.22 * a + (s.sheen ?? 0);
       let tone = l > 0.62 && t < 0.4 && a > 0 ? 0 : l > 0.28 ? 1 : l > -0.12 ? 2 : 3;
       if (t > 0.88) tone = Math.min(3, tone + 1);
       if (d.darkHair && tone > 0) tone = Math.min(3, tone + 1);
@@ -694,10 +696,10 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
     // A tail at the back of the head would hide behind it from the front as he runs: it flicks
     // out to one side instead (the same side every frame).
     const flick = add3(dirIn(fr, Math.cos(rad(tail.yaw)), 0, Math.sin(rad(tail.yaw))), across, 0.8);
-    const main = solve(tail, 0.4, out, flick);
+    const main = { ...solve(tail, 0.4, out, flick), sheen: tail.sheen };
     const side = (k: number, seed: number): HairStrand => {
       const s = solve({ ...tail, len: tail.len * 0.86, w: tail.w * 0.62 }, seed, out, flick);
-      return { ...s, pts: s.pts.map((p, i) => add3(p, across, k * tail.w * 0.55 * Math.min(1, i / 2))) };
+      return { ...s, sheen: tail.sheen, pts: s.pts.map((p, i) => add3(p, across, k * tail.w * 0.55 * Math.min(1, i / 2))) };
     };
     const strands = [side(-1, 2.2), side(1, 4.1), main];
     const root = main.pts[0] as V3;
