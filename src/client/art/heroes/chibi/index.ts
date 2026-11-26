@@ -102,7 +102,7 @@ const DARK_KNIGHT_TIMING: Record<ChibiClip, ClipTiming> = {
   atk1: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
   atk2: { frames: 7, mode: 'once', seconds: 0.36, windup: 1 },
   atk3: { frames: 9, mode: 'once', seconds: 0.62, windup: 2 },
-  guard: { frames: 4, mode: 'once', seconds: 1, windup: 0 },
+  guard: { frames: 5, mode: 'once', seconds: 1, windup: 1 },
   hurt: { frames: 3, mode: 'once', seconds: 0.3, windup: 0 },
   kneel: { frames: 4, mode: 'loop', seconds: 1.6, windup: 0 },
   ko: { frames: 6, mode: 'hold', seconds: 0.9, windup: 0 },
