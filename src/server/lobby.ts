@@ -8,7 +8,7 @@ import { HEROES, heroFor, isHero, isRole, ROLE_ORDER, ROLES, WEAPONS, weaponFor,
 import type { AiFill, ClientMsg, LobbyState, PartyView, QueueView, ReadyCheckView, ServerMsg } from '../shared/protocol.js';
 import { generateDungeon } from './dungeonGen.js';
 import { findMatches, assemble, rolesFree, type QueueEntry } from './matchmaker.js';
-import { Instance, seatHero, type InstanceOptions, type Seat } from './sim/instance.js';
+import { Instance, seatHero, seatWeapon, type InstanceOptions, type Seat } from './sim/instance.js';
 
 export interface Conn {
   send(msg: ServerMsg): void;
@@ -464,7 +464,7 @@ export class Lobby {
       id: rc.id,
       deadline: rc.deadline,
       dungeon: rc.dungeon,
-      slots: rc.seats.map((s) => ({ role: s.role, name: s.name, hero: seatHero(s), weapon: s.weapon, bot: s.ownerId === null, accepted: s.ownerId ? (rc.accepted.get(s.ownerId) ?? null) : true, you: s.ownerId === playerId })),
+      slots: rc.seats.map((s) => ({ role: s.role, name: s.name, hero: seatHero(s), weapon: seatWeapon(s), bot: s.ownerId === null, accepted: s.ownerId ? (rc.accepted.get(s.ownerId) ?? null) : true, you: s.ownerId === playerId })),
     };
   }
 

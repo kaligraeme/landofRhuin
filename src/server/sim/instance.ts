@@ -32,6 +32,11 @@ export interface Seat {
   ownerId: string | null;
   name: string;
   role: RoleId;
+  /**
+   * The weapon asked for, which picks the hero only when `hero` does not (see `seatHero`): a hero
+   * always fights with their own weapon (`seatWeapon`), so one seat can never be one hero with
+   * another hero's kit.
+   */
   weapon: string;
 }
 
@@ -42,6 +47,11 @@ export interface Seat {
 export function seatHero(seat: Seat): HeroId {
   const heroes = ROLES[seat.role].heroes;
   return heroes.find((h) => h === seat.hero) ?? heroes.find((h) => weaponFor(h) === seat.weapon) ?? defaultHero(seat.role);
+}
+
+/** The weapon a seat fights with: always its hero's own (`seatHero`), whatever `Seat.weapon` says. */
+export function seatWeapon(seat: Seat): string {
+  return weaponFor(seatHero(seat));
 }
 
 export interface InstanceOptions {
@@ -151,8 +161,8 @@ export class Instance {
       botControlled: seat.ownerId === null,
       role: seat.role,
       hero: seatHero(seat),
-      weapon: seat.weapon,
-      hotbar: hotbarFor(seat.role, seat.weapon),
+      weapon: seatWeapon(seat),
+      hotbar: hotbarFor(seat.role, seatWeapon(seat)),
       mp: role.mp,
       maxMp: role.mp,
       healPower: role.healPower,
@@ -858,7 +868,7 @@ export class Instance {
   }
 
   results(): MemberResult[] {
-    return this.players.map((p) => ({ id: p.id, name: p.name, role: p.role, weapon: p.weapon, bot: p.ownerId === null, damage: Math.round(p.stats.damage), healing: Math.round(p.stats.healing), deaths: p.stats.deaths, raises: p.stats.raises }));
+    return this.players.map((p) => ({ id: p.id, name: p.name, role: p.role, hero: p.hero, weapon: p.weapon, bot: p.ownerId === null, damage: Math.round(p.stats.damage), healing: Math.round(p.stats.healing), deaths: p.stats.deaths, raises: p.stats.raises }));
   }
 
   /** Takes the events gathered since the last call and builds the shared part of a snapshot. */

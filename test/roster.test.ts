@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { heroArtId } from '../src/client/art/heroArt.js';
 import { CHIBI_HEROES } from '../src/client/art/heroes/chibi/index.js';
 import { FORM_ART, formHero, heroForms } from '../src/client/art/heroForms.js';
-import { Instance, seatHero, type Seat } from '../src/server/sim/instance.js';
-import { defaultHero, HERO_ORDER, HEROES, heroFor, isHero, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId } from '../src/shared/content/classes.js';
+import { Instance, seatHero, seatWeapon, type Seat } from '../src/server/sim/instance.js';
+import { defaultHero, HERO_ORDER, HEROES, heroFor, hotbarFor, isHero, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId } from '../src/shared/content/classes.js';
 import { BOSSES, MOBS, THEMES } from '../src/shared/content/monsters.js';
 import { STATUSES } from '../src/shared/content/statuses.js';
 
@@ -57,6 +57,21 @@ describe('the roster', () => {
     const inst = new Instance('t', [seat('tank', 'sword_shield', 'sage'), seat('mage', 'staff', 'sage'), seat('ranger', 'crossbow'), seat('melee', 'spear', 'blademaster')], { seed: 1, countdown: 0 });
     const spawns = inst.startFor(inst.players[0]!).entities.filter((e) => e.kind === 'player');
     expect(spawns.map((e) => e.hero)).toEqual(['guardian', 'sage', 'arbalest', 'blademaster']);
+    // Each fights with their own hero's weapon and skills, even where the seat named another
+    // weapon (the Blademaster's seat asked for the Lance): one hero never carries another's kit.
+    expect(spawns.map((e) => e.weapon)).toEqual(['sword_shield', 'staff', 'crossbow', 'twin_blades']);
+    for (const p of inst.players) {
+      expect(p.weapon, p.name).toBe(weaponFor(p.hero));
+      expect(p.hotbar, p.name).toEqual(hotbarFor(p.role, weaponFor(p.hero)));
+    }
+    expect(seatWeapon(seat('melee', 'spear', 'blademaster'))).toBe('twin_blades');
+    // The results at the end of a run say who played whom.
+    expect(inst.results().map((r) => [r.hero, r.weapon])).toEqual([
+      ['guardian', 'sword_shield'],
+      ['sage', 'staff'],
+      ['arbalest', 'crossbow'],
+      ['blademaster', 'twin_blades'],
+    ]);
   });
 
   it('draws every hero, and every form a hero takes, as a chibi of their own', () => {

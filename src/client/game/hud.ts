@@ -3,7 +3,7 @@
  * cooldowns, your health and cast bar, battle log, banners and the results screen.
  */
 import { AGGRO_STICK, AGGRO_TANK_STICK } from '../../shared/constants.js';
-import { FORMS, HOTBAR_KEYS, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
+import { FORMS, HEROES, HOTBAR_KEYS, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
 import { STATUSES } from '../../shared/content/statuses.js';
 import { T_FLOOR, T_GATE } from '../../shared/map.js';
 import type { EntitySnap, MemberResult } from '../../shared/protocol.js';
@@ -178,7 +178,8 @@ export class Hud {
       } else if (e.key === 'Escape') this.chatInput.blur();
     });
     const leave = h('button', { class: 'btn ghost small', onclick: () => confirm('Leave the dungeon? An AI companion will take your place.') && handlers.leave() }, 'Leave dungeon');
-    const weapon = WEAPONS[me?.spawn.weapon ?? ''];
+    // Who you play, as the lobby named them: the role and the hero.
+    const hero = me?.spawn.hero ? HEROES[me.spawn.hero].name : (WEAPONS[me?.spawn.weapon ?? '']?.name ?? '');
     this.el = h(
       'div',
       { class: 'hud' },
@@ -186,7 +187,7 @@ export class Hud {
       h(
         'div',
         { class: 'left-col' },
-        h('div', { class: 'top-actions interactive' }, leave, musicControl(), h('span', { class: 'who-am-i' }, `${ROLES[role].name} · ${weapon?.name ?? ''}`)),
+        h('div', { class: 'top-actions interactive' }, leave, musicControl(), h('span', { class: 'who-am-i' }, `${ROLES[role].name} · ${hero}`)),
         this.party,
         h('div', { class: 'keys-help' }, 'WASD move · Mouse aim · Hold left click to attack · Right click, Q, E, R, F skills · 1–3 role skills and elixir · Space dodge · T follow · Wheel zoom · Enter chat'),
       ),
@@ -274,7 +275,7 @@ export class Hud {
             h(
               'table',
               null,
-              h('thead', null, h('tr', null, h('th', null, 'Hero'), h('th', null, 'Weapon'), h('th', { class: 'num' }, 'Damage'), h('th', { class: 'num' }, 'DPS'), h('th', { class: 'num' }, 'Healing'), h('th', { class: 'num' }, 'KOs'))),
+              h('thead', null, h('tr', null, h('th', null, 'Player'), h('th', null, 'Hero'), h('th', { class: 'num' }, 'Damage'), h('th', { class: 'num' }, 'DPS'), h('th', { class: 'num' }, 'Healing'), h('th', { class: 'num' }, 'KOs'))),
               h(
                 'tbody',
                 null,
@@ -285,7 +286,7 @@ export class Hud {
                     'tr',
                     null,
                     h('td', null, icon, ' ', r.name, r.bot ? h('span', null, ' ', h('span', { class: 'ai-badge' }, 'AI')) : null),
-                    h('td', { class: 'muted' }, WEAPONS[r.weapon]?.name ?? r.weapon),
+                    h('td', null, HEROES[r.hero]?.name ?? '', ' ', h('span', { class: 'muted small' }, WEAPONS[r.weapon]?.name ?? r.weapon)),
                     h('td', { class: 'num' }, `${fmtNum(r.damage)} `, h('span', { class: 'muted small' }, `${Math.round((r.damage / total) * 100)}%`)),
                     h('td', { class: 'num' }, fmtNum(r.damage / Math.max(1, time))),
                     h('td', { class: 'num' }, fmtNum(r.healing)),

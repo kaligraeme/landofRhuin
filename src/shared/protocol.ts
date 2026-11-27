@@ -197,6 +197,8 @@ export interface MemberResult {
   id: number;
   name: string;
   role: RoleId;
+  /** The hero they played, and the hero's weapon. */
+  hero: HeroId;
   weapon: string;
   bot: boolean;
   damage: number;
