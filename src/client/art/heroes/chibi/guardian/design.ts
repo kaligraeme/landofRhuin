@@ -42,8 +42,9 @@ const BLUE = { ...mat4('#6a9cf0', '#3a64c0', '#22397a', '#121e44', '#0a1028', 0.
 const CLOTH = { ...mat4('#6a9cf0', '#3a64c0', '#22397a', '#121e44', '#0a1028', 0.1), gain: 0.6 };
 const CLOTH_IN = mat4('#2a4688', '#1c3066', '#121e44', '#0a1230', '#060a1c');
 const GOLD = mat4('#fff0b0', '#e8c25a', '#a8802c', '#5e4414', '#2e2008', 0.1);
-// The cape: dark violet-navy outside, crimson inside.
-const CAPE = { ...mat4('#54549e', '#3a3a7a', '#262654', '#161632', '#0a0a1c', 0), gain: 0.85 };
+// The cape: dark violet-navy outside, crimson inside. Its light spread a little wide, so its folds
+// stand out from behind as the Dark Knight's coat's pleats do.
+const CAPE = { ...mat4('#5c5ca8', '#3a3a7a', '#262654', '#161632', '#0a0a1c', 0), gain: 1.15 };
 const CRIMSON = mat4('#e0505e', '#b02c3c', '#7c1a2a', '#4a0e18', '#22060c');
 const SAPPHIRE = mat4('#eef8ff', '#9ad6ff', '#3e8ee0', '#1c4e9c', '#0c2250', 0.05);
 // The sword: bright steel with a white edge, a blue leather grip bound in gold thread.
@@ -389,8 +390,8 @@ const GUARDIAN: ChibiDesign = {
         { from: 260, to: 324, len: 10, jag: 1 },
       ],
     }),
-    // The cape, from the shoulders to the calves.
-    cape({ outer: CAPE, inner: CRIMSON, top: 19.6, ring: [5.4, 8.2], from: 106, to: 254, len: 36, jag: 2.2, taper: 1.25, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 1 } }),
+    // The cape, from the shoulders to the calves, in two panels that part a little at the hem.
+    cape({ outer: CAPE, inner: CRIMSON, top: 19.6, ring: [5.4, 8.2], from: 106, to: 254, len: 36, jag: 2.2, taper: 1.25, panels: 2, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 1 } }),
   ],
   weapon: SWORD,
   offhand: KITE_SHIELD,

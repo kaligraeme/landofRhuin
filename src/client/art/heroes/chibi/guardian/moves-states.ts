@@ -203,8 +203,9 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
 
 /**
  * She falls on her back with her feet toward the way she faced, turned (`turn` -60) so she lies
- * across the screen in all three views. The shield has slipped from her arm and lies flat on the
- * floor beside her, face up; the sword lies by her outflung hand.
+ * across the screen in all three views. The shield slipped from her arm and fell forward as she
+ * went back: it lies flat on the floor by her feet, face up, where it shows in every view (beside
+ * her, her body would hide it side on or from behind); the sword lies by her outflung hand.
  */
 const DOWN: ChibiPose = pose(S, {
   x: -8,
@@ -226,7 +227,7 @@ const DOWN: ChibiPose = pose(S, {
   roll: 80,
   yaw: 0,
   dropB: true,
-  dropAtB: [2, 1.5, -20],
+  dropAtB: [24, 1.5, 8],
   weaponB: 90,
   rollB: -90,
   yawB: 0,
@@ -260,10 +261,10 @@ const ko: ChibiPose[] = [
   pose(S, { x: -4, y: 5, lean: -14, twist: 6, tilt: -6, head: -14, handF: [4, 14, 9], weapon: 70, roll: 10, yaw: -20, handB: [3, 12, 9], elbowB: [0, -0.6, 1], yawB: 30, rollB: 0, face: 'hurt', sway: -0.4, lift: 0.15 }),
   // Her knees give: down on both, the sword's point striking the floor in front of her.
   pose(S, { x: -2, y: 14, lean: 8, twist: 0, head: 16, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [8, 15, 6], weapon: 150, roll: 0, yaw: -10, handB: [5, 15, 8], elbowB: [0, -0.8, 1], yawB: 10, rollB: -20, face: 'hurt', wind: 0, flare: 0.2 }),
-  // She sways back, turning, the shield slipping off her arm.
-  pose(S, { x: -2, y: 15, lean: -10, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-6, -1, 5], footB: [-8, -1, 4.6], kneel: 'F', handF: [6, 17, 13], weapon: 160, roll: -10, yaw: 0, handB: [2, 17, 11], elbowB: [0, -0.8, 1], dropB: true, dropAtB: [3, 10, -14], weaponB: 40, rollB: -40, yawB: 0, face: 'closed', wind: 0, lift: 0.2 }),
+  // She sways back, turning, the shield slipping off her arm and toppling forward.
+  pose(S, { x: -2, y: 15, lean: -10, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-6, -1, 5], footB: [-8, -1, 4.6], kneel: 'F', handF: [6, 17, 13], weapon: 160, roll: -10, yaw: 0, handB: [2, 17, 11], elbowB: [0, -0.8, 1], dropB: true, dropAtB: [14, 10, 4], weaponB: 40, rollB: -40, yawB: 0, face: 'closed', wind: 0, lift: 0.2 }),
   // Toppling back, the cape flying up; the shield has hit the floor.
-  pose(DOWN, { x: -5, y: 17, lean: -45, turn: -45, head: -8, look: 10, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 15], handB: [0, 6, 13], dropAt: [-14, 3, 24], weapon: 84, dropAtB: [2, 3, -19], weaponB: 80, rollB: -80, lift: 0.3 }),
+  pose(DOWN, { x: -5, y: 17, lean: -45, turn: -45, head: -8, look: 10, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 15], handB: [0, 6, 13], dropAt: [-14, 3, 24], weapon: 84, dropAtB: [20, 3, 7], weaponB: 80, rollB: -80, lift: 0.3 }),
   // Down: the thud raises dust and bounces her boots.
   pose(DOWN, { lean: -82, head: -12, footF: [14, -4, 6.5], footB: [12, -5, 2], lift: 0.2, fx: { dust: 0.9, extra: thud } }),
   pose(DOWN, {}),
