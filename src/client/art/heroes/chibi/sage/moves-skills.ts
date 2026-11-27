@@ -534,7 +534,7 @@ const r: ChibiPose[] = [
  * The chant: the staff raised overhead in both hands, held up behind his head, so its orb blazes
  * above him at the top of the pillar of light, his elbows out; chin up and eyes closed.
  */
-const CHANT: ChibiPose = pose(S, { x: 0, y: 2, lean: -4, twist: 0, head: -8, look: 0, footF: [6, 0, 5.4], footB: [-6, 0, 5], handF: [-7, -11, 2], elbowF: [0, 0.3, 1], elbowB: [0, 0.3, 1], grip: -2, grip2: -9, weapon: 0, roll: 0, yaw: 0, wind: 0.2, lift: 0.4, face: 'closed' });
+const CHANT: ChibiPose = pose(S, { x: 0, y: 2, lean: -4, twist: 0, head: -8, look: 0, footF: [6, 0, 5.4], footB: [-6, 0, 5], handF: [-7, -11, 2], elbowF: [0, 0.3, 1], elbowB: [0, 0.3, 1], grip: -2, grip2: -9, weapon: 0, roll: 0, yaw: 0, wind: 0.2, lift: 0.15, face: 'closed' });
 
 /** The light of the burst: warm white beams with a bright gold edge. */
 const BURST: Aura = { core: [255, 206, 64], edge: [255, 224, 120], hot: [255, 250, 228] };
@@ -548,7 +548,7 @@ const chant = (i: number): ChibiPose => {
     lean: -4 + breath,
     head: -8 - t * 2,
     handF: [-7, -11 - t, 2],
-    lift: 0.3 + t * 0.4,
+    lift: 0.12 + t * 0.2,
     sway: Math.sin(i * 0.8) * 0.2,
     phase: i / 8,
     fx: {
@@ -567,7 +567,7 @@ const chant = (i: number): ChibiPose => {
 };
 
 /** The release: the staff thrust higher, chin up, a burst of gold. */
-const RAISE: ChibiPose = pose(CHANT, { y: 1, lean: -7, head: -10, handF: [-6, -13, 2], weapon: -2, wind: 0.5, lift: 0.8, face: 'shout' });
+const RAISE: ChibiPose = pose(CHANT, { y: 1, lean: -7, head: -10, handF: [-6, -13, 2], weapon: -2, wind: 0.5, lift: 0.5, face: 'shout' });
 
 /** Brought down out of the burst: the staff lowered before him in both hands and across to his left, as the stance holds it. */
 const LOWERED: ChibiPose = pose(S, { x: 1, y: 3, lean: 2, twist: 14, head: -1, look: -2, handF: [7, 9, 5], grip: -4, grip2: 9, weapon: 36, roll: -16, yaw: -34, wind: 0.4, lift: 0.4, face: 'stern' });

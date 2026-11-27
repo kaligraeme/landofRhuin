@@ -6,8 +6,9 @@
  *   kneel    4  (loop) low health: down on his right knee, leaning on the staff planted upright
  *               beside it, his left hand pressed to his chest; heaving, a bead of sweat
  *   ko       6  (hold) a stagger, his knees giving way, and a crumple onto his back, turned so he
- *               lies across the screen in every view, the staff falling beside him and the beard
- *               spilling over his chest
+ *               lies across the screen in every view and rolled a little onto his left side with
+ *               his head turned toward the viewer, so his face shows side on, the staff falling
+ *               beside him and the beard spilling over his chest
  *   victory  8  (hold) the staff twirled once and raised high on his right, his hand up at his
  *               brow and the staff off the floor, the orb blazing with teal rays and motes, chin up,
  *               his left hand on his hip and a warm smile
