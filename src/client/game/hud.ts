@@ -3,7 +3,7 @@
  * cooldowns, your health and cast bar, battle log, banners and the results screen.
  */
 import { AGGRO_STICK, AGGRO_TANK_STICK } from '../../shared/constants.js';
-import { HOTBAR_KEYS, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
+import { FORMS, HOTBAR_KEYS, ROLES, SKILLS, WEAPONS, type RoleId } from '../../shared/content/classes.js';
 import { STATUSES } from '../../shared/content/statuses.js';
 import { T_FLOOR, T_GATE } from '../../shared/map.js';
 import type { EntitySnap, MemberResult } from '../../shared/protocol.js';
@@ -37,9 +37,12 @@ interface MemberRow {
 
 interface SlotEl {
   el: HTMLElement;
+  img: HTMLImageElement;
   cd: HTMLElement;
   cdt: HTMLElement;
   id: string;
+  /** What the slot shows now: its skill, or a form's blow in the basic attack's slot. */
+  shown: string;
 }
 
 function statusChips(list: EntitySnap['s'], max = 10): HTMLElement[] {
@@ -97,6 +100,14 @@ export class Hud {
   private castName = h('span');
   private castTime = h('span');
   private castFill = h('div', { class: 'fill' });
+  /** While you have taken a form (the Firebeast): its name and the seconds it has left. */
+  private formBar = h('div', { class: 'cast-bar form-bar' });
+  private formName = h('span');
+  private formTime = h('span');
+  private formFill = h('div', { class: 'fill' });
+  /** When the form ends (server clock), and the longest it was seen to have left: the bar's full length. */
+  private formEnds: number | null = null;
+  private formTotal = 0;
   private errorEl = h('div', { class: 'skill-error' });
   private logLines = h('div', { class: 'log-lines' });
   private chatInput = h('input', { class: 'input interactive', placeholder: 'Press Enter to chat', maxlength: '200', 'aria-label': 'Chat' });
@@ -124,13 +135,15 @@ export class Hud {
     world.hotbar.forEach((id, i) => {
       const cd = h('div', { class: 'cd' });
       const cdt = h('div', { class: 'cdt' });
-      const el = h('div', { class: 'slot', 'data-skill': id }, h('img', { src: skillIcon(id), alt: SKILLS[id]?.name ?? id, draggable: false }), cd, cdt, h('span', { class: 'key' }, HOTBAR_KEYS[i] === 'Space' ? '␣' : (HOTBAR_KEYS[i] ?? '')));
+      const img = h('img', { src: skillIcon(id), alt: SKILLS[id]?.name ?? id, draggable: false });
+      const el = h('div', { class: 'slot', 'data-skill': id }, img, cd, cdt, h('span', { class: 'key' }, HOTBAR_KEYS[i] === 'Space' ? '␣' : (HOTBAR_KEYS[i] ?? '')));
       el.addEventListener('mousedown', (e) => {
         e.preventDefault();
         handlers.useSlot(i);
       });
-      withTooltip(el, () => skillTooltip(id));
-      this.slots.push({ el, cd, cdt, id });
+      const slot: SlotEl = { el, img, cd, cdt, id, shown: id };
+      withTooltip(el, () => skillTooltip(slot.shown));
+      this.slots.push(slot);
       hotbar.appendChild(el);
       if (i === 0) el.classList.add('basic');
       if (i === 5 || i === 7) hotbar.appendChild(h('div', { class: 'slot-sep' }));
@@ -143,6 +156,7 @@ export class Hud {
     this.mpWrap.append(h('div', { class: 'lbl' }, h('span', null, ROLES[role].mp > 0 ? 'MP' : ''), this.mpVal), h('div', { class: 'bar mp' }, this.mpFill));
 
     this.castBar.append(h('div', { class: 'lbl' }, this.castName, this.castTime), h('div', { class: 'bar cast' }, this.castFill));
+    this.formBar.append(h('div', { class: 'lbl' }, this.formName, this.formTime), h('div', { class: 'bar form' }, this.formFill));
     const stWrap = h('div', { class: 'me-bar' }, h('div', { class: 'lbl' }, h('span', null, 'Stamina'), this.stVal), h('div', { class: 'bar stamina' }, this.stFill));
     const meBars = h('div', { class: 'me-bars' }, hpWrap, ROLES[role].mp > 0 ? this.mpWrap : null, stWrap);
     // Log and chat.
@@ -169,7 +183,7 @@ export class Hud {
       ),
       this.target,
       h('div', { style: 'right:16px;top:16px;width:270px;display:flex;flex-direction:column;gap:10px' }, h('div', { class: 'hud-panel duty-panel', style: 'position:static;width:auto' }, this.dutyName, this.dutyMeta, this.dutyObj), h('div', { class: 'hud-panel minimap', style: 'position:static;width:auto' }, this.mini)),
-      h('div', { class: 'hotbar-wrap' }, this.errorEl, this.aggroAlert, this.castBar, meBars, hotbar),
+      h('div', { class: 'hotbar-wrap' }, this.errorEl, this.aggroAlert, this.castBar, this.formBar, meBars, hotbar),
       h('div', { class: 'hud-panel log interactive' }, this.logLines, this.chatInput),
       this.banner,
       this.countdown,
@@ -325,9 +339,37 @@ export class Hud {
     const world = this.world;
     const mine = world.me;
     const meSnap = world.meEntity()?.snap;
+    // A form (the Firebeast) has only its own basic attack: the slot shows its blow, and every
+    // other skill is greyed until it ends, while a bar counts its seconds down.
+    const formStatus = (meSnap?.s ?? []).find(([id]) => STATUSES[id]?.form && FORMS[id]);
+    const form = formStatus ? FORMS[formStatus[0]] : undefined;
+    if (formStatus && form) {
+      // Snapshots come ten times a second: count down smoothly between them from the server clock.
+      const ends = (this.formEnds ??= now + Math.max(0, formStatus[1]));
+      if (Math.abs(now + formStatus[1] - ends) > 0.3) this.formEnds = now + formStatus[1];
+      const left = Math.max(0, (this.formEnds ?? ends) - now);
+      this.formTotal = Math.max(this.formTotal, left);
+      this.formBar.classList.add('show');
+      this.formName.textContent = form.name;
+      this.formTime.textContent = `${left.toFixed(1)}s`;
+      this.formFill.style.width = `${Math.min(100, (left / Math.max(0.1, this.formTotal)) * 100)}%`;
+    } else {
+      this.formBar.classList.remove('show');
+      this.formEnds = null;
+      this.formTotal = 0;
+    }
     for (const slot of this.slots) {
       const def = SKILLS[slot.id];
       if (!def || !mine) continue;
+      const shown = form && def.slot === 'basic' ? (form.basic.hits[0] as string) : slot.id;
+      if (shown !== slot.shown) {
+        slot.shown = shown;
+        slot.img.src = skillIcon(shown);
+        slot.img.alt = SKILLS[shown]?.name ?? shown;
+      }
+      const locked = !!form && def.slot !== 'basic';
+      slot.el.classList.toggle('form-locked', locked);
+      slot.el.classList.toggle('form-basic', !!form && def.slot === 'basic');
       let remaining = 0;
       const cd = mine.cds[slot.id];
       if (cd && cd > now) remaining = cd - now;
@@ -338,8 +380,8 @@ export class Hud {
         slot.cdt.textContent = String(Math.floor(mine.stamina / def.stamina));
       } else slot.cdt.textContent = remaining > 0.9 ? String(Math.ceil(remaining)) : '';
       const short = def.mp > (meSnap?.mp ?? 0) || def.stamina > mine.stamina;
-      slot.el.classList.toggle('unusable', short || !!meSnap?.d);
-      slot.el.classList.toggle('glow', def.slot === 'ult' && frac === 0 && !short && !meSnap?.d);
+      slot.el.classList.toggle('unusable', short || locked || !!meSnap?.d);
+      slot.el.classList.toggle('glow', def.slot === 'ult' && frac === 0 && !short && !locked && !meSnap?.d);
     }
   }
 
@@ -444,6 +486,10 @@ export class Hud {
         cls = 'loose';
         text = `${loose} loose on the party — grab ${loose === 1 ? 'it' : 'them'}!`;
       }
+    } else if (onMe && world.formOf(world.meId)) {
+      // No monster can hurt a form (the Firebeast), but it will still be after you when the form ends.
+      cls = 'have';
+      text = `${onMe === 1 ? 'One is' : `${onMe} are`} after you — they cannot hurt the ${FORMS[world.formOf(world.meId) ?? '']?.name ?? 'beast'}, but get to the tank before it ends`;
     } else if (onMe) {
       cls = 'have';
       text = `You have aggro! ${onMe === 1 ? 'It is' : `${onMe} are`} coming for you — get to the tank`;

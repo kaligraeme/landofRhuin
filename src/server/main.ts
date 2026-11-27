@@ -2,7 +2,7 @@
  * Land of Rhuin game server: serves the built browser client and runs the lobby and dungeon
  * simulations over a WebSocket at /ws.
  *
- *   node dist/server.mjs [--port 8787] [--host 127.0.0.1] [--quick]
+ *   node dist/server.mjs [--port 8787] [--host 127.0.0.1] [--quick] [--countdown 5] [--clan orc] [--companions flameWarden]
  */
 import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -10,6 +10,7 @@ import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { TICK_RATE } from '../shared/constants.js';
+import { isHero } from '../shared/content/classes.js';
 import { THEME_IDS, type ThemeId } from '../shared/content/monsters.js';
 import type { ClientMsg, ServerMsg } from '../shared/protocol.js';
 import { cleanName, Lobby, type LobbyOptions } from './lobby.js';
@@ -33,6 +34,8 @@ const lobbyOpts: LobbyOptions = {
     // --clan orc|dragon|undead makes every dungeon belong to one clan.
     ...(arg('clan') && (THEME_IDS as string[]).includes(arg('clan') as string) ? { theme: arg('clan') as ThemeId } : {}),
   },
+  // --companions flameWarden,bowmaster: AI companions play these heroes where their role has one.
+  companions: (arg('companions') ?? '').split(',').filter(isHero),
 };
 const lobby = new Lobby(lobbyOpts);
 

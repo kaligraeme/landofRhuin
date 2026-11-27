@@ -41,6 +41,7 @@ it into **Party code** and press **Join**. The party leader then joins the queue
 | `--quick` | Monsters have a quarter of their health. Good for trying things out. |
 | `--countdown 5` | Seconds before the entrance barrier drops. |
 | `--clan orc` | Make every dungeon belong to one clan: `orc`, `dragon` or `undead`. |
+| `--companions flameWarden` | AI companions play these heroes (comma-separated hero ids) where their role has one. |
 
 For development, `npm run dev` runs the server with reload on port 8787 and the Vite client on
 http://localhost:5173 (it forwards the game socket to the server).
@@ -83,7 +84,7 @@ hero chooses your weapon. A role starts on its first hero until you pick another
 | **Tank** | The only hero who can take the monsters' blows: 16,000 health and 55% damage reduction. Builds three times the aggro, holds it, and loses it three times slower. Needs a healer in a long fight. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | **Dark Knight**: a two-handed greatsword · **Guardian**: sword and shield, a paladin with healing light |
 | **Mage** | Offensive and healing spells. | **Sage**: a two-handed branch staff (the healer) · **Spellblade**: a mystic sword and a wand |
 | **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | **Arbalest**: a crossbow · **Bowmaster**: a longbow |
-| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | **Dragoon**: a two-handed lance · **Blademaster**: twin blades |
+| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | **Dragoon**: a two-handed lance · **Blademaster**: twin blades · **Flame Warden**: a burning blade, and the Firebeast within |
 
 | Weapon | Hero | Special (RMB) · Q · E · R · Ultimate (F) |
 | --- | --- | --- |
@@ -95,16 +96,66 @@ hero chooses your weapon. A role starts on its first hero until you pick another
 | Longbow | Bowmaster | Charged Shot · Volley · Snare Trap · Fan of Arrows · Rain of Ruin |
 | Lance | Dragoon | Sweeping Strike · Piercing Thrust · Vault Strike · Whirling Lance · Skewer |
 | Twin Blades | Blademaster | Rising Slash · Whirlwind · Blademaster's Lunge · Executioner · Cataclysm Blades |
+| Ember Blade | Flame Warden | Blazing Crescent (a piercing crescent of flame) · Flashfire (a 6-tile dash that sets foes burning) · Inferno Burst (a blast just ahead of you that throws foes back) · Kindle (8s: attacks 25% faster, every foe struck catches fire) · Firebeast (see below) |
 
 Role skills: the Tank has **Challenge** (taunt everything nearby) and **Rallying Bulwark**. The
 Mage has **Arcane Blink** and **Mana Font**. The Ranger has **Vault** and **Field Dressing**. The
 Duelist has **Bloodrush** (more damage dealt, more taken) and **Second Wind**.
 
 The Sage's Staff is the party's healer. An AI companion filling the Mage slot is always the Sage;
-the other AI companions play either of their role's heroes. A party without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
+the other AI companions play any of their role's heroes. A party without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
 
-In AI-only test runs, Duelists deal about 1,500 damage per second, Rangers about 1,150, Mages
-about 700 and Tanks 550 (Guardian) to 700 (Dark Knight).
+In AI-only test runs, Duelists deal about 1,500 damage per second (the Flame Warden about 1,850),
+Rangers about 1,150, Mages about 700 and Tanks 550 (Guardian) to 700 (Dark Knight).
+
+### The Flame Warden and the Firebeast
+
+The third Duelist is a fast, aggressive glass cannon. His **Ember Slash** combo is the quickest of
+any Duelist (a cut every 0.4s, the third a wider sweep) and the shortest: 2.4 to 2.8 tiles, where
+the Dragoon's thrusts reach 3.8 and the Blademaster's slashes 3.4. He is the Duelist with the most
+sustained damage, and he pays for it by standing closest to what he fights.
+
+His ultimate, **Firebeast** (F, a 90-second cooldown), engulfs him in flame: for 5 seconds he *is*
+the Firebeast.
+
+- **It only has its claws.** Holding the attack button swings the Firebeast's three-claw chain, one
+  swipe every 0.45s through everything within 3 tiles in front of it, each at **potency 1000**. The
+  form takes 0.8s to take shape, so a full form lands ten claws. Every other skill, the role skills,
+  the Elixir and the dodge roll are refused until it ends (greyed on the hotbar, with a bar
+  counting the form's seconds down).
+- **No monster can hurt it.** Blows, bolts and arrows, every ground mechanic and damage over time
+  (even from a monster that has since died) show **Immune** instead of a number. Knockbacks still
+  move it, and the heroes around it are hit as ever.
+- **Buffs.** The potency is fixed at 1000, and Kindle does not hurry the claws: the form is balanced
+  on its ten swipes. Bloodrush, the Echo of Rhuin and a staggered boss's weakness still raise the
+  claws' damage, as they do every blow, because they multiply damage, not potency; Bloodrush has to
+  be used first, since role skills wait during the form, and its cost (15% more damage taken) only
+  bites once the form ends.
+- **Aggro works as ever.** Ten claws at 1000 potency pull monsters onto the Firebeast. They cannot
+  hurt it, but they are still after the Warden when the form ends, so he needs to be near the Tank
+  by then (the hotbar warns him).
+
+An AI Flame Warden takes the form when a fight worth it is on (a boss, or a pack with plenty of
+health left in reach of his claws), and while transformed only attacks: no skills, no rolls, no
+easing off his aggro and no running to the Tank. An AI Tank leaves the monsters on the Firebeast be
+and saves its taunt for the moment the form ends.
+
+What the sims show, with AI parties in the same 32 dungeons (16 seeds, each with a
+Guardian–Sage–Bowmaster party and a Dark Knight–Sage–Arbalest one):
+
+- Against a training dummy for two minutes, without his ultimate, the Flame Warden deals about
+  1,600 damage per second to the Dragoon's 1,350 and the Blademaster's 1,300; with it, about 2,250
+  to their 1,500. Against a pack of four his short reach tells: about 2,400 (4,100 with the
+  Firebeast), behind the Dragoon's 2,750 and far behind the Blademaster's sweeping 4,950.
+- Over whole dungeons he deals about 1,850 damage per second to the other Duelists' 1,450 to 1,550,
+  and every party clears every dungeon in about the same time. The Firebeast comes out about nine
+  times a run and deals about a fifth of his damage.
+- He falls more often than the others, about 1.7 times a run to their 0.9 to 1.5: his claws pull
+  monsters onto him, and they are still after him when the form ends.
+- The cooldown: at 60 seconds his damage would rise by about a tenth again, at 120 it falls by a few
+  percent; 90 keeps him about a quarter ahead of the other Duelists.
+- Alone against a pack of three with no Tank, he wins every time with the Firebeast ready, and falls
+  like any Duelist with it on cooldown.
 
 ## Aggro and teamwork
 
@@ -138,8 +189,9 @@ What that means in a fight:
 
 - Standing still with a pack of three on them, a Duelist, Ranger or Mage falls in 3 to 5 seconds.
   Fighting back with no Tank to run to, every one of them falls to a wave of five within 2 to
-  11 seconds. A pack of only three is a fairer fight: the Blademaster beats it about half the time,
-  other damage dealers now and then, and the Sage can hold out for a minute by healing.
+  11 seconds (the Flame Warden too, unless his Firebeast is ready). A pack of only three is a
+  fairer fight: the Blademaster beats it about half the time, other damage dealers now and then,
+  and the Sage can hold out for a minute by healing.
 - A Tank lasts far longer: about 11 seconds standing still, and much longer fighting.
 - Alone against a wave of five, the Dark Knight falls in 19 to 27 seconds and the Guardian in 30
   to 50. A Guardian who outlasts one wave falls to the next. With the Staff healer behind them,
@@ -176,6 +228,11 @@ and a red scarf. Weapons are part of each hero's animation, held the way they ar
 held: the Dark Knight's greatsword, the Sage's staff and the Dragoon's lance in both hands, the
 Guardian's sword and kite shield, the Spellblade's sword and wand, the Arbalest's crossbow, the
 Bowmaster's longbow and the Blademaster's twin blades.
+
+The Flame Warden, the third Duelist, is painted only as a chibi, and so is the Firebeast he
+becomes (`hero-flame-warden` and `hero-firebeast`). Until his chibi is registered he is drawn as
+the Spellblade, a fellow blade, in the lobby and in the dungeon; until the Firebeast's is, he keeps
+that look through the form, wreathed in firelight and embers either way (`art/heroLook.ts`).
 
 Heroes turn to face where they are aiming: side on to the left and right, toward you when they
 face down the screen and away from you when they face up it, in every clip.
@@ -362,7 +419,17 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
   and height.
 
 Then register it in `CHIBI_HEROES` (`heroes/chibi/index.ts`) under its sprite id: `hero-` and the
-hero's name in kebab case, such as `hero-dragoon` (`heroArt.ts`).
+hero's name in kebab case, such as `hero-dragoon` (`heroArt.ts`). A hero painted only as a chibi
+(`CHIBI_ONLY` in `heroArt.ts`, such as the Flame Warden) needs no artwork in `creatures/`: they show
+once their side view is painted, and another hero stands in for them until they are registered.
+
+A form a hero takes, the Flame Warden's Firebeast, is a chibi hero of its own with the same sixteen
+clips, registered under its sprite id (`hero-firebeast`; `FORM_ART` in `heroLook.ts`). When the
+form begins, the hero's `ult` clip plays as flames engulf them, then the form's `ult` once as it
+emerges, each in half of the 0.8 seconds the form takes to take shape; the form then stands, runs
+and attacks with its own clips (its combo is its claw chain) and never flinches, kneels or falls.
+When it ends, its `cast` clip plays as it collapses into flame and the hero returns, at once if
+they act (`formShow` in `game/chibiState.ts`). A burst of fire and embers marks both moments.
 `npx tsx scripts/chibi-sheet.ts --hero <id>` paints contact sheets of every clip in the three
 views, and `test/chibi.test.ts` checks every registered hero: that every frame paints cleanly
 and the same every time, stands on the ground, fits its frame and changes from frame to frame,
@@ -500,14 +567,16 @@ npm run simulate -- 42 5   # play 5 dungeons (seeds 42-46) with AI parties and p
 npx tsx scripts/chibi-sheet.ts   # contact sheets of a chibi hero's clips in three views (--hero <sprite id>)
 ```
 
-The simulation tests have four AI parties with different weapons clear entire dungeons. That
+The simulation tests have five AI parties with different weapons clear entire dungeons. That
 checks the generator, the combat rules, every boss and the AI together, and keeps the balance
 honest: AI parties clear a dungeon in about 10 to 14 minutes. Without the Staff healer they can
 take twice as long and wipe once or twice. `test/teamwork.test.ts` checks the
 aggro balance: damage dealers with a pack on them fall in seconds, a tank lasts far longer, and a
-tank facing a big pack alone falls but wins with a healer. `PARTY=tank_greatsword,staff,crossbow,greatsword
-npm run simulate -- 1 4` picks the party's weapons and prints how often each hero pulled a
-monster off the tank and what killed them.
+tank facing a big pack alone falls but wins with a healer. `test/flameWarden.test.ts` checks the
+Flame Warden's kit and the Firebeast: what it refuses, its claws' potency and rhythm, its immunity
+to every kind of monster damage, its duration and cooldown, and how the AI uses it.
+`PARTY=sword_shield,staff,bow,flame_sword npm run simulate -- 1 4` picks the party's weapons and
+prints how often each hero pulled a monster off the tank and what killed them.
 
 ## Ideas for what is next
 

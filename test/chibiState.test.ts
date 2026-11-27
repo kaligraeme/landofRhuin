@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SKILLS, WEAPONS } from '../src/shared/content/classes.js';
 import type { ChibiClip, ClipTiming } from '../src/client/art/heroes/chibi/index.js';
 import { CHIBI_CLIPS, CHIBI_HEROES, SLOT_CLIPS } from '../src/client/art/heroes/chibi/index.js';
-import { actClip, actFrame, chibiClip, type ChibiInput } from '../src/client/game/chibiState.js';
+import { actClip, actFrame, chibiClip, FORM_COLLAPSE, formShow, type ChibiInput, type FormShowInput } from '../src/client/game/chibiState.js';
 
 /**
  * A fixed timing table, so the tests do not move when the painter retimes its clips. The flinch
@@ -265,5 +265,72 @@ describe('chibi clip priority', () => {
         expect(pick.frame).toBeLessThan(hero!.timing[pick.clip].frames);
       }
     }
+  });
+});
+
+describe('a hero who takes a form (the Flame Warden’s Firebeast)', () => {
+  /** The Firebeast's own clip timing: different frame counts, so frames are seen to come from it. */
+  const F: Record<ChibiClip, ClipTiming> = { ...T, ult: { frames: 10, seconds: 0.8, windup: 1 }, cast: { frames: 6, seconds: 0.5, windup: 0 } };
+  const START = NOW - 0.01;
+  const shows = (over: Partial<FormShowInput>) => formShow({ now: NOW, seen: { id: 'firebeast', at: START, endedAt: null }, act: null, down: false, hero: T, form: F, emerge: 0.8, ...over });
+
+  it('is engulfed in his own ult clip, then the form emerges in its ult clip, each played through in its half', () => {
+    const seen = { id: 'firebeast', at: NOW, endedAt: null };
+    const ult = { at: NOW - 0.001, k: 'sk' as const, d: 0, s: 'firebeast' };
+    const frames: [boolean, number][] = [];
+    for (let i = 0; i < 20; i++) {
+      const show = formShow({ now: NOW + i * 0.04, seen, act: ult, down: false, hero: T, form: F, emerge: 0.8 });
+      expect(show.force?.clip, `${i}`).toBe('ult');
+      expect(show.steady).toBe(true);
+      frames.push([show.form, show.force!.frame]);
+    }
+    // First the hero, frames 0 to the last of his ult; then the form, frames 0 to the last of its own.
+    const hero = frames.filter(([form]) => !form).map(([, f]) => f);
+    const beast = frames.filter(([form]) => form).map(([, f]) => f);
+    expect(hero.length).toBe(10);
+    expect(beast.length).toBe(10);
+    expect(hero[0]).toBe(0);
+    expect(hero.at(-1)).toBeGreaterThanOrEqual(T.ult.frames - 2);
+    expect(beast[0]).toBe(0);
+    expect(beast.at(-1)).toBe(F.ult.frames - 1);
+    for (const list of [hero, beast]) for (let i = 1; i < list.length; i++) expect(list[i]!).toBeGreaterThanOrEqual(list[i - 1]!);
+  });
+
+  it('then fights as the form with its own blows: no flinch, no kneel, no fall', () => {
+    const now = START + 2;
+    // The skill that began the form is behind it; the form's own claws drive its clips.
+    expect(shows({ now, act: { at: START - 0.001, k: 'sk', d: 0, s: 'firebeast' } })).toEqual({ form: true, act: null, steady: true, force: null });
+    const claw = { at: now - 0.1, k: 'atk' as const, d: 0, c: 2, s: 'firebeast.basic3' };
+    const show = shows({ now, act: claw });
+    expect(show).toEqual({ form: true, act: claw, steady: true, force: null });
+    const pick = chibiClip({ ...input({ now, act: show.act, hurtAt: show.steady ? null : now, hp: 10, maxHp: 100 }), timing: F });
+    expect(pick.clip).toBe('atk3');
+  });
+
+  it('collapses in the form’s cast clip when it ends, unless the hero acts at once', () => {
+    const ended = { id: 'firebeast', at: START - 5, endedAt: NOW };
+    const picks: number[] = [];
+    for (let i = 0; i * 0.05 < FORM_COLLAPSE - 0.01; i++) {
+      const show = shows({ now: NOW + i * 0.05, seen: ended });
+      expect(show.form).toBe(true);
+      expect(show.force?.clip).toBe('cast');
+      picks.push(show.force!.frame);
+    }
+    expect(picks[0]).toBe(0);
+    expect(picks.at(-1)).toBe(F.cast.frames - 1);
+    // Then the hero is back as ever.
+    expect(shows({ now: NOW + FORM_COLLAPSE + 0.01, seen: ended })).toEqual({ form: false, act: null, steady: false, force: null });
+    // An attack the moment it ends brings the hero straight back.
+    const slash = { at: NOW + 0.05, k: 'atk' as const, d: 0, c: 0 };
+    expect(shows({ now: NOW + 0.1, seen: ended, act: slash })).toEqual({ form: false, act: slash, steady: false, force: null });
+  });
+
+  it('keeps the hero’s own look until the form’s chibi is painted, and drops it when knocked out', () => {
+    const act = { at: START - 0.001, k: 'sk' as const, d: 0, s: 'firebeast' };
+    expect(shows({ form: null, act })).toEqual({ form: false, act, steady: true, force: null });
+    expect(shows({ form: null, now: START + 3, act })).toEqual({ form: false, act, steady: true, force: null });
+    expect(shows({ form: null, seen: { id: 'firebeast', at: START - 5, endedAt: NOW } })).toEqual({ form: false, act: null, steady: false, force: null });
+    expect(shows({ down: true })).toEqual({ form: false, act: null, steady: false, force: null });
+    expect(formShow({ now: NOW, seen: null, act, down: false, hero: T, form: F, emerge: 0.8 })).toEqual({ form: false, act, steady: false, force: null });
   });
 });

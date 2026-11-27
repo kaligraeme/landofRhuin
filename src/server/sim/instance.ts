@@ -13,7 +13,7 @@ import type { DutyState, EntitySnap, EntitySpawn, GameEvent, GateInfo, InstanceS
 import { Rng } from '../../shared/rng.js';
 import { updateBot } from '../ai/botAI.js';
 import { generateDungeon, insideRoom, type DungeonPlan, type GatePlan, type RoomPlan } from '../dungeonGen.js';
-import { applyDamage, applyHeal, applyStatus, basicAttack, counterBurst, dodge, finishCast, getStatus, isStunned, speedOf, useSkill } from './combat.js';
+import { applyDamage, applyHeal, applyStatus, basicAttack, clearStatuses, counterBurst, dodge, finishCast, formEnded, getStatus, isStunned, speedOf, useSkill } from './combat.js';
 import { stepProjectiles } from './projectiles.js';
 import { updateMonster } from './monsterAI.js';
 import { aggroTable, fadeAggro } from './aggro.js';
@@ -336,7 +336,7 @@ export class Instance {
       p.cast = null;
       p.attacking = false;
       p.roll = null;
-      p.statuses = [];
+      clearStatuses(this, p);
       p.stats.deaths++;
       this.log(`${p.name} has fallen${src ? ` to ${src.name}` : ''}.`, 'warn');
       for (const m of this.monsters.values()) m.enmity.delete(p.id);
@@ -361,7 +361,7 @@ export class Instance {
     if (!p.dead) return;
     p.dead = false;
     p.hp = Math.max(1, Math.round(p.maxHp * hpFrac));
-    p.statuses = [];
+    clearStatuses(this, p);
     this.applyPassives(p);
     this.emit({ e: 'raise', i: p.id });
     this.log(`${p.name} is back on their feet.`, 'good');
@@ -552,6 +552,7 @@ export class Instance {
     const ending = a.statuses.filter((s) => s.expires <= this.now);
     a.statuses = a.statuses.filter((s) => s.expires > this.now);
     if (a.team === 'party' && !a.dead) for (const s of ending) if (STATUSES[s.id]?.counter && s.value > 0) counterBurst(this, a as Player, s);
+    for (const s of ending) if (STATUSES[s.id]?.form) formEnded(this, a, s.id);
     if (a.dead || !dotTick) return;
     for (const s of [...a.statuses]) {
       const def = STATUSES[s.id];
@@ -776,7 +777,7 @@ export class Instance {
       p.dead = false;
       p.hp = p.maxHp;
       p.mp = p.maxMp;
-      p.statuses = [];
+      clearStatuses(this, p);
       p.cast = null;
       p.attacking = false;
       p.roll = null;

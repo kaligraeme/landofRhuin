@@ -124,3 +124,74 @@ export function chibiClip(input: ChibiInput): ChibiPick {
   if (input.fighting) return { clip: 'battle', frame: looped(T.battle, now, input.id) };
   return { clip: 'idle', frame: looped(T.idle, now, input.id) };
 }
+
+// ── Forms ────────────────────────────────────────────────────────────────────────────────────
+
+/** A hero's form (the Firebeast) as the client saw it: when it began, and when it ended (null while it lasts). */
+export interface FormSeen {
+  id: string;
+  at: number;
+  endedAt: number | null;
+}
+
+/** Seconds a form takes to collapse back into the hero when it ends. */
+export const FORM_COLLAPSE = 0.45;
+
+export interface FormShowInput {
+  now: number;
+  seen: FormSeen | null;
+  /** The hero's latest attack or skill. */
+  act: ChibiAct | null;
+  down: boolean;
+  /** The hero's clip timing, and the form's (null until the form's chibi is painted). */
+  hero: Readonly<Record<ChibiClip, ClipTiming>>;
+  form: Readonly<Record<ChibiClip, ClipTiming>> | null;
+  /**
+   * Seconds the form takes to take shape (FormDef.emerge): flames engulf the hero in the first
+   * half (the hero's `ult`), the form emerges in the second (the form's `ult`).
+   */
+  emerge: number;
+}
+
+/** How a hero who has taken a form shows now. */
+export interface FormShow {
+  /** Draw the form's sprite, else the hero's own. */
+  form: boolean;
+  /** The act that drives the clip: once the form shows, only its own blows (acts from before it began are dropped). */
+  act: ChibiAct | null;
+  /** The form never flinches, kneels or falls. */
+  steady: boolean;
+  /** A clip of the transformation, played through in its moment, over whatever else applies. */
+  force: ChibiPick | null;
+}
+
+/** The frame `k` (0 to 1) of the way through a clip played in one go. */
+function through(t: ClipTiming, k: number): number {
+  return Math.min(lastFrame(t), Math.max(0, Math.floor(k * t.frames)));
+}
+
+/**
+ * Which sprite and clip a hero who takes forms shows. When the form begins, the hero's `ult` clip
+ * plays (flames engulf them), then the form's `ult` once (it emerges); then the form fights with
+ * its own clips (stances, running and its attack chain, never a flinch, kneel or fall). When it
+ * ends, the form's `cast` clip plays (it collapses into flame) and the hero returns, at once if
+ * they act. Until the form's chibi is painted, the hero keeps their own look throughout.
+ */
+export function formShow(input: FormShowInput): FormShow {
+  const { now, seen, act, down, hero, form, emerge } = input;
+  const plain: FormShow = { form: false, act, steady: false, force: null };
+  if (!seen || down) return plain;
+  if (seen.endedAt === null) {
+    if (!form) return { ...plain, steady: true };
+    const since = now - seen.at;
+    const half = Math.max(0.05, emerge / 2);
+    if (since < half) return { form: false, act: null, steady: true, force: { clip: 'ult', frame: through(hero.ult, since / half) } };
+    if (since < half * 2) return { form: true, act: null, steady: true, force: { clip: 'ult', frame: through(form.ult, (since - half) / half) } };
+    return { form: true, act: act && act.at > seen.at ? act : null, steady: true, force: null };
+  }
+  const after = now - seen.endedAt;
+  if (form && after >= 0 && after < FORM_COLLAPSE && !(act && act.at > seen.endedAt)) {
+    return { form: true, act: null, steady: true, force: { clip: 'cast', frame: through(form.cast, after / FORM_COLLAPSE) } };
+  }
+  return plain;
+}

@@ -4,7 +4,7 @@
  * and HUD every frame.
  */
 import { PLAYER_RADIUS, ROLL_DISTANCE, ROLL_STAMINA, ROLL_TIME } from '../../shared/constants.js';
-import { SKILLS } from '../../shared/content/classes.js';
+import { FORMS, SKILLS } from '../../shared/content/classes.js';
 import { STATUSES } from '../../shared/content/statuses.js';
 import { angleTo, dist } from '../../shared/geometry.js';
 import { findPath, moveCircle } from '../../shared/map.js';
@@ -195,6 +195,15 @@ export class Game {
       case 'act':
         w.acts.set(ev.i, { at: performance.now() / 1000, k: ev.k, d: ev.d ?? 0, s: ev.s, c: ev.c });
         break;
+      case 'status': {
+        // A form (the Firebeast) takes shape or collapses in a burst of fire and embers.
+        if (!STATUSES[ev.id]?.form || !w.formEvent(ev.i, ev.id, ev.gain, now)) break;
+        const p = pos(ev.i);
+        if (p) this.fx.add({ kind: 'flame', x: p.x, y: p.y, x2: 0, y2: 0, follow: ev.i, hue: 18, r: ev.gain ? 2.6 : 1.8, life: ev.gain ? 1.1 : 0.8 });
+        if (ev.gain && p && dist(p, this.local) < 12) this.renderer.shake(ev.i === w.meId ? 0.7 : 0.35);
+        if (ev.i === w.meId && ev.gain) this.hud.error(`You are the ${FORMS[ev.id]?.name ?? 'beast'}!`);
+        break;
+      }
       case 'gate':
         w.setGate(ev.id, ev.open);
         break;
@@ -260,6 +269,10 @@ export class Game {
         break;
       case 'evade':
         if (t) this.fx.text('Evade', t.x, t.y, '#bfe6ff', 12);
+        break;
+      case 'immune':
+        // A blow on a hero no monster can hurt (the Firebeast).
+        if (t) this.fx.text('Immune', t.x, t.y, '#ffb35c', ev.t === this.world.meId ? 14 : 11);
         break;
       case 'stagger':
         if (t) {
@@ -445,6 +458,9 @@ export class Game {
     const snap = this.world.meEntity()?.snap;
     const me = this.world.me;
     if (!snap || !me || snap.d || this.roll) return;
+    // A form cannot roll (the server refuses it too).
+    const form = this.world.formOf(this.world.meId);
+    if (form) return this.hud.error(FORMS[form]?.refusal ?? 'You cannot roll now');
     if (me.stamina < ROLL_STAMINA) return this.hud.error('Not enough stamina');
     if ((snap.s ?? []).some(([id]) => STATUSES[id]?.stun)) return;
     let { dx, dy } = this.moveInput();

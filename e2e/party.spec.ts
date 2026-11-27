@@ -117,3 +117,58 @@ test('two players form a party, queue with AI fill and clear the first room toge
   await expect(alice.locator('.duty-obj .obj.done').first()).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('a party with an AI Flame Warden clears the first room', async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enter(page, 'Cara');
+
+  // The Duelist offers three heroes; the Flame Warden's skills include the Firebeast and its claws.
+  await page.locator('.role-card[data-role="melee"]').click();
+  await expect(page.locator('.hero-card')).toHaveText([/^Dragoon · Lance/, /^Blademaster · Twin Blades/, /^Flame Warden · Ember Blade/]);
+  await page.locator('.hero-card[data-hero="flameWarden"]').click();
+  await expect(page.locator('.hero-card.selected')).toContainText('Flame Warden · Ember Blade');
+  await expect(page.locator('.skill-list .sname')).toContainText(['Ember Slash chain', 'Blazing Crescent', 'Flashfire', 'Inferno Burst', 'Kindle', 'Firebeast', 'Firebeast Claw chain', 'Bloodrush', 'Second Wind']);
+  await expect(page.locator('.hero-card[data-hero="flameWarden"] img')).toHaveAttribute('src', /^data:image\/png/);
+
+  // Cara plays the Ranger; the server sends the AI Duelist as the Flame Warden.
+  await page.locator('.role-card[data-role="ranger"]').click();
+  await page.locator('.fill-options button', { hasText: 'Now' }).click();
+  await page.getByRole('button', { name: 'Join Queue' }).click();
+  await expect(page.locator('.modal .ready-slot')).toHaveCount(4);
+  await expect(page.locator('.modal .ready-slot').nth(3)).toContainText('Flame Warden · Ember Blade');
+  await page.getByRole('button', { name: 'Commence' }).click();
+  await expect(page.locator('canvas.world')).toBeVisible();
+  await expect.poll(async () => (await world(page))?.phase, { timeout: 10_000 }).toBe('running');
+
+  const wardenId = await page.evaluate(() => {
+    const { game } = (window as unknown as { rhuin: { game: { world: { ents: Map<number, { id: number; spawn: { hero?: string; bot?: boolean } }> } } } }).rhuin;
+    return [...game.world.ents.values()].find(({ spawn }) => spawn.hero === 'flameWarden' && spawn.bot)?.id ?? null;
+  });
+  expect(wardenId).not.toBeNull();
+
+  // Follow the AI tank in, hold the attack button and use skills until the first room falls.
+  await page.keyboard.press('t');
+  await page.mouse.move(720, 300);
+  await page.mouse.down();
+  const seen = () =>
+    page.evaluate((id) => {
+      const { game } = (window as unknown as { rhuin: { game: { world: { forms: Map<number, unknown> }; renderer: { chibiShown: Map<number, unknown> } } } }).rhuin;
+      return { drawn: game.renderer.chibiShown.has(id), transformed: game.world.forms.has(id) };
+    }, wardenId as number);
+  const deadline = Date.now() + 120_000;
+  let cleared = 0;
+  let transformed = false;
+  while (Date.now() < deadline && cleared < 2) {
+    for (const k of ['q', 'e', 'r']) await page.keyboard.press(k);
+    await page.waitForTimeout(300);
+    cleared = (await world(page))?.cleared ?? 0;
+    transformed ||= (await seen()).transformed;
+  }
+  expect(cleared).toBeGreaterThanOrEqual(2);
+  // He is drawn as a chibi hero once its frames are painted: his own, or a stand-in until his are.
+  await expect.poll(async () => (await seen()).drawn, { timeout: 30_000 }).toBe(true);
+  test.info().annotations.push({ type: 'firebeast', description: transformed ? 'The AI Flame Warden took the Firebeast form.' : 'The first room fell before the Firebeast was worth it.' });
+  expect(errors).toEqual([]);
+});

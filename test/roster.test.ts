@@ -1,10 +1,15 @@
 /**
- * The roster: each role offers its heroes (any number, the default first), each hero carries one
- * weapon of their own, and nothing offered to players frames the choice as a man or a woman.
+ * The roster: each role offers its heroes (any number, the default first: the Duelist has three),
+ * each hero carries one weapon of their own and is drawn with artwork (their own, or a stand-in's
+ * until it is painted), and nothing offered to players frames the choice as a man or a woman.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { heroArtId, heroOfArt } from '../src/client/art/heroArt.js';
+import { CHIBI_ONLY, heroArtId, heroOfArt, isPainted } from '../src/client/art/heroArt.js';
+import { hasCreatureArt } from '../src/client/art/creature-art.js';
+import { CHIBI_HEROES } from '../src/client/art/heroes/chibi/index.js';
+import { HERO_DESIGNS } from '../src/client/art/heroes/designs.js';
+import { FORM_ART, formHero, heroForms, heroLook, standingIn } from '../src/client/art/heroLook.js';
 import { auraFor } from '../src/client/art/rigs.js';
 import { Instance, seatHero, type Seat } from '../src/server/sim/instance.js';
 import { defaultHero, HERO_ORDER, HEROES, heroFor, isHero, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId } from '../src/shared/content/classes.js';
@@ -17,7 +22,7 @@ describe('the roster', () => {
       ['darkKnight', 'guardian'],
       ['sage', 'spellblade'],
       ['arbalest', 'bowmaster'],
-      ['dragoon', 'blademaster'],
+      ['dragoon', 'blademaster', 'flameWarden'],
     ]);
     expect(ROLE_ORDER.map(defaultHero)).toEqual(['darkKnight', 'sage', 'arbalest', 'dragoon']);
     expect([...HERO_ORDER].sort()).toEqual(Object.keys(HEROES).sort());
@@ -55,6 +60,25 @@ describe('the roster', () => {
     const inst = new Instance('t', [seat('tank', 'sword_shield', 'sage'), seat('mage', 'staff', 'sage'), seat('ranger', 'crossbow'), seat('melee', 'spear', 'blademaster')], { seed: 1, countdown: 0 });
     const spawns = inst.startFor(inst.players[0]!).entities.filter((e) => e.kind === 'player');
     expect(spawns.map((e) => e.hero)).toEqual(['guardian', 'sage', 'arbalest', 'blademaster']);
+  });
+
+  it('draws every hero: with their own artwork once painted, else with a stand-in’s', () => {
+    for (const hero of HERO_ORDER) {
+      const look = heroLook(hero);
+      // Whatever a hero is drawn with exists: a registered chibi, or artwork and a design for the older painter.
+      expect(!!CHIBI_HEROES[look] || (hasCreatureArt(look) && look in HERO_DESIGNS), hero).toBe(true);
+      if (isPainted(hero)) expect(look, hero).toBe(heroArtId(hero));
+    }
+    // The Flame Warden is painted only as a chibi: his own once registered, the Spellblade until then.
+    expect(CHIBI_ONLY).toEqual(['flameWarden']);
+    expect(heroArtId('flameWarden')).toBe('hero-flame-warden');
+    expect(heroLook('flameWarden')).toBe(CHIBI_HEROES['hero-flame-warden'] ? 'hero-flame-warden' : 'hero-spellblade');
+    expect(standingIn('flameWarden')).toBe(!CHIBI_HEROES['hero-flame-warden']);
+    // He can become the Firebeast, drawn with its own chibi once that is registered.
+    expect(heroForms('flameWarden')).toEqual(['firebeast']);
+    expect(heroForms('dragoon')).toEqual([]);
+    expect(FORM_ART.firebeast).toBe('hero-firebeast');
+    expect(formHero('firebeast')).toBe(CHIBI_HEROES['hero-firebeast'] ?? null);
   });
 
   it('names each hero’s artwork after them, and keeps each role’s skill glow', () => {

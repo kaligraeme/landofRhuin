@@ -1,9 +1,10 @@
 /**
- * The eight heroes: how each is dressed and armed. Faces and hair are cut from the hero artwork
+ * The eight heroes the older painter draws (every hero but the chibi-only ones, see heroArt.ts):
+ * how each is dressed and armed. Faces and hair are cut from the hero artwork
  * (`head` gives the crop and the point under the chin that sits on the neck); everything else is
  * painted from these colours and shapes.
  */
-import type { HeroArtId } from '../heroArt.js';
+import type { PaintedArtId } from '../heroArt.js';
 import { hex, ramp, type Ramp, type RGB } from './paint.js';
 import type { Hairdo } from './heads.js';
 import type { WeaponKind } from './weapons.js';
@@ -11,7 +12,7 @@ import type { WeaponKind } from './weapons.js';
 export type Moveset = 'greatsword' | 'swordShield' | 'staff' | 'swordWand' | 'crossbow' | 'longbow' | 'halberd' | 'twinBlades';
 
 export interface HeroDesign {
-  id: HeroArtId;
+  id: PaintedArtId;
   moveset: Moveset;
   weapon: WeaponKind;
   /** The off-hand weapon, if any. */
@@ -57,7 +58,7 @@ const MAGE_VIOLET = hex('#b98cff');
 const RANGER_GREEN = hex('#8fe36f');
 const DUELIST_RED = hex('#ff6f5e');
 
-export const HERO_DESIGNS: Record<HeroArtId, HeroDesign> = {
+export const HERO_DESIGNS: Record<PaintedArtId, HeroDesign> = {
   'hero-dark-knight': {
     id: 'hero-dark-knight',
     moveset: 'greatsword',

@@ -1,6 +1,7 @@
 /**
  * The party's roles depend on each other: monsters hit too hard for anyone but a tank to stand in
- * front of them, and even a tank needs a healer to keep standing.
+ * front of them, and even a tank needs a healer to keep standing. The one exception lasts five
+ * seconds: the Flame Warden's Firebeast, which no monster can hurt.
  */
 import { describe, expect, it } from 'vitest';
 import { taunt } from '../src/server/sim/aggro.js';
@@ -17,13 +18,14 @@ const WEAPON: Record<string, [Seat['role'], string]> = {
   Arbalest: ['ranger', 'crossbow'],
   Dragoon: ['melee', 'spear'],
   Blademaster: ['melee', 'twin_blades'],
+  'Flame Warden': ['melee', 'flame_sword'],
 };
 
 /**
  * Puts a pack on one hero, with everyone else out of the fight, and returns seconds until they fall
  * (or the limit). When the hero is not the tank, the tank is gone, so there is no one to run to.
  */
-function standAgainst(hero: string, pack: MobKind[], opts: { fight: boolean; healer?: boolean; seed?: number; limit?: number }): { fell: number | null; won: boolean } {
+function standAgainst(hero: string, pack: MobKind[], opts: { fight: boolean; healer?: boolean; seed?: number; limit?: number; noUltimate?: boolean }): { fell: number | null; won: boolean } {
   const [role, weapon] = WEAPON[hero] as [Seat['role'], string];
   const others = (['tank', 'mage', 'ranger', 'melee'] as Seat['role'][]).filter((r) => r !== role);
   const seats: Seat[] = [{ ownerId: null, name: hero, role, weapon }, ...others.map((r): Seat => ({ ownerId: null, name: r, role: r, weapon: r === 'tank' ? 'tank_greatsword' : r === 'mage' ? 'staff' : r === 'ranger' ? 'bow' : 'spear' }))];
@@ -31,6 +33,7 @@ function standAgainst(hero: string, pack: MobKind[], opts: { fight: boolean; hea
   inst.tick();
   const me = inst.players[0] as Player;
   me.botControlled = opts.fight;
+  if (opts.noUltimate) me.cooldowns.set(me.hotbar[5] as string, 1e9);
   for (const o of inst.players.slice(1)) {
     // A Staff healer stays to help when asked; everyone else steps out of the fight.
     if (opts.healer && o.role === 'mage') continue;
@@ -69,11 +72,23 @@ describe('teamwork', () => {
     const wave: MobKind[] = ['brute', 'brute', 'skirmisher', 'archer', 'caster'];
     for (const hero of Object.keys(WEAPON).filter((h) => WEAPON[h]![0] !== 'tank')) {
       for (const seed of [1, 2, 3]) {
-        const r = standAgainst(hero, wave, { fight: true, seed, limit: 60 });
+        // The Flame Warden's Firebeast is the exception, below.
+        const r = standAgainst(hero, wave, { fight: true, seed, limit: 60, noUltimate: hero === 'Flame Warden' });
         expect(r.won, `${hero}, seed ${seed}`).toBe(false);
         expect(r.fell, `${hero}, seed ${seed}`).not.toBeNull();
         expect(r.fell!, `${hero}, seed ${seed}`).toBeLessThan(15);
       }
+    }
+  });
+
+  it('the Firebeast carries the Flame Warden through a pack; on cooldown, he falls like any Duelist', () => {
+    for (const seed of [1, 2, 3]) {
+      const beast = standAgainst('Flame Warden', pack, { fight: true, seed, limit: 60 });
+      expect(beast.won, `seed ${seed}`).toBe(true);
+      expect(beast.fell, `seed ${seed}`).toBeNull();
+      const warden = standAgainst('Flame Warden', pack, { fight: true, seed, limit: 60, noUltimate: true });
+      expect(warden.won, `on cooldown, seed ${seed}`).toBe(false);
+      expect(warden.fell, `on cooldown, seed ${seed}`).not.toBeNull();
     }
   });
 

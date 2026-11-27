@@ -166,4 +166,26 @@ describe('lobby', () => {
     // Over 30 runs, the Tank and the Ranger come as either of their heroes.
     expect([...seen].sort()).toEqual(['arbalest', 'bowmaster', 'darkKnight', 'guardian', 'sage']);
   });
+
+  it('sends an AI Duelist as any of the three, or as the heroes the server asks for', () => {
+    const duelists = new Set<HeroId>();
+    for (let run = 0; run < 40; run++) {
+      const lobby = new Lobby();
+      const a = client(lobby, 'Alice');
+      lobby.handle(a.id, { t: 'queue.join', aiFill: 0 }, 0);
+      duelists.add(a.lobby().readyCheck!.slots.find((s) => s.role === 'melee')!.hero);
+    }
+    expect([...duelists].sort()).toEqual(['blademaster', 'dragoon', 'flameWarden']);
+
+    for (let run = 0; run < 5; run++) {
+      const lobby = new Lobby({ companions: ['flameWarden', 'bowmaster'] });
+      const a = client(lobby, 'Alice');
+      lobby.handle(a.id, { t: 'queue.join', aiFill: 0 }, 0);
+      const slots = a.lobby().readyCheck!.slots;
+      expect(slots.find((s) => s.role === 'melee')).toMatchObject({ bot: true, hero: 'flameWarden', weapon: 'flame_sword' });
+      expect(slots.find((s) => s.role === 'ranger')).toMatchObject({ bot: true, hero: 'bowmaster', weapon: 'bow' });
+      // A role with none of the heroes asked for keeps its own rules: the Mage is still the healer.
+      expect(slots.find((s) => s.role === 'mage')).toMatchObject({ hero: 'sage' });
+    }
+  });
 });

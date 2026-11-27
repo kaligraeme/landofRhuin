@@ -1,6 +1,6 @@
 /** The lobby: character (role and hero), party, expedition queue, ready check and chat. */
 import { READY_CHECK_SECONDS } from '../../shared/constants.js';
-import { defaultHero, HEROES, HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId, type RoleId } from '../../shared/content/classes.js';
+import { defaultHero, FORMS, HEROES, HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId, type RoleId } from '../../shared/content/classes.js';
 import type { AiFill, LobbyState } from '../../shared/protocol.js';
 import { clear, fmtTime, h, toast } from '../dom.js';
 import { showHero } from '../art/sprites.js';
@@ -205,14 +205,21 @@ export class LobbyView {
       );
       const weapon = WEAPONS[state.you.weapon];
       const ids = weapon ? [weapon.basic.hits[0] as string, ...weapon.skills, ...role.roleSkills] : [];
+      const chainName = (sid: string): string => `${SKILLS[sid]?.name.replace(/ I$/, '') ?? sid} chain`;
+      const row = (sid: string, name: string, kind: string): HTMLElement => withTooltip(h('div', { class: 'skill-row' }, h('img', { src: skillIcon(sid), alt: '' }), h('div', null, h('div', { class: 'sname' }, name), h('div', { class: 'skind' }, kind))), () => skillTooltip(sid));
       clear(
         this.skillsEl,
-        ids.map((sid, i) => {
+        ids.flatMap((sid, i) => {
           const key = HOTBAR_KEYS[i] ?? '';
           const kind = i === 0 ? 'Basic attack · hold LMB' : i < 6 ? `${HEROES[state.you.hero].name} · ${key}` : `Role skill · ${key}`;
-          const name = i === 0 ? `${SKILLS[sid]?.name.replace(/ I$/, '') ?? sid} chain` : (SKILLS[sid]?.name ?? sid);
-          const row = h('div', { class: 'skill-row' }, h('img', { src: skillIcon(sid), alt: '' }), h('div', null, h('div', { class: 'sname' }, name), h('div', { class: 'skind' }, kind)));
-          return withTooltip(row, () => skillTooltip(sid));
+          const rows = [row(sid, i === 0 ? chainName(sid) : (SKILLS[sid]?.name ?? sid), kind)];
+          // A skill that transforms you (the Firebeast) shows the form's own attack after it.
+          for (const e of SKILLS[sid]?.effects ?? []) {
+            const form = e.kind === 'status' ? FORMS[e.status] : undefined;
+            const blow = form?.basic.hits[0];
+            if (form && blow) rows.push(row(blow, chainName(blow), `As the ${form.name} · hold LMB`));
+          }
+          return rows;
         }),
       );
     }

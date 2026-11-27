@@ -55,6 +55,11 @@ interface RunningInstance {
 
 export interface LobbyOptions {
   instance?: InstanceOptions;
+  /**
+   * AI companions play these heroes where their role has one of them (to try a hero alongside
+   * you, and for browser tests); otherwise one of the role's heroes at random.
+   */
+  companions?: HeroId[];
   /** How long a disconnected player is kept for reconnecting (ms). */
   reconnectGraceMs?: number;
 }
@@ -337,10 +342,12 @@ export class Lobby {
         const name = BOT_NAMES.filter((n) => !usedNames.has(n))[Math.floor(Math.random() * 8)] ?? 'Companion';
         usedNames.add(name);
         // An AI companion plays one of the role's heroes at random, but always a healer where the
-        // role has one (the Mage's Sage), so an AI-filled party has one.
+        // role has one (the Mage's Sage), so an AI-filled party has one; heroes asked for in the
+        // options come first.
         const heroes = ROLES[role].heroes;
+        const asked = (this.opts.companions ?? []).filter((h) => heroes.includes(h));
         const healers = heroes.filter((h) => WEAPONS[weaponFor(h)]?.healer);
-        const pool = healers.length ? healers : heroes;
+        const pool = asked.length ? asked : healers.length ? healers : heroes;
         const hero = pool[Math.floor(Math.random() * pool.length)] as HeroId;
         seats.push({ ownerId: null, name, role, hero, weapon: weaponFor(hero) });
       }
