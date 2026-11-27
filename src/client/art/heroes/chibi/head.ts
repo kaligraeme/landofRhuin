@@ -20,7 +20,7 @@ import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import { type BodyDesign, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
 import { FLIP_FROM, hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
-import { flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
+import { flat, type Hit, type Mat, type Part, shade, toneLight, toneOf } from './raster.js';
 import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, sub3, TO_CAMERA, type V3 } from './rig.js';
 
 /** Shape ids inside the head's part. */
@@ -232,8 +232,10 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     if (fan) {
       const k = clumpAt(d, fan, h.p);
       if (fan.spec.comb) {
-        // Combed: the tone the light gives, each clump parted from the next by a dark line, with a
-        // streak a tone lighter along its lit side where the hair faces the light.
+        // Combed: the tone the light gives (as the raster would shade the material, its bias and
+        // gain included; the underside stays in shadow), each clump parted from the next by a dark
+        // line, with a streak a tone lighter along its lit side where the hair faces the light.
+        if (h.n[1] >= -0.5) tone = toneOf(l * (hair.gain ?? 1) + (hair.bias ?? 0));
         if (k >= 0 && k < COMB_LINE) tone = 3;
         else if (k >= 0 && k < COMB_STREAK && l > 0.05) tone = Math.max(0, tone - 1);
       } else if (k !== -1) tone = Math.min(3, banded(k) + (l < -0.2 ? 1 : 0) + (h.n[1] < -0.55 ? 1 : 0));
@@ -262,15 +264,16 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     long.nape.forEach((t, i) => paintTress(ctx, part, d, hero(d.shell.c), napeStrand(ctx, d, fr, t, i, over), hair, NAPE0 + i, long.napeDeep ?? 1, NAPE_SHADE));
   }
 
-  // The fringe casts a shadow on the brow.
+  // The fringe casts a shadow on the brow, `hairline.shadow` pixels deep.
   const cx = Math.round(ctx.proj(hero(d.skull.c))[0]);
   const cy = Math.round(ctx.proj(hero(d.skull.c))[1]);
+  const deep = d.hairline.shadow ?? 2;
   for (let y = cy - 16; y <= cy + 16; y++) {
     for (let x = cx - 16; x <= cx + 16; x++) {
       if (part.idAt(x, y) !== SKIN) continue;
-      const above = part.idAt(x, y - 1);
-      const above2 = part.idAt(x, y - 2);
-      if (above >= SHELL || above2 >= SHELL) part.darken(x, y, 0.45);
+      let under = false;
+      for (let k = 1; k <= deep && !under; k++) under = part.idAt(x, y - k) >= SHELL;
+      if (under) part.darken(x, y, 0.45);
     }
   }
 
@@ -390,7 +393,7 @@ function clumpAt(d: HeadDesign, fan: Fan, p: V3): number {
 const CROWN = -2;
 /** A combed whorl's clumps: the share of each that is its parting line, and where its lit streak ends. */
 const COMB_LINE = 0.08;
-const COMB_STREAK = 0.34;
+const COMB_STREAK = 0.24;
 
 /**
  * The tone (0 highlight to 3 shadow) of a fan's clump at a place across it (`clumpAt`): a parting
