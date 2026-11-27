@@ -180,15 +180,19 @@ export const warmMotes =
 
 /**
  * Powder smoke round the crossbow's nose, rising and spreading as `k` runs from 0 (just fired: a
- * tight grey puff) to 1 (a thin haze drifting up and back); `seed` varies the puffs.
+ * tight grey puff) to 1 (a thin haze drifting up and back); `seed` varies the puffs. Shooting at
+ * the viewer the nose is under his chin, so there the smoke drifts out to his right beside the
+ * prod and rises less, rather than climbing up over his face.
  */
 export const smoke =
   (k: number, seed = 0, strength = 1) =>
   (x: FxContext): void => {
     const { c, hash } = x;
+    const front = atViewer(x, x.tip, x.dir);
     for (let i = 0; i < 5; i++) {
       const along = 2 + hash(i, 41 + seed) * 6;
-      const p3 = add3(add3(x.tip, x.dir, along - 6 - k * 8), [0, 1, 0], 1 + k * (6 + hash(i, 42 + seed) * 8));
+      const up = 1 + k * (6 + hash(i, 42 + seed) * 8) * (front ? 0.45 : 1);
+      const p3 = add3(add3(add3(x.tip, x.dir, along - 6 - k * 8), [0, 1, 0], up), [0, 0, 1], front ? 7 + k * 5 + hash(i, 45 + seed) * 3 : 0);
       const p = x.proj(p3);
       const r = 2 + k * 3 + hash(i, 43 + seed) * 1.5;
       const a = strength * (0.5 - k * 0.32);

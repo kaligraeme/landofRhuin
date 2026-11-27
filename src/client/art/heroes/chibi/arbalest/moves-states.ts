@@ -120,9 +120,10 @@ const ko: ChibiPose[] = [
 // ── Victory ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * The last pose, held: the crossbow propped on his right shoulder, rolled so its prod stands up
- * behind his head as a T rather than wrapping round it side on; goggles down (the pose's `hood`
- * moves them: see gear.ts `goggles`), a toothy grin, weight on one hip.
+ * The last pose, held: the crossbow propped on his right shoulder, its stock rising over the
+ * shoulder and its prod up behind it as an arc, clear of his head rather than wrapping round it
+ * side on; goggles down (the pose's `hood` moves them: see gear.ts `goggles`), a toothy grin,
+ * weight on one hip.
  */
 const PROUD: ChibiPose = pose(AT_EASE, {
   y: 1.5,
@@ -135,8 +136,8 @@ const PROUD: ChibiPose = pose(AT_EASE, {
   footB: [-6, 0, 6],
   handF: [3, 4, 8.5],
   handB: [2, 14, 11],
-  weapon: -28,
-  roll: 60,
+  weapon: -40,
+  roll: 30,
   yaw: -24,
   face: 'smirk',
   hood: 'down',
