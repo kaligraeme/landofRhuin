@@ -7,11 +7,15 @@
  *               tip in her left hand, her right hand pressed to her side, head hung; heaving,
  *               a bead of sweat
  *   ko       6  (hold) a stagger, down to her knees and over onto her back, turning so she lies
- *               across the screen in every view; the hood falls back from her hair and the bow
- *               lies beside her
- *   victory  8  (hold) the arrow eased off the string and spun in her fingers, slid back into the
- *               quiver over her shoulder, then the hood pushed back from her hair: a smile and a
- *               wink, a hand on her hip, the cape stirring in the breeze
+ *               across the screen in every view on her cape spread out under her; the hood
+ *               slides back from her hair (frame 2) and the bow lies beside her
+ *   victory  8  (hold) the arrow eased off the string and twirled in her fingers ahead of her
+ *               chest, slid back into the quiver over her shoulder, then the hood pushed back
+ *               from her hair (it slides back over frame 5 and lies in a roll round her neck): a
+ *               smile and a wink, a hand on her hip, the cape stirring in the breeze
+ *
+ * Frame 2 of the KO and frame 5 of the victory are painted with the hood sliding back (hero.ts
+ * FRAME_VARIANTS, design.ts `HOOD_SLIDING`): the pose format's hood is only up or down.
  *
  * The sweat and the glint are `fx.extra` painters defined beside them. The flinch ends most of the
  * way back into the battle stance (`settle`), and the victory starts from it (`fromReady`).

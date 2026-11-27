@@ -151,25 +151,43 @@ function tipBack(fr: Frame3, deg: number, pivot: V3): Frame3 {
 const SLIDE = 58;
 const SLIDE_PIVOT: V3 = [-4, -6, 0];
 
+/** A point in her head's own axes, in the tipped hood's axes (`toTipped`), and back (`fromTipped`). */
+function toTipped(p: V3): V3 {
+  const c = Math.cos(rad(SLIDE));
+  const s = Math.sin(rad(SLIDE));
+  const x = p[0] - SLIDE_PIVOT[0];
+  const y = p[1] - SLIDE_PIVOT[1];
+  return [SLIDE_PIVOT[0] + c * x + s * y, SLIDE_PIVOT[1] - s * x + c * y, p[2]];
+}
+function fromTipped(q: V3): V3 {
+  const c = Math.cos(rad(SLIDE));
+  const s = Math.sin(rad(SLIDE));
+  const x = q[0] - SLIDE_PIVOT[0];
+  const y = q[1] - SLIDE_PIVOT[1];
+  return [SLIDE_PIVOT[0] + c * x - s * y, SLIDE_PIVOT[1] + s * x + c * y, q[2]];
+}
+
 /**
  * The hood sliding back off her hair, the one frame between worn up and worn down (in the KO and
  * the victory): the hood worn up, tipped back about the back of her skull, so her fringe and the
- * front of her crown show and its opening, rimmed in the lighter band, faces up. It covers the
- * hair it still lies over (where hair would poke through it).
+ * front of her crown show and its opening, rimmed in the lighter band, faces up; whatever of it
+ * would still wrap round in front of her face is left open. It covers the hair it still lies over
+ * (all that grows from the back of her head, so the tied tail does not poke through it).
  */
 const HOOD_SLIDING: HeadPiece = {
-  blobs: (ctx, head) => HOOD_UP.blobs?.({ ...ctx, pose: { ...ctx.pose, hood: 'up' } }, tipBack(head, SLIDE, SLIDE_PIVOT)) ?? [],
+  blobs: (ctx, head) =>
+    (HOOD_UP.blobs?.({ ...ctx, pose: { ...ctx.pose, hood: 'up' } }, tipBack(head, SLIDE, SLIDE_PIVOT)) ?? []).map((g) => ({
+      ...g,
+      shade: (h: Hit) => {
+        const o = fromTipped(h.p);
+        return o[0] > 1.5 && o[1] < 6.5 ? null : g.shade(h);
+      },
+    })),
   covers: () => {
-    const c = Math.cos(rad(-SLIDE));
-    const s = Math.sin(rad(-SLIDE));
-    const R = [SHELL.r[0] + 1.6, SHELL.r[1] + 1.6, SHELL.r[2] + 1.6];
+    const R = [SHELL.r[0] + 1.6, SHELL.r[1] + 1.6, SHELL.r[2] + 1.6] as const;
     return (p: V3) => {
-      // The point in the tipped hood's own axes: turned the other way about the pivot.
-      const x = p[0] - SLIDE_PIVOT[0];
-      const y = p[1] - SLIDE_PIVOT[1];
-      const q: V3 = [SLIDE_PIVOT[0] + x * c + y * s, SLIDE_PIVOT[1] - x * s + y * c, p[2]];
-      const d = ((q[0] - SHELL.c[0]) / (R[0] as number)) ** 2 + ((q[1] - SHELL.c[1]) / (R[1] as number)) ** 2 + ((q[2] - SHELL.c[2]) / (R[2] as number)) ** 2;
-      // Everything growing from the back of her head is still under it (the tied tail too).
+      const q = toTipped(p);
+      const d = ((q[0] - SHELL.c[0]) / R[0]) ** 2 + ((q[1] - SHELL.c[1]) / R[1]) ** 2 + ((q[2] - SHELL.c[2]) / R[2]) ** 2;
       return p[0] < -1 || (d < 0.92 && q[0] < 0);
     };
   },
@@ -537,7 +555,7 @@ const QUIVER_SPEC = {
   r: [2.6, 2.1] as const,
   mat: QUIVER,
   band: OLD_BRASS,
-  arrows: { n: 5, out: 9.5, shaft: flat(hex('#d8b080')), fletch: FLETCH, len: 4.5, spread: 2.2 },
+  arrows: { n: 5, out: 11, shaft: flat(hex('#d8b080')), fletch: FLETCH, len: 4.5, spread: 3.6 },
   strap: { mat: BELT, side: 1 as const, w: 1, over: { chest: BODY.chest, hips: BODY.hips } },
 };
 const QUIVER_BASE = quiver(QUIVER_SPEC);

@@ -11,8 +11,9 @@
  *   q        9  (2 wind-up) Volley: leaning back, the bow tilted high, three arrows loosed at the
  *               sky one after another, each a little steeper, their streaks climbing out of the
  *               frame; the game rains them on her aim
- *   e        7  (2 wind-up) Snare Trap: a crouch, the coiled snare unhooked from her belt and
- *               swung back, then tossed underarm in a long, low arc toward her aim
+ *   e        7  (2 wind-up) Snare Trap: a deep crouch, the coiled snare unhooked from her belt
+ *               and swung back, then tossed underarm in an arc up and on toward her aim, a
+ *               little out to her right so it clears her outline in every view
  *   r        8  (1 wind-up) Fan of Arrows: five arrows on the string, the bow canted flat; loosed
  *               together in a level fan of five streaks
  *   ult     12  (3 wind-up) Rain of Ruin: a crouch gathering violet-black power, a leap, the dark
@@ -177,13 +178,14 @@ const special: ChibiPose[] = [
 // ── Volley ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Leaning back, the bow raised ahead of her brow and laid back nearly square to a steep shot, its
- * upper limb canted toward her right (the viewer's side, side on) so it passes over the top front
- * of her hood rather than behind it, and clears the hood above her right shoulder from behind; an
- * arrow drawn to her cheek. `k` (0 to 2) raises the bow hand for each steeper shot.
+ * Leaning back, the bow raised ahead of her brow (out to her left, so front on her fist is clear
+ * of her face) and laid back nearly square to a steep shot, its upper limb canted toward her right
+ * (the viewer's side, side on) so it passes over the top front of her hood rather than behind it,
+ * and clears the hood above her right shoulder from behind; an arrow drawn to her cheek. `k` (0 to
+ * 2) raises the bow hand for each steeper shot.
  */
 const sky = (k: number, over: Partial<ChibiPose> = {}): ChibiPose =>
-  pose(FULL_DRAW, { y: 4, lean: -6, twist: 16, head: -6, look: -6, footF: [9, 0, 5.4], footB: [-10, 0, 5], handF: [2, 0.5, 2], elbowF: [-1, 0.2, 0.7], handB: [10 - k, -14 - k, 4], weaponB: -30 - 3 * k, rollB: -30, yawB: 0, draw: 1, nock: true, wind: 0.3, lift: 0.2, ...over });
+  pose(FULL_DRAW, { y: 4, lean: -6, twist: 16, head: -6, look: -6, footF: [9, 0, 5.4], footB: [-10, 0, 5], handF: [2, 0.5, 2], elbowF: [-1, 0.2, 0.7], handB: [10 - k, -14 - k, 11], weaponB: -30 - 3 * k, rollB: -30, yawB: 0, draw: 1, nock: true, wind: 0.3, lift: 0.2, ...over });
 /** Loosed: the fingers open where they drew, the string snapped forward, the bow held where it was. */
 const skyLoose = (k: number, phase: number): ChibiPose => sky(k, { handF: [0.6, 2.4, 3.2], draw: 0, nock: false, wind: 0.45, lift: 0.3, phase, face: 'shout' });
 const skyDraw = (k: number, phase: number): ChibiPose => sky(k, { draw: 0.9, phase });
@@ -210,9 +212,16 @@ const volley =
     const d = skyDir(x);
     const at = add3(x.rig.offhand.o, d, x.cam.view === 'side' ? 3 : 18);
     const side = norm3(cross3(d, [0, 0, 1]));
-    for (const f of fan) trail(x, at, swing(d, side, f.deg), f.k, { len: f.len });
+    for (const f of fan) trail(x, at, swing(d, side, f.deg), f.k, { len: f.len * offSide(x) });
     if (flashK > 0) flash(x, at, d, flashK);
   };
+/**
+ * How long a streak climbing at the sky is drawn in this view: toward and away from the viewer
+ * it climbs across the picture (where side on it runs mostly up and ahead), so it is drawn
+ * shorter there to stay inside the frame.
+ */
+const offSide = (x: FxContext): number => (x.cam.view === 'side' ? 1 : 0.62);
+
 /** A release: three streaks fanned a little, the middle one brightest. */
 const RELEASE = (k: number): { deg: number; k: number; len: number }[] => [
   { deg: 0, k, len: 66 },
@@ -317,11 +326,11 @@ const r: ChibiPose[] = [
 // ── Rain of Ruin ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * The dark arrow drawn steeply up at the sky, the bow raised over her head as for Volley (the
- * Rain of Ruin design sorts it against her hood the same way), its upper limb canted toward the
- * viewer over the top front of the hood.
+ * The dark arrow drawn steeply up at the sky, the bow raised over her head and out to her left as
+ * for Volley (the Rain of Ruin design sorts it against her hood the same way), its upper limb
+ * canted toward the viewer over the top front of the hood.
  */
-const UP_DRAW = pose(FULL_DRAW, { lean: -8, twist: 16, head: -8, look: -4, handF: [2, 0.5, 0], elbowF: [-1, 0.2, 0.7], handB: [10, -15, 4], weaponB: -28, rollB: -30, yawB: 0, draw: 1, nock: true, face: 'grit' });
+const UP_DRAW = pose(FULL_DRAW, { lean: -8, twist: 16, head: -8, look: -4, handF: [2, 0.5, 0], elbowF: [-1, 0.2, 0.7], handB: [10, -15, 11], weaponB: -28, rollB: -30, yawB: 0, draw: 1, nock: true, face: 'grit' });
 const UP_LOOSE = pose(UP_DRAW, { handF: [0.8, 3, 0.4], elbowF: [-1, 0.6, 0.8], draw: 0, nock: false, face: 'shout' });
 
 /** The ultimate's colours: a deep violet rim fading to black-violet, a violet flare, a green-white heart and green sparks. */
@@ -404,7 +413,7 @@ const darkStreak =
     const at = from ? from(x) : upFrom(x);
     const d = dir ?? upDir(x);
     const A = x.proj(at);
-    const B = x.proj(add3(at, d, len));
+    const B = x.proj(add3(at, d, len * offSide(x)));
     const L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
     const ux = (B[0] - A[0]) / L;
     const uy = (B[1] - A[1]) / L;
