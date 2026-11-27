@@ -37,9 +37,9 @@ function handOnGrip(p: ChibiPose): ChibiPose {
 const hurt: ChibiPose[] = [
   // The blow: thrown back and sideways, head snapped back, the arms flung loose, the coat tails
   // whipped forward past his legs.
-  pose(S, { x: -4, y: 5, lean: -16, twist: -10, tilt: -10, head: -16, look: -10, footF: [13, 0, 6], footB: [-10, -2, 5.5], handF: [2, 16, 9], handB: [-4, 8, 14], weapon: -160, roll: 10, yaw: -30, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
+  pose(S, { x: -4, y: 5, lean: -16, twist: -10, tilt: -10, head: -16, look: -10, footF: [13, 0, 6], footB: [-10, -2, 5.5], handF: [2, 15, 9], handB: [-4, 8, 14], weapon: -128, roll: 10, yaw: -30, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0.3, sway: -0.5, phase: 0.2 }),
   // Knocked back a step.
-  pose(S, { x: -6, y: 6, lean: -8, twist: 0, tilt: -6, head: -8, look: -6, footF: [12, 0, 6], footB: [-11, 0, 5.5], handF: [0, 16, 10], handB: [0, 11, 13], weapon: -146, roll: 4, yaw: -28, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
+  pose(S, { x: -6, y: 6, lean: -8, twist: 0, tilt: -6, head: -8, look: -6, footF: [12, 0, 6], footB: [-11, 0, 5.5], handF: [0, 15, 10], handB: [0, 11, 13], weapon: -128, roll: 4, yaw: -28, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
   settle(pose(S, { x: -3, y: 6, lean: 10, twist: 6, tilt: 0, head: 4 }), 0.7, { face: 'grit', wind: 0.2, phase: 0.6 }),
 ];
@@ -247,8 +247,8 @@ const victory: ChibiPose[] = [
   // The blade swung up out of the stance and out to his right, blazing.
   pose(S, { x: 0, y: 4, lean: 2, twist: -6, head: -2, look: 6, footF: [9, 0, 6.5], footB: [-8, 0, 6], handF: [0, 3, 15], weapon: -28, roll: 50, yaw: 0, handB: [1, 14, 11], face: 'grit', wind: 0.3, lift: 0.2, fx: { rune: 1, extra: flames(1.1, 81) } }),
   // Flicked hard down and out beside him: its flames fly off.
-  pose(S, { x: 1, y: 5.5, lean: 8, twist: 6, head: 2, look: 6, footF: [9, 0, 6.5], footB: [-8, 0, 6], handF: [8, 15, 14], weapon: -206, roll: -24, yaw: 0, handB: [1, 14, 11], face: 'smirk', wind: 0.5, lift: 0.2, phase: 0.15, fx: { rune: 0.6, extra: both(fireArc({ from: -28, roll: 50, yaw: 0, width: 0.5, alpha: 0.8 }, 82), shaken(0)) } }),
-  pose(S, { x: 1, y: 5.5, lean: 7, twist: 6, head: 0, look: 8, footF: [9, 0, 6.5], footB: [-8, 0, 6], handF: [8, 15.5, 14], weapon: -210, roll: -24, yaw: 0, handB: [1, 14, 11], face: 'smirk', wind: 0.45, lift: 0.3, phase: 0.3, fx: { rune: 0.25, extra: shaken(0.6) } }),
+  pose(S, { x: 1, y: 5.5, lean: 8, twist: 6, head: 2, look: 6, footF: [9, 0, 6.5], footB: [-8, 0, 6], handF: [8, 13, 14], weapon: -224, roll: -24, yaw: 0, handB: [1, 14, 11], face: 'smirk', wind: 0.5, lift: 0.2, phase: 0.15, fx: { rune: 0.6, extra: both(fireArc({ from: -28, roll: 50, yaw: 0, width: 0.5, alpha: 0.8 }, 82), shaken(0)) } }),
+  pose(S, { x: 1, y: 5.5, lean: 7, twist: 6, head: 0, look: 8, footF: [9, 0, 6.5], footB: [-8, 0, 6], handF: [8, 13.5, 14], weapon: -226, roll: -24, yaw: 0, handB: [1, 14, 11], face: 'smirk', wind: 0.45, lift: 0.3, phase: 0.3, fx: { rune: 0.25, extra: shaken(0.6) } }),
   // Swung back up onto his shoulder.
   pose(PROUD, { y: 2, lean: 0, handF: [5, 6, 10], weapon: -100, roll: 20, phase: 0.45, wind: 0.6, fx: { rune: 0.25, extra: shaken(1) } }),
   // Settled: chin up, a grin, the coat still streaming, an ember or two off the blade.

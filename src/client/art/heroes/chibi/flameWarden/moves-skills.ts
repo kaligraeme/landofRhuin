@@ -91,7 +91,7 @@ const THRUST: ChibiPose = pose(S, { x: 8, y: 8, lean: 22, twist: -18, head: 0, l
 
 const inferno: ChibiPose[] = [
   // Drawn back: the blade pulled back level by his hip, point ahead, the left hand aiming.
-  fromReady(pose(S, { x: -2, y: 8, lean: 12, twist: 30, head: 2, look: -2, footF: [12, 0, 5.6], footB: [-12, 0, 5.2], handF: [-6, 12, 10], weapon: -266, roll: 0, yaw: -6, handB: [13, 6, 1], face: 'grit', wind: 0.3, fx: { rune: 1, extra: flames(1, 41) } }), 0.6),
+  fromReady(pose(S, { x: -2, y: 8, lean: 12, twist: 30, head: 2, look: -2, footF: [12, 0, 5.6], footB: [-12, 0, 5.2], handF: [-6, 12, 10], weapon: -266, roll: 0, yaw: -6, handB: [13, 6, 1], face: 'grit', wind: 0.3, fx: { rune: 1, extra: flames(1, 41) } }), 0.6, { weapon: -258 }),
   // The thrust: a spark of fire at the point, swelling.
   pose(THRUST, { phase: 0.15, fx: { rune: 1, dust: 0.6, impact: 0.8, extra: both(fireball(BURST, 0.25), flames(1, 42)) } }),
   pose(THRUST, { x: 9, y: 9, lean: 24, phase: 0.3, wind: 0.8, lift: 0.3, fx: { rune: 1, extra: both(fireball(BURST, 0.7, 0, 22, 0.2), flames(0.9, 43)) } }),
@@ -105,12 +105,12 @@ const inferno: ChibiPose[] = [
 
 // ── Kindle ───────────────────────────────────────────────────────────────────────────────────
 
-/** Thrown upright, chest out and head back, fists clenched by his hips, the blade pointing down. */
-const BLAZE: ChibiPose = pose(S, { x: 0, y: 3, lean: -6, twist: 0, head: -10, look: 0, footF: [9, 0, 7.5], footB: [-9, 0, 7], handF: [2, 17, 12], weapon: -188, roll: -14, yaw: -10, handB: [2, 16, 12], elbowF: [-0.6, -0.6, 1], elbowB: [-0.6, -0.6, 1], face: 'shout', wind: 0.2, lift: 0.9 });
+/** Thrown upright, chest out and head back, fists clenched by his hips, the blade trailing low behind him. */
+const BLAZE: ChibiPose = pose(S, { x: 0, y: 3, lean: -6, twist: 0, head: -10, look: 0, footF: [9, 0, 7.5], footB: [-9, 0, 7], handF: [2, 16, 12], weapon: -136, roll: -14, yaw: -10, handB: [2, 16, 12], elbowF: [-0.6, -0.6, 1], elbowB: [-0.6, -0.6, 1], face: 'shout', wind: 0.2, lift: 0.9 });
 
 const kindleClip: ChibiPose[] = [
   // Hunched, gathering: fists clenched, head down, a glow at his feet.
-  fromReady(pose(S, { x: 0, y: 9, lean: 22, twist: 4, head: 12, footF: [9, 0, 7.5], footB: [-9, 0, 7], handF: [4, 15, 9], weapon: -200, roll: -10, yaw: -10, handB: [5, 15, 7], elbowF: [-0.6, -0.6, 1], elbowB: [-0.6, -0.6, 1], face: 'grit', wind: 0.1, fx: { rune: 0.8, aura: 0.6, extra: both(flames(0.6, 51), kindle(0.2, 0, 51, 0)) } }), 0.6),
+  fromReady(pose(S, { x: 0, y: 9, lean: 22, twist: 4, head: 12, footF: [9, 0, 7.5], footB: [-9, 0, 7], handF: [4, 15, 9], weapon: -140, roll: -10, yaw: -10, handB: [5, 15, 7], elbowF: [-0.6, -0.6, 1], elbowB: [-0.6, -0.6, 1], face: 'grit', wind: 0.1, fx: { rune: 0.8, aura: 0.6, extra: both(flames(0.6, 51), kindle(0.2, 0, 51, 0)) } }), 0.6),
   pose(BLAZE, { phase: 0.1, fx: { rune: 1, aura: 1, extra: both(kindle(1.2, 0, 52, 0.1), flames(1, 52)) } }),
   pose(BLAZE, { y: 3.5, head: -11, phase: 0.2, lift: 1, fx: { rune: 1, aura: 1, extra: both(kindle(1.1, 6, 53, 0.3), flames(1, 53)) } }),
   pose(BLAZE, { y: 3.5, head: -10, phase: 0.3, fx: { rune: 1, aura: 0.9, extra: both(kindle(1, 12, 54, 0.45), flames(0.9, 54)) } }),
@@ -144,12 +144,12 @@ const firebeast: ChibiPose[] = [
 // ── Cast ─────────────────────────────────────────────────────────────────────────────────────
 
 /** The left hand raised high beside his head, the flare burning in it; the blade lowered at his right. */
-const RAISE: ChibiPose = pose(S, { x: 0, y: 5, lean: 4, twist: 14, head: -6, look: -2, footF: [11, 0, 6.5], footB: [-10, 0, 6], handF: [-1, 16, 11], weapon: -210, roll: -18, yaw: -10, handB: [10, -3, 15], elbowB: [-0.3, -0.6, 1], face: 'shout', wind: 0.25, lift: 0.5 });
+const RAISE: ChibiPose = pose(S, { x: 0, y: 5, lean: 4, twist: 14, head: -6, look: -2, footF: [11, 0, 6.5], footB: [-10, 0, 6], handF: [-1, 15, 11], weapon: -140, roll: -18, yaw: -10, handB: [10, -3, 15], elbowB: [-0.3, -0.6, 1], face: 'shout', wind: 0.25, lift: 0.5 });
 
 const cast: ChibiPose[] = [
   // Drawn in: the left fist brought to his chest, fire kindling in it.
-  fromReady(pose(S, { x: 0, y: 8, lean: 14, twist: 10, head: 6, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [0, 15, 11], weapon: -190, roll: -10, yaw: -10, handB: [6, 6, -2], face: 'grit', wind: 0.15, fx: { rune: 0.6, extra: flare(0.3, 0, 0) } }), 0.6),
-  pose(S, { x: 0, y: 7, lean: 8, twist: 6, head: 0, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [1, 15, 11], weapon: -194, roll: -12, yaw: -10, handB: [8, 3, 9], face: 'grit', wind: 0.2, lift: 0.3, phase: 0.1, fx: { rune: 0.8, extra: flare(0.6, 0.05, 0.3) } }),
+  fromReady(pose(S, { x: 0, y: 8, lean: 14, twist: 10, head: 6, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [0, 15, 11], weapon: -138, roll: -10, yaw: -10, handB: [6, 6, -2], face: 'grit', wind: 0.15, fx: { rune: 0.6, extra: flare(0.3, 0, 0) } }), 0.6),
+  pose(S, { x: 0, y: 7, lean: 8, twist: 6, head: 0, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [1, 15, 11], weapon: -139, roll: -12, yaw: -10, handB: [8, 3, 9], face: 'grit', wind: 0.2, lift: 0.3, phase: 0.1, fx: { rune: 0.8, extra: flare(0.6, 0.05, 0.3) } }),
   // Raised: the flare bursts, ringed with green light; motes of healing rise round him.
   pose(RAISE, { phase: 0.2, fx: { rune: 1, extra: flare(1, 0.12) } }),
   pose(RAISE, { y: 3.5, head: -9, phase: 0.35, lift: 0.6, fx: { rune: 1, extra: flare(0.9, 0.2) } }),

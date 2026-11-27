@@ -228,7 +228,7 @@ export const fromReady = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}
 
 // atk1: a rising slash, from the blade trailing low behind him, down past the floor and up across
 // his front to high on his left.
-const A1_COCK = pose(READY, { x: -2, y: 7.5, lean: 22, twist: 26, head: 0, look: -2, footF: [11, -1, 5.4], handF: [-7, 16, 11], weapon: -136, roll: -6, yaw: -28, handB: [10, 6, 1], wind: 0.3, lift: 0.15, sway: 0.25, phase: 0.1, face: 'grit', fx: { rune: 0.6, extra: flames(0.6, 1) } });
+const A1_COCK = pose(READY, { x: -2, y: 7.5, lean: 22, twist: 26, head: 0, look: -2, footF: [11, -1, 5.4], handF: [-7, 16, 11], weapon: -130, roll: -6, yaw: -28, handB: [10, 6, 1], wind: 0.3, lift: 0.15, sway: 0.25, phase: 0.1, face: 'grit', fx: { rune: 0.6, extra: flames(0.6, 1) } });
 const A1_SWING = pose(READY, { x: 3, y: 6, lean: 14, twist: 4, head: 0, footF: [14, 0, 5.6], handF: [9, 11, 9], weapon: -232, roll: -20, yaw: -10, handB: [3, 11, 10], wind: 0.45, phase: 0.25, face: 'shout', fx: { rune: 0.9 } });
 const A1_HIT = pose(READY, { x: 6, y: 3.5, lean: 2, twist: -22, head: -3, look: 0, footF: [15, 0, 5.8], footB: [-11, -1, 5.2], handF: [12, 2, -4], weapon: -332, roll: -34, yaw: 0, handB: [-2, 11, 12], wind: 0.75, lift: 0.2, phase: 0.4, face: 'shout', fx: { impact: 0.8, rune: 1 } });
 const A1_FOLLOW = pose(A1_HIT, { y: 3, lean: 0, twist: -26, head: -4, handF: [10, -2, -6], weapon: -354, wind: 0.9, lift: 0.4, phase: 0.55, face: 'grit', fx: { rune: 0.7, extra: flames(0.7, 4) } });
@@ -256,8 +256,8 @@ const atk2: ChibiPose[] = [
   smear(A2_COCK, A2_SWING, 0.7, 1, 4),
   smear(A2_COCK, A2_HIT, 0.55, 1, 5),
   smear(A2_COCK, A2_FOLLOW, 0.5, 0.45, 6),
-  pose(A2_FOLLOW, { y: 8, lean: 24, twist: 16, handF: [13, 16, 0], weapon: 150, roll: 20, wind: 0.6, lift: 0.45, phase: 0.7, face: 'smirk', fx: { rune: 0.5, extra: flames(0.6, 9) } }),
-  settle(pose(A2_FOLLOW, { weapon: -160, roll: 0, yaw: -20 }), 0.55, { wind: 0.35, lift: 0.25, phase: 0.85, face: 'smirk' }),
+  pose(A2_FOLLOW, { y: 8, lean: 24, twist: 16, handF: [13, 15, 0], weapon: 136, roll: 20, wind: 0.6, lift: 0.45, phase: 0.7, face: 'smirk', fx: { rune: 0.5, extra: flames(0.6, 9) } }),
+  settle(pose(A2_FOLLOW, { weapon: -148, roll: 0, yaw: -20 }), 0.55, { wind: 0.35, lift: 0.25, phase: 0.85, face: 'smirk' }),
   settle(pose(A2_FOLLOW, { weapon: -140, roll: 0, yaw: -24 }), 0.88, { wind: 0.27, lift: 0.05, phase: 1 }),
 ];
 
@@ -265,7 +265,7 @@ const atk2: ChibiPose[] = [
 // steps of 80 degrees with the blade held out level and leading inside a ring of fire, and a
 // forehand sweep across his front to finish: a deep crouch, the coat-tails flung out, a great
 // slanted band of fire round him, held a frame.
-const A3_COIL = pose(READY, { x: -2, y: 9, lean: 20, twist: 32, turn: 30, head: 0, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.6], handF: [-7, 15, 12], weapon: -132, roll: 0, yaw: -30, handB: [9, 7, 1], wind: 0.3, lift: 0.1, sway: 0.3, face: 'grit', fx: { rune: 1, extra: flames(1, 10) } });
+const A3_COIL = pose(READY, { x: -2, y: 9, lean: 20, twist: 32, turn: 30, head: 0, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.6], handF: [-7, 15, 12], weapon: -126, roll: 0, yaw: -30, handB: [9, 7, 1], wind: 0.3, lift: 0.1, sway: 0.3, face: 'grit', fx: { rune: 1, extra: flames(1, 10) } });
 /** The turn: `turn` degrees round, the blade out level to his right and leading, the ring burning behind it. */
 const spin = (turn: number, phase: number): ChibiPose =>
   pose(READY, { x: 1, y: 5, lean: 8, twist: 0, turn, head: 1, look: 10, footF: [9, -1, 6], footB: [-9, 0, 6], handF: [5, 11, 12], weapon: 90, roll: 0, yaw: 86, handB: [-2, 11, 11], wind: 0.6, flare: 1, lift: 0.2, sway: 0.4, phase, face: 'shout', fx: { rune: 1, extra: both(fireRing(turn + 176, turn + 86, 38, 50), flames(0.9, phase * 10)) } });
