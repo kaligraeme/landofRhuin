@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Lobby, type Conn } from '../src/server/lobby.js';
+import { applyDamage, formOf, useSkill } from '../src/server/sim/combat.js';
 import { HEROES, type HeroId } from '../src/shared/content/classes.js';
 import type { ServerMsg } from '../src/shared/protocol.js';
 
@@ -165,6 +166,32 @@ describe('lobby', () => {
     }
     // Over 30 runs, the Tank and the Ranger come as either of their heroes.
     expect([...seen].sort()).toEqual(['arbalest', 'bowmaster', 'darkKnight', 'guardian', 'sage']);
+  });
+
+  it('tells a Flame Warden player that a blow on their Firebeast did nothing: Immune, over the wire', () => {
+    const lobby = new Lobby({ instance: { countdown: 0 } });
+    const a = client(lobby, 'Dana');
+    lobby.handle(a.id, { t: 'loadout', role: 'melee' }, 0);
+    lobby.handle(a.id, { t: 'hero', hero: 'flameWarden' }, 0);
+    lobby.handle(a.id, { t: 'queue.join', aiFill: 0 }, 0);
+    lobby.handle(a.id, { t: 'ready', accept: true }, 0);
+    const run = [...lobby.instances.values()][0]!;
+    lobby.tick(0);
+    const dana = run.inst.playerByOwner(a.id)!;
+    expect(dana.hero).toBe('flameWarden');
+    expect(useSkill(run.inst, dana, 'firebeast', { x: dana.x + 1, y: dana.y })).toBeNull();
+    expect(formOf(dana)?.name).toBe('Firebeast');
+    // A monster's blow lands on the Firebeast.
+    const brute = run.inst.spawnMob('brute', dana.x + 1.5, dana.y, 0, 0);
+    const hp = dana.hp;
+    a.inbox.length = 0;
+    expect(applyDamage(run.inst, brute, dana, 800)).toBe(0);
+    for (let i = 0; i < 4; i++) lobby.tick(0);
+    // Her client hears it as Immune on her, and never as damage.
+    const events = a.inbox.flatMap((m) => (m.t === 'snap' ? m.ev : []));
+    expect(events).toContainEqual(expect.objectContaining({ e: 'fx', k: 'immune', t: dana.id }));
+    expect(events.filter((ev) => ev.e === 'dmg' && ev.t === dana.id)).toEqual([]);
+    expect(dana.hp).toBe(hp);
   });
 
   it('sends an AI Duelist as any of the three, or as the heroes the server asks for', () => {

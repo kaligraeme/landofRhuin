@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { HERO_ORDER } from '../src/shared/content/classes.js';
 
 async function enter(page: Page, name: string): Promise<void> {
   await page.goto('/');
@@ -66,6 +67,9 @@ test('two players form a party, queue with AI fill and clear the first room toge
     await expect(p.locator('.pl-member')).toHaveCount(4);
     await expect(p.locator('.hotbar .slot')).toHaveCount(10);
   }
+  // The HUD names each player's hero as the lobby did.
+  await expect(alice.locator('.who-am-i')).toHaveText('Ranger · Bowmaster');
+  await expect(bob.locator('.who-am-i')).toHaveText('Duelist · Dragoon');
   await expect.poll(async () => (await world(alice))?.phase, { timeout: 10_000 }).toBe('running');
 
   const aliceHero = await bob.evaluate(() => {
@@ -176,7 +180,7 @@ test('a party with an AI Flame Warden clears the first room', async ({ browser }
   await page.context().close();
 });
 
-test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the claws answer, and Immune shows', async ({ browser }) => {
+test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the claws answer, no monster hurts it and Immune shows', async ({ browser }) => {
   const page = await (await browser.newContext()).newPage();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -191,49 +195,66 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
   await expect.poll(async () => (await world(page))?.phase, { timeout: 10_000 }).toBe('running');
 
   type Game = {
-    world: { meId: number; formOf(id: number): string | null; meEntity(): { x: number; y: number; snap: { d?: number } } | undefined; enemies(): { x: number; y: number; snap: { a?: number } }[] };
+    world: { meId: number; formOf(id: number): string | null; meEntity(): { x: number; y: number; snap: { d?: number; hp: number } } | undefined; enemies(): { x: number; y: number; spawn: { kind: string }; snap: { a?: number } }[] };
     roll: unknown;
     fx: { texts: { text: string }[] };
     hud: { error(text: string): void };
     onEvent(ev: unknown): void;
   };
-  // Keep every message the hotbar shows, since a later one soon replaces it.
+  // Keep every message the hotbar shows, since a later one soon replaces it, and count every blow
+  // the server reports landing on Dana's Firebeast (Immune, as it arrives over the wire).
   await page.evaluate(() => {
-    const g = (window as unknown as { rhuin: { game: Game }; said: string[] }).rhuin.game;
-    const said: string[] = ((window as unknown as { said: string[] }).said = []);
+    const w = window as unknown as { rhuin: { game: Game }; said: string[]; immune: number };
+    const g = w.rhuin.game;
+    const said: string[] = (w.said = []);
     const show = g.hud.error.bind(g.hud);
     g.hud.error = (text: string) => {
       said.push(text);
       show(text);
     };
+    w.immune = 0;
+    const handle = g.onEvent.bind(g);
+    g.onEvent = (ev: unknown) => {
+      const e = ev as { e: string; k?: string; t?: number };
+      if (e.e === 'fx' && e.k === 'immune' && e.t === g.world.meId) w.immune++;
+      handle(ev);
+    };
   });
   const state = () =>
     page.evaluate(() => {
-      const g = (window as unknown as { rhuin: { game: Game } }).rhuin.game;
+      const w = window as unknown as { rhuin: { game: Game }; immune: number };
+      const g = w.rhuin.game;
       const me = g.world.meEntity();
       const near = me ? g.world.enemies().filter((e) => Math.hypot(e.x - me.x, e.y - me.y) < 3.5) : [];
       return {
         form: g.world.formOf(g.world.meId),
         down: !!me?.snap.d,
         rolling: g.roll !== null,
-        near: near.length,
         onMe: near.some((e) => e.snap.a === g.world.meId),
-        immune: g.fx.texts.some((t) => t.text === 'Immune'),
+        boss: near.some((e) => e.spawn.kind === 'boss' && e.snap.a !== undefined),
+        hp: me?.snap.hp ?? 0,
+        immune: w.immune,
+        shown: g.fx.texts.some((t) => t.text === 'Immune'),
       };
     });
 
-  // Follow the AI tank in and fight. Take the form once a monster in reach is after Dana (its blows
-  // will show Immune), or beside any monster if none turns on her soon, and never while she is
-  // knocked out (a boss can floor her on the way in; the Sage raises her).
+  // Follow the AI tank in and fight, skills and all, until something will strike the Firebeast: a
+  // monster within reach that has turned on Dana, or the first boss in a fight beside her (its
+  // marked blasts land on everyone, and the claws pull it off the tank, who leaves it be while the
+  // form lasts). Never while she is knocked out (a boss can floor her; the Sage raises her).
   await page.keyboard.press('t');
   await page.mouse.move(720, 300);
   await page.mouse.down();
-  const patience = Date.now() + 25_000;
-  const deadline = Date.now() + 90_000;
-  for (;;) {
+  const deadline = Date.now() + 120_000;
+  let why: 'onMe' | 'boss';
+  for (let tick = 0; ; tick++) {
     const s = await state();
-    if (!s.down && (s.onMe || (s.near && Date.now() > patience))) break;
-    expect(Date.now()).toBeLessThan(deadline);
+    if (!s.down && (s.onMe || s.boss)) {
+      why = s.onMe ? 'onMe' : 'boss';
+      break;
+    }
+    expect(Date.now(), 'no monster turned on Dana and no boss came near').toBeLessThan(deadline);
+    if (tick % 10 === 0) for (const k of ['q', 'e', 'r']) await page.keyboard.press(k);
     await page.waitForTimeout(50);
   }
 
@@ -251,22 +272,36 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
   await expect(page.locator('.hotbar .slot.form-locked')).toHaveCount(9);
   await expect(page.locator('.hotbar .slot.form-basic img')).toHaveAttribute('alt', 'Firebeast Claw I');
 
-  // Blows that land on the Firebeast show Immune. If none landed while it lasted, the client is
-  // still asked to draw one, so the path is covered either way.
-  let immune = false;
-  while ((await state()).form) {
-    immune ||= (await state()).immune;
+  // While the form lasts no monster hurts Dana, and every blow the server reports on the Firebeast
+  // shows as Immune. Against a monster that is after her the claws rest, so it lives to strike; a
+  // boss they pull onto her.
+  if (why === 'onMe') await page.mouse.up();
+  const hp = await page.evaluate(() => (window as unknown as { rhuin: { game: Game } }).rhuin.game.world.meEntity()?.snap.hp ?? 0);
+  let lowest = hp;
+  let shown = false;
+  for (;;) {
+    const s = await state();
+    if (!s.form) break;
+    lowest = Math.min(lowest, s.hp);
+    shown ||= s.immune > 0 && s.shown;
     await page.waitForTimeout(40);
   }
-  test.info().annotations.push({ type: 'immune', description: immune ? 'A monster struck the Firebeast: Immune.' : 'No monster struck the Firebeast; an immune event was replayed.' });
-  if (!immune) {
-    immune = await page.evaluate(() => {
+  await page.mouse.down();
+  expect(lowest, 'no monster hurt the Firebeast').toBeGreaterThanOrEqual(hp);
+  const struck = (await state()).immune;
+  if (struck) expect(shown || (await state()).shown, 'the client showed the server’s Immune').toBe(true);
+  else {
+    // No blow happened to land in its 5 seconds (the AI tank soon takes monsters back, and the
+    // form cannot be taken again for 90): the client is handed the event the server sends for one
+    // (test/lobby.test.ts checks the server sends it), through the same handler, and must show it.
+    shown = await page.evaluate(() => {
       const g = (window as unknown as { rhuin: { game: Game } }).rhuin.game;
       g.onEvent({ e: 'fx', k: 'immune', t: g.world.meId });
       return g.fx.texts.some((t) => t.text === 'Immune');
     });
+    expect(shown).toBe(true);
   }
-  expect(immune).toBe(true);
+  test.info().annotations.push({ type: 'immune', description: `${why === 'onMe' ? 'Taken with a monster after Dana' : 'Taken beside a boss'}: ${struck ? `${struck} blows reached the client as Immune` : 'no blow landed, so the event was handed to the client'}.` });
 
   // The form ends: the bar goes, the hotbar answers again, and the room still falls.
   await expect(page.locator('.form-bar.show')).toHaveCount(0);
@@ -280,4 +315,34 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
   expect(cleared).toBeGreaterThanOrEqual(2);
   expect(errors).toEqual([]);
   await page.context().close();
+});
+
+test('the title shows every hero, however narrow the window', async ({ browser }) => {
+  for (const [width, height] of [[1440, 900], [1024, 768], [800, 700], [480, 800]] as const) {
+    const context = await browser.newContext({ viewport: { width, height } });
+    const page = await context.newPage();
+    await page.goto('/');
+    // Every hero's portrait, painted.
+    await expect(page.locator('.hero-line img')).toHaveCount(HERO_ORDER.length);
+    await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>('.hero-line img')].every((i) => i.src.startsWith('data:image/png') && i.complete), null, { timeout: 30_000 });
+    const m = await page.evaluate(() => ({
+      vw: innerWidth,
+      vh: innerHeight,
+      scroll: document.documentElement.scrollWidth,
+      imgs: [...document.querySelectorAll<HTMLImageElement>('.hero-line img')].map((i) => {
+        const r = i.getBoundingClientRect();
+        return { alt: i.alt, left: r.left, right: r.right, top: r.top, bottom: r.bottom, height: r.height };
+      }),
+    }));
+    // Each stands whole inside the window, big enough to read, and the page does not scroll sideways.
+    expect(m.scroll, `${width}px`).toBeLessThanOrEqual(m.vw);
+    for (const i of m.imgs) {
+      expect(i.left, `${i.alt} at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(i.right, `${i.alt} at ${width}px`).toBeLessThanOrEqual(m.vw);
+      expect(i.top, `${i.alt} at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(i.bottom, `${i.alt} at ${width}px`).toBeLessThanOrEqual(m.vh);
+      expect(i.height, `${i.alt} at ${width}px`).toBeGreaterThanOrEqual(60);
+    }
+    await context.close();
+  }
 });
