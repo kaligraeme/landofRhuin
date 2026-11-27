@@ -21,7 +21,7 @@ import type { Vec } from '../skeleton.js';
 import { type BodyDesign, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
 import { FLIP_FROM, hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
 import { flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
-import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, TO_CAMERA, type V3 } from './rig.js';
+import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, sub3, TO_CAMERA, type V3 } from './rig.js';
 
 /** Shape ids inside the head's part. */
 const SKIN = 1;
@@ -223,15 +223,20 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   const hair: Mat = { ...d.hair, line: d.lockLine ?? shade(d.hair.tones[3], -0.3), clear: 1 };
   part.blobs(fr, [{ c: d.skull.c, r: d.skull.r, id: SKIN }, { c: d.jaw.c, r: d.jaw.r, id: SKIN }], () => ({ m: d.skin }));
   part.blobs(fr, [{ c: d.ear.c, r: d.ear.r, id: EAR }, { c: [d.ear.c[0], d.ear.c[1], -d.ear.c[2]], r: d.ear.r, id: EAR }], () => ({ m: d.skin, light: -0.05 }));
-  const whorl = d.whorl ? norm3(dirIn(HEAD_AXES, Math.cos(rad(d.whorl.yaw)) * Math.cos(rad(d.whorl.pitch)), Math.sin(rad(d.whorl.pitch)), Math.sin(rad(d.whorl.yaw)) * Math.cos(rad(d.whorl.pitch)))) : null;
+  const fan = d.whorl ? fanOf(d.whorl) : null;
   part.blobs(fr, [{ c: d.shell.c, r: d.shell.r, id: SHELL }, ...(d.volume ?? []).map((v) => ({ c: v.c, r: v.r, id: SHELL }))], (h: Hit) => {
     if (h.back) return { m: hair, light: toneLight(hair, 3) };
     if (bare(d, h.p)) return null;
     const l = cam.light(dirIn(fr, h.n[0], h.n[1], h.n[2]));
     let tone = h.n[1] < -0.5 ? 3 : l > 0.45 ? 1 : l > -0.15 ? 2 : 3;
-    if (whorl && d.whorl) {
-      const c = clump(d, whorl, d.whorl, h.p);
-      if (c >= 0) tone = Math.min(3, c + (l < -0.2 ? 1 : 0) + (h.n[1] < -0.55 ? 1 : 0));
+    if (fan) {
+      const k = clumpAt(d, fan, h.p);
+      if (fan.spec.comb) {
+        // Combed: the tone the light gives, each clump parted from the next by a dark line, with a
+        // streak a tone lighter along its lit side where the hair faces the light.
+        if (k >= 0 && k < COMB_LINE) tone = 3;
+        else if (k >= 0 && k < COMB_STREAK && l > 0.05) tone = Math.max(0, tone - 1);
+      } else if (k !== -1) tone = Math.min(3, banded(k) + (l < -0.2 ? 1 : 0) + (h.n[1] < -0.55 ? 1 : 0));
     }
     // Dark hair: the whole mass a tone deeper.
     if (d.darkHair) tone = Math.min(3, tone + 1);
@@ -322,25 +327,78 @@ function despeckle(ctx: PieceContext, tones: readonly RGB[], x0: number, y0: num
 
 const HEAD_AXES: Frame3 = { o: [0, 0, 0], f: [1, 0, 0], u: [0, 1, 0], r: [0, 0, 1] };
 
+/** The unit direction (head space) at degrees round the head (0 the face, 90 the right) and up. */
+const onSphere = (yaw: number, pitch: number): V3 => [Math.cos(rad(yaw)) * Math.cos(rad(pitch)), Math.sin(rad(pitch)), Math.sin(rad(yaw)) * Math.cos(rad(pitch))];
+
 /**
  * The clumps painted on the back of the hair's shell: sectors fanning out from the crown's whorl,
- * twisting a little as they fall, each with a parting line on one side, a lit band beside it, the
- * light tone and a darker far side. Gives the tone (0 highlight to 3 shadow) at a point of the
- * shell (head space), or -1 outside the fan.
+ * twisting a little as they fall, and meeting again at the point opposite it or at its sink. What
+ * `clumpAt` needs of them, worked out once a head: the whorl (unit, head space), the way down the
+ * back from it and the way across, and for a sink, the frame of a stereographic projection from it.
  */
-function clump(d: HeadDesign, w: V3, spec: NonNullable<HeadDesign['whorl']>, p: V3): number {
+interface Fan {
+  spec: NonNullable<HeadDesign['whorl']>;
+  w: V3;
+  ref: V3;
+  side: V3;
+  sink: { v: V3; at: V3; e1: V3; e2: V3 } | null;
+}
+
+/** A point of the unit sphere seen in a stereographic projection from `s` (onto the plane through the centre, square to it). */
+const fromPole = (v: V3, s: V3): V3 => mul3(add3(v, s, -dot3(v, s)), 1 / Math.max(1e-6, 1 - dot3(v, s)));
+
+function fanOf(spec: NonNullable<HeadDesign['whorl']>): Fan {
+  const w = norm3(dirIn(HEAD_AXES, Math.cos(rad(spec.yaw)) * Math.cos(rad(spec.pitch)), Math.sin(rad(spec.pitch)), Math.sin(rad(spec.yaw)) * Math.cos(rad(spec.pitch))));
+  // The way down the back from the whorl, where its azimuth is measured from.
+  const ref = norm3(add3([0, -1, 0], w, -dot3([0, -1, 0], w)));
+  let sink: Fan['sink'] = null;
+  if (spec.sink) {
+    // The clumps run along the circles through the whorl and the sink. Seen in a stereographic
+    // projection from the sink those are straight lines out from the whorl's image, so the angle
+    // round it there places a point among them (the projection keeps angles, so it is measured
+    // from the way down the back, as round the whorl).
+    const v = onSphere(spec.sink.yaw, spec.sink.pitch);
+    const at = fromPole(w, v);
+    const e1 = norm3(sub3(fromPole(norm3(add3(w, ref, 0.01)), v), at));
+    sink = { v, at, e1, e2: cross3(e1, v) };
+  }
+  return { spec, w, ref, side: cross3(w, ref), sink };
+}
+
+/**
+ * Where a point of the shell (head space) falls among the whorl's clumps: how far across its clump
+ * it lies (0 at the parting on one side to 1 at the next), CROWN at the whorl itself or where the
+ * clumps meet at its sink (a small point where they part), or -1 outside the fan.
+ */
+function clumpAt(d: HeadDesign, fan: Fan, p: V3): number {
   const s = d.shell;
   const n = norm3([(p[0] - s.c[0]) / s.r[0], (p[1] - s.c[1]) / s.r[1], (p[2] - s.c[2]) / s.r[2]]);
-  const cosT = dot3(n, w);
-  const theta = Math.acos(Math.max(-1, Math.min(1, cosT)));
-  if (theta > rad(spec.reach)) return -1;
-  // The crown itself: a small dark point where the clumps part.
-  if (theta < rad(9)) return 2;
-  // Azimuth round the whorl, measured from the way down the back.
-  const ref = norm3(add3([0, -1, 0], w, cosT === 1 ? 0 : -dot3([0, -1, 0], w)));
-  const side = cross3(w, ref);
-  const phi = Math.atan2(dot3(n, side), dot3(n, ref)) + theta * spec.twist;
-  const k = (((phi / (Math.PI * 2)) * spec.clumps) % 1 + 1) % 1;
+  const theta = Math.acos(Math.max(-1, Math.min(1, dot3(n, fan.w))));
+  if (theta > rad(fan.spec.reach)) return -1;
+  if (theta < rad(9)) return CROWN;
+  let phi: number;
+  if (fan.sink) {
+    if (dot3(n, fan.sink.v) > Math.cos(rad(9))) return CROWN;
+    const q = sub3(fromPole(n, fan.sink.v), fan.sink.at);
+    phi = Math.atan2(dot3(q, fan.sink.e2), dot3(q, fan.sink.e1));
+  } else phi = Math.atan2(dot3(n, fan.side), dot3(n, fan.ref));
+  phi += theta * fan.spec.twist;
+  return (((phi / (Math.PI * 2)) * fan.spec.clumps) % 1 + 1) % 1;
+}
+
+/** `clumpAt` at the whorl itself, or where the clumps meet at its sink. */
+const CROWN = -2;
+/** A combed whorl's clumps: the share of each that is its parting line, and where its lit streak ends. */
+const COMB_LINE = 0.08;
+const COMB_STREAK = 0.34;
+
+/**
+ * The tone (0 highlight to 3 shadow) of a fan's clump at a place across it (`clumpAt`): a parting
+ * line on one side, a lit band beside it, the light tone and a darker far side; the crown a small
+ * dark point.
+ */
+function banded(k: number): number {
+  if (k === CROWN) return 2;
   if (k < 0.1) return 3;
   if (k < 0.36) return 0;
   return k < 0.8 ? 1 : 2;

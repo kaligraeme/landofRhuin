@@ -217,9 +217,15 @@ export interface HeadDesign {
   /**
    * Clumps painted on the shell, fanning out from the crown's whorl (where on the shell, as a
    * lock's root is given), out to `reach` degrees from it: how many there are round it and how
-   * far they twist as they fall (radians of turn per radian out).
+   * far they twist as they fall (radians of turn per radian out). By default each clump is banded
+   * the same all round the head (a dark parting, a lit band, the light tone, a darker far side).
+   * `comb` shades them as combed hair instead: the hair takes the tone the light gives it, each
+   * clump parted from the next by a thin dark line, with a streak a tone lighter along its lit
+   * side only where the hair faces the light (hair combed back from a whorl under the hairline).
+   * The clumps meet again at the point opposite the whorl, or at `sink` (where on the shell, as
+   * the whorl is given) if set: hair combed back from the brow gathering at the nape.
    */
-  whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number };
+  whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number; comb?: boolean; sink?: { yaw: number; pitch: number } };
   face: FaceDesign;
   /** Hair longer than the locks: a curtain down the back, locks over the shoulders, a ponytail. */
   long?: LongHair;
