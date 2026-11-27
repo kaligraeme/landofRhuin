@@ -3,13 +3,13 @@
  * and hulking beast on the same biped rig as the heroes but bigger (about 108 px tall): charred
  * obsidian hide and plates lit warm by its own fire and cracked with glowing magma seams, a great
  * mane of living flame round its head and shoulders (tongues of flame licking up off a deeper
- * orange mass, a ruff of it under the jaw), heavy brows over big eyes glowing white-gold, ringed
- * in the Warden's amber, a heavy fanged muzzle whose maw glows red, long dark claws on both hands
- * with white-hot points like his blade's glow, digitigrade legs with plated hocks on clawed feet,
- * a thick tail with a mane of flame along its end, and a scrap of his crimson shirt knotted round
- * its waist as a sash with a tatter of his black coat hanging behind. Everything here is data for
- * the chibi engine and the beast's own pieces (fire.ts); its moves are in the moves-*.ts files
- * beside it, and hero.ts puts it together.
+ * orange mass), a throat in the hide's middle tone under the jaw, heavy brows over big eyes glowing
+ * white-gold, ringed in the Warden's amber, a heavy fanged muzzle whose maw glows red, long dark
+ * claws on both hands with white-hot points like his blade's glow, digitigrade legs with plated
+ * hocks on clawed feet, a thick tail with a mane of flame along its end, and a scrap of his crimson
+ * shirt knotted round its waist as a sash with a tatter of his black coat hanging behind.
+ * Everything here is data for the chibi engine and the beast's own pieces (fire.ts); its moves are
+ * in the moves-*.ts files beside it, and hero.ts puts it together.
  */
 import { hex } from '../../paint.js';
 import type { ChibiDesign, FaceStyle, Lock } from '../design.js';
@@ -112,10 +112,6 @@ const LOCKS: Lock[] = [
   L(-100, -22, [-0.5, -0.45, -1], 10, 4, [-0.3, 0.6, -0.2]),
   L(150, -10, [-1, -0.5, 0.4], 11, 4.4, [-0.2, 0.6, 0]),
   L(-150, -10, [-1, -0.5, -0.4], 11, 4.4, [-0.2, 0.6, 0]),
-  // A ruff of flame under the jaw, parting the head from the chest.
-  L(0, -58, [0.5, -1, 0], 7, 3.6, [0.5, 0.4, 0]),
-  L(34, -52, [0.4, -1, 0.4], 7, 3.4, [0.4, 0.4, 0.2]),
-  L(-34, -52, [0.4, -1, -0.4], 7, 3.4, [0.4, 0.4, -0.2]),
 ];
 
 /** The mane's flickering tongues, round the back and sides of the head. */
