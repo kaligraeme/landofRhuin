@@ -1,26 +1,28 @@
 /**
  * The Dragoon, as a chibi: a lean, long-legged young lancer with narrow amber eyes and a cocky
  * half-smile, in light dragon-styled armour of dark indigo steel, its pale lilac edges kept to a
- * few: the helm's brow band, the leading bones of its wings and the pauldrons' tips. He wears an
+ * few: the helm's brow band, the bones and claws of its wings and the pauldrons' tips. He wears an
  * open-faced half-helm whose sides are a pair of dragon's wings folded down and back round his
- * head: a smooth, low dark cap with a pale brow band set with a small violet gem at its middle and
- * scaled cheek guards, and over each side of it a wing, its pale leading bone running from above
- * the outer end of his brow back over the temple and curving down behind the ear, two finger bones
- * fanned under it with dark membrane between them, scalloped between the points, which leave the
- * helm and trail down and back beside the ponytail. Nothing on it rises above the crown. His
- * jet-black hair, blue in its sheen, shows at the fringe and falls from under the back of the helm
- * in a long ponytail that parts into locks at its end. A
- * scale-patterned breastplate and a gorget, layered wing-like pauldrons swept back to points with
- * scales jutting past the shoulder, vambraces ending in claws over the knuckles, pointed tassets
- * and greaves with a spur at the knee, over a dark charcoal under-suit; a streaming violet-black
- * cape to below the knee, closed at the collar by a short mantle, with a crimson lining and a hem
- * cut like a wing's trailing edge. His lance is taller than he is: a dark steel shaft with violet
- * wraps and two small steel bands, a long leaf point that glows violet inside a soft halo, a
- * vamplate of spread dragon wings below it and a butt spike. His energy is violet with a pale
- * lilac edge and a white-hot core. Everything here is data for the chibi engine (with the few
- * pieces of his own below: the helm's folded wings, gem and scaled cheek guards, the pauldrons,
- * the spurs and claws, the cape's mantle, the lance's wings and halo); his moves are in the
- * moves-*.ts files beside it, and hero.ts puts him together.
+ * head: a smooth, low dark cap with a pale brow band set with a violet gem at its middle and a row
+ * of scales above it, scaled cheek guards, and a low ridge of three small spines down the back like
+ * a dragon's spine. Each wing's wrist sits high over the temple, a pale thumb claw hooking forward
+ * and out from it over the outer end of his brow; from it the pale leading bone runs back high
+ * along the side of the helm and curves down behind it, and a finger bone fans down past the ear,
+ * with the membrane between them a step lighter than the steel. Behind the ear the wing leaves the
+ * helm, so its two points trail down and back clear of the head beside the ponytail, a deep scallop
+ * between them. Nothing on it rises above the crown. His jet-black hair, blue in its sheen, shows
+ * at the fringe and falls from under the back of the helm in a long ponytail that parts into locks
+ * at its end. A scale-patterned breastplate and a gorget, layered wing-like pauldrons swept back to
+ * points with scales jutting past the shoulder, vambraces ending in claws over the knuckles,
+ * pointed tassets and greaves with a spur at the knee, over a dark charcoal under-suit; a streaming
+ * violet-black cape to below the knee, closed at the collar by a short mantle, with a crimson
+ * lining and a hem cut like a wing's trailing edge. His lance is taller than he is: a dark steel
+ * shaft with violet wraps and two small steel bands, a long leaf point that glows violet inside a
+ * soft halo, a vamplate of spread dragon wings below it and a butt spike. His energy is violet with
+ * a pale lilac edge and a white-hot core. Everything here is data for the chibi engine (with the
+ * few pieces of his own below: the helm's folded wings, ridge, gem and scaled cheek guards, the
+ * pauldrons, the spurs and claws, the cape's mantle, the lance's wings and halo); his moves are in
+ * the moves-*.ts files beside it, and hero.ts puts him together.
  */
 import { hex, type RGB, type Vec } from '../../paint.js';
 import { scaleAt } from '../armour.js';
@@ -43,13 +45,13 @@ const HAIR = mat4('#4e5e80', '#262c3e', '#1c2030', '#0e1018', '#06070c', -0.04);
 // the light, the highlight only a glint, so the plates read dark indigo and the glowing lance and
 // the effects stay the brightest things on him.
 const ARMOUR = { ...mat4('#9a86d8', '#5e4a9c', '#3a2c66', '#1c1434', '#0e0a1c', -0.3), gain: 0.72, clear: 1.2 };
-// The few near-white edges he has: the helm's brow band, the leading bones of its wings, the tips of the pauldrons.
+// The few near-white edges he has: the helm's brow band, the leading bones, points and thumb claws of its wings, the tips of the pauldrons.
 const BRIGHT = mat4('#f4f0ff', '#d8ccff', '#a898e0', '#6a5aa8', '#2a2048', 0.02);
 // A duller lilac for every other rim: the scales, the lower edges of plates, the vambraces' cuffs, the knee cops, the toe caps.
 const RIM = mat4('#b4a4ec', '#8e7cd0', '#6a58a8', '#3e3070', '#0e0a1c', -0.1);
 // The scales' rims: the dull lilac, mostly its light tone.
 const SCALE = { ...mat4('#b4a4ec', '#8e7cd0', '#6a58a8', '#4e3e8e', '#0e0a1c', -0.15), clear: 1.2 };
-// The shadowed gaps under the scales, and the dark membrane of the helm's wings.
+// The shadowed gaps under the scales.
 const UNDER = mat4('#3a2c66', '#2a1f4c', '#1c1434', '#120c24', '#08060e', -0.2);
 // The charcoal under-suit, a step cooler and darker than the steel, so the plates stand out from it.
 const SUIT = mat4('#50505e', '#3a3a46', '#24242e', '#14141a', '#0a0a0e', -0.06);
@@ -160,133 +162,179 @@ function onHelm(e: number, yaw: number, pitch: number): V3 {
   return [SHELL.c[0] + Math.cos((yaw * Math.PI) / 180) * cp * (SHELL.r[0] + e), SHELL.c[1] + Math.sin((pitch * Math.PI) / 180) * (SHELL.r[1] + e), SHELL.c[2] + Math.sin((yaw * Math.PI) / 180) * cp * (SHELL.r[2] + e)];
 }
 
-/** A point of a wing on his right side (the left mirrors it): [forward, up] of the head's centre, head space, so behind it is negative. */
-type W2 = readonly [number, number];
-/**
- * How far out to the side the wing lies at a point of it, `t` of the way along its bones from the
- * wrist: just clear of the helm's side, so it wraps the head from the crown down, then leaving it
- * toward the points, so they flare out beside the nape.
- */
-function wingZ(y: number, t: number): number {
-  const k = (y - SHELL.c[1]) / (SHELL.r[1] + EASE);
-  const round = k > 0 ? Math.sqrt(Math.max(0, 1 - k * k)) : 1 - 0.8 * k * k;
-  return round * (SHELL.r[2] + EASE) + 0.6 + FLARE * t * t * t;
-}
-/** How far out the points flare. */
-const FLARE = 2.6;
-/** The wing's wrist, over the temple, where its bones fan from. */
-const WRIST: W2 = [1, 7];
+/** A point of the wing on his right side (the left mirrors it): yaw round the helm from the face, pitch, and how far clear of the helm's shell it stands. */
+type WP = readonly [number, number, number];
+/** The wing's wrist, high over the temple, where its bones fan from and its thumb claw hooks forward. */
+const WRIST: WP = [70, 34, 0.5];
 /**
  * The bones of the wing folded down and back over his right side, from the wrist: the leading bone
- * arching back over the temple and curving down behind the ear toward the nape, then two finger
- * bones fanned under it, each shorter and lower, the lowest passing behind the ear. Each ends in a
- * point standing clear of the head (see `wingZ`), trailing down and back beside the ponytail; the
- * leading bone's is the longest.
+ * running back high along the side of the helm and curving down behind it toward the nape, and a
+ * finger bone fanned under it, dropping past the ear. Both lie close along the helm until behind
+ * the ear, then stand off it, so their points leave the helm and trail down, back and out beside
+ * the ponytail.
  */
-const WING_BONES: readonly (readonly W2[])[] = [
-  [WRIST, [-4, 7.6], [-10, 6.8], [-15.5, 3.8], [-20, -0.5], [-24, -5.5]],
-  [WRIST, [-6, 3.6], [-12, -0.8], [-19.5, -7.5]],
-  [WRIST, [-5, 1.2], [-9, -2.6], [-14.5, -8.5]],
+const WING_BONES: readonly (readonly WP[])[] = [
+  [WRIST, [96, 40, 0.6], [122, 36, 1], [138, 18, 2.6], [146, -2, 8], [146, -16, 16]],
+  [WRIST, [86, 18, 0.6], [102, 2, 0.9], [118, -12, 2.4], [130, -20, 6], [132, -28, 12.5]],
 ];
-/** The leading bone's run forward from the wrist along the helm to above the outer end of the brow (yaw, pitch, clearance). */
-const ARM: readonly (readonly [number, number, number])[] = [[44, 16, 0.4], [62, 25, 0.9]];
-/** How far the membrane's edge sags in toward the wrist between two points (a scallop), and over how many of the last steps along the bones. */
-const SAG = 0.55;
-const SCALLOP = 3;
-/** Steps along each bone. */
-const STEPS = 10;
+/**
+ * The thumb claw at the wrist: a hook from its root along the leading bone forward, down and out
+ * over the outer end of the brow band, standing clear of the helm toward its point, so seen from
+ * the front it breaks the outline at the upper corners of the head and, side on, the far one hooks
+ * forward past the brow.
+ */
+const CLAW: readonly WP[] = [[86, 42, 0.5], [68, 27, 0.5], [58, 20, 2.6], [48, 15, 5.2], [58, 29, 3.6], [72, 37, 1.6]];
+/** How far the membrane's trailing edge sags in toward the wrist between the two points (a scallop), as a share of the bones' length. */
+const SAG = 0.35;
+/** Over how many of the last steps along the finger bone its point is pale. */
+const PALE_TIP = 4;
+/** Steps along each bone, and across the membrane between them. */
+const STEPS = 12;
+const ACROSS = 6;
 
-/** `n` + 1 points evenly along a polyline. */
-function along(P: readonly W2[], n: number): W2[] {
+/** The wing's membrane: the steel's own tones a step lighter, so it reads against the dark cap, the black ponytail and the cape. */
+const MEMBRANE: Mat = { ...ARMOUR, bias: (ARMOUR.bias ?? 0) + 0.3 };
+
+const WING_GUARD = GEAR_ID + 70;
+/** The lowest a wing comes, hero space: just above the floor (lying down, the wing under him lies flat on it). */
+const FLOOR = 0.5;
+
+/** `n` + 1 points evenly along a polyline of wing points (spaced by their distance on the helm). */
+function along(P: readonly WP[], n: number): WP[] {
+  const pos = P.map((p) => onHelm(EASE + p[2], p[0], p[1]));
   const len: number[] = [0];
-  for (let i = 1; i < P.length; i++) len.push((len[i - 1] as number) + Math.hypot((P[i] as W2)[0] - (P[i - 1] as W2)[0], (P[i] as W2)[1] - (P[i - 1] as W2)[1]));
+  for (let i = 1; i < P.length; i++) len.push((len[i - 1] as number) + Math.hypot(...sub3(pos[i] as V3, pos[i - 1] as V3)));
   const total = len[len.length - 1] as number;
-  const out: W2[] = [];
+  const out: WP[] = [];
   let k = 0;
   for (let i = 0; i <= n; i++) {
     const d = (total * i) / n;
     while (k < P.length - 2 && (len[k + 1] as number) < d) k++;
-    const t = ((d - (len[k] as number)) / ((len[k + 1] as number) - (len[k] as number) || 1));
-    const p = P[k] as W2;
-    const q = P[k + 1] as W2;
-    out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+    const t = (d - (len[k] as number)) / ((len[k + 1] as number) - (len[k] as number) || 1);
+    out.push(mix(P[k] as WP, P[k + 1] as WP, t));
   }
   return out;
 }
+const mix = (a: WP, b: WP, t: number): WP => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-const WING_GUARD = GEAR_ID + 70;
-/** The lowest a wing comes, hero space: just above the floor (lying down, it lies flat on it). */
-const FLOOR = 0.5;
+/** A one-pixel line through points with their true depth, lifted as the helm's plates are and `lift` more. */
+function edge(ctx: PieceContext, part: Part, P: readonly V3[], m: Mat, light: number, id: number, lift = 0.6): void {
+  const Q = P.map((p) => ctx.proj(p));
+  const Z = P.map((p) => ctx.depth(p) + HELM_LIFT + lift);
+  for (let i = 0; i + 1 < P.length; i++) part.line(Q[i] as Vec, Q[i + 1] as Vec, m, light, ((Z[i] as number) + (Z[i + 1] as number)) / 2, id);
+}
 
 /**
- * Paints the folded wings: each a curved plate just clear of the helm's side, its membrane dark in
- * two panels between the bones (the upper a tone lighter), flat triangles with their true depth,
- * cut back in a scallop between the points; over it the leading bone, two pixels thick with a pale
- * upper edge, running on forward along the helm to above the brow, and the finger bones, a pixel of
- * the duller lilac over a pixel of the steel. The far wing passes behind the head and shows only
- * where it flares past it.
+ * Paints the folded wings: each a membrane lying just clear of the helm and following its curve
+ * over the side, then leaving it behind the ear toward the points, in facets with their true
+ * depth, cut back in a scallop between the two points; along its upper edge the leading bone, two
+ * pixels thick with a pale upper edge, and along its lower edge the finger bone, a pixel of the
+ * duller lilac with a pixel of the steel on the membrane's side, its point pale; and at the wrist
+ * the thumb claw. The far wing passes behind the head and shows only where it clears it.
  */
 function paintWingGuards(ctx: PieceContext, part: Part, head: Frame3): void {
+  // The top of the helm's cap, hero space: the wings never rise above it.
+  const top = at3(head, SHELL.c[0], SHELL.c[1], SHELL.c[2])[1] + Math.hypot((SHELL.r[0] + EASE) * head.f[1], (SHELL.r[1] + EASE) * head.u[1], (SHELL.r[2] + EASE) * head.r[1]);
   for (const side of [1, -1]) {
-    // Lying down, a wing pressed to the floor lies flat on it rather than passing through it.
-    const at = (p: W2, t: number): V3 => {
-      const q = at3(head, p[0], p[1], side * wingZ(p[1], t));
-      return q[1] < FLOOR ? [q[0], FLOOR, q[2]] : q;
+    // Lying down, a wing pressed to the floor lies flat on it rather than passing through it, and
+    // the wing on top lies flat at the height of the helm rather than standing up from it.
+    const at = (w: WP): V3 => {
+      const p = onHelm(EASE + w[2], w[0], w[1]);
+      const q = at3(head, p[0], p[1], side * p[2]);
+      return [q[0], clamp(q[1], FLOOR, top), q[2]];
     };
     const id = WING_GUARD + (side > 0 ? 0 : 5);
-    for (let j = 0; j + 1 < WING_BONES.length; j++) {
-      const A = along(WING_BONES[j] as readonly W2[], STEPS);
-      const B = along(WING_BONES[j + 1] as readonly W2[], STEPS);
-      const light = toneLight(UNDER, j === 0 ? 1 : 2);
-      const P = (i: number): V3 => at(A[i] as W2, i / STEPS);
-      const Q = (i: number): V3 => at(B[i] as W2, i / STEPS);
-      const tri = (p: V3, q: V3, r: V3): void => {
-        part.facet([p, q, r], UNDER, 0, id + j, light, HELM_LIFT);
-      };
-      const k = STEPS - SCALLOP;
-      for (let i = 0; i < k; i++) {
-        tri(P(i), P(i + 1), Q(i + 1));
-        tri(P(i), Q(i + 1), Q(i));
-      }
-      // The scallop: the edge between the two points sags in toward the wrist.
-      const a = A[STEPS] as W2;
-      const b = B[STEPS] as W2;
-      const S = at([(a[0] + b[0]) / 2 + (WRIST[0] - (a[0] + b[0]) / 2) * SAG, (a[1] + b[1]) / 2 + (WRIST[1] - (a[1] + b[1]) / 2) * SAG], 1 - SAG);
-      for (let i = k; i < STEPS; i++) {
-        tri(S, P(i), P(i + 1));
-        tri(S, Q(i + 1), Q(i));
-      }
-      tri(S, Q(k), P(k));
-    }
-    const line = (P: readonly V3[], m: Mat, light: number, lid: number, lift = 0.6): void => {
-      const Q = P.map((p) => ctx.proj(p));
-      const Z = P.map((p) => ctx.depth(p) + HELM_LIFT + lift);
-      for (let i = 0; i + 1 < P.length; i++) part.line(Q[i] as Vec, Q[i + 1] as Vec, m, light, ((Z[i] as number) + (Z[i + 1] as number)) / 2, lid);
+    // The membrane's outer face is lit from its outward normal, never darker than the steel's base
+    // tone; its inner face, seen where the wing turns away, lies a tone deeper in its shadow.
+    const mid = at3(head, SHELL.c[0], SHELL.c[1], SHELL.c[2]);
+    const tri = (p: V3, q: V3, r: V3): void => {
+      let n = cross3(sub3(q, p), sub3(r, p));
+      if (dot3(n, sub3(add3(add3(p, q), r), mul3(mid, 3))) < 0) n = mul3(n, -1);
+      n = norm3(n);
+      const light = ctx.cam.facing(n) >= 0 ? Math.max(ctx.cam.light(n) + 0.15, toneLight(MEMBRANE, 2) + 0.05) : toneLight(MEMBRANE, 3);
+      part.facet([p, q, r], MEMBRANE, 0, id, light, HELM_LIFT);
     };
-    // The leading bone: from above the brow along the helm to the wrist, then over the wing to its point.
-    const arm = ARM.map(([yaw, pitch, off]) => {
-      const p = onHelm(EASE + off, yaw, pitch);
-      return at3(head, p[0], p[1], side * p[2]);
-    });
-    const lead = [...arm, ...along(WING_BONES[0] as readonly W2[], STEPS).map((p, i) => at(p, i / STEPS))];
-    line(lead.map((p) => add3(p, head.u, -0.8)), RIM, 0.3, id + 3, 0.5);
-    line(lead, BRIGHT, 0.45, id + 3);
-    WING_BONES.slice(1).forEach((B) => {
-      const P = along(B, STEPS).map((p, i) => at(p, i / STEPS));
-      line(P.map((p) => add3(p, head.u, -0.7)), ARMOUR, 0.5, id + 4, 0.5);
-      line(P, RIM, 0.3, id + 4);
-    });
+    const A = along(WING_BONES[0] as readonly WP[], STEPS);
+    const B = along(WING_BONES[1] as readonly WP[], STEPS);
+    // The membrane: strips across from the leading bone to the finger, each running along the bones
+    // to the trailing edge, which reaches both points and sags in between them (the scallop).
+    const M: V3[][] = [];
+    for (let c = 0; c <= ACROSS; c++) {
+      const t = c / ACROSS;
+      const reach = 1 - SAG * Math.sin(Math.PI * t);
+      const col: V3[] = [];
+      for (let i = 0; i <= STEPS; i++) {
+        const u = (i / STEPS) * reach * STEPS;
+        const i0 = Math.min(STEPS - 1, Math.floor(u));
+        const f = u - i0;
+        col.push(at(mix(mix(A[i0] as WP, A[i0 + 1] as WP, f), mix(B[i0] as WP, B[i0 + 1] as WP, f), t)));
+      }
+      M.push(col);
+    }
+    for (let c = 0; c < ACROSS; c++) {
+      for (let i = 0; i < STEPS; i++) {
+        const p00 = (M[c] as V3[])[i] as V3;
+        const p10 = (M[c] as V3[])[i + 1] as V3;
+        const p01 = (M[c + 1] as V3[])[i] as V3;
+        const p11 = (M[c + 1] as V3[])[i + 1] as V3;
+        tri(p00, p10, p11);
+        tri(p00, p11, p01);
+      }
+    }
+    const k = STEPS - PALE_TIP;
+    // The thumb claw: dark steel, its lower edge and point pale.
+    const claw = CLAW.map(at);
+    part.facet(claw, ARMOUR, 0.25, id + 2, undefined, HELM_LIFT + 0.4);
+    edge(ctx, part, claw.slice(0, 4), BRIGHT, 0.45, id + 2, 0.8);
+    edge(ctx, part, claw.slice(3).concat([claw[0] as V3]), RIM, 0.3, id + 2, 0.8);
+    // The leading bone, from the wrist over the wing to its point; the finger bone, its second pixel
+    // on the membrane's side (not hanging below it, where it would leave slivers of background
+    // between it and the cheek guard or the pauldrons), pale at its point.
+    const lead = A.map(at);
+    edge(ctx, part, lead.map((p) => add3(p, head.u, -0.8)), RIM, 0.3, id + 3, 0.5);
+    edge(ctx, part, lead, BRIGHT, 0.45, id + 3);
+    const finger = B.map(at);
+    edge(ctx, part, finger.slice(0, k + 1).map((p) => add3(p, head.u, 0.7)), ARMOUR, 0.5, id + 4, 0.5);
+    edge(ctx, part, finger.slice(0, k + 1), RIM, 0.3, id + 4);
+    edge(ctx, part, finger.slice(k), BRIGHT, 0.3, id + 4);
   }
 }
 
-/** The violet gem at the middle of the brow band, glowing as his lance's point does. */
-const GEM: Blob = { c: [11.1, 4.55, 0], r: [0.9, 1.4, 1.3], id: GEAR_ID + 80 };
+/**
+ * The low ridge down the middle of the back of the helm, from behind the crown to above the nape
+ * where the ponytail comes out: three small spines raked back, like a dragon's spine between its
+ * folded wings. Each is given as the pitches (on the helm's back, at yaw 180) of its front and back
+ * feet and of its point, and how far its point stands clear of the helm. None rises as high as the
+ * crown, and seen from the front they stay hidden behind it.
+ */
+const RIDGE: readonly (readonly [number, number, number, number])[] = [
+  [62, 46, 44, 1.5],
+  [44, 26, 22, 2],
+  [24, 6, 2, 1.7],
+];
+const RIDGE_ID = GEAR_ID + 78;
+/** Paints the ridge's spines: plates of the steel with their true depth, rimmed in the duller lilac, the leading edge lit. */
+function paintRidge(ctx: PieceContext, part: Part, head: Frame3): void {
+  RIDGE.forEach(([a, b, t, h], i) => {
+    const pts = [onHelm(EASE - 0.3, 180, a), onHelm(EASE + h, 180, t), onHelm(EASE - 0.3, 180, b)].map((p) => at3(head, p[0], p[1], p[2]));
+    part.facet(pts, ARMOUR, 0.3, RIDGE_ID + i, undefined, HELM_LIFT + 0.3);
+    edge(ctx, part, pts.slice(0, 2), RIM, 0.45, RIDGE_ID + i, 0.6);
+    edge(ctx, part, pts.slice(1), RIM, 0.1, RIDGE_ID + i, 0.6);
+  });
+}
+
+/** The row of scales above the brow band: how far round from the face it runs (radians), and between which heights (head space). */
+const BROW_SCALES = { yaw: (62 * Math.PI) / 180, from: 5.1, to: 7.9 };
+
+/** The violet gem at the middle of the brow band, in his lance point's glowing violet, two pixels across at game size. */
+const GEM: Blob = { c: [11.3, 4.6, 0], r: [1.2, 2, 2], id: GEAR_ID + 80 };
 
 /**
  * The folded wing half-helm: the engine's open-faced helm (a smooth dark cap, a pale brow band and
- * cheek guards) with overlapping scales over the cheek guards, a violet gem at the middle of the
- * brow band, and a dragon's wing folded down and back round each side of it. Turned away from the
- * viewer it keeps the scales only where they face him: the far cheek guard is plain dark steel.
+ * cheek guards) with overlapping scales over the cheek guards and in a row just above the brow
+ * band, a violet gem at the middle of the band, a dragon's wing folded down and back round each
+ * side of it and a low ridge down the back. Turned away from the viewer it keeps the cheek guards'
+ * scales only where they face him: the far cheek guard is plain dark steel.
  */
 const HELM: HeadPiece = {
   ...HELM_BASE,
@@ -307,6 +355,12 @@ const HELM: HeadPiece = {
           const s = scaleAt(h.p[0] * 1.2 + 30, 2 - h.p[1], 3.8, 2.6);
           return { ...r, m: s === 'face' ? ARMOUR : s === 'rim' ? RIM : UNDER };
         }
+        // A row of scales across the front of the cap, just above the brow band.
+        const round = Math.atan2(h.p[2], h.p[0] - SHELL.c[0]);
+        if (r.m === ARMOUR && Math.abs(round) < BROW_SCALES.yaw && h.p[1] > BROW_SCALES.from && h.p[1] < BROW_SCALES.to) {
+          const s = scaleAt(round * (SHELL.r[2] + EASE) + 30, BROW_SCALES.to - h.p[1], 3.2, 2.6);
+          return { ...r, m: s === 'face' ? ARMOUR : s === 'rim' ? SCALE : UNDER };
+        }
         return r;
       },
     }));
@@ -315,7 +369,10 @@ const HELM: HeadPiece = {
       { frame: head, blobs: [GEM], shade: (h: Hit) => (h.back ? null : { m: POINT_STEEL, lift: HELM_LIFT + 0.6 }) },
     ];
   },
-  paint: (ctx, part, head) => paintWingGuards(ctx, part, head),
+  paint: (ctx, part, head) => {
+    paintWingGuards(ctx, part, head);
+    paintRidge(ctx, part, head);
+  },
 };
 
 // ── The torso: a scaled breastplate over the charcoal suit, a belt ──────────────────────────

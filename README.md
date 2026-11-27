@@ -510,18 +510,20 @@ her back. Her effects are a verdant green-gold, her ultimate's dark arrow violet
 
 **The Dragoon**, a Duelist, has a new look: a lean, long-legged young lancer about 84 pixels tall to
 the top of his helm, narrow amber eyes and a cocky half-smile, in light dragon-styled armour of dark
-indigo steel with pale lilac edges. His open-faced half-helm is low and smooth on top, with a small
-violet gem in its pale brow band and scaled cheek guards; its sides are a pair of dragon's wings
-folded down and back round his head, each with a pale leading bone sweeping from above his brow back
-over the temple and down behind the ear, dark membrane scalloped between its bones, and points that
-trail down and back beside his ponytail. His jet-black hair, blue in its sheen, shows at the fringe
-and falls from under the back of the helm in a long ponytail. A
-scale-patterned breastplate, layered wing-like pauldrons swept back to points, vambraces ending in
-claws over the knuckles and greaves with a spur at the knee go over a charcoal under-suit, with a
-violet-black cape to below the knee, lined in crimson and cut like a wing's trailing edge. His lance
-is taller than he is: a dark steel shaft with violet wraps, a long leaf point glowing violet and a
-vamplate of spread dragon wings below it. His energy is violet with a pale lilac edge and a
-white-hot core (`heroes/chibi/dragoon/`):
+indigo steel with pale lilac edges. His open-faced half-helm is low and smooth on top, with a violet
+gem in its pale brow band and a row of scales above it, scaled cheek guards and a low ridge of small
+spines down the back; its sides are a pair of dragon's wings folded down and back round his head.
+Each wing's wrist sits high over the temple, with a pale thumb claw hooking forward over the end of
+his brow; its pale leading bone runs back along the side of the helm and down behind it, a finger
+bone fans down past the ear, and behind the ear the wing leaves the helm, its two points trailing
+down and back clear of his head beside the ponytail with a deep scallop between them. Nothing on it
+rises above the crown. His jet-black hair, blue in its sheen, shows at the fringe and falls from
+under the back of the helm in a long ponytail. A scale-patterned breastplate, layered wing-like
+pauldrons swept back to points, vambraces ending in claws over the knuckles and greaves with a spur
+at the knee go over a charcoal under-suit, with a violet-black cape to below the knee, lined in
+crimson and cut like a wing's trailing edge. His lance is taller than he is: a dark steel shaft with
+violet wraps, a long leaf point glowing violet and a vamplate of spread dragon wings below it. His
+energy is violet with a pale lilac edge and a white-hot core (`heroes/chibi/dragoon/`):
 
 | Clip | Frames | The Dragoon |
 | --- | --- | --- |
