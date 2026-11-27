@@ -198,8 +198,9 @@ function volley(i: number): ChibiPose[] {
 const U_LAST = pose(PLANTED, { x: -4.6, lean: 2, head: 3, handF: [6.5, -0.5, 4], weapon: 80, yaw: 0, draw: 0, nock: false, face: 'grit', wink: undefined, wind: 0.5, lift: 0.4, phase: 0.85 });
 
 const ult: ChibiPose[] = [
-  // Wind-up: planted low and wide, the lever thrown open, a glow gathering round him.
-  onLever(pose(PLANTED, { y: 8, lean: 12, head: 8, yaw: -10, weapon: 94, draw: 0.55, face: 'grit', fx: { rune: 0.8, aura: 0.6 } })),
+  // Wind-up: dropped low into a wide crouch, the nose dipped and the lever thrown right open over
+  // the prod under his left hand, a glow gathering round him; he rises into the first shot.
+  onLever(pose(PLANTED, { y: 11, lean: 15, head: 10, footF: [17, 0, 7.4], footB: [-16, 0, 6.8], elbowF: [-0.6, 0.5, 1], yaw: -12, weapon: 102, draw: 0.2, face: 'grit', fx: { rune: 0.8, aura: 0.6 } })),
   ...volley(0),
   ...volley(1),
   ...volley(2),

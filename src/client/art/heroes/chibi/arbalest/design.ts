@@ -159,6 +159,16 @@ const FACE_ARBALEST: FaceStyle = {
   },
 };
 
+/**
+ * A short beard close over the jaw, with a short tuft under the jaw either side of the chin. The
+ * engine's short beard also hangs one under the middle of the chin, but hanging tufts are painted
+ * over the face and that one would hide his mouth, so he goes without it: the two either side hang
+ * a little lower and longer instead, and the bare patch round his lips is wider, so his grin and
+ * his shouts show under the moustache.
+ */
+const SHORT_BEARD = beard({ kind: 'short', mat: BEARD, len: 3, thick: 0.9, cheek: -6.3, side: -2.4, mouth: [3.4, 2.1] });
+const BEARD_GROWTH = { ...SHORT_BEARD, hang: (SHORT_BEARD.hang ?? []).filter((t) => t.yaw !== 0).map((t) => ({ ...t, pitch: t.pitch - 6, len: t.len * 1.3 })) };
+
 // ── The torso: a belted leather coat, open over the jerkin ───────────────────────────────────
 
 const deg = (h: Hit): number => Math.abs((Math.atan2(h.p[2], h.p[0]) * 180) / Math.PI);
@@ -275,13 +285,15 @@ export const ARBALEST: ChibiDesign = {
     jaw: { c: [1.8, -4.1, 0], r: [8, 6.9, 8.4] },
     ear: { c: [-0.6, -3.2, 10], r: [2, 2.8, 1.6] },
     shell: SHELL,
-    hairline: { faceYaw: 72, brow: 6.6, temple: 1, nape: -6.5, ear: -1.8 },
+    // A clear band of brow under the goggles at the front; at the sides the short hair comes down
+    // over his temples to the sideburns, so no bare skin runs up the side of his head to the strap.
+    hairline: { faceYaw: 54, brow: 6.6, temple: -2, nape: -6.5, ear: -1.8 },
     locks: LOCKS,
     darkHair: true,
     lockLine: hex('#6e2c0c'),
     // Combed back: clumps run back over the head from the brow to a point low on the crown.
     whorl: { yaw: 180, pitch: 20, reach: 150, clumps: 9, twist: 0.05 },
-    beard: beard({ kind: 'short', mat: BEARD, len: 3, thick: 0.9, cheek: -6.3, side: -2.4, mouth: [3, 1.8] }),
+    beard: BEARD_GROWTH,
     moustache: { mat: BEARD, len: 3, w: 0.75, droop: 0.6 },
     face: {
       eye: [8.8, -1.7, 3.9],

@@ -237,9 +237,13 @@ export const shrapnel =
     const base = Math.atan2(d[1], d[0]);
     // Half the cone's opening on screen; a full round seen end on.
     const half = star ? Math.PI : rad(33);
+    // Flying away from the viewer (seen from behind) the cone is foreshortened: it rises above his
+    // head as a low, broad wedge rather than standing up behind him at its full length.
+    const sv = x.cam.vec(dir);
+    const short = star ? 1 : Math.min(1, Math.max(0.75, Math.hypot(sv[0], sv[1]) / 0.8));
     if (k < 0.3) {
       // The blast: a fan (or a disc seen end on) of light, hottest at its apex.
-      const R = (star ? 16 : 40) * (0.95 + k);
+      const R = (star ? 16 : 40) * (0.95 + k) * short;
       const fade = 1 - k / 0.3;
       const ri = Math.ceil(R);
       for (let dy = -ri; dy <= ri; dy++) {
@@ -261,7 +265,7 @@ export const shrapnel =
       if (star) starburst(c, A, 1.6, WHITE, AMBER, fade, under);
     }
     // The sparks: flying out from the prod along the cone, some still close to it.
-    const reach = (star ? 12 : 30) + k * (star ? 24 : 50);
+    const reach = ((star ? 12 : 30) + k * (star ? 24 : 50)) * short;
     const n = k > 0.8 ? 18 : 40;
     for (let i = 0; i < n; i++) {
       const ang = base + (hash(i, 61) * 2 - 1) * half * (star ? 1 : 0.95);
