@@ -43,9 +43,8 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
  * in at the top (his launch takes him out of the top of every frame for two frames, leaving only
  * the beam he rose on) and deep enough below the ground point for the rings, which roll out toward
  * the viewer. The game crops every frame to what is painted, so the spare room costs nothing there.
- * He stands about 93 px tall at ease from the tips of his helm's frills to his soles (84 to the
- * top of the helm): 2.1 tiles per 84 px, as the Dark Knight, so his helm stands a little taller in
- * game.
+ * He stands about 84 px tall at ease from the top of his helm to his soles (nothing on the helm
+ * rises above its crown): 2.1 tiles per 84 px, as the Dark Knight.
  */
 export const DRAGOON_HERO: ChibiHero = chibiHero(
   DRAGOON,
@@ -57,5 +56,5 @@ export const DRAGOON_HERO: ChibiHero = chibiHero(
     back: { w: 184, h: 238, ax: 92, ay: 193 },
   },
   2.1 / 84,
-  93,
+  84,
 );

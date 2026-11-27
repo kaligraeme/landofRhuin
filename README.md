@@ -284,8 +284,8 @@ hero is a big-headed chibi painted in code frame by frame (see [Chibi heroes](#c
 - **Bowmaster** (Ranger): a light-footed archer in a forest-green hood and short hooded cape, with
   a dark recurve longbow and a quiver of pale-fletched arrows.
 - **Dragoon** (Duelist): a lean lancer in dark violet dragon-scale armour and an open-faced
-  dragon-crest half-helm, a long black ponytail, a violet-black cape lined in crimson and a lance
-  taller than he is.
+  half-helm with folded dragon's wings for sides, a long black ponytail, a violet-black cape lined
+  in crimson and a lance taller than he is.
 - **Blademaster** (Duelist): a quick duelist with a messy dark bob, a black coat lined in crimson
   with swallowtails to her knees, and two curved sabres.
 - **Flame Warden** (Duelist): a lean swordsman with spiky black hair, a long black coat lined in
@@ -509,11 +509,13 @@ her back. Her effects are a verdant green-gold, her ultimate's dark arrow violet
 | `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the bow flung out; on one knee, the bow planted on its tip; a fall onto her back on her spread cape, the hood sliding back; the arrow twirled and slid into the quiver, the hood pushed back, a smile and a wink |
 
 **The Dragoon**, a Duelist, has a new look: a lean, long-legged young lancer about 84 pixels tall to
-the top of his helm (93 to the tips of its frills), narrow amber eyes and a cocky half-smile, in light dragon-styled armour
-of dark indigo steel with pale lilac edges. His open-faced dragon-crest half-helm has a brow band
-dipping to a snout point over his nose, overlapping scales on the cheek guards, and a frill of three
-swept-back blades behind each temple like a dragon's folded wing; his jet-black hair, blue in its
-sheen, shows at the fringe and falls from under the back of the helm in a long ponytail. A
+the top of his helm, narrow amber eyes and a cocky half-smile, in light dragon-styled armour of dark
+indigo steel with pale lilac edges. His open-faced half-helm is low and smooth on top, with a small
+violet gem in its pale brow band and scaled cheek guards; its sides are a pair of dragon's wings
+folded down and back round his head, each with a pale leading bone sweeping from above his brow back
+over the temple and down behind the ear, dark membrane scalloped between its bones, and points that
+trail down and back beside his ponytail. His jet-black hair, blue in its sheen, shows at the fringe
+and falls from under the back of the helm in a long ponytail. A
 scale-patterned breastplate, layered wing-like pauldrons swept back to points, vambraces ending in
 claws over the knuckles and greaves with a spur at the knee go over a charcoal under-suit, with a
 violet-black cape to below the knee, lined in crimson and cut like a wing's trailing edge. His lance
