@@ -6,7 +6,7 @@
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import type { Blob, Hit, Mat, Part } from './raster.js';
-import type { Build, Camera, ChibiPose, Face, Frame3, Grip, Rig, V3 } from './rig.js';
+import type { Build, Camera, ChibiPose, Face, Frame3, Grip, Rig, Strap, V3 } from './rig.js';
 
 /** A lock of hair: a clump raked over the head, a strand of the fringe, a lock at the nape. */
 export interface Lock {
@@ -329,11 +329,12 @@ export interface Held {
  * item a design draws itself). Its own axes are a grip's: u along it from where the hand holds
  * it, v across it (toward a blade's cutting edge), n its flat.
  *
- * A bow would be one too: held at its middle in the off hand (`reach` running from one limb's tip
- * below the hand to the other's above it), with its painter stringing it to wherever the main
- * hand is (`ctx.rig.armR.end`), so a pose draws it by pulling that hand back, and `tip` where an
- * arrow (or a spell) leaves it. The main weapon would then be what the drawing hand holds (an
- * arrow, or a sword for when the bow is not drawn), so neither needs the other redrawn.
+ * Other kinds build on the same: a shield (shield.ts) is strapped to the forearm (`strap`) and
+ * faces out from it; a bow (bow.ts) is held at its middle in the off hand and strings itself to
+ * wherever the main hand is (`ctx.rig.armR.end`), so a pose draws it by pulling that hand back,
+ * its string and arrow sorted on their own (`items`) and its shots leaving from the arrow's head
+ * (`aim`); the main weapon is then what the drawing hand holds (`NO_WEAPON` in held.ts, or an
+ * arrow). A crossbow (crossbow.ts) is a two-handed main weapon.
  */
 export interface HeldItem {
   /** Its working part along it from the hand (a blade, a pole arm's head, a wand's crystal), for smears and impacts. */
@@ -344,6 +345,24 @@ export interface HeldItem {
   paint: (ctx: PieceContext, part: Part, held?: Held) => void;
   /** A soft glow painted over the figure after it is outlined, 0 to 1 strength (or more), on its own pixels only. */
   glow?: (ctx: PieceContext, strength: number, held?: Held) => void;
+  /**
+   * Worn strapped to the forearm (a shield) rather than gripped at the pose's angles, in the off
+   * hand: its grip is then the middle of its back, on the forearm, its u axis its top and its n
+   * axis out of its face (see rig.ts `strapGrip` and the pose's notes on shields). The left arm
+   * and hand sort behind it while its face is toward the viewer, in front of it otherwise.
+   */
+  strap?: Strap;
+  /**
+   * Where effects leave it and which way they fly, in hero space, when that is not simply its
+   * `tip` along it (`FxContext.tip`/`dir`, `tipB`/`dirB`): a bow's is its arrow's head and the
+   * arrow's line, a shield's the middle of its face and out of it.
+   */
+  aim?: (ctx: PieceContext, held: Held) => { tip: V3; dir: V3 };
+  /**
+   * Parts of it sorted on their own rather than with it (a bow's string and nocked arrow, which
+   * run back to the drawing hand across the body): more draw items for the frame.
+   */
+  items?: (ctx: PieceContext, held: Held) => DrawItem[];
 }
 
 /**
@@ -373,7 +392,7 @@ export interface ChibiDesign {
   outfit: readonly Piece[];
   weapon: WeaponDesign;
   /**
-   * An item in the off (left) hand: a wand, a second blade, later a bow. With one, the main weapon
+   * An item in the off (left) hand: a wand, a second blade, a shield, a bow. With one, the main weapon
    * is one-handed: the pose gives `handB` and the item's own angles (`weaponB`, `rollB`, `yawB`);
    * a pose that leaves `handB` out still puts that hand, item and all, on the main weapon's
    * second grip (a two-handed blow).

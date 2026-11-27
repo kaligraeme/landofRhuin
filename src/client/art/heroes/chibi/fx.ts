@@ -3,18 +3,20 @@
  * outlined: swoosh arcs swept by the blade (or the off-hand item) in 3D (and a level ring for
  * spins), impact bursts, a guard's clang, dust, speed lines, a rim of power, rune circles and
  * shockwaves on the ground, wisps drawn in from all around, a mist of blood, the blade's glowing
- * runes, lightning, a ward of runes or hexagons, spiralling wind and afterimages, all in the
- * design's aura colours. Parts of an effect behind the hero go on the under layer, so the figure
- * hides them. `glowLine`, `puff`, `starburst`, `lightning`, `ward`, `swirl`, `afterimages` and
- * the dust colours are exported for a hero's own `fx.extra` painters.
+ * runes, lightning, a ward of runes or hexagons, spiralling wind and afterimages, a clang on a
+ * shield, a shot's release flash and its trail, light rays (a burst of beams or a column of
+ * light) and rising motes of light, all in the design's aura colours. Parts of an effect behind
+ * the hero go on the under layer, so the figure hides them. `glowLine`, `puff`, `starburst`,
+ * `lightning`, `ward`, `swirl`, `afterimages`, `clang`, `flash`, `trail`, `rays`, `column`,
+ * `motes` and the dust colours are exported for a hero's own `fx.extra` painters.
  */
 import type { Canvas, RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
 import { type ChibiDesign, HEAD_TAG, type Held, OFFHAND_TAG, type PieceContext } from './design.js';
-import { blaze } from './held.js';
+import { aimOf, blaze, mainHeld } from './held.js';
 import { hash } from './pieces.js';
 import { mixc, scanPoly } from './raster.js';
-import { add3, type ChibiFx, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, lerp3, mul3, norm3, rad, sub3, TO_CAMERA, type V3, weaponAxes } from './rig.js';
+import { add3, at3, type ChibiFx, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, lerp3, mul3, norm3, rad, sub3, TO_CAMERA, type V3, weaponAxes } from './rig.js';
 
 const WHITE: RGB = [255, 255, 255];
 /** Dust kicked up off the floor: its light and dark puffs. */
@@ -218,16 +220,26 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
   const { c, rig, pose, cam } = ctx;
   const w = rig.weapon;
   const [r0, r1] = d.weapon.reach;
-  const tip = add3(w.o, w.u, d.weapon.tip ?? r1);
+  const main = aimOf(d.weapon, ctx, mainHeld(ctx));
+  const tip = main.tip;
   const aura = d.aura;
   const ground = (p: V3): V3 => [p[0], 0, p[2]];
   // The off-hand item, and where its spells leave it (the bare hand if it holds nothing).
   const off = d.offhand;
   const wB = rig.offhand;
-  const tipB = off ? add3(wB.o, wB.u, off.tip ?? off.reach[1]) : rig.armL.end;
   const heldB: Held = { grip: wB, blaze: blaze(ctx, true), tag: OFFHAND_TAG };
+  const offAim = off ? aimOf(off, ctx, heldB) : null;
+  const tipB = offAim ? offAim.tip : rig.armL.end;
+  const dirB = offAim ? offAim.dir : norm3(sub3(rig.armL.end, rig.armL.mid));
   const bodyZ = ctx.depth(rig.pelvis.o);
-  const fctx: FxContext = { c, cam, rig, proj: ctx.proj, depth: ctx.depth, tip, tipB, aura, hash, behind: (p) => ctx.depth(p) < bodyZ };
+  const fctx: FxContext = { c, cam, rig, proj: ctx.proj, depth: ctx.depth, tip, tipB, dir: main.dir, dirB, aura, hash, behind: (p) => ctx.depth(p) < bodyZ };
+  // Where a shot leaves (an item's tip, or a point) and which way it flies.
+  const source = (from: 'main' | 'off' | V3 | undefined, dir: V3 | undefined): { at: V3; dir: V3 } => {
+    const src = from ?? (off ? 'off' : 'main');
+    const at = src === 'off' ? tipB : src === 'main' ? tip : src;
+    return { at, dir: norm3(dir ?? (src === 'off' ? dirB : main.dir)) };
+  };
+  const onHead = (x: number, y: number): boolean => ctx.owner[y * c.w + x] === HEAD_TAG;
 
   // The blade's rune: barely a glow at rest, blazing as the pose calls on it.
   if (d.weapon.glow) d.weapon.glow(ctx, clamp(0.06 + (fx.rune ?? 0) * 1.1 + (fx.aura ?? 0) * 0.35, 0, 1.4));
@@ -483,17 +495,28 @@ export function paintFx(ctx: PieceContext, d: ChibiDesign, fx: ChibiFx, behindZ:
 
   if (fx.impactB) starburst(c, ctx.proj(tipB), fx.impactB, aura.hot, aura.core, 1);
 
-  if (fx.clang) {
-    const p = ctx.proj(add3(w.o, w.u, r0 + (r1 - r0) * 0.45));
-    starburst(c, p, 0.8 * fx.clang, WHITE, [255, 236, 190], 1);
-    for (let i = 0; i < 7; i++) {
-      const ang = hash(i, 51) * Math.PI * 2;
-      const len = 6 + hash(i, 52) * 9;
-      const a: Vec = [p[0] + Math.cos(ang) * 4, p[1] + Math.sin(ang) * 4];
-      const b: Vec = [p[0] + Math.cos(ang) * len, p[1] + Math.sin(ang) * len + 2];
-      glowLine(c, a, b, [255, 220, 150], 0.95 * fx.clang, false);
+  if (fx.clang) clang(c, ctx.proj(add3(w.o, w.u, r0 + (r1 - r0) * 0.45)), fx.clang);
+  if (fx.clangB) clang(c, ctx.proj(tipB), fx.clangB, fctx.behind(tipB));
+
+  if (fx.trail && fx.trail.k > 0) {
+    const s = source(fx.trail.from, fx.trail.dir);
+    trail(fctx, s.at, s.dir, fx.trail.k, { len: fx.trail.len });
+  }
+  if (fx.flash && fx.flash.k > 0) {
+    const s = source(fx.flash.from, fx.flash.dir);
+    flash(fctx, s.at, s.dir, fx.flash.k);
+  }
+  if (fx.rays && fx.rays.k > 0) {
+    const g = fx.rays;
+    const at = g.at ?? 'body';
+    if (g.column) {
+      column(fctx, typeof at === 'string' ? (at === 'main' ? tip : at === 'off' ? tipB : rig.pelvis.o) : at, g.k, { radius: g.radius, skip: onHead });
+    } else {
+      const p = typeof at === 'string' ? (at === 'main' ? tip : at === 'off' ? tipB : at3(rig.chest, 0, 15, 0)) : at;
+      rays(fctx, p, g.k, { n: g.n, len: g.len, spin: g.spin, behind: at === 'body', skip: onHead });
     }
   }
+  if (fx.motes && fx.motes.k > 0) motes(fctx, fx.motes.k, { n: fx.motes.n, rise: fx.motes.rise });
 
   if (fx.glow) {
     for (let y = 0; y < c.h; y++) for (let x = 0; x < c.w; x++) if (c.opaque(x, y) && (x + y) % 2 === 0) c.glow(x, y, aura.core, 0.18 * fx.glow);
@@ -840,6 +863,267 @@ export function swirl(x: FxContext, from: V3, to: V3, k: number, o: { radius?: n
         if (head > 0.55) glowLine(c, [prev[0], prev[1] + 1], [p[0], p[1] + 1], aura.core, a * 0.5, back);
       }
       prev = p;
+    }
+  }
+}
+
+/**
+ * A guard's clang at a screen point: a hard white flash and sparks flying out of it, 0 to 1 (the
+ * main weapon's `fx.clang`, a shield's `fx.clangB`); `under` puts it under the figure (a shield
+ * seen from behind him), so only the sparks flying clear of him show.
+ */
+export function clang(c: Canvas, p: Vec, k: number, under = false): void {
+  starburst(c, p, 0.8 * k, WHITE, [255, 236, 190], 1, under);
+  for (let i = 0; i < 7; i++) {
+    const ang = hash(i, 51) * Math.PI * 2;
+    const len = 6 + hash(i, 52) * 9;
+    const a: Vec = [p[0] + Math.cos(ang) * 4, p[1] + Math.sin(ang) * 4];
+    const b: Vec = [p[0] + Math.cos(ang) * len, p[1] + Math.sin(ang) * len + 2];
+    glowLine(c, a, b, [255, 220, 150], 0.95 * k, under);
+  }
+}
+
+/**
+ * A direction on screen for an effect running from a hero-space point along `dir`: as seen, or,
+ * when it runs nearly straight at the viewer or away (and would shrink to a stub), opened out to
+ * at least `least` of its length, down the screen toward the viewer and up it away from them.
+ */
+function seenDir(x: FxContext, at: V3, dir: V3, least: number): { d: Vec; k: number } {
+  const v = x.cam.vec(dir);
+  const l = Math.hypot(v[0], v[1]);
+  if (l >= least) return { d: [v[0] / l, v[1] / l], k: l };
+  const toward = x.depth(add3(at, dir)) >= x.depth(at) ? 1 : -1;
+  // Blend the little it shows on screen with straight down (or up) the screen.
+  const w = l / least;
+  const d: Vec = l > 1e-3 ? [(v[0] / l) * w, (v[1] / l) * w + toward * (1 - w)] : [0, toward];
+  const dl = Math.hypot(d[0], d[1]) || 1;
+  return { d: [d[0] / dl, d[1] / dl], k: least };
+}
+
+/**
+ * A release flash where a shot leaves `at` (hero space) flying along `dir`: a white-hot core, a
+ * long spike of light along the shot with two shorter ones raked back beside it, a ring round the
+ * shot just ahead of the tip and a few sparks thrown forward, in the aura's colours; `k` its
+ * strength. A shot flying at the viewer opens out on screen rather than shrinking to a point.
+ */
+export function flash(x: FxContext, at: V3, dir: V3, k: number): void {
+  const { c, aura } = x;
+  k = clamp(k, 0, 1.5);
+  if (k <= 0) return;
+  dir = norm3(dir);
+  const A = x.proj(at);
+  const under = x.behind(at) && x.behind(add3(at, dir, 6));
+  const { d } = seenDir(x, at, dir, 0.55);
+  const n: Vec = [-d[1], d[0]];
+  const L = 15 * Math.min(1.2, 0.6 + k * 0.5);
+  const lines: { pts: Vec[]; alpha: (t: number) => number; width?: number }[] = [{ pts: [A, [A[0] + d[0] * L, A[1] + d[1] * L]], alpha: (t) => k * (1 - t * 0.85) }];
+  for (const s of [1, -1]) {
+    const e: Vec = [d[0] * 0.8 + n[0] * s * 0.6, d[1] * 0.8 + n[1] * s * 0.6];
+    lines.push({ pts: [A, [A[0] + e[0] * L * 0.5, A[1] + e[1] * L * 0.5]], alpha: (t) => k * 0.85 * (1 - t), width: 0.7 });
+  }
+  lines.push({ pts: [A, [A[0] - d[0] * 4, A[1] - d[1] * 4]], alpha: (t) => k * 0.6 * (1 - t), width: 0.6 });
+  strokeBands(c, lines, [[0.7, aura.hot, 1], [1.6, aura.core, 0.85], [2.6, aura.edge, 0.35]], () => under);
+  // The ring round the shot, a little ahead of the tip.
+  const ref: V3 = Math.abs(dir[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const e1 = norm3(cross3(dir, ref));
+  const e2 = cross3(dir, e1);
+  const centre = add3(at, dir, 3);
+  const R = 3.2 + 2 * Math.min(1, k);
+  for (let i = 0; i < 28; i++) {
+    const th = (i / 28) * Math.PI * 2;
+    const p3 = add3(add3(centre, e1, Math.cos(th) * R), e2, Math.sin(th) * R);
+    const p = x.proj(p3);
+    c.glow(p[0], p[1], i % 2 ? aura.core : aura.hot, 0.7 * Math.min(1, k), x.behind(p3) && under);
+  }
+  puff(c, A[0], A[1], 3.4, aura.core, 0.55 * Math.min(1, k), under);
+  puff(c, A[0], A[1], 1.7, WHITE, Math.min(1, k), under);
+  // Sparks thrown forward.
+  for (let i = 0; i < 6; i++) {
+    const ang = Math.atan2(d[1], d[0]) + (hash(i, 81) - 0.5) * 2.2;
+    const r0 = 4 + hash(i, 82) * 4;
+    const r1 = r0 + 3 + hash(i, 83) * 4;
+    glowLine(c, [A[0] + Math.cos(ang) * r0, A[1] + Math.sin(ang) * r0], [A[0] + Math.cos(ang) * r1, A[1] + Math.sin(ang) * r1], i % 2 ? aura.hot : aura.core, 0.85 * Math.min(1, k), under);
+  }
+}
+
+/**
+ * The trail a shot leaves as it flies from `at` (hero space) along `dir`, `len` long (default
+ * 52): a white-hot line brightest at its far end, where the shot now is, fading back toward where
+ * it left, sheathed in the aura's core colour with a fringe of its edge colour, and sparks shed
+ * along it; `k` its strength. Seen end on it opens out down the screen (toward the viewer) or up
+ * it (away), as lightning does; the part of it behind the figure is hidden by it.
+ */
+export function trail(x: FxContext, at: V3, dir: V3, k: number, o: { len?: number } = {}): void {
+  const { c, aura } = x;
+  k = clamp(k, 0, 1.5);
+  if (k <= 0) return;
+  dir = norm3(dir);
+  const len = o.len ?? 52;
+  const to = add3(at, dir, len);
+  const A = x.proj(at);
+  const seen = seenDir(x, at, dir, 0.6);
+  const B: Vec = [A[0] + seen.d[0] * len * seen.k, A[1] + seen.d[1] * len * seen.k];
+  const L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+  const bA = x.behind(at);
+  const bB = x.behind(to);
+  const under = (px: number, py: number): boolean => {
+    if (bA === bB) return bA;
+    const t = clamp(((px - A[0]) * (B[0] - A[0]) + (py - A[1]) * (B[1] - A[1])) / (L * L), 0, 1);
+    return x.behind(lerp3(at, to, t));
+  };
+  const fade = (t: number): number => k * (0.12 + 0.88 * Math.pow(t, 1.3));
+  // A thin second streak beside the first, a little behind it, so the trail has some body.
+  const n: Vec = [-(B[1] - A[1]) / L, (B[0] - A[0]) / L];
+  const lines = [
+    { pts: [A, B], alpha: fade },
+    { pts: [[A[0] + n[0] * 1.2, A[1] + n[1] * 1.2] as Vec, [B[0] - (B[0] - A[0]) * 0.18 + n[0] * 1.2, B[1] - (B[1] - A[1]) * 0.18 + n[1] * 1.2] as Vec], alpha: (t: number) => fade(t) * 0.55, width: 0.6 },
+  ];
+  strokeBands(c, lines, [[0.6, aura.hot, 1], [1.5, aura.core, 0.8], [2.5, aura.edge, 0.3]], under);
+  // Sparks shed along it, drifting off to either side.
+  for (let i = 0; i < 7; i++) {
+    const t = 0.15 + 0.8 * hash(i, 91);
+    const side = (hash(i, 92) - 0.5) * 7;
+    const px = A[0] + (B[0] - A[0]) * t + n[0] * side;
+    const py = A[1] + (B[1] - A[1]) * t + n[1] * side + hash(i, 93) * 2;
+    c.glow(px, py, i % 3 ? aura.core : aura.hot, fade(t) * 0.9, under(px, py));
+  }
+}
+
+/**
+ * A burst of light rays round `at` (hero space): `n` beams (default 12), every other one shorter,
+ * about `len` long (default 34, or 46 shining out from behind him), turned `spin` degrees, each a
+ * wedge of the aura's core colour widening and fading as it goes out, with a white-hot line down
+ * its middle, round a bright heart; `k` their strength. With
+ * `behind` they shine out from behind the figure (on the under layer: a burst at his chest);
+ * otherwise they lie over it, softly where they cross it, leaving alone any pixel `skip` names
+ * (his face).
+ */
+export function rays(x: FxContext, at: V3, k: number, o: { n?: number; len?: number; spin?: number; behind?: boolean; skip?: (x: number, y: number) => boolean } = {}): void {
+  const { c, aura } = x;
+  k = clamp(k, 0, 1.5);
+  if (k <= 0) return;
+  const P = x.proj(at);
+  const n = o.n ?? 12;
+  const len = (o.len ?? (o.behind ? 46 : 34)) * (0.55 + 0.45 * Math.min(1, k));
+  const spin = rad(o.spin ?? 0);
+  const under = !!o.behind;
+  const put = (px: number, py: number, col: RGB, a: number): void => {
+    if (o.skip?.(px, py)) return;
+    // Over the figure, softly, so he shows through.
+    c.glow(px, py, col, !under && c.opaque(px, py) ? a * 0.4 : a, under);
+  };
+  for (let i = 0; i < n; i++) {
+    const th = spin + (i / n) * Math.PI * 2;
+    const L = len * (i % 2 ? 0.62 : 1) * (0.9 + 0.2 * hash(i, 101));
+    const d: Vec = [Math.cos(th), Math.sin(th)];
+    const m: Vec = [-d[1], d[0]];
+    // Each beam widens as it goes out, as sunbeams do.
+    const w0 = 0.7;
+    const w1 = L * (i % 2 ? 0.07 : 0.1);
+    const r0 = 3;
+    const pts: Vec[] = [
+      [P[0] + d[0] * r0 + m[0] * w0, P[1] + d[1] * r0 + m[1] * w0],
+      [P[0] + d[0] * L + m[0] * w1, P[1] + d[1] * L + m[1] * w1],
+      [P[0] + d[0] * L - m[0] * w1, P[1] + d[1] * L - m[1] * w1],
+      [P[0] + d[0] * r0 - m[0] * w0, P[1] + d[1] * r0 - m[1] * w0],
+    ];
+    scanPoly(pts, c.w, c.h, (px, py) => {
+      const t = clamp(((px + 0.5 - P[0]) * d[0] + (py + 0.5 - P[1]) * d[1]) / L, 0, 1);
+      put(px, py, t < 0.4 ? mixc(aura.hot, aura.core, t / 0.4) : aura.core, k * 0.6 * (1 - t * 0.85));
+    });
+    const steps = Math.ceil(L * 0.8);
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const px = P[0] + d[0] * (r0 + (L - r0) * t * 0.85);
+      const py = P[1] + d[1] * (r0 + (L - r0) * t * 0.85);
+      put(px, py, aura.hot, k * 0.85 * (1 - t));
+    }
+  }
+  // The heart of the burst.
+  for (let dy = -6; dy <= 6; dy++) {
+    for (let dx = -6; dx <= 6; dx++) {
+      const r = Math.hypot(dx, dy);
+      if (r > 6) continue;
+      put(P[0] + dx, P[1] + dy, r < 2.5 ? WHITE : r < 4.2 ? aura.hot : aura.core, k * (r < 2.5 ? 0.95 : r < 4.2 ? 0.7 : 0.35));
+    }
+  }
+}
+
+/**
+ * A column of light pouring down onto a point on the ground (the ground under `at`), `radius`
+ * wide (default 13) from high above (about 120 px): white-hot down its middle, the aura's core
+ * colour out to its edges and its edge colour at the rim, fading in at the top, faint streaks
+ * running down it and a pool of light where it lands; `k` its strength. Behind the figure it goes
+ * on the under layer; over it, a softer veil so he shows through, leaving alone any pixel `skip`
+ * names (his face).
+ */
+export function column(x: FxContext, at: V3, k: number, o: { radius?: number; height?: number; skip?: (x: number, y: number) => boolean } = {}): void {
+  const { c, aura } = x;
+  k = clamp(k, 0, 1.5);
+  if (k <= 0) return;
+  const g: V3 = [at[0], 0, at[2]];
+  const R = o.radius ?? 13;
+  const H = o.height ?? 120;
+  const foot = x.proj(g);
+  const top = x.proj([g[0], H, g[2]]);
+  const y0 = Math.max(0, Math.floor(top[1]));
+  const y1 = Math.min(c.h - 1, Math.ceil(foot[1]));
+  for (let y = y0; y <= y1; y++) {
+    const ty = (y - top[1]) / Math.max(1, foot[1] - top[1]);
+    const fadeIn = clamp(ty / 0.3, 0, 1);
+    for (let dx = -Math.ceil(R); dx <= Math.ceil(R); dx++) {
+      const px = Math.floor(foot[0]) + dx;
+      const r = Math.abs(dx + 0.5) / R;
+      if (r > 1) continue;
+      if (o.skip?.(px, y)) continue;
+      // Faint streaks down it.
+      const streak = hash(dx + 40, 111) > 0.78 ? 0.18 : 0;
+      const col = r < 0.3 ? mixc(aura.hot, WHITE, 0.3) : r < 0.75 ? aura.core : aura.edge;
+      const a = k * fadeIn * ((r < 0.3 ? 0.6 : r < 0.75 ? 0.4 : 0.22) + streak);
+      // Behind him in full; over him a softer veil.
+      if (c.opaque(px, y)) c.glow(px, y, col, a * 0.32);
+      else c.glow(px, y, col, a, true);
+    }
+  }
+  // The pool of light where it lands, and a bright rim to it.
+  const pool = R * 1.6;
+  for (let i = 0; i < 48; i++) {
+    const th = (i / 48) * Math.PI * 2;
+    for (const [rr, col, a] of [[1, aura.hot, 0.7], [0.82, aura.core, 0.5], [0.55, aura.core, 0.3]] as [number, RGB, number][]) {
+      const p3: V3 = [g[0] + Math.cos(th) * pool * rr, 0, g[2] + Math.sin(th) * pool * rr];
+      const p = x.proj(p3);
+      c.glow(p[0], p[1], col, a * Math.min(1, k), x.behind(p3) || c.opaque(Math.floor(p[0]), Math.floor(p[1])));
+    }
+  }
+}
+
+/**
+ * Motes of light rising round him (a blessing, a heal): `n` of them (default 14), each a small
+ * cross of light with a white-hot heart, scattered round him from his feet to above his head and
+ * lifted by `rise` (0 to 1: advance it every frame; each wraps round to the floor at the top),
+ * fading in and out at the ends of their climb; `k` their strength. Those behind him pass behind
+ * him.
+ */
+export function motes(x: FxContext, k: number, o: { n?: number; rise?: number } = {}): void {
+  const { c, aura, rig } = x;
+  k = clamp(k, 0, 1.5);
+  if (k <= 0) return;
+  const n = o.n ?? 14;
+  const rise = o.rise ?? 0;
+  const g = rig.pelvis.o;
+  for (let i = 0; i < n; i++) {
+    const th = hash(i, 71) * Math.PI * 2;
+    const rr = 9 + hash(i, 72) * 16;
+    const t = (((hash(i, 73) + rise * (0.7 + 0.6 * hash(i, 74))) % 1) + 1) % 1;
+    const p3: V3 = [g[0] + Math.cos(th) * rr, 2 + t * 72, g[2] + Math.sin(th) * rr];
+    const p = x.proj(p3);
+    const a = k * Math.sin(Math.PI * t);
+    const back = x.behind(p3);
+    const big = i % 3 === 0;
+    c.glow(p[0], p[1], WHITE, a, back);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      c.glow(p[0] + dx, p[1] + dy, aura.hot, a * 0.75, back);
+      if (big) c.glow(p[0] + dx * 2, p[1] + dy * 2, aura.core, a * 0.45, back);
     }
   }
 }
