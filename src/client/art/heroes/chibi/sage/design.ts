@@ -95,7 +95,7 @@ const LOCKS: Lock[] = [
 const SHELL = { c: [-1.8, 1.8, 0] as const, r: [11.2, 10.8, 11] as const };
 
 /**
- * His face glyphs: the plain style's level eyes with a crease of age under them, and bushy white
+ * His face glyphs: the plain style's level eyes with a crease of age at their outer corners, and bushy white
  * brows drooping past the eyes' outer corners, with a line of shadow under them so they stand
  * out from his skin. Calm when closed; his `smirk` is a warm smile under the moustache (his mouth
  * sits a little lower than a young face's, so it shows below the moustache).
@@ -104,8 +104,8 @@ const FACE_ELDER: FaceStyle = {
   ...FACE_PLAIN,
   eyes: {
     ...FACE_PLAIN.eyes,
-    full: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '.lll.'], ax: 2, ay: 1 },
-    mid: { rows: ['KKKK', 'IhIW', 'iIIK', '.ll.'], ax: 1, ay: 1 },
+    full: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '...ll'], ax: 2, ay: 1 },
+    mid: { rows: ['KKKK', 'IhIW', 'iIIK', '..ll'], ax: 1, ay: 1 },
   },
   brows: {
     full: { rows: ['.BBB..', 'BBBBBB', 'llBBBB', '....lB'], ax: 2, ay: 1 },
@@ -117,7 +117,7 @@ const FACE_ELDER: FaceStyle = {
     mid: { rows: ['BB...', 'BBBB.', 'lBBBB', '...lB'], ax: 1, ay: 1 },
     narrow: { rows: ['B..', 'BBB', 'lBB'], ax: 1, ay: 1 },
   },
-  mouths: { ...FACE_PLAIN.mouths, smirk: { rows: ['M...M', '.MMM.'], ax: 2, ay: 0 } },
+  mouths: { ...FACE_PLAIN.mouths, smirk: { rows: ['M...M', '.MMM.'], ax: 2, ay: 1 } },
 };
 
 /** His hood, worn down: fallen back behind his neck onto his shoulders, its gold rim turned up. */
@@ -316,11 +316,14 @@ export const SAGE: ChibiDesign = {
     locks: LOCKS,
     whorl: { yaw: 180, pitch: 40, reach: 90, clumps: 7, twist: 0.2 },
     long: {
-      back: curtain({ from: 112, to: 248, count: 6, pitch: 8, len: 17, w: 3.3, jag: 0.25, taper: 0.5 }),
+      back: curtain({ from: 112, to: 248, count: 7, pitch: 8, len: 18, w: 3.2, jag: 0.4, taper: 0.8 }),
       lie: 1.8,
     },
-    beard: beard({ kind: 'full', len: 16, w: 3, give: 0.35 }),
-    moustache: { len: 4.8, w: 1.5, droop: 2.6 },
+    // The beard grows from lower on his cheeks than the preset's, so they show under his eyes.
+    beard: beard({ kind: 'full', len: 16, w: 3, give: 0.35, cheek: -7.2, mouth: [2.6, 1.6] }),
+    // The moustache hangs from a little lower under his nose than usual, so his cheeks show
+    // between it and his eyes; his mouth sits lower still, below it.
+    moustache: { len: 4.2, w: 1.4, droop: 2.4, at: [9.8, -6] },
     face: {
       eye: [8.6, -1.6, 4],
       lash: hex('#2a1a16'),
@@ -331,7 +334,7 @@ export const SAGE: ChibiDesign = {
       brow: hex('#fbfbff'),
       browUp: 3.4,
       mouth: hex('#8a4038'),
-      mouthAt: [9.6, -7.4],
+      mouthAt: [9.6, -7.7],
       noseAt: [10.1, -3.9],
       style: FACE_ELDER,
     },

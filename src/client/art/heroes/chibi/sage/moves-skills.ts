@@ -138,7 +138,11 @@ const runeRing =
     }
   };
 
-/** Light rising from a ring on the floor (Sanctuary's hallowed ground): thin streaks climbing from it, `t` how far they have climbed, `k` their strength. */
+/**
+ * Light rising from a ring on the floor (Sanctuary's hallowed ground): streaks climbing from it,
+ * each a bright line with a fainter one beside it and a white-hot head, `t` how far they have
+ * climbed, `k` their strength.
+ */
 const rising =
   (at: (x: FxContext) => V3, r: number, t: number, k: number, aura: Aura): Extra =>
   (x) => {
@@ -148,13 +152,16 @@ const rising =
       const th = (i / 12) * Math.PI * 2 + x.hash(i, 611) * 0.4;
       const rr = r * (0.55 + 0.45 * x.hash(i, 612));
       const h0 = ((x.hash(i, 613) * 20 + t * 40) % 40) + 2;
-      const len = 5 + x.hash(i, 614) * 6;
+      const len = 8 + x.hash(i, 614) * 8;
       const p3: V3 = [c0[0] + Math.cos(th) * rr, h0, c0[2] + Math.sin(th) * rr];
       const a = x.proj(p3);
       const b = x.proj([p3[0], h0 + len, p3[2]]);
       const fade = k * Math.sin(Math.PI * clamp(h0 / 42, 0, 1));
-      glowLine(x.c, a, b, aura.core, fade * 0.8, x.behind(p3));
-      x.c.glow(b[0], b[1], aura.hot, fade, x.behind(p3));
+      const back = x.behind(p3);
+      glowLine(x.c, a, b, aura.core, fade, back);
+      glowLine(x.c, [a[0] + 1, a[1] - 2], [b[0] + 1, b[1] + 1], aura.edge, fade * 0.45, back);
+      x.c.glow(b[0], b[1], aura.hot, fade, back);
+      x.c.glow(b[0], b[1] - 1, aura.hot, fade * 0.6, back);
     }
   };
 
