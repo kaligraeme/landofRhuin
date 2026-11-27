@@ -5,6 +5,7 @@ import { paintChibi } from '../src/client/art/heroes/chibi/painter.js';
 import { add3, camera, type ChibiPose, lerp3, solveRig, type V3 } from '../src/client/art/heroes/chibi/rig.js';
 import type { Raster } from '../src/client/art/heroes/paint.js';
 import { COMBINED, COMBINED_BOX as BOX, POLEARM, POLEARM_CLIPS, SWORD_WAND, SWORD_WAND_CLIPS } from './chibi-combined-mannequins.js';
+import { darkKnightFrames, timeAgainst } from './paint-timing.js';
 
 /** The colour of a pixel, as one number (0 where nothing is painted). */
 const at = (r: Raster, x: number, y: number): number => {
@@ -141,22 +142,15 @@ describe('hair, cloth and gear together', () => {
   });
 
   it('paint fast enough', () => {
-    // In a hero-sized frame, as the game paints them (the box above is larger, for the vault).
+    // In a hero-sized frame, as the game paints them (the box above is larger, for the vault), and
+    // against the Dark Knight painted in the same breath, so a busy machine slows both alike: they
+    // take about his time today, so this fails if one comes to take much more than half as long again.
     const box = { w: 224, h: 240, ax: 112, ay: 172 };
+    const knight = darkKnightFrames();
     for (const { design, clips } of COMBINED) {
-      for (const p of Object.values(clips).flat()) paintChibi(design, p, 'side', box);
-      let n = 0;
-      const t0 = performance.now();
-      for (const poses of Object.values(clips)) {
-        for (const p of poses) {
-          for (const view of CHIBI_VIEWS) {
-            paintChibi(design, p, view, box);
-            n++;
-          }
-        }
-      }
-      const ms = (performance.now() - t0) / n;
-      expect(ms, `${design.id}: ${ms.toFixed(2)} ms a frame`).toBeLessThan(12);
+      const work = Object.values(clips).flat().flatMap((p) => CHIBI_VIEWS.map((view) => () => paintChibi(design, p, view, box)));
+      const t = timeAgainst(work, knight);
+      expect(t.ratio, `${design.id}: ${t.ratio.toFixed(2)} of the Dark Knight's time (${t.ms.toFixed(2)} ms a frame against his ${t.refMs.toFixed(2)} ms)`).toBeLessThan(1.75);
     }
   });
 });

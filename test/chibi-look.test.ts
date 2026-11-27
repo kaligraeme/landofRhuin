@@ -10,6 +10,7 @@ import type { RGB, Raster } from '../src/client/art/heroes/paint.js';
 import { DARK_KNIGHT } from '../src/client/art/heroes/chibi/darkKnight/design.js';
 import { DARK_KNIGHT_HERO } from '../src/client/art/heroes/chibi/darkKnight/hero.js';
 import { BOX, FACES, LANKY, LOOK_CLIPS, MANNEQUINS, ROBED, RUN, SPIN, STAND } from './chibi-mannequins.js';
+import { darkKnightFrames, timeAgainst } from './paint-timing.js';
 
 /** A quick checksum of a frame's pixels. */
 function sum(r: Raster): number {
@@ -98,14 +99,11 @@ describe('the look mannequins', () => {
   });
 
   it('paint fast enough', () => {
-    let n = 0;
-    const t0 = performance.now();
-    for (const d of MANNEQUINS) for (const poses of Object.values(LOOK_CLIPS)) for (const p of poses) for (const view of CHIBI_VIEWS) {
-      paintChibi(d, p, view, BOX);
-      n++;
-    }
-    const ms = (performance.now() - t0) / n;
-    expect(ms, `${ms.toFixed(2)} ms a frame`).toBeLessThan(20);
+    // Against the Dark Knight painted in the same breath, so a busy machine slows both alike; they
+    // paint at about 0.8 of his time today, so this fails if they come to take nearly twice as long.
+    const work = MANNEQUINS.flatMap((d) => Object.values(LOOK_CLIPS).flat().flatMap((p) => CHIBI_VIEWS.map((view) => () => paintChibi(d, p, view, BOX))));
+    const t = timeAgainst(work, darkKnightFrames());
+    expect(t.ratio, `${t.ratio.toFixed(2)} of the Dark Knight's time (${t.ms.toFixed(2)} ms a frame against his ${t.refMs.toFixed(2)} ms)`).toBeLessThan(1.5);
   });
 });
 

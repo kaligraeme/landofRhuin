@@ -6,6 +6,7 @@ import { add3, camera, type ChibiPose, dot3, type FxContext, len3, mix, pose, so
 import type { Raster } from '../src/client/art/heroes/paint.js';
 import { pole } from '../src/client/art/heroes/chibi/pole.js';
 import { HALBERD, HALBERD_MANNEQUIN, HALBERD_POSES, HALBERD_SPEC, SLENDER_SWORD, SPELLBLADE_MANNEQUIN, SWORD_WAND_POSES, WAND } from './chibi-gear-mannequin.js';
+import { darkKnightFrames, timeAgainst } from './paint-timing.js';
 
 /** A frame big enough for the halberd's vault and the effects round the mannequins. */
 const BOX = { w: 320, h: 300, ax: 160, ay: 215 };
@@ -315,23 +316,13 @@ describe('the gear mannequins', () => {
     }
   });
 
-  it('paint fast enough with the new gear and effects (well under 8 ms a frame)', () => {
+  it('paint fast enough with the new gear and effects (well within what the Dark Knight takes)', () => {
+    // Against the Dark Knight painted in the same breath, so a busy machine slows both alike; they
+    // paint at about 0.65 of his time today, so this fails if they come to take twice as long.
     const box = { w: 256, h: 232, ax: 112, ay: 180 };
-    for (const [d, poses] of all) for (const p of Object.values(poses)) paintChibi(d, p, 'side', box);
-    let n = 0;
-    const t0 = performance.now();
-    for (let k = 0; k < 2; k++) {
-      for (const [d, poses] of all) {
-        for (const p of Object.values(poses)) {
-          for (const view of CHIBI_VIEWS) {
-            paintChibi(d, p, view, box);
-            n++;
-          }
-        }
-      }
-    }
-    const ms = (performance.now() - t0) / n;
-    expect(ms, `${ms.toFixed(2)} ms a frame`).toBeLessThan(12);
+    const work = all.flatMap(([d, poses]) => Object.values(poses).flatMap((p) => CHIBI_VIEWS.map((view) => () => paintChibi(d, p, view, box))));
+    const t = timeAgainst([...work, ...work], darkKnightFrames());
+    expect(t.ratio, `${t.ratio.toFixed(2)} of the Dark Knight's time (${t.ms.toFixed(2)} ms a frame against his ${t.refMs.toFixed(2)} ms)`).toBeLessThan(1.25);
   });
 
   it('keep the off-hand item and the pole arm on their own axes (u along, v across, n the flat)', () => {

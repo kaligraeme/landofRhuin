@@ -12,6 +12,7 @@ import { flat } from '../src/client/art/heroes/chibi/raster.js';
 import { add3, camera, type ChibiPose, dot3, type FxContext, len3, mix, norm3, pose, solveRig, sub3, type V3 } from '../src/client/art/heroes/chibi/rig.js';
 import { heaterOutline, roundOutline, shield, towerOutline } from '../src/client/art/heroes/chibi/shield.js';
 import { ARCHER, ARCHER_CLIPS, ARROW_SPEC, BOLT_SPEC, CROSSBOW, CROSSBOW_CLIPS, CROSSBOWMAN, KIT, KIT_BOX as BOX, KITE, KITE_SPEC, ORB_STAFF, RECURVE, SABRE, SABRE_CLIPS, SABRE_SPEC, SHIELD_CLIPS, SHIELD_KNIGHT, STAFF_CLIPS, STAFF_MAGE, TWIN_SABRES } from './chibi-kit-mannequins.js';
+import { darkKnightFrames, timeAgainst } from './paint-timing.js';
 
 /** A quick checksum of a frame's pixels (as in chibi.test.ts). */
 function sum(r: Raster): number {
@@ -511,19 +512,13 @@ describe('the kit mannequins', () => {
     }
   });
 
-  it('paint fast enough with the new gear and effects (well under 8 ms a frame)', () => {
+  it('paint fast enough with the new gear and effects (well within what the Dark Knight takes)', () => {
+    // Against the Dark Knight painted in the same breath, so a busy machine slows both alike; they
+    // paint at about 0.8 of his time today, so this fails if they come to take nearly twice as long.
     const box = { w: 256, h: 232, ax: 112, ay: 180 };
     const all = KIT.flatMap(({ design, clips }) => Object.values(clips).flatMap((poses) => poses.map((p) => [design, p] as const)));
-    for (const [d, p] of all) paintChibi(d, p, 'side', box);
-    let n = 0;
-    const t0 = performance.now();
-    for (const [d, p] of all) {
-      for (const view of CHIBI_VIEWS) {
-        paintChibi(d, p, view, box);
-        n++;
-      }
-    }
-    const ms = (performance.now() - t0) / n;
-    expect(ms, `${ms.toFixed(2)} ms a frame`).toBeLessThan(12);
+    const work = all.flatMap(([d, p]) => CHIBI_VIEWS.map((view) => () => paintChibi(d, p, view, box)));
+    const t = timeAgainst(work, darkKnightFrames());
+    expect(t.ratio, `${t.ratio.toFixed(2)} of the Dark Knight's time (${t.ms.toFixed(2)} ms a frame against his ${t.refMs.toFixed(2)} ms)`).toBeLessThan(1.5);
   });
 });

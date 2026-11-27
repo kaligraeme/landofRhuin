@@ -4,6 +4,7 @@ import { cropRaster, opaqueBounds } from '../src/client/art/atlas.js';
 import { paintChibi } from '../src/client/art/heroes/chibi/painter.js';
 import { type ChibiPose, solveRig } from '../src/client/art/heroes/chibi/rig.js';
 import type { Raster } from '../src/client/art/heroes/paint.js';
+import { machineFrames, timeAgainst } from './paint-timing.js';
 
 /** Every registered chibi hero: each gets the generic checks below, read from its own data. */
 const HEROES = Object.values(CHIBI_HEROES).filter((h): h is ChibiHero => !!h);
@@ -178,17 +179,14 @@ describe.each(HEROES.map((h) => [h.id, h] as const))('chibi hero %s', (_id, hero
   });
 
   it('paints fast enough to build every atlas in the background', () => {
+    // Against a fixed frame's worth of plain work timed in the same breath (machineFrames), so a
+    // busy machine slows both alike: a hero paints at about 4 to 6 times that work today, so this
+    // fails if one comes to take about twice as long.
+    const machine = machineFrames();
     for (const view of CHIBI_VIEWS) {
-      let n = 0;
-      const t0 = performance.now();
-      for (const clip of CHIBI_CLIPS) {
-        for (let i = 0; i < hero.timing[clip].frames; i++) {
-          hero.paint(clip, i, view);
-          n++;
-        }
-      }
-      const ms = (performance.now() - t0) / n;
-      expect(ms, `${view}: ${ms.toFixed(2)} ms a frame`).toBeLessThan(20);
+      const work = CHIBI_CLIPS.flatMap((clip) => Array.from({ length: hero.timing[clip].frames }, (_, i) => () => hero.paint(clip, i, view)));
+      const t = timeAgainst(work, machine);
+      expect(t.ratio, `${view}: ${t.ratio.toFixed(2)} times the plain work (${t.ms.toFixed(2)} ms a frame against its ${t.refMs.toFixed(2)} ms)`).toBeLessThan(10);
     }
   });
 });

@@ -12,6 +12,7 @@ import { at3, camera, type ChibiPose, type ChibiView, len3, pose, solveRig, sub3
 import { Canvas, type RGB, type Raster } from '../src/client/art/heroes/paint.js';
 import { BODY_BOX as BOX, BODY_CLIPS, BODY_MANNEQUINS, BUNS, ELDER, HOODED, UPDO, WARDEN } from './chibi-body-mannequins.js';
 import { FACES, RUN, STAND } from './chibi-mannequins.js';
+import { darkKnightFrames, timeAgainst } from './paint-timing.js';
 
 /** A quick checksum of a frame's pixels. */
 function sum(r: Raster): number {
@@ -114,17 +115,13 @@ describe('the body mannequins', () => {
     }
   });
 
-  it('paint fast enough (under about 8 ms a frame, with room for a busy machine)', () => {
+  it('paint fast enough (well within what the Dark Knight takes, timed alongside him)', () => {
+    // Against the Dark Knight painted in the same breath, so a busy machine slows both alike; they
+    // paint at about 0.6 of his time today, so this fails if they come to take twice as long.
     const all = Object.values(BODY_CLIPS).flat();
-    for (const d of BODY_MANNEQUINS) for (const view of CHIBI_VIEWS) paint(d, STAND, view);
-    let n = 0;
-    const t0 = performance.now();
-    for (const d of BODY_MANNEQUINS) for (const p of all) for (const view of CHIBI_VIEWS) {
-      paint(d, p, view);
-      n++;
-    }
-    const ms = (performance.now() - t0) / n;
-    expect(ms, `${ms.toFixed(2)} ms a frame`).toBeLessThan(14);
+    const work = BODY_MANNEQUINS.flatMap((d) => all.flatMap((p) => CHIBI_VIEWS.map((view) => () => paint(d, p, view))));
+    const t = timeAgainst(work, darkKnightFrames());
+    expect(t.ratio, `${t.ratio.toFixed(2)} of the Dark Knight's time (${t.ms.toFixed(2)} ms a frame against his ${t.refMs.toFixed(2)} ms)`).toBeLessThan(1.25);
   });
 });
 
