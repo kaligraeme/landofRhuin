@@ -1,5 +1,5 @@
 /**
- * The Halberdier's core moves: stances, running and the three-thrust combo. Poses use the chibi
+ * The Dragoon's core moves: stances, running and the three-thrust combo. Poses use the chibi
  * pose format (rig.ts, ChibiPose): side-plane points, hands from the base of the neck, the
  * halberd's angle (0 up, 90 forward), its plane's `roll` and `yaw`, both hands' places along the
  * haft (`grip` the right hand's, `grip2` the left's), and the cloth's `wind`/`lift`/`phase`.
@@ -31,10 +31,10 @@ import type { Vec } from '../../skeleton.js';
 import { glowLine, puff, starburst, swirl } from '../fx.js';
 import { mixc } from '../raster.js';
 import { add3, type ChibiPose, clamp, type FxContext, mix, pose, solveRig, type V3, wave } from '../rig.js';
-import { HALBERDIER } from './design.js';
+import { DRAGOON } from './design.js';
 
-const BUILD = HALBERDIER.build;
-const W = HALBERDIER.weapon;
+const BUILD = DRAGOON.build;
+const W = DRAGOON.weapon;
 const TIP = W.tip ?? W.reach[1];
 
 // ── Stances ──────────────────────────────────────────────────────────────────────────────────

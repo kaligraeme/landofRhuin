@@ -1,7 +1,7 @@
 /**
  * The Dark Knight as a chibi hero: his design (design.ts) and moves (moves-core.ts, moves-skills.ts,
- * moves-states.ts) put together with his clip timing, frame boxes and scale. Registered for the
- * male Warrior in ../index.ts.
+ * moves-states.ts) put together with his clip timing, frame boxes and scale. Registered in
+ * ../index.ts.
  */
 import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
 import { chibiHero } from '../painter.js';

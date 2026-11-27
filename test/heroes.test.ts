@@ -4,7 +4,8 @@ import { HERO_CHARGE, HERO_CLIP_LENGTH, HERO_WINDUP, heroClips, type HeroClip } 
 import { renderHero } from '../src/client/art/heroes/render.js';
 import { renderTurned, TURNED_H, TURNED_W, TURNED_Y } from '../src/client/art/heroes/turned.js';
 import { FRAME_H, FRAME_W, GROUND_Y, solveLimb } from '../src/client/art/heroes/skeleton.js';
-import { HERO_LOOKS, ROLE_ORDER, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
+import { heroArtId } from '../src/client/art/heroArt.js';
+import { HERO_ORDER, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
 
 const CLIPS: HeroClip[] = ['idle', 'battle', 'move', 'action', 'skill'];
 const designs = Object.values(HERO_DESIGNS);
@@ -18,23 +19,21 @@ const DRAWN_AS: Record<string, string> = {
   crossbow: 'crossbow',
   bow: 'longbow',
   spear: 'halberd',
-  greatsword: 'blade',
+  twin_blades: 'blade',
 };
 
 describe('hero designs', () => {
-  it('dresses and arms every hero: a man and a woman for each role, each with their own weapon', () => {
-    for (const role of ROLE_ORDER) {
-      for (const look of HERO_LOOKS) {
-        const d = HERO_DESIGNS[`hero-${role}-${look}`];
-        expect(d, `${role} ${look}`).toBeDefined();
-        const kit = weaponFor(role, look);
-        expect(WEAPONS[kit]).toBeDefined();
-        expect(d.weapon).toBe(DRAWN_AS[kit]);
-      }
+  it('dresses and arms every hero, each with their own weapon', () => {
+    for (const hero of HERO_ORDER) {
+      const d = HERO_DESIGNS[heroArtId(hero)];
+      expect(d, hero).toBeDefined();
+      const kit = weaponFor(hero);
+      expect(WEAPONS[kit]).toBeDefined();
+      expect(d.weapon).toBe(DRAWN_AS[kit]);
     }
-    expect(HERO_DESIGNS['hero-mage-female'].weapon2).toBe('wand');
-    expect(HERO_DESIGNS['hero-tank-female'].weapon2).toBe('shield');
-    expect(HERO_DESIGNS['hero-melee-female'].weapon2).toBe('blade');
+    expect(HERO_DESIGNS['hero-spellblade'].weapon2).toBe('wand');
+    expect(HERO_DESIGNS['hero-guardian'].weapon2).toBe('shield');
+    expect(HERO_DESIGNS['hero-blademaster'].weapon2).toBe('blade');
   });
 
   it('choreographs every clip at its length, with a wind-up before the blow', () => {
@@ -74,7 +73,7 @@ describe('hero frames', () => {
   });
 
   it('smears the swing and glows for a skill', () => {
-    const d = HERO_DESIGNS['hero-tank-male'];
+    const d = HERO_DESIGNS['hero-dark-knight'];
     const clips = heroClips(d.moveset);
     const strike = clips.action.find((p) => p.fx?.smear !== undefined)!;
     const f = renderHero(d, strike, null);
@@ -117,7 +116,7 @@ describe('hero frames', () => {
   });
 
   it('paints a face from the front and the back of the head from behind', () => {
-    const d = HERO_DESIGNS['hero-mage-male'];
+    const d = HERO_DESIGNS['hero-sage'];
     const pose = heroClips(d.moveset).idle[0]!;
     const count = (f: { data: Uint8ClampedArray }, rgb: readonly number[]) => {
       let n = 0;

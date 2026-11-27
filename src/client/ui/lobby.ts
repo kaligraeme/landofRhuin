@@ -1,9 +1,9 @@
-/** The lobby: character (role and weapon), party, expedition queue, ready check and chat. */
+/** The lobby: character (role and hero), party, expedition queue, ready check and chat. */
 import { READY_CHECK_SECONDS } from '../../shared/constants.js';
-import { HERO_LOOKS, HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type RoleId } from '../../shared/content/classes.js';
+import { defaultHero, HEROES, HOTBAR_KEYS, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId, type RoleId } from '../../shared/content/classes.js';
 import type { AiFill, LobbyState } from '../../shared/protocol.js';
 import { clear, fmtTime, h, toast } from '../dom.js';
-import { defaultHeroLook, showHero } from '../art/sprites.js';
+import { showHero } from '../art/sprites.js';
 import { roleIcon, skillIcon } from '../icons.js';
 import type { Net } from '../net.js';
 import { skillTooltip, withTooltip } from './common.js';
@@ -42,8 +42,7 @@ export class LobbyView {
   private queueEl = h('div');
   private queueHint = h('p', { class: 'hint' });
   private modalHost = h('div');
-  private lastRoleRendered: RoleId | null = null;
-  private lastWeaponRendered: string | null = null;
+  private lastHeroRendered: HeroId | null = null;
 
   constructor(private net: Net) {
     this.rejoinBtn.addEventListener('click', () => net.send({ t: 'instance.rejoin' }));
@@ -68,7 +67,7 @@ export class LobbyView {
       const def = ROLES[role];
       const card = h('button', { class: 'role-card', 'data-role': role, style: `--rc:${def.color}`, onclick: () => this.pickRole(role) });
       const art = h('img', { class: 'role-art', alt: '' });
-      showHero(art, role);
+      showHero(art, defaultHero(role));
       card.append(art, h('span', { class: 'rname' }, def.name), h('span', { class: 'rtag' }, def.tagline));
       this.rolesEl.appendChild(card);
     }
@@ -172,38 +171,36 @@ export class LobbyView {
     for (const card of this.rolesEl.querySelectorAll<HTMLButtonElement>('.role-card')) {
       const cardRole = card.dataset.role as RoleId;
       card.classList.toggle('selected', cardRole === state.you.role);
+      // Each role shows the hero you would play: your pick for your role, the default for the others.
       const portrait = card.querySelector('img');
-      const look = state.you.look ?? defaultHeroLook(cardRole);
-      if (portrait && portrait.dataset.hero !== `${cardRole}-${look}`) showHero(portrait, cardRole, look);
+      const hero = cardRole === state.you.role ? state.you.hero : defaultHero(cardRole);
+      if (portrait && portrait.dataset.hero !== hero) showHero(portrait, hero);
     }
-    const selectedLook = state.you.look ?? defaultHeroLook(state.you.role);
     const locked = Boolean(state.queue || state.readyCheck || state.instanceId);
     const role = ROLES[state.you.role];
     this.roleDescEl.textContent = role.description;
-    if (this.lastRoleRendered !== state.you.role || this.lastWeaponRendered !== state.you.weapon) {
-      this.lastRoleRendered = state.you.role;
-      this.lastWeaponRendered = state.you.weapon;
-      // One card per hero: the man and the woman of this role, each with their own weapon.
+    if (this.lastHeroRendered !== state.you.hero) {
+      this.lastHeroRendered = state.you.hero;
+      // One card per hero of the role, each with their own weapon.
       clear(
         this.weaponsEl,
-        HERO_LOOKS.map((look) => {
-          const w = WEAPONS[weaponFor(state.you.role, look)];
+        role.heroes.map((hero) => {
+          const w = WEAPONS[weaponFor(hero)];
           if (!w) return null;
           const art = h('img', { class: 'hero-card-art', alt: '' });
-          showHero(art, state.you.role, look);
-          const card = h(
+          showHero(art, hero);
+          const selected = hero === state.you.hero;
+          return h(
             'button',
-            { class: `weapon-card hero-card${look === selectedLook ? ' selected' : ''}`, 'data-look': look, 'aria-pressed': String(look === selectedLook), onclick: () => this.net.send({ t: 'appearance', look }) },
+            { class: `weapon-card hero-card${selected ? ' selected' : ''}`, 'data-hero': hero, 'aria-pressed': String(selected), onclick: () => this.net.send({ t: 'hero', hero }) },
             art,
             h(
               'span',
               { class: 'hero-card-text' },
-              h('span', { class: 'wname' }, `${look === 'male' ? 'Male' : 'Female'} · ${w.name}`, w.healer ? h('span', { class: 'healer-tag' }, 'HEALER') : null),
-              h('span', { class: 'wstyle' }, w.style),
+              h('span', { class: 'wname' }, `${HEROES[hero].name} · ${w.name}`, w.healer ? h('span', { class: 'healer-tag' }, 'HEALER') : null),
               h('span', { class: 'wdesc' }, w.description),
             ),
           );
-          return card;
         }),
       );
       const weapon = WEAPONS[state.you.weapon];
@@ -212,7 +209,7 @@ export class LobbyView {
         this.skillsEl,
         ids.map((sid, i) => {
           const key = HOTBAR_KEYS[i] ?? '';
-          const kind = i === 0 ? 'Basic attack · hold LMB' : i < 6 ? `${weapon?.style ?? ''} · ${key}` : `Role skill · ${key}`;
+          const kind = i === 0 ? 'Basic attack · hold LMB' : i < 6 ? `${HEROES[state.you.hero].name} · ${key}` : `Role skill · ${key}`;
           const name = i === 0 ? `${SKILLS[sid]?.name.replace(/ I$/, '') ?? sid} chain` : (SKILLS[sid]?.name ?? sid);
           const row = h('div', { class: 'skill-row' }, h('img', { src: skillIcon(sid), alt: '' }), h('div', null, h('div', { class: 'sname' }, name), h('div', { class: 'skind' }, kind)));
           return withTooltip(row, () => skillTooltip(sid));
@@ -234,7 +231,7 @@ export class LobbyView {
           'div',
           { class: 'party-slot' },
           icon,
-          h('div', null, h('div', { class: 'pname' }, m.name, m.leader ? h('span', { class: 'leader-crown', title: 'Party leader' }, '♛') : null, m.playerId === state.you.id ? h('span', { class: 'muted small' }, ' (you)') : null), h('div', { class: 'pmeta' }, `${ROLES[m.role].name} · ${WEAPONS[m.weapon]?.name ?? ''}${m.online ? '' : ' · offline'}`)),
+          h('div', null, h('div', { class: 'pname' }, m.name, m.leader ? h('span', { class: 'leader-crown', title: 'Party leader' }, '♛') : null, m.playerId === state.you.id ? h('span', { class: 'muted small' }, ' (you)') : null), h('div', { class: 'pmeta' }, `${ROLES[m.role].name} · ${HEROES[m.hero]?.name ?? ''}${m.online ? '' : ' · offline'}`)),
           youLead && m.playerId !== state.you.id ? h('button', { class: 'btn ghost small', onclick: () => this.net.send({ t: 'party.kick', playerId: m.playerId }) }, 'Remove') : h('span'),
         ),
       );
@@ -303,7 +300,7 @@ export class LobbyView {
         { class: `ready-slot${s.accepted === true ? ' ok' : s.accepted === false ? ' no' : ''}` },
         icon,
         h('div', null, h('b', null, s.name), s.bot ? h('div', null, h('span', { class: 'ai-badge' }, 'AI')) : null),
-        h('div', { class: 'muted' }, WEAPONS[s.weapon]?.name ?? ''),
+        h('div', { class: 'muted' }, `${HEROES[s.hero]?.name ?? ''} · ${WEAPONS[s.weapon]?.name ?? ''}`),
         h('div', { class: 'mark' }, s.accepted === true ? '✔' : s.accepted === false ? '✖' : '…'),
       );
     });

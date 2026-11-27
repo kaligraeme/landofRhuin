@@ -174,7 +174,7 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
 }
 
 const DARK_KNIGHT: ChibiDesign = {
-  id: 'hero-tank-male',
+  id: 'hero-dark-knight',
   build: BUILD,
   head: {
     skin: SKIN,

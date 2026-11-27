@@ -3,7 +3,7 @@
  * in the three views (a row each: side on, toward the viewer, away), all on one ground line,
  * scaled up with nearest-neighbour on a dark floor, one PNG per clip.
  *
- * Usage: npx tsx scripts/chibi-sheet.ts [--hero hero-tank-male] [--out dir] [--scale 3] [clip ...]
+ * Usage: npx tsx scripts/chibi-sheet.ts [--hero hero-dark-knight] [--out dir] [--scale 3] [clip ...]
  * With no clips named it draws them all. Sheets go to a chibi-sheets folder in the system's
  * temporary directory unless --out says otherwise.
  */
@@ -51,7 +51,7 @@ function writePng(path: string, w: number, h: number, rgb: Uint8Array): void {
   writeFileSync(path, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
 }
 
-const heroId = option('hero', 'hero-tank-male');
+const heroId = option('hero', 'hero-dark-knight');
 const hero = CHIBI_HEROES[heroId];
 if (!hero) throw new Error(`${heroId} is not a chibi hero (see CHIBI_HEROES)`);
 const out = option('out', join(tmpdir(), 'chibi-sheets'));

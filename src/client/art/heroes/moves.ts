@@ -55,7 +55,7 @@ function build(base: Pose, clips: { idle: (i: number) => Partial<Pose>; battle: 
 const STAND = { x: 0, y: 1, lean: 4, footF: [6, 0] as Vec, footB: [-6, 0] as Vec };
 const FIGHT = { x: 0, y: 5, lean: 14, footF: [14, 0] as Vec, footB: [-12, 0] as Vec };
 
-// ── Warrior: greatsword ──────────────────────────────────────────────────────────────────────
+// ── Tank: the Dark Knight's greatsword ───────────────────────────────────────────────────────
 
 const greatsword = (): Clips =>
   build({ ...FIGHT, handF: [9, 12], weapon: 55, wind: 0.2 }, {
@@ -88,7 +88,7 @@ const greatsword = (): Clips =>
     ],
   });
 
-// ── Warrior: the Guardian's sword and shield ─────────────────────────────────────────────────
+// ── Tank: the Guardian's sword and shield ────────────────────────────────────────────────────
 
 const swordShield = (): Clips =>
   build({ ...FIGHT, handF: [6, 6], weapon: 52, handB: [13, 7], weapon2: 3, front2: true, wind: 0.2 }, {
@@ -123,7 +123,7 @@ const swordShield = (): Clips =>
     ],
   });
 
-// ── Mage: branch staff ───────────────────────────────────────────────────────────────────────
+// ── Mage: the Sage's branch staff ────────────────────────────────────────────────────────────
 
 const staff = (): Clips =>
   build({ ...FIGHT, y: 3, lean: 8, footF: [12, 0], footB: [-10, 0], handF: [10, 8], handB: [12, 14], weapon: 18, wind: 0.2 }, {
@@ -157,7 +157,7 @@ const staff = (): Clips =>
     ],
   });
 
-// ── Mage: mystic sword and wand ──────────────────────────────────────────────────────────────
+// ── Mage: the Spellblade's mystic sword and wand ─────────────────────────────────────────────
 
 const swordWand = (): Clips =>
   build({ ...FIGHT, y: 4, lean: 12, handF: [11, 10], handB: [10, 4], weapon: 70, weapon2: 50, wind: 0.2, front2: false }, {
@@ -190,7 +190,7 @@ const swordWand = (): Clips =>
     ],
   });
 
-// ── Ranger: crossbow ─────────────────────────────────────────────────────────────────────────
+// ── Ranger: the Arbalest's crossbow ──────────────────────────────────────────────────────────
 
 const crossbow = (): Clips =>
   build({ ...FIGHT, y: 4, lean: 8, footF: [12, 0], footB: [-12, 0], handF: [9, 6], weapon: 92, wind: 0.2 }, {
@@ -223,7 +223,7 @@ const crossbow = (): Clips =>
     ],
   });
 
-// ── Ranger: longbow ──────────────────────────────────────────────────────────────────────────
+// ── Ranger: the Bowmaster's longbow ──────────────────────────────────────────────────────────
 
 const longbow = (): Clips =>
   build({ ...FIGHT, y: 4, lean: 6, footF: [12, 0], footB: [-12, 0], handF: [17, 4], handB: [8, 6], weapon: 90, wind: 0.2 }, {
@@ -256,7 +256,7 @@ const longbow = (): Clips =>
     ],
   });
 
-// ── Duelist: halberd ─────────────────────────────────────────────────────────────────────────
+// ── Duelist: the Dragoon's halberd ───────────────────────────────────────────────────────────
 
 const halberd = (): Clips =>
   build({ ...FIGHT, handF: [10, 10], weapon: 72, wind: 0.2 }, {
@@ -290,7 +290,7 @@ const halberd = (): Clips =>
     ],
   });
 
-// ── Duelist: twin blades ─────────────────────────────────────────────────────────────────────
+// ── Duelist: the Blademaster's twin blades ───────────────────────────────────────────────────
 
 const twinBlades = (): Clips =>
   build({ ...FIGHT, y: 6, lean: 18, handF: [12, 9], handB: [6, 4], weapon: 75, weapon2: 40, wind: 0.2 }, {

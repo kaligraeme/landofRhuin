@@ -1,5 +1,5 @@
 /**
- * The Halberdier, as a chibi: a lean, long-legged young lancer with a cocky half-smile, jet-black
+ * The Dragoon, as a chibi: a lean, long-legged young lancer with a cocky half-smile, jet-black
  * hair with a cool blue sheen swept back into a high ponytail tied with a red cord (a few loose
  * locks over his brow), a long red scarf wrapped round his neck and jaw with two tails streaming
  * behind him, light gunmetal armour (a fitted breastplate, a layered pauldron on his leading left
@@ -100,7 +100,7 @@ const LOCKS: Lock[] = [
  * stay apart instead of running together across the bridge of his nose. Shouting, the eye opens a
  * row higher but keeps no dark lower lash, so it never closes into a dark-framed band.
  */
-const FACE_HALBERDIER: FaceStyle = {
+const FACE_DRAGOON: FaceStyle = {
   ...FACE_SHARP,
   eyes: {
     ...FACE_SHARP.eyes,
@@ -201,8 +201,8 @@ const HALBERD: PoleSpec = {
 /** Where the tip of the butt spike is along the haft (u, from the right hand's rest grip): where a planted halberd meets the floor. */
 export const BUTT = HALBERD.haft.from - (HALBERD.butt?.len ?? 0);
 
-const HALBERDIER: ChibiDesign = {
-  id: 'hero-melee-male',
+const DRAGOON: ChibiDesign = {
+  id: 'hero-dragoon',
   build: BUILD,
   head: {
     skin: SKIN,
@@ -240,7 +240,7 @@ const HALBERDIER: ChibiDesign = {
       mouth: hex('#5a2018'),
       mouthAt: [9.8, -6.1],
       noseAt: [10.3, -3.9],
-      style: FACE_HALBERDIER,
+      style: FACE_DRAGOON,
       rest: 'smirk',
     },
   },
@@ -286,4 +286,4 @@ const HALBERDIER: ChibiDesign = {
   aura: { core: hex('#6fe3c1'), edge: hex('#e8fff8'), hot: hex('#ffffff') },
 };
 
-export { HALBERDIER };
+export { DRAGOON };

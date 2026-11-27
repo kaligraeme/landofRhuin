@@ -15,11 +15,11 @@
  * wand.ts wands, held.ts what they share; a design may also give one for the off hand), fx.ts
  * (effects) and painter.ts (puts a frame together). A hero has a folder of its own: a design file,
  * its moves files and a hero file that puts them together with its timing (see darkKnight/,
- * spellblade/ and halberdier/), registered below.
+ * spellblade/ and dragoon/), registered below.
  */
 import type { Raster } from '../paint.js';
 import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
-import { HALBERDIER_HERO } from './halberdier/hero.js';
+import { DRAGOON_HERO } from './dragoon/hero.js';
 import type { ChibiDesign } from './design.js';
 import { SPELLBLADE_HERO } from './spellblade/hero.js';
 import type { ChibiPose, ChibiView } from './rig.js';
@@ -109,7 +109,7 @@ export const COMBO_CLIPS: readonly ChibiClip[] = ['atk1', 'atk2', 'atk3'];
 
 /** The heroes drawn by the chibi painter, by sprite id. Others use the older painter. */
 export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
-  'hero-tank-male': DARK_KNIGHT_HERO,
-  'hero-mage-female': SPELLBLADE_HERO,
-  'hero-melee-male': HALBERDIER_HERO,
+  'hero-dark-knight': DARK_KNIGHT_HERO,
+  'hero-spellblade': SPELLBLADE_HERO,
+  'hero-dragoon': DRAGOON_HERO,
 };

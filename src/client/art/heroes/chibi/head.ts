@@ -58,7 +58,7 @@ type Glyph = FaceGlyph;
 
 /**
  * The plain style (the default): small, level eyes under a heavy brow that slants down toward the
- * nose, and a firm, straight mouth: a stern young man's face.
+ * nose, and a firm, straight mouth: a stern young face.
  */
 export const FACE_PLAIN: FaceStyle = {
   eyes: {

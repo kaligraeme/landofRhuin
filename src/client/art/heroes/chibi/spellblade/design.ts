@@ -287,7 +287,7 @@ const CURTAIN: Tress[] = (
 const SHELL = { c: [-1.4, 0.8, 0] as V3, r: [11.4, 10.2, 11.8] as V3 };
 
 const SPELLBLADE: ChibiDesign = {
-  id: 'hero-mage-female',
+  id: 'hero-spellblade',
   build: BUILD,
   head: {
     skin: FACE_SKIN,

@@ -13,10 +13,10 @@ const WEAPON: Record<string, [Seat['role'], string]> = {
   Guardian: ['tank', 'sword_shield'],
   Sage: ['mage', 'staff'],
   Spellblade: ['mage', 'mystic_sword'],
-  Marksman: ['ranger', 'bow'],
-  Arbalist: ['ranger', 'crossbow'],
-  Halberdier: ['melee', 'spear'],
-  Reaver: ['melee', 'greatsword'],
+  Bowmaster: ['ranger', 'bow'],
+  Arbalest: ['ranger', 'crossbow'],
+  Dragoon: ['melee', 'spear'],
+  Blademaster: ['melee', 'twin_blades'],
 };
 
 /**

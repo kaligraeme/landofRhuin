@@ -24,13 +24,16 @@ test('two players form a party, queue with AI fill and clear the first room toge
   await enter(alice, 'Alice');
   await enter(bob, 'Bob');
 
-  // Alice plays the male Ranger, who carries the Crossbow; Bob joins her party by code and plays a Duelist.
+  // Alice plays the Ranger's second hero, the Bowmaster, who carries the Longbow; Bob joins her party
+  // by code and plays a Duelist.
   await alice.locator('.role-card[data-role="ranger"]').click();
-  await expect(alice.locator('.hero-card.selected')).toContainText('Female · Longbow');
-  const male = alice.locator('.hero-card[data-look="male"]');
-  await male.click();
-  await expect(male).toHaveAttribute('aria-pressed', 'true');
-  await expect(alice.locator('.hero-card.selected')).toContainText('Male · Crossbow');
+  await expect(alice.locator('.hero-card')).toHaveText([/^Arbalest · Crossbow/, /^Bowmaster · Longbow/]);
+  await expect(alice.locator('.hero-card.selected')).toContainText('Arbalest · Crossbow');
+  const bowmaster = alice.locator('.hero-card[data-hero="bowmaster"]');
+  await bowmaster.click();
+  await expect(bowmaster).toHaveAttribute('aria-pressed', 'true');
+  await expect(alice.locator('.hero-card.selected')).toContainText('Bowmaster · Longbow');
+  await expect(alice.locator('.party-slot .pmeta').first()).toHaveText('Ranger · Bowmaster');
   const code = (await alice.locator('.code-box .code').textContent())?.trim() ?? '';
   expect(code).toMatch(/^[A-Z2-9]{5}$/);
   await bob.locator('.role-card[data-role="melee"]').click();
@@ -65,11 +68,11 @@ test('two players form a party, queue with AI fill and clear the first room toge
   }
   await expect.poll(async () => (await world(alice))?.phase, { timeout: 10_000 }).toBe('running');
 
-  const aliceLook = await bob.evaluate(() => {
-    const { game } = (window as unknown as { rhuin: { game: { world: { ents: Map<number, { spawn: { name: string; look?: string } }> } } } }).rhuin;
-    return [...game.world.ents.values()].find(({ spawn }) => spawn.name === 'Alice')?.spawn.look;
+  const aliceHero = await bob.evaluate(() => {
+    const { game } = (window as unknown as { rhuin: { game: { world: { ents: Map<number, { spawn: { name: string; hero?: string } }> } } } }).rhuin;
+    return [...game.world.ents.values()].find(({ spawn }) => spawn.name === 'Alice')?.spawn.hero;
   });
-  expect(aliceLook).toBe('male');
+  expect(aliceHero).toBe('bowmaster');
 
   // Bob walks, and Alice sees him move.
   const before = await bob.evaluate(() => {

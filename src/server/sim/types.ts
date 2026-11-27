@@ -2,7 +2,7 @@
 import type { ProjectileLook, RoleId, SkillDef } from '../../shared/content/classes.js';
 import type { AbilityDef, BossDef, BossKind, MobDef, MobKind } from '../../shared/content/monsters.js';
 import type { Shape, Vec } from '../../shared/geometry.js';
-import type { HeroLook, TelegraphStyle } from '../../shared/protocol.js';
+import type { HeroId, TelegraphStyle } from '../../shared/protocol.js';
 
 export interface StatusInst {
   id: string;
@@ -52,7 +52,8 @@ export interface PlayerStats {
 }
 
 export interface Player extends ActorBase {
-  look?: HeroLook;
+  /** The hero played (see `seatHero` in instance.ts). */
+  hero: HeroId;
   kind: 'player';
   team: 'party';
   /** The lobby player who controls this character, or null for an AI companion. */

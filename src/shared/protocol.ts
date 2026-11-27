@@ -1,5 +1,5 @@
 /** Messages between the browser client and the game server, sent as JSON over a WebSocket. */
-import type { HeroLook, RoleId } from './content/classes.js';
+import type { HeroId, RoleId } from './content/classes.js';
 import type { BossKind, MobKind, ThemeId } from './content/monsters.js';
 import type { Shape } from './geometry.js';
 
@@ -9,6 +9,7 @@ export interface PartyMemberView {
   playerId: string;
   name: string;
   role: RoleId;
+  hero: HeroId;
   weapon: string;
   leader: boolean;
   online: boolean;
@@ -36,6 +37,7 @@ export interface QueueView {
 export interface ReadySlot {
   role: RoleId;
   name: string;
+  hero: HeroId;
   weapon: string;
   bot: boolean;
   accepted: boolean | null;
@@ -50,7 +52,7 @@ export interface ReadyCheckView {
 }
 
 export interface LobbyState {
-  you: { id: string; name: string; role: RoleId; weapon: string; look?: HeroLook };
+  you: { id: string; name: string; role: RoleId; hero: HeroId; weapon: string };
   party: PartyView;
   queue: QueueView | null;
   readyCheck: ReadyCheckView | null;
@@ -65,7 +67,7 @@ export interface LobbyState {
 
 export type TelegraphStyle = 'aoe' | 'stack' | 'spread' | 'buster' | 'raidwide' | 'ally';
 
-export { HERO_LOOKS, type HeroLook } from './content/classes.js';
+export type { HeroId } from './content/classes.js';
 
 export interface EntitySpawn {
   id: number;
@@ -74,7 +76,8 @@ export interface EntitySpawn {
   name: string;
   radius: number;
   role?: RoleId;
-  look?: HeroLook;
+  /** Players: the hero they play. */
+  hero?: HeroId;
   weapon?: string;
   bot?: boolean;
   ownerId?: string | null;
@@ -241,8 +244,9 @@ export interface InstanceStart {
 
 export type ClientMsg =
   | { t: 'hello'; name: string; token?: string }
-  | { t: 'appearance'; look: HeroLook }
-  /** Pick a role; the weapon follows from the role and the hero's look. */
+  /** Pick one of your role's heroes; the weapon is the hero's. */
+  | { t: 'hero'; hero: HeroId }
+  /** Pick a role; you play its default hero until you pick another. */
   | { t: 'loadout'; role: RoleId }
   | { t: 'party.join'; code: string }
   | { t: 'party.leave' }

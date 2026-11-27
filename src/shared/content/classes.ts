@@ -89,7 +89,6 @@ export interface WeaponDef {
   id: string;
   role: RoleId;
   name: string;
-  style: string;
   description: string;
   /** The basic attack chain: one hit every `interval` seconds while the button is held. */
   basic: { interval: number; hits: string[] };
@@ -122,8 +121,8 @@ export interface RoleDef {
   /** Multiplier on the aggro the role's damage and healing build. */
   enmity: number;
   speed: number;
-  /** The man's weapon, then the woman's: each hero carries one. */
-  weapons: string[];
+  /** The role's heroes, in the order the lobby offers them: the first is the role's default. */
+  heroes: HeroId[];
   roleSkills: [string, string];
 }
 
@@ -158,7 +157,7 @@ def({ id: 'fieldDressing', name: 'Field Dressing', glyph: '✚', hue: 130, slot:
 def({ id: 'bloodrush', name: 'Bloodrush', glyph: '✪', hue: 10, slot: 'role', cooldown: 40, description: 'Deal 25% more damage for 12s, but take 15% more.', effects: [{ kind: 'status', status: 'bloodrush', duration: 12, to: 'self' }] });
 def({ id: 'secondWind', name: 'Second Wind', glyph: '✚', hue: 120, slot: 'role', cooldown: 40, description: 'Catch your breath: restore 25% of your max HP.', effects: [{ kind: 'healPct', pct: 0.25, to: 'self' }] });
 
-// ── Warrior: Greatsword (the Dark Knight) ─────────────────────────────────────────────────────
+// ── Tank: Greatsword (the Dark Knight) ─────────────────────────────────────────────────────
 const tgBasic = chain('tank_greatsword', 'Greatsword Cleave', '⚔', 30, [
   { delivery: arc(3.2, 160), potency: 120 },
   { delivery: arc(3.2, 160), potency: 120 },
@@ -172,7 +171,7 @@ const tgSkills: WeaponDef['skills'] = [
   def({ id: 'ruination', name: 'Ruination', glyph: '☄', hue: 285, slot: 'ult', cooldown: 45, hpCost: 0.5, aggro: 1.5, delivery: { kind: 'ground', radius: 6, range: 10, delay: 0.4, repeat: 4, every: 0.3 }, description: 'Ultimate. Sacrifice 50% of your maximum health to rain four massive strikes on your aim: potency 700 each to every foe within 6 tiles.', effects: [dmg(700), { kind: 'stagger', amount: 25 }] }),
 ];
 
-// ── Warrior: Sword & Shield (the Guardian) ──────────────────────────────────────────────────────
+// ── Tank: Sword & Shield (the Guardian) ────────────────────────────────────────────────────
 const ssBasic = chain('sword_shield', 'Guardian’s Edge', '⚔', 48, [
   { delivery: arc(2.9, 120), potency: 120 },
   { delivery: arc(2.9, 120), potency: 120 },
@@ -186,7 +185,7 @@ const ssSkills: WeaponDef['skills'] = [
   def({ id: 'luminaire', name: 'Luminaire', glyph: '☀', hue: 50, slot: 'ult', cooldown: 50, windup: 0.6, aggro: 1.5, delivery: { kind: 'self', radius: 30, sight: true }, description: 'Ultimate. Flood the whole battlefield with light: potency 1100 to every enemy in sight.', effects: [dmg(1100), { kind: 'stagger', amount: 50 }] }),
 ];
 
-// ── Mage: Staff (healer) ────────────────────────────────────────────────────────────────────
+// ── Mage: Staff (the Sage, a healer) ───────────────────────────────────────────────────────
 const stBasic = chain('staff', 'Arcane Bolt', '✦', 265, [
   { delivery: { kind: 'projectile', speed: 24, radius: 0.4, range: 22, look: 'spark' }, potency: 105 },
   { delivery: { kind: 'projectile', speed: 24, radius: 0.4, range: 22, look: 'spark' }, potency: 105 },
@@ -200,7 +199,7 @@ const stSkills: WeaponDef['skills'] = [
   def({ id: 'resurrection', name: 'Resurrection', glyph: '✧', hue: 55, slot: 'ult', cooldown: 60, mp: 2000, windup: 1.5, delivery: { kind: 'ground', radius: 5, range: 20 }, description: 'Ultimate. Revive every fallen ally in a circle at your aim, and heal everyone there (potency 600).', effects: [{ kind: 'raise' }, { kind: 'heal', potency: 600, to: 'area' }] }),
 ];
 
-// ── Mage: Mystic Sword & Wand ──────────────────────────────────────────────────────────────────────
+// ── Mage: Mystic Sword & Wand (the Spellblade) ─────────────────────────────────────────────
 const msBasic = chain('mystic_sword', 'Mystic Slash', '⟋', 290, [
   { delivery: arc(2.6, 130), potency: 110 },
   { delivery: arc(2.6, 130), potency: 110 },
@@ -214,7 +213,7 @@ const msSkills: WeaponDef['skills'] = [
   def({ id: 'astralCleave', name: 'Astral Cleave', glyph: '✹', hue: 300, slot: 'ult', cooldown: 35, mp: 800, windup: 0.5, delivery: thrust(14, 4), description: 'Ultimate. A great astral blade 14 tiles long: potency 560.', effects: [dmg(560), { kind: 'stagger', amount: 40 }] }),
 ];
 
-// ── Ranger: Longbow ─────────────────────────────────────────────────────────────────────────────
+// ── Ranger: Longbow (the Bowmaster) ────────────────────────────────────────────────────────
 const arrow = (potency: number) => ({ delivery: { kind: 'projectile', speed: 30, radius: 0.35, range: 24, look: 'arrow' } as Delivery, potency });
 const bwBasic = chain('bow', 'Quick Arrow', '➶', 95, [arrow(120), arrow(120), arrow(150)]);
 const bwSkills: WeaponDef['skills'] = [
@@ -225,7 +224,7 @@ const bwSkills: WeaponDef['skills'] = [
   def({ id: 'rainOfRuin', name: 'Rain of Ruin', glyph: '☔︎', hue: 45, slot: 'ult', cooldown: 40, delivery: { kind: 'ground', radius: 6, range: 20, delay: 1 }, description: 'Ultimate. Blacken the sky over your aim: potency 680 and bleeding.', effects: [dmg(680), { kind: 'status', status: 'bleed', duration: 9, to: 'hit', potency: 80 }] }),
 ];
 
-// ── Ranger: Crossbow ────────────────────────────────────────────────────────────────────────
+// ── Ranger: Crossbow (the Arbalest) ────────────────────────────────────────────────────────
 const bolt = (potency: number) => ({ delivery: { kind: 'projectile', speed: 34, radius: 0.35, range: 20, look: 'bolt' } as Delivery, potency });
 const cbBasic = chain('crossbow', 'Bolt', '→', 30, [bolt(92), bolt(92), bolt(120)]);
 const cbSkills: WeaponDef['skills'] = [
@@ -236,8 +235,8 @@ const cbSkills: WeaponDef['skills'] = [
   def({ id: 'siegeBarrage', name: 'Siege Barrage', glyph: '⇶', hue: 25, slot: 'ult', cooldown: 35, delivery: { kind: 'projectile', speed: 32, radius: 0.4, range: 20, count: 9, spread: (30 * Math.PI) / 180, look: 'bolt' }, description: 'Ultimate. Nine bolts in a tight spread: potency 150 each.', effects: [dmg(150)] }),
 ];
 
-// ── Duelist: Halberd ────────────────────────────────────────────────────────────────────────────
-const spBasic = chain('spear', 'Halberd Thrust', '↑', 220, [
+// ── Duelist: Lance (the Dragoon) ───────────────────────────────────────────────────────────
+const spBasic = chain('spear', 'Lance Thrust', '↑', 220, [
   { delivery: thrust(3.8, 1.3), potency: 125 },
   { delivery: thrust(3.8, 1.3), potency: 125 },
   { delivery: thrust(4.2, 1.6), potency: 170 },
@@ -246,12 +245,12 @@ const spSkills: WeaponDef['skills'] = [
   def({ id: 'sweepingStrike', name: 'Sweeping Strike', glyph: '◠', hue: 215, slot: 'special', cooldown: 5, delivery: arc(3.8, 200), description: 'Sweep the haft around you: potency 220, knocking foes back.', effects: [dmg(220), { kind: 'knockback', distance: 1.5 }] }),
   def({ id: 'piercingThrust', name: 'Piercing Thrust', glyph: '⇑', hue: 225, slot: 'q', cooldown: 6, delivery: thrust(6, 1.8), description: 'A lunging thrust 6 tiles long: potency 360.', effects: [dmg(360)] }),
   def({ id: 'vaultStrike', name: 'Vault Strike', glyph: '⤒', hue: 205, slot: 'e', cooldown: 10, iframes: 0.4, delivery: { kind: 'leap', range: 7, radius: 2.5 }, description: 'Pole-vault to your aim and strike: potency 250.', effects: [dmg(250)] }),
-  def({ id: 'whirlingSpear', name: 'Whirling Halberd', glyph: '✣', hue: 230, slot: 'r', cooldown: 9, delivery: { kind: 'self', radius: 3.8 }, description: 'Spin the halberd: potency 300 around you and slows.', effects: [dmg(300), { kind: 'status', status: 'slow', duration: 4, to: 'hit' }] }),
+  def({ id: 'whirlingSpear', name: 'Whirling Lance', glyph: '✣', hue: 230, slot: 'r', cooldown: 9, delivery: { kind: 'self', radius: 3.8 }, description: 'Spin the lance: potency 300 around you and slows.', effects: [dmg(300), { kind: 'status', status: 'slow', duration: 4, to: 'hit' }] }),
   def({ id: 'skewer', name: 'Skewer', glyph: '⟿', hue: 240, slot: 'ult', cooldown: 35, iframes: 0.3, delivery: { kind: 'dash', distance: 9, width: 2 }, description: 'Ultimate. Charge 9 tiles, skewering everything: potency 680.', effects: [dmg(680), { kind: 'stagger', amount: 40 }] }),
 ];
 
-// ── Duelist: Twin Blades ───────────────────────────────────────────────────────────────────────
-const mgBasic = chain('greatsword', 'Twin Slash', '⚔', 0, [
+// ── Duelist: Twin Blades (the Blademaster) ─────────────────────────────────────────────────
+const mgBasic = chain('twin_blades', 'Twin Slash', '⚔', 0, [
   { delivery: arc(3.4, 150), potency: 175 },
   { delivery: arc(3.4, 150), potency: 175 },
   { delivery: arc(3.6, 200), potency: 260 },
@@ -259,7 +258,7 @@ const mgBasic = chain('greatsword', 'Twin Slash', '⚔', 0, [
 const mgSkills: WeaponDef['skills'] = [
   def({ id: 'risingSlash', name: 'Rising Slash', glyph: '⤴', hue: 15, slot: 'special', cooldown: 6, delivery: arc(3.6, 120), description: 'An upward slash that launches foes: potency 280 and a short stun.', effects: [dmg(280), { kind: 'stun', duration: 0.8 }, { kind: 'stagger', amount: 15 }] }),
   def({ id: 'whirlwind', name: 'Whirlwind', glyph: '◎', hue: 5, slot: 'q', cooldown: 8, delivery: { kind: 'self', radius: 4 }, description: 'Spin with both blades outstretched: potency 340 around you.', effects: [dmg(340)] }),
-  def({ id: 'reaversLunge', name: 'Reaver’s Lunge', glyph: '⇢', hue: 355, slot: 'e', cooldown: 9, iframes: 0.25, delivery: { kind: 'dash', distance: 6, width: 2.2 }, description: 'Lunge 6 tiles: potency 260 to everything in your path.', effects: [dmg(260)] }),
+  def({ id: 'reaversLunge', name: 'Blademaster’s Lunge', glyph: '⇢', hue: 355, slot: 'e', cooldown: 9, iframes: 0.25, delivery: { kind: 'dash', distance: 6, width: 2.2 }, description: 'Lunge 6 tiles: potency 260 to everything in your path.', effects: [dmg(260)] }),
   def({ id: 'executioner', name: 'Executioner', glyph: '✠', hue: 350, slot: 'r', cooldown: 12, windup: 0.4, delivery: thrust(5, 3), execute: 1.6, description: 'Both blades brought down in a crossing chop: potency 520, and 60% more against foes below 30% health.', effects: [dmg(520)] }),
   def({ id: 'cataclysmBlade', name: 'Cataclysm Blades', glyph: '✹', hue: 10, slot: 'ult', cooldown: 40, windup: 0.6, delivery: { kind: 'self', radius: 5.5 }, description: 'Ultimate. A ruinous spinning strike: potency 900 around you.', effects: [dmg(900), { kind: 'stagger', amount: 50 }] }),
 ];
@@ -269,14 +268,14 @@ export const SKILLS: Record<string, SkillDef> = Object.fromEntries(skills.map((s
 export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
   (
     [
-      { id: 'tank_greatsword', role: 'tank', name: 'Greatsword', style: 'Dark Knight', ranged: false, reach: 1, description: 'A dark knight’s greatsword: charge into the crowd, sweep it with Eclipse, drain its life to heal, and spend your own blood on Ruination.', basic: { interval: 0.85, hits: tgBasic }, skills: tgSkills },
-      { id: 'sword_shield', role: 'tank', name: 'Sword & Shield', style: 'Guardian', ranged: false, reach: 1, description: 'A paladin’s sword and shield: flash into the fight, mend your own wounds, block everything and throw it back, and flood the field with light.', basic: { interval: 0.65, hits: ssBasic }, skills: ssSkills },
-      { id: 'staff', role: 'mage', name: 'Staff', style: 'Sage', ranged: true, healer: true, reach: 9, description: 'The party’s lifeline: healing circles, a sanctuary, meteors and the power to raise the fallen.', basic: { interval: 0.55, hits: stBasic }, skills: stSkills },
-      { id: 'mystic_sword', role: 'mage', name: 'Mystic Sword & Wand', style: 'Spellblade', ranged: false, reach: 1.2, description: 'A sword in one hand and a wand in the other: arcane slashes, lightning, wards and a healing sigil.', basic: { interval: 0.55, hits: msBasic }, skills: msSkills },
-      { id: 'bow', role: 'ranger', name: 'Longbow', style: 'Marksman', ranged: true, reach: 11, description: 'Long range and huge damage: charged shots, volleys, traps and a fan of arrows.', basic: { interval: 0.5, hits: bwBasic }, skills: bwSkills },
-      { id: 'crossbow', role: 'ranger', name: 'Crossbow', style: 'Arbalist', ranged: true, reach: 9, description: 'Rapid bolts, explosive shots, a shrapnel blast and a tumble to escape danger.', basic: { interval: 0.36, hits: cbBasic }, skills: cbSkills },
-      { id: 'spear', role: 'melee', name: 'Halberd', style: 'Halberdier', ranged: false, reach: 2.4, description: 'An axe-blade on a long haft: fast thrusts with long reach, sweeping cuts, a vault and a skewering charge.', basic: { interval: 0.5, hits: spBasic }, skills: spSkills },
-      { id: 'greatsword', role: 'melee', name: 'Twin Blades', style: 'Reaver', ranged: false, reach: 1.4, description: 'A blade in each hand and the biggest hits in Rhuin: sweeping slashes, whirlwinds and an executioner’s cross-cut.', basic: { interval: 0.8, hits: mgBasic }, skills: mgSkills },
+      { id: 'tank_greatsword', role: 'tank', name: 'Greatsword', ranged: false, reach: 1, description: 'A dark knight’s greatsword: charge into the crowd, sweep it with Eclipse, drain its life to heal, and spend your own blood on Ruination.', basic: { interval: 0.85, hits: tgBasic }, skills: tgSkills },
+      { id: 'sword_shield', role: 'tank', name: 'Sword & Shield', ranged: false, reach: 1, description: 'A paladin’s sword and shield: flash into the fight, mend your own wounds, block everything and throw it back, and flood the field with light.', basic: { interval: 0.65, hits: ssBasic }, skills: ssSkills },
+      { id: 'staff', role: 'mage', name: 'Staff', ranged: true, healer: true, reach: 9, description: 'The party’s lifeline: healing circles, a sanctuary, meteors and the power to raise the fallen.', basic: { interval: 0.55, hits: stBasic }, skills: stSkills },
+      { id: 'mystic_sword', role: 'mage', name: 'Mystic Sword & Wand', ranged: false, reach: 1.2, description: 'A sword in one hand and a wand in the other: arcane slashes, lightning, wards and a healing sigil.', basic: { interval: 0.55, hits: msBasic }, skills: msSkills },
+      { id: 'bow', role: 'ranger', name: 'Longbow', ranged: true, reach: 11, description: 'Long range and huge damage: charged shots, volleys, traps and a fan of arrows.', basic: { interval: 0.5, hits: bwBasic }, skills: bwSkills },
+      { id: 'crossbow', role: 'ranger', name: 'Crossbow', ranged: true, reach: 9, description: 'Rapid bolts, explosive shots, a shrapnel blast and a tumble to escape danger.', basic: { interval: 0.36, hits: cbBasic }, skills: cbSkills },
+      { id: 'spear', role: 'melee', name: 'Lance', ranged: false, reach: 2.4, description: 'A long lance: fast thrusts with long reach, sweeping cuts, a vault and a skewering charge.', basic: { interval: 0.5, hits: spBasic }, skills: spSkills },
+      { id: 'twin_blades', role: 'melee', name: 'Twin Blades', ranged: false, reach: 1.4, description: 'A blade in each hand and the biggest hits in Rhuin: sweeping slashes, whirlwinds and an executioner’s cross-cut.', basic: { interval: 0.8, hits: mgBasic }, skills: mgSkills },
     ] satisfies WeaponDef[]
   ).map((w) => [w.id, w]),
 );
@@ -284,9 +283,9 @@ export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
 export const ROLES: Record<RoleId, RoleDef> = {
   tank: {
     id: 'tank',
-    name: 'Warrior',
+    name: 'Tank',
     tagline: 'Hold the line',
-    description: 'The only one who can take the monsters’ blows. Your attacks build three times the aggro, your skills hold it, and monsters cling to you, but in a long fight you need a healer. He is a Dark Knight with a greatsword; she is a Guardian with sword, shield and light.',
+    description: 'The only one who can take the monsters’ blows. Your attacks build three times the aggro, your skills hold it, and monsters cling to you, but in a long fight you need a healer. Two heroes: the Dark Knight with a greatsword, and the Guardian with sword, shield and light.',
     color: '#4f8dff',
     hp: 16000,
     mp: 0,
@@ -297,14 +296,14 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 0.55,
     enmity: 3,
     speed: 5.7,
-    weapons: ['tank_greatsword', 'sword_shield'],
+    heroes: ['darkKnight', 'guardian'],
     roleSkills: ['challenge', 'rallyingBulwark'],
   },
   mage: {
     id: 'mage',
     name: 'Mage',
     tagline: 'Spells to harm and heal',
-    description: 'Offensive and healing spells. His Staff keeps the party alive; her Mystic Sword and wand fight up close with spellblade magic.',
+    description: 'Offensive and healing spells. The Sage’s Staff keeps the party alive; the Spellblade fights up close with a mystic sword and a wand.',
     color: '#c77dff',
     hp: 6200,
     mp: 10000,
@@ -315,7 +314,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 1,
     enmity: 1,
     speed: 6,
-    weapons: ['staff', 'mystic_sword'],
+    heroes: ['sage', 'spellblade'],
     roleSkills: ['arcaneBlink', 'manaFont'],
   },
   ranger: {
@@ -333,7 +332,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 1.15,
     enmity: 1,
     speed: 6.4,
-    weapons: ['crossbow', 'bow'],
+    heroes: ['arbalest', 'bowmaster'],
     roleSkills: ['vault', 'fieldDressing'],
   },
   melee: {
@@ -351,7 +350,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 1.2,
     enmity: 1,
     speed: 6.4,
-    weapons: ['spear', 'greatsword'],
+    heroes: ['dragoon', 'blademaster'],
     roleSkills: ['bloodrush', 'secondWind'],
   },
 };
@@ -375,16 +374,52 @@ export function isRole(role: unknown): role is RoleId {
   return typeof role === 'string' && role in ROLES;
 }
 
-/** Each hero comes as a man or a woman, and each carries one weapon of their own. */
-export const HERO_LOOKS = ['male', 'female'] as const;
-export type HeroLook = (typeof HERO_LOOKS)[number];
+export type HeroId = 'darkKnight' | 'guardian' | 'sage' | 'spellblade' | 'arbalest' | 'bowmaster' | 'dragoon' | 'blademaster';
 
-/** The look a hero has until the player picks one: the Mage defaults to the healer. */
-export const DEFAULT_LOOK: Record<RoleId, HeroLook> = { tank: 'male', mage: 'male', ranger: 'female', melee: 'male' };
+/**
+ * A hero a player can pick once they have a role. Each carries one weapon of their own. A role may
+ * have any number of heroes (RoleDef.heroes lists them).
+ */
+export interface HeroDef {
+  id: HeroId;
+  role: RoleId;
+  /** The hero's name, as players see it. */
+  name: string;
+  /** The weapon the hero carries. */
+  weapon: string;
+}
 
-/** The weapon a hero carries: each role lists the man's weapon first, then the woman's. */
-export function weaponFor(role: RoleId, look: HeroLook): string {
-  return ROLES[role].weapons[look === 'male' ? 0 : 1] as string;
+export const HEROES: Record<HeroId, HeroDef> = {
+  darkKnight: { id: 'darkKnight', role: 'tank', name: 'Dark Knight', weapon: 'tank_greatsword' },
+  guardian: { id: 'guardian', role: 'tank', name: 'Guardian', weapon: 'sword_shield' },
+  sage: { id: 'sage', role: 'mage', name: 'Sage', weapon: 'staff' },
+  spellblade: { id: 'spellblade', role: 'mage', name: 'Spellblade', weapon: 'mystic_sword' },
+  arbalest: { id: 'arbalest', role: 'ranger', name: 'Arbalest', weapon: 'crossbow' },
+  bowmaster: { id: 'bowmaster', role: 'ranger', name: 'Bowmaster', weapon: 'bow' },
+  dragoon: { id: 'dragoon', role: 'melee', name: 'Dragoon', weapon: 'spear' },
+  blademaster: { id: 'blademaster', role: 'melee', name: 'Blademaster', weapon: 'twin_blades' },
+};
+
+/** Every hero, role by role, each role's in its own order. */
+export const HERO_ORDER: HeroId[] = ROLE_ORDER.flatMap((role) => ROLES[role].heroes);
+
+export function isHero(hero: unknown): hero is HeroId {
+  return typeof hero === 'string' && Object.prototype.hasOwnProperty.call(HEROES, hero);
+}
+
+/** The hero a player has until they pick one: the role's first (the Mage's is the healer). */
+export function defaultHero(role: RoleId): HeroId {
+  return ROLES[role].heroes[0] as HeroId;
+}
+
+/** The hero asked for if it is one of the role's heroes; otherwise (unknown, missing or another role's) the role's default. */
+export function heroFor(role: RoleId, hero: unknown): HeroId {
+  return isHero(hero) && HEROES[hero].role === role ? hero : defaultHero(role);
+}
+
+/** The weapon a hero carries. */
+export function weaponFor(hero: HeroId): string {
+  return HEROES[hero].weapon;
 }
 
 /** The weapon a basic-attack skill belongs to. */

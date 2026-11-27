@@ -1,5 +1,5 @@
 /**
- * The Halberdier's skills, in the chibi pose format (rig.ts, ChibiPose), with a few effects of
+ * The Dragoon's skills, in the chibi pose format (rig.ts, ChibiPose), with a few effects of
  * their own painted through `fx.extra`. Wind-up frames come first; none of his skills has a
  * server wind-up, so they take 0.06 s each and the rest share the clip's seconds. A weapon skill's
  * clip is named after its hotbar slot.
@@ -17,7 +17,7 @@
  *                point first, the wind gathering round the point, to drive it into the floor as he
  *                lands: a burst of wind, a shockwave, dust. The server moves him to his aim at
  *                once, so it plays in place.
- *   r        10  (1 wind-up) Whirling Halberd: two fast turns with the haft held level at its
+ *   r        10  (1 wind-up) Whirling Lance: two fast turns with the haft held level at its
  *                middle in both hands, a ring of wind round him that trails the head, the scarf,
  *                ribbon and ponytail flung out
  *   ult      12  (2 wind-up) Skewer: the lance couched low under his arm, a crouch while the wind
@@ -35,12 +35,12 @@ import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
 import { DUST, DUST_DARK, glowLine, puff, swirl } from '../fx.js';
 import { add3, type ChibiPose, cross3, type FxContext, norm3, pose, solveRig, type V3, weaponAxes } from '../rig.js';
-import { BUTT, HALBERDIER } from './design.js';
+import { BUTT, DRAGOON } from './design.js';
 import { both, drill, flash, fromReady, gust, headUp, READY, settle, streak, tipOf, withExtra } from './moves-core.js';
 
 const S = READY;
-const BUILD = HALBERDIER.build;
-const W = HALBERDIER.weapon;
+const BUILD = DRAGOON.build;
+const W = DRAGOON.weapon;
 const TIP = W.tip ?? W.reach[1];
 
 // ── Effects of the skills' own ───────────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ const e: ChibiPose[] = [
   settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, handF: [8, 10, 6], weapon: 120, yaw: -10, grip: -12, grip2: 10 }), 0.88, { phase: 1, fx: undefined }),
 ];
 
-// ── Whirling Halberd ─────────────────────────────────────────────────────────────────────────
+// ── Whirling Lance ───────────────────────────────────────────────────────────────────────────
 
 /** Where the spin starts (the wind-up's turn) and how far round each spin frame is: two fast turns. */
 const WHIRL_FROM = -45;

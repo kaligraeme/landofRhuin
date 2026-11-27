@@ -3,7 +3,9 @@
  * painted from a skeleton instead: see heroes/.) Sprites not listed here are rigged automatically:
  * a figure with a gap between its legs walks on two legs, anything else sways like a robe.
  */
+import { HEROES } from '../../shared/content/classes.js';
 import { rgbOf, type RigHint } from './animation.js';
+import { heroOfArt } from './heroArt.js';
 
 export const RIG_HINTS: Record<string, RigHint> = {
   // Orcs.
@@ -54,9 +56,9 @@ const AURA: Record<string, string> = {
   undead: '#5dffb0',
 };
 
-/** The colour a creature glows when it uses a skill: by hero role, or by monster clan. */
+/** The colour a creature glows when it uses a skill: by a hero's role, or by a monster's clan. */
 export function auraFor(id: string): [number, number, number] {
-  const parts = id.split('-');
-  const key = parts[0] === 'hero' ? (parts[1] as string) : (parts[0] as string);
+  const hero = heroOfArt(id);
+  const key = hero ? HEROES[hero].role : (id.split('-')[0] as string);
   return rgbOf(AURA[key] ?? '#ffffff');
 }

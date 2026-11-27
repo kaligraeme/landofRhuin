@@ -64,7 +64,7 @@ describe('shelf packing', () => {
   });
 
   it("fits a chibi hero's every frame in one compact atlas per view", () => {
-    const hero = CHIBI_HEROES['hero-tank-male']!;
+    const hero = CHIBI_HEROES['hero-dark-knight']!;
     for (const view of CHIBI_VIEWS) {
       const crops = CHIBI_CLIPS.flatMap((clip) => Array.from({ length: hero.timing[clip].frames }, (_, i) => opaqueBounds(hero.paint(clip, i, view))));
       const p = shelfPack(crops);

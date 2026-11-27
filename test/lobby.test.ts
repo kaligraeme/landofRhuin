@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Lobby, type Conn } from '../src/server/lobby.js';
+import { HEROES, type HeroId } from '../src/shared/content/classes.js';
 import type { ServerMsg } from '../src/shared/protocol.js';
 
 function client(lobby: Lobby, name: string) {
@@ -16,7 +17,7 @@ describe('lobby', () => {
     const a = client(lobby, 'Alice');
     const b = client(lobby, 'Bob');
     lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
-    lobby.handle(a.id, { t: 'appearance', look: 'female' }, 0);
+    lobby.handle(a.id, { t: 'hero', hero: 'guardian' }, 0);
     lobby.handle(b.id, { t: 'party.join', code: a.lobby().party.code }, 0);
     expect(a.lobby().party.members.map((m) => m.name)).toEqual(['Alice', 'Bob']);
 
@@ -37,13 +38,18 @@ describe('lobby', () => {
     expect(rc).not.toBeNull();
     expect(rc.slots.map((s) => s.role)).toEqual(['tank', 'mage', 'ranger', 'melee']);
     expect(rc.slots.filter((s) => s.bot).map((s) => s.role)).toEqual(['mage', 'ranger']);
-    expect(rc.slots.find((s) => s.role === 'mage')?.weapon).toBe('staff');
+    expect(rc.slots.find((s) => s.role === 'mage')).toMatchObject({ hero: 'sage', weapon: 'staff' });
+    expect(rc.slots.find((s) => s.name === 'Alice')).toMatchObject({ hero: 'guardian', weapon: 'sword_shield' });
 
     lobby.handle(a.id, { t: 'ready', accept: true }, 12_000);
     expect(a.last('instance.start')).toBeUndefined();
     lobby.handle(b.id, { t: 'ready', accept: true }, 12_000);
     const start = a.last('instance.start')!.start;
-    expect(start.entities.filter((e) => e.kind === 'player')).toHaveLength(4);
+    const heroes = start.entities.filter((e) => e.kind === 'player');
+    expect(heroes).toHaveLength(4);
+    // Each player enters as the hero they play, every one a hero of their role.
+    expect(heroes.find((e) => e.name === 'Alice')).toMatchObject({ role: 'tank', hero: 'guardian', weapon: 'sword_shield' });
+    for (const e of heroes) expect(HEROES[e.hero!], e.name).toMatchObject({ role: e.role, weapon: e.weapon });
     expect(b.last('instance.start')).toBeDefined();
     expect(lobby.instances.size).toBe(1);
 
@@ -66,7 +72,7 @@ describe('lobby', () => {
     const b = client(lobby, 'Bob');
     lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
     lobby.handle(b.id, { t: 'loadout', role: 'mage' }, 0);
-    lobby.handle(b.id, { t: 'appearance', look: 'female' }, 0);
+    lobby.handle(b.id, { t: 'hero', hero: 'spellblade' }, 0);
     lobby.handle(a.id, { t: 'queue.join', aiFill: null }, 0);
     lobby.handle(b.id, { t: 'queue.join', aiFill: 0 }, 100);
     // Bob's AI fill pulls Alice in only if she accepts AI; she does not, so Bob goes alone.
@@ -107,21 +113,57 @@ describe('lobby', () => {
     expect(lobby.players.get(id)!.conn).toBeNull();
   });
 
-  it('gives each hero their own weapon: the look picks it', () => {
+  it('gives each hero their own weapon: picking the hero picks it', () => {
     const lobby = new Lobby();
     const a = client(lobby, 'Alice');
     lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
-    expect(a.lobby().you).toMatchObject({ role: 'tank', look: 'male', weapon: 'tank_greatsword' });
-    lobby.handle(a.id, { t: 'appearance', look: 'female' }, 0);
-    expect(a.lobby().you).toMatchObject({ look: 'female', weapon: 'sword_shield' });
-    // The look carries over to a new role, and brings that role's weapon.
+    expect(a.lobby().you).toMatchObject({ role: 'tank', hero: 'darkKnight', weapon: 'tank_greatsword' });
+    lobby.handle(a.id, { t: 'hero', hero: 'guardian' }, 0);
+    expect(a.lobby().you).toMatchObject({ hero: 'guardian', weapon: 'sword_shield' });
+    expect(a.lobby().party.members[0]).toMatchObject({ role: 'tank', hero: 'guardian', weapon: 'sword_shield' });
+    // A new role starts on its default hero, the first it lists, with that hero's weapon.
     lobby.handle(a.id, { t: 'loadout', role: 'melee' }, 0);
-    expect(a.lobby().you).toMatchObject({ role: 'melee', look: 'female', weapon: 'greatsword' });
-    lobby.handle(a.id, { t: 'appearance', look: 'male' }, 0);
-    expect(a.lobby().you.weapon).toBe('spear');
+    expect(a.lobby().you).toMatchObject({ role: 'melee', hero: 'dragoon', weapon: 'spear' });
+    lobby.handle(a.id, { t: 'hero', hero: 'blademaster' }, 0);
+    expect(a.lobby().you).toMatchObject({ hero: 'blademaster', weapon: 'twin_blades' });
     lobby.handle(a.id, { t: 'loadout', role: 'mage' }, 0);
-    expect(a.lobby().you.weapon).toBe('staff');
+    expect(a.lobby().you).toMatchObject({ hero: 'sage', weapon: 'staff' });
     lobby.handle(a.id, { t: 'loadout', role: 'ranger' }, 0);
-    expect(a.lobby().you.weapon).toBe('crossbow');
+    expect(a.lobby().you).toMatchObject({ hero: 'arbalest', weapon: 'crossbow' });
+  });
+
+  it('rejects a hero from another role, and one that does not exist', () => {
+    const lobby = new Lobby();
+    const a = client(lobby, 'Alice');
+    lobby.handle(a.id, { t: 'loadout', role: 'tank' }, 0);
+    lobby.handle(a.id, { t: 'hero', hero: 'guardian' }, 0);
+    lobby.handle(a.id, { t: 'hero', hero: 'blademaster' }, 0);
+    expect(a.last('error')?.message).toBe('The Blademaster is not a Tank hero.');
+    expect(a.lobby().you).toMatchObject({ role: 'tank', hero: 'guardian', weapon: 'sword_shield' });
+    for (const hero of ['female', 'tank', '', undefined, 3]) {
+      const seen = a.inbox.length;
+      lobby.handle(a.id, { t: 'hero', hero: hero as HeroId }, 0);
+      expect(a.inbox.slice(seen), String(hero)).toEqual([{ t: 'error', message: 'Choose a valid hero.' }]);
+    }
+    expect(a.lobby().you).toMatchObject({ role: 'tank', hero: 'guardian', weapon: 'sword_shield' });
+  });
+
+  it('fills empty roles with AI companions playing heroes of those roles, the Mage always the healer', () => {
+    const seen = new Set<HeroId>();
+    for (let run = 0; run < 30; run++) {
+      const lobby = new Lobby();
+      const a = client(lobby, 'Alice');
+      lobby.handle(a.id, { t: 'loadout', role: 'melee' }, 0);
+      lobby.handle(a.id, { t: 'queue.join', aiFill: 0 }, 0);
+      const bots = a.lobby().readyCheck!.slots.filter((s) => s.bot);
+      expect(bots.map((s) => s.role)).toEqual(['tank', 'mage', 'ranger']);
+      for (const s of bots) {
+        expect(HEROES[s.hero]).toMatchObject({ role: s.role, weapon: s.weapon });
+        seen.add(s.hero);
+      }
+      expect(bots[1]!.hero).toBe('sage');
+    }
+    // Over 30 runs, the Tank and the Ranger come as either of their heroes.
+    expect([...seen].sort()).toEqual(['arbalest', 'bowmaster', 'darkKnight', 'guardian', 'sage']);
   });
 });

@@ -1,11 +1,11 @@
 /**
- * The Halberdier as a chibi hero: his design (design.ts) and moves (moves-core.ts,
+ * The Dragoon as a chibi hero: his design (design.ts) and moves (moves-core.ts,
  * moves-skills.ts, moves-states.ts) put together with his clip timing, frame boxes and scale.
- * Registered for the male Duelist in ../index.ts.
+ * Registered in ../index.ts.
  */
 import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
 import { chibiHero } from '../painter.js';
-import { HALBERDIER } from './design.js';
+import { DRAGOON } from './design.js';
 import { CORE_MOVES } from './moves-core.js';
 import { SKILL_MOVES } from './moves-skills.js';
 import { STATE_MOVES } from './moves-states.js';
@@ -13,7 +13,7 @@ import { STATE_MOVES } from './moves-states.js';
 /**
  * His clip timing (frame counts match his moves files). His basic attack strikes every 0.5 s, so
  * each thrust plays out in about that, wind-up included. His weapon skills: `special` Sweeping
- * Strike, `q` Piercing Thrust, `e` Vault Strike, `r` Whirling Halberd, `ult` Skewer; `cast` his
+ * Strike, `q` Piercing Thrust, `e` Vault Strike, `r` Whirling Lance, `ult` Skewer; `cast` his
  * role skills and the Elixir. None has a server wind-up, so wind-up frames take 0.06 s each.
  */
 const TIMING: Record<ChibiClip, ClipTiming> = {
@@ -45,8 +45,8 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
  * costs nothing there. He stands about 85 px tall at ease (87 standing straight): 2.1 tiles per 84
  * px, as the Dark Knight, so he stands a little taller in game.
  */
-export const HALBERDIER_HERO: ChibiHero = chibiHero(
-  HALBERDIER,
+export const DRAGOON_HERO: ChibiHero = chibiHero(
+  DRAGOON,
   { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES },
   TIMING,
   {

@@ -8,7 +8,7 @@ const seats: Seat[] = [
   { ownerId: 'h1', name: 'Tank', role: 'tank', weapon: 'tank_greatsword' },
   { ownerId: 'h2', name: 'Mage', role: 'mage', weapon: 'staff' },
   { ownerId: 'h3', name: 'Ranger', role: 'ranger', weapon: 'bow' },
-  { ownerId: 'h4', name: 'Duelist', role: 'melee', weapon: 'greatsword' },
+  { ownerId: 'h4', name: 'Duelist', role: 'melee', weapon: 'twin_blades' },
 ];
 
 function setup() {
