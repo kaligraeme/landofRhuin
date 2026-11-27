@@ -56,9 +56,9 @@ export const SAGE_HERO: ChibiHero = chibiHero(
   { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES },
   TIMING,
   {
-    side: { w: 200, h: 188, ax: 66, ay: 154 },
-    front: { w: 144, h: 200, ax: 82, ay: 162 },
-    back: { w: 144, h: 192, ax: 62, ay: 156 },
+    side: { w: 200, h: 184, ax: 66, ay: 148 },
+    front: { w: 128, h: 190, ax: 66, ay: 152 },
+    back: { w: 128, h: 184, ax: 62, ay: 148 },
   },
   2.1 / 84,
   92,

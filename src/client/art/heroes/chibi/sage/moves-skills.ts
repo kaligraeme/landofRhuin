@@ -44,6 +44,7 @@
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
 import { column, flash, glowLine, motes, rays } from '../fx.js';
+import { scanPoly } from '../raster.js';
 import { add3, type ChibiPose, type FxContext, lerp3, pose, rad, type V3 } from '../rig.js';
 import { AIM, ARCANE, type Aura, ball, both, type Extra, swoosh, withExtra, FIRE, footAt, fromOrb, fromReady, gather, GOLD_LIGHT, LIFE, orbOf, plant, pool, READY, settle, tinted } from './moves-core.js';
 
@@ -87,13 +88,14 @@ const halo =
   };
 
 /**
- * A soft crescent of healing light (Mending Light) `d` pixels on from the orb along the aim, `k`
- * its strength, `half` its half-height: side on a crescent across the way it flies, bowed toward
- * the aim, 4 pixels thick with a cream-white core; toward or away from the viewer, where it flies
- * along the camera, a ring opening round that point.
+ * A crescent of healing light (Mending Light) `d` pixels on from the orb along the aim, `k` its
+ * strength, `half` its half-height: side on a broad crescent across the way it flies, bowed toward
+ * the aim, five pixels thick at its middle with a cream-white core, gold-green round it and a warm
+ * gold fringe, tapering to its horns; toward or away from the viewer, where it flies along the
+ * camera, a ring of the same light opening round that point.
  */
 const crescent =
-  (d: number, k: number, half = 10): Extra =>
+  (d: number, k: number, half = 12): Extra =>
   (x) => {
     if (k <= 0) return;
     const c3 = add3(x.tip, AIM, d);
@@ -101,32 +103,43 @@ const crescent =
     const v = x.cam.vec(AIM);
     const L = Math.hypot(v[0], v[1]);
     const back = x.behind(c3);
-    const bands: [number, RGB, number][] = [
-      [-1.6, LIFE.edge, 0.5],
-      [-0.8, LIFE.core, 0.9],
-      [0, LIFE.hot, 1],
-      [0.8, LIFE.core, 0.9],
-      [1.6, LIFE.edge, 0.5],
+    // Bands across it, as offsets along the way it flies (behind its middle to ahead of it).
+    const bands: [number, number, RGB, number][] = [
+      [-2.6, -1.3, LIFE.edge, 0.8],
+      [-1.3, -0.5, LIFE.core, 1],
+      [-0.5, 0.5, LIFE.hot, 1],
+      [0.5, 1.3, LIFE.core, 1],
+      [1.3, 2.6, LIFE.edge, 0.8],
     ];
+    const fill = (pts: Vec[], col: RGB, a: number): void => scanPoly(pts, x.c.w, x.c.h, (px, py) => soft(x, px, py, col, a, back));
     if (L > 0.5) {
       const u: Vec = [v[0] / L, v[1] / L];
       const nrm: Vec = [-u[1], u[0]];
-      const n = Math.ceil(half * 4);
-      for (let i = 0; i <= n; i++) {
-        const s = (2 * i) / n - 1;
-        const bow = (1 - s * s) * 4;
-        const taper = 1 - Math.pow(Math.abs(s), 4);
-        for (const [o, col, a] of bands) soft(x, P[0] + nrm[0] * s * half + u[0] * (bow + o), P[1] + nrm[1] * s * half + u[1] * (bow + o), col, k * a * taper, back);
+      const n = 16;
+      const at = (s: number, o: number): Vec => {
+        const bow = (1 - s * s) * 5;
+        const w = 1 - Math.pow(Math.abs(s), 3);
+        return [P[0] + nrm[0] * s * half + u[0] * (bow + o * w), P[1] + nrm[1] * s * half + u[1] * (bow + o * w)];
+      };
+      for (let i = 0; i < n; i++) {
+        const s0 = (2 * i) / n - 1;
+        const s1 = (2 * (i + 1)) / n - 1;
+        for (const [o0, o1, col, a] of bands) fill([at(s0, o0), at(s1, o0), at(s1, o1), at(s0, o1)], col, k * a);
       }
     } else {
-      const R = half * 0.8;
-      const n = Math.ceil(R * 7);
+      const R = half * 0.75;
+      const n = 24;
+      const at = (th: number, o: number): Vec => [P[0] + Math.cos(th) * (R + o), P[1] + Math.sin(th) * (R + o) * 0.85];
       for (let i = 0; i < n; i++) {
-        const th = (i / n) * Math.PI * 2;
-        for (const [o, col, a] of bands) soft(x, P[0] + Math.cos(th) * (R + o), P[1] + Math.sin(th) * (R + o) * 0.85, col, k * a, back);
+        const t0 = (i / n) * Math.PI * 2;
+        const t1 = ((i + 1) / n) * Math.PI * 2;
+        for (const [o0, o1, col, a] of bands) fill([at(t0, o0), at(t1, o0), at(t1, o1), at(t0, o1)], col, k * a);
       }
     }
   };
+
+/** The dark teal a rune is set on. */
+const RUNE_PLATE: RGB = [10, 58, 52];
 
 /** His runes: bold abstract signs, five pixels square (a ringed point, a diamond, a sheaf, a tree, a lattice, a crossed bar), none of them a letter. */
 const RUNES: readonly (readonly string[])[] = [
@@ -141,8 +154,8 @@ const RUNES: readonly (readonly string[])[] = [
 /**
  * Sanctuary's ward on the floor round a point (the staff's foot), `r` in radius and `k` its
  * strength, turned `spin` degrees: a bright teal ring two pixels thick with a fainter one outside
- * it, a gold-green ring inside, and his runes standing on the floor between them, each a teal
- * glyph with a white heart, the ones behind him passing behind him.
+ * it, a gold-green ring inside, and his runes standing on the floor between them, each a pale
+ * mint glyph with a white heart on a dark teal plate, the ones behind him passing behind him.
  */
 const runeRing =
   (at: (x: FxContext) => V3, r: number, k: number, spin: number): Extra =>
@@ -160,13 +173,13 @@ const runeRing =
       const p = x.proj(p3);
       const glyph = RUNES[i % RUNES.length] as readonly string[];
       const back = x.behind(p3);
+      const gx0 = Math.round(p[0]) - 2;
+      const gy0 = Math.round(p[1]) - 6;
+      // A dark plate under each rune, so it reads against the light of the ring and the floor.
+      for (let dy = -1; dy <= 5; dy++) for (let dx = -1; dx <= 5; dx++) x.c.glow(gx0 + dx, gy0 + dy, RUNE_PLATE, k * 0.7, back);
       glyph.forEach((row, gy) => {
         for (let gx = 0; gx < row.length; gx++) {
-          if (row[gx] !== '#') continue;
-          const px = Math.round(p[0]) - 2 + gx;
-          const py = Math.round(p[1]) - 6 + gy;
-          x.c.glow(px, py, gy === 2 && gx === 2 ? [255, 255, 255] : ARCANE.hot, k, back);
-          x.c.glow(px + 1, py + 1, ARCANE.core, k * 0.55, back);
+          if (row[gx] === '#') x.c.glow(gx0 + gx, gy0 + gy, gy === 2 && gx === 2 ? [255, 255, 255] : ARCANE.edge, k, back);
         }
       });
     }
@@ -189,15 +202,15 @@ const rising =
       const p3: V3 = [c0[0] + Math.cos(th) * rr, 0, c0[2] + Math.sin(th) * rr];
       const back = x.behind(p3);
       const foot = x.proj(p3);
-      const H = (14 + 22 * x.hash(i, 613)) * (0.35 + 0.65 * t);
+      const H = (20 + 20 * x.hash(i, 613)) * (0.4 + 0.6 * t);
       for (let h = 0; h <= H; h++) {
-        const a = k * (1 - h / H) * (0.6 + 0.4 * Math.min(1, h / 3));
+        const a = k * Math.min(1, 1.25 * (1 - h / H));
         const y = foot[1] - h;
         soft(x, foot[0], y, LIFE.hot, a, back);
-        soft(x, foot[0] - 1, y, LIFE.core, a * 0.75, back);
-        soft(x, foot[0] + 1, y, LIFE.core, a * 0.75, back);
-        soft(x, foot[0] - 2, y, LIFE.edge, a * 0.3, back);
-        soft(x, foot[0] + 2, y, LIFE.edge, a * 0.3, back);
+        soft(x, foot[0] - 1, y, LIFE.core, a * 0.9, back);
+        soft(x, foot[0] + 1, y, LIFE.core, a * 0.9, back);
+        soft(x, foot[0] - 2, y, LIFE.edge, a * 0.4, back);
+        soft(x, foot[0] + 2, y, LIFE.edge, a * 0.4, back);
       }
       // A mote climbing the column.
       const m = ((x.hash(i, 614) + t * 1.3) % 1) * (H + 6);
@@ -415,9 +428,9 @@ const special: ChibiPose[] = [
   fromReady(MEND_UP, 0.9, { fx: { rune: 0.8, extra: both(halo(9, 0.7, LIFE), ball(fromOrb(0.5), 4, 0.9, LIFE), gather(0.8, 0, 15, LIFE)) } }),
   pose(MEND_UP, { y: 3.5, lean: -3, head: -6, phase: 0.1, face: 'closed', fx: { rune: 1, aura: 0.2, extra: both(halo(12, 1, LIFE), orbRays(0.5, LIFE, 10, 16), ball(fromOrb(0.5), 6, 1, LIFE), gather(1, 0.5, 9, LIFE)) } }),
   // Released: a soft crescent of light leaves the orb for the aim.
-  pose(MEND_OUT, { phase: 0.25, fx: { rune: 1, extra: both(burst(1.1, LIFE), halo(10, 0.6, LIFE), crescent(9, 1, 9), lifeMotes(0.8, 0)) } }),
-  pose(MEND_OUT, { y: 4, lean: 7, weapon: 40, wind: 0.45, phase: 0.4, face: 'stern', fx: { rune: 0.8, extra: both(ball(fromOrb(0.5), 3.5, 0.7, LIFE), crescent(24, 0.9, 11), lifeMotes(0.9, 0.15)) } }),
-  pose(MEND_OUT, { y: 4, lean: 6, weapon: 38, wind: 0.35, lift: 0.15, phase: 0.55, fx: { rune: 0.6, extra: both(crescent(39, 0.5, 12), lifeMotes(0.8, 0.3)) } }),
+  pose(MEND_OUT, { phase: 0.25, fx: { rune: 1, extra: both(burst(1.1, LIFE), halo(10, 0.6, LIFE), crescent(10, 1, 11), lifeMotes(0.8, 0)) } }),
+  pose(MEND_OUT, { y: 4, lean: 7, weapon: 40, wind: 0.45, phase: 0.4, face: 'stern', fx: { rune: 0.8, extra: both(ball(fromOrb(0.5), 3.5, 0.7, LIFE), crescent(26, 0.95, 13), lifeMotes(0.9, 0.15)) } }),
+  pose(MEND_OUT, { y: 4, lean: 6, weapon: 38, wind: 0.35, lift: 0.15, phase: 0.55, fx: { rune: 0.6, extra: both(crescent(42, 0.6, 14), lifeMotes(0.8, 0.3)) } }),
   settle(MEND_OUT, 0.5, { weapon: 52, yaw: -30, wind: 0.25, lift: 0.15, phase: 0.7, fx: { rune: 0.45, extra: lifeMotes(0.5, 0.45) } }),
   settle(MEND_OUT, 0.88, { wind: 0.18, phase: 0.85, fx: { rune: 0.35, extra: lifeMotes(0.25, 0.6) } }),
 ];
