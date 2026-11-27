@@ -15,13 +15,13 @@
 import { hex } from '../../paint.js';
 import { quiver } from '../back.js';
 import { arrow, arrowHeads, type ArrowSpec, bow, type BowSpec, flatShaft, nocked, paintArrow } from '../bow.js';
-import { type BodyDesign, type ChibiDesign, type DrawItem, type HeadPiece, type Held, type HeldItem, type Lock, OFFHAND_TAG, type Piece, type PieceContext, WEAPON_TAG, type WeaponDesign } from '../design.js';
+import { type BodyDesign, type ChibiDesign, type DrawItem, GEAR_ID, type HeadPiece, type Held, type HeldItem, type Lock, OFFHAND_TAG, type Piece, type PieceContext, WEAPON_TAG, type WeaponDesign } from '../design.js';
 import { FACE_SOFT } from '../head.js';
 import { hood } from '../headgear.js';
 import { mainHeld } from '../held.js';
 import { cowl } from '../pieces.js';
-import { dim, flat, type Hit, type Mat, mat4, type Part, toneLight } from '../raster.js';
-import { add3, at3, cross3, dirIn, type Limb, lerp3, norm3, rad, sub3, type V3 } from '../rig.js';
+import { type Blob, dim, flat, type Hit, type Mat, mat4, type Part, toneLight } from '../raster.js';
+import { add3, at3, cross3, dirIn, type Frame3, type Limb, lerp3, norm3, rad, sub3, type V3 } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
@@ -107,7 +107,7 @@ const SHELL = { c: [-1.4, 1.2, 0] as V3, r: [11, 10.2, 10.9] as V3 };
 
 /** The hood: worn up over her hair, its opening's band a shade lighter, a soft point at its crown. */
 const HOOD_DRAPE = -15;
-const HOOD = hood({ outer: GREEN, inner: GREEN_IN, rim: GREEN_RIM, shell: SHELL, opening: { top: 6.4, bottom: -12.5, side: 8.4 }, drape: HOOD_DRAPE, peak: { pitch: 34, size: 4.4 }, folds: true, down: { size: 1.4 } });
+const HOOD = hood({ outer: GREEN, inner: GREEN_IN, rim: GREEN_RIM, shell: SHELL, opening: { top: 6.4, bottom: -12.5, side: 8.4 }, drape: HOOD_DRAPE, peak: { pitch: 34, size: 4.4 }, folds: true });
 
 /**
  * The hood worn up, shaped further than the engine's plain hood so its back is not one flat dome:
@@ -134,6 +134,89 @@ const HOOD_UP: HeadPiece = {
         return out;
       },
     })),
+};
+
+/** A frame tipped back by `deg` degrees about its own side axis, round a point (`pivot`, in the frame's own axes). */
+function tipBack(fr: Frame3, deg: number, pivot: V3): Frame3 {
+  const c = Math.cos(rad(deg));
+  const s = Math.sin(rad(deg));
+  const u = norm3(sub3(add3([0, 0, 0], fr.u, c), add3([0, 0, 0], fr.f, s)));
+  const f = norm3(add3(add3([0, 0, 0], fr.f, c), fr.u, s));
+  const P = add3(add3(add3(fr.o, fr.f, pivot[0]), fr.u, pivot[1]), fr.r, pivot[2]);
+  const o = sub3(P, add3(add3(add3([0, 0, 0], f, pivot[0]), u, pivot[1]), fr.r, pivot[2]));
+  return { o, f, u, r: fr.r };
+}
+
+/** How far the hood is tipped back as it slides off, and the point at the back of her skull it turns about. */
+const SLIDE = 58;
+const SLIDE_PIVOT: V3 = [-4, -6, 0];
+
+/**
+ * The hood sliding back off her hair, the one frame between worn up and worn down (in the KO and
+ * the victory): the hood worn up, tipped back about the back of her skull, so her fringe and the
+ * front of her crown show and its opening, rimmed in the lighter band, faces up. It covers the
+ * hair it still lies over (where hair would poke through it).
+ */
+const HOOD_SLIDING: HeadPiece = {
+  blobs: (ctx, head) => HOOD_UP.blobs?.({ ...ctx, pose: { ...ctx.pose, hood: 'up' } }, tipBack(head, SLIDE, SLIDE_PIVOT)) ?? [],
+  covers: () => {
+    const c = Math.cos(rad(-SLIDE));
+    const s = Math.sin(rad(-SLIDE));
+    const R = [SHELL.r[0] + 1.6, SHELL.r[1] + 1.6, SHELL.r[2] + 1.6];
+    return (p: V3) => {
+      // The point in the tipped hood's own axes: turned the other way about the pivot.
+      const x = p[0] - SLIDE_PIVOT[0];
+      const y = p[1] - SLIDE_PIVOT[1];
+      const q: V3 = [SLIDE_PIVOT[0] + x * c + y * s, SLIDE_PIVOT[1] - x * s + y * c, p[2]];
+      const d = ((q[0] - SHELL.c[0]) / (R[0] as number)) ** 2 + ((q[1] - SHELL.c[1]) / (R[1] as number)) ** 2 + ((q[2] - SHELL.c[2]) / (R[2] as number)) ** 2;
+      // Everything growing from the back of her head is still under it (the tied tail too).
+      return p[0] < -1 || (d < 0.92 && q[0] < 0);
+    };
+  },
+};
+
+/**
+ * The hood worn down: a deep roll of cloth round the back of her neck and over her shoulders,
+ * wider than her hair so it shows either side of it from behind, its opening turned up in the
+ * lighter band with the lining in shadow along it, and the hood bunched on her upper back below,
+ * narrowing to its point (which lifts a little in the wind).
+ */
+const FALLEN_HOOD: Piece = (ctx: PieceContext): DrawItem[] => {
+  if (ctx.pose.hood !== 'down') return [];
+  const { rig, pose } = ctx;
+  const cf = rig.chest;
+  const T = ctx.build.torso;
+  const wind = Math.max(0, pose.wind ?? 0);
+  const lift = pose.lift ?? 0;
+  const roll: Blob = { c: [-3.4, T - 1, 0], r: [4.8, 4, 14.4], id: GEAR_ID + 1 };
+  const bodyC: V3 = [-7 - wind * 1.2, T - 7 + lift * 1.5 + wind * 0.6, 0];
+  const body: Blob = { c: bodyC, r: [3.2, 8.4, 9.6], id: GEAR_ID };
+  const shade = (h: Hit): { m: Mat; light?: number; id?: number } | null => {
+    if (h.back) return null;
+    const p = h.p;
+    if (h.blob === body) {
+      // It narrows to a point at the bottom, a crease down its middle.
+      const below = (bodyC[1] - p[1]) / body.r[1];
+      if (below > 0 && Math.abs(p[2]) / body.r[2] > 1.05 - below) return null;
+      if (Math.abs(p[2]) < 0.7 && p[1] < bodyC[1] + 2) return { m: GREEN, light: toneLight(GREEN, 3) };
+      return { m: GREEN };
+    }
+    // The opening, turned up: the lining in shadow along the roll's top; the roll below it in the band's green, deep where it lies on her.
+    if (h.n[1] > 0.86 && p[0] < -1.5) return { m: GREEN_IN, light: toneLight(GREEN_IN, 2), id: GEAR_ID + 2 };
+    if (h.n[1] < -0.5) return { m: GREEN_DEEP, light: toneLight(GREEN_DEEP, 2) };
+    return { m: GREEN_RIM };
+  };
+  const mid = at3(cf, bodyC[0] - body.r[0], T - 3, 0);
+  return [
+    {
+      z: ctx.upperZ(ctx.depth(mid)),
+      draw: () => {
+        const part = ctx.part();
+        part.blobs(cf, [roll, body], shade);
+        part.commit();
+      },
+    },
+  ];
 };
 
 // ── The torso: a laced jerkin and a belt ─────────────────────────────────────────────────────
@@ -276,9 +359,9 @@ export const DARK_ARROW: ArrowSpec = {
 const BOW_SPEC: BowSpec = {
   limb: { len: 28.5, w0: 1.7, w1: 0.85, mat: BOW_WOOD },
   grip: { len: 7, r: 1.7, mat: BOW_GRIP },
-  brace: 8.5,
-  bend: 3.5,
-  recurve: 4.5,
+  brace: 12.5,
+  bend: 2,
+  recurve: 5,
   tips: HORN,
   string: STRING,
   arrow: ARROW,
@@ -506,13 +589,16 @@ const QUIVER_PIECE: Piece = (ctx: PieceContext): DrawItem[] => {
 
 /**
  * The hood worn down and the quiver: the fallen hood lies bunched on her upper back under the
- * quiver (the engine lays a hood worn down over a quiver's mouth), so its tube and strap still
- * cross her back when the hood is down.
+ * quiver's tube (the engine lays a hood worn down over a quiver's mouth), so the tube and its
+ * strap still cross her back when the hood is down, but over the cape, so the hood shows as a
+ * green fold round the back of her neck.
  */
 const BACK_GEAR: Piece = (ctx: PieceContext): DrawItem[] => {
   const quiverItems = QUIVER_PIECE(ctx);
-  const under = Math.min(...quiverItems.map((it) => it.z)) - 0.02;
-  return [...HOOD.down(ctx).map((it) => ({ ...it, z: Math.min(it.z, under) })), ...quiverItems];
+  // The tube is the last of the engine quiver's own items (its chest strap comes first).
+  const tube = quiverItems[QUIVER_BASE(ctx).length - 1];
+  const under = (tube ? tube.z : Math.min(...quiverItems.map((it) => it.z))) - 0.02;
+  return [...FALLEN_HOOD(ctx).map((it) => ({ ...it, z: Math.min(it.z, under) })), ...quiverItems];
 };
 
 /**
@@ -587,6 +673,11 @@ const BOWMASTER_FAN: ChibiDesign = { ...BOWMASTER, offhand: headSorted(fanBow(BO
 /** The victory: the arrow she twirls held at its middle. */
 const BOWMASTER_TWIRL: ChibiDesign = { ...BOWMASTER, weapon: twirlArrow(ARROW) };
 
+/** The frame her hood slides back off her hair (the KO and the victory): the hood tipped back, not yet down. */
+const sliding = (d: ChibiDesign): ChibiDesign => ({ ...d, headPieces: [HOOD_SLIDING], outfit: [CAPE, QUIVER_PIECE, pouch, bootCuffs] });
+const BOWMASTER_SLIDING = sliding(BOWMASTER);
+const BOWMASTER_TWIRL_SLIDING = sliding(BOWMASTER_TWIRL);
+
 /** Volley: the bow raised over her head, sorted against the hood as such (see `headSorted`). */
 const BOWMASTER_VOLLEY: ChibiDesign = { ...BOWMASTER, offhand: headSorted(bow(BOW_SPEC), true) };
 
@@ -615,4 +706,4 @@ const BOWMASTER_RUIN: ChibiDesign = {
   aura: { core: hex('#7a34c8'), edge: hex('#1a0a2a'), hot: hex('#e4ffd0') },
 };
 
-export { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_VOLLEY };
+export { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SLIDING, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_TWIRL_SLIDING, BOWMASTER_VOLLEY };

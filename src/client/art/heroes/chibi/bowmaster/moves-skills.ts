@@ -50,17 +50,6 @@ function across(x: FxContext, d: V3): V3 {
   return norm3(cross3(n, d));
 }
 
-/**
- * Streaks of shots already loosed, from the bow along its aim turned `deg` degrees across the bow
- * (in its plane), each `k` strong and `len` long: the flurry of Volley and the fan of five.
- */
-const streaks =
-  (shots: readonly { deg: number; k: number; len?: number }[]): Extra =>
-  (x) => {
-    const side = across(x, x.dirB);
-    for (const s of shots) trail(x, x.tipB, swing(x.dirB, side, s.deg), s.k, { len: s.len });
-  };
-
 // ── Charged Shot ─────────────────────────────────────────────────────────────────────────────
 
 /** Her charged light: a verdant green core, a pale gold edge, a white heart. */
@@ -254,36 +243,70 @@ const q: ChibiPose[] = [
 // ── Snare Trap ───────────────────────────────────────────────────────────────────────────────
 
 /** Crouched low, the bow held out to her left, the coiled snare in her right hand. */
-const CROUCH: ChibiPose = pose(READY, { y: 9, lean: 16, twist: 8, head: 6, look: 0, footF: [10, 0, 5.4], footB: [-10, 0, 5], handB: [9, 12, 7], weaponB: 38, rollB: 30, draw: 0, nock: false, weapon: 180, roll: 0, yaw: 0, drop: false, face: 'stern' });
-/** The snare in flight: where its grip is (hero space) and how it tumbles. */
+const CROUCH: ChibiPose = pose(READY, { y: 14, lean: 18, twist: 8, head: 6, look: 0, footF: [11, 0, 5.6], footB: [-11, 0, 5.2], handB: [9, 12, 7], weaponB: 38, rollB: 30, draw: 0, nock: false, weapon: 180, roll: 0, yaw: 0, drop: false, face: 'stern' });
+/** The snare in flight: where its grip is (hero space: ahead, up from the ground, toward her right) and how it tumbles. */
 const flying = (at: V3, weapon: number): Partial<ChibiPose> => ({ drop: true, dropAt: at, weapon, roll: 30, yaw: 0 });
 
+/**
+ * Where the snare flies, frame by frame: tossed underarm from low by her right hip, up and on
+ * ahead in an arc and out to her right a little, so it leaves her outline in every view: side on
+ * ahead of her, front on out beside her, from behind rising past her right shoulder.
+ */
+const SNARE_AT: readonly V3[] = [
+  [18, 22, 8],
+  [42, 44, 20],
+  [62, 56, 24],
+];
+const toward = (a: V3, b: V3): V3 => norm3(sub3(b, a));
+
 const e: ChibiPose[] = [
-  // The snare unhooked from her belt.
-  fromReady(pose(CROUCH, { handF: [2, 19, 9], elbowF: [-0.6, -1, 0.6], weapon: 175, phase: 0.05 }), 0.6, { drop: false }),
-  // Swung back past her hip.
-  pose(CROUCH, { y: 10, lean: 18, twist: 20, handF: [-9, 17, 8], weapon: 230, wind: 0.25, phase: 0.15, face: 'grit' }),
+  // The snare unhooked from her belt as she sinks.
+  fromReady(pose(CROUCH, { handF: [2, 19, 9], elbowF: [-0.6, -1, 0.6], weapon: 175, phase: 0.05 }), 0.75, { drop: false }),
+  // Down low, swung back past her hip.
+  pose(CROUCH, { y: 16, lean: 20, twist: 20, handF: [-9, 17, 8], weapon: 230, wind: 0.25, phase: 0.15, face: 'grit' }),
   // Tossed underarm: it leaves her hand low and ahead, a streak behind it.
-  pose(CROUCH, { y: 8, lean: 12, twist: -10, handF: [12, 11, 4], elbowF: [0.2, -1, 0.6], ...flying([20, 18, 2], 120), wind: 0.45, phase: 0.3, face: 'shout', fx: { trail: { k: 0.5, from: [10, 20, 4], dir: [0.8, -0.1, -0.2], len: 9 } } }),
-  // Arcing on toward her aim, the arm following through.
-  pose(CROUCH, { y: 6, lean: 8, twist: -12, handF: [12, 5, 5], elbowF: [0.2, -1, 0.6], ...flying([38, 30, 1], 250), wind: 0.4, lift: 0.1, phase: 0.45, face: 'stern', fx: { trail: { k: 0.45, from: [20, 22, 2], dir: norm3([18, 10, -1]), len: 18 } } }),
-  pose(CROUCH, { y: 6, lean: 8, twist: -6, handF: [9, 8, 5], ...flying([58, 34, 0], 400), wind: 0.3, lift: 0.15, phase: 0.6, face: 'stern', fx: { trail: { k: 0.35, from: [38, 32, 1], dir: norm3([20, 3, -1]), len: 20 } } }),
+  pose(CROUCH, { y: 12, lean: 12, twist: -10, handF: [12, 11, 6], elbowF: [0.2, -1, 0.6], ...flying(SNARE_AT[0] as V3, 120), wind: 0.45, phase: 0.3, face: 'shout', fx: { trail: { k: 0.5, from: [10, 18, 6], dir: toward([10, 18, 6], SNARE_AT[0] as V3), len: 9 } } }),
+  // Arcing up and on toward her aim, the arm following through high.
+  pose(CROUCH, { y: 7, lean: 6, twist: -12, handF: [12, 2, 7], elbowF: [0.2, -1, 0.6], ...flying(SNARE_AT[1] as V3, 250), wind: 0.4, lift: 0.1, phase: 0.45, face: 'stern', fx: { trail: { k: 0.45, from: SNARE_AT[0] as V3, dir: toward(SNARE_AT[0] as V3, SNARE_AT[1] as V3), len: 24 } } }),
+  pose(CROUCH, { y: 6, lean: 8, twist: -6, handF: [9, 6, 6], ...flying(SNARE_AT[2] as V3, 400), wind: 0.3, lift: 0.15, phase: 0.6, face: 'stern', fx: { trail: { k: 0.35, from: SNARE_AT[1] as V3, dir: toward(SNARE_AT[1] as V3, SNARE_AT[2] as V3), len: 22 } } }),
   settle(pose(CROUCH, { y: 6, handF: [7, 9, 4], drop: true, dropAt: undefined }), 0.6, { drop: true, dropAt: undefined, nock: true, phase: 0.75 }),
   settle(pose(CROUCH, { y: 6, handF: [7, 9, 4], drop: true }), 0.9, { drop: true, dropAt: undefined, phase: 0.9 }),
 ];
 
 // ── Fan of Arrows ────────────────────────────────────────────────────────────────────────────
 
-/** Five arrows drawn together, the bow canted flat so they fan out level. */
-const FAN_DRAW = pose(FULL_DRAW, { y: 5, lean: 6, twist: 26, head: 2, look: -10, footF: [10, 0, 5.6], footB: [-11, 0, 5], handF: [2, 3, 0.5], handB: [17, 1.5, 1], weaponB: -8, rollB: 78, draw: 1, nock: true, wind: 0.25, phase: 0.1, face: 'grit' });
+/**
+ * Five arrows drawn together, the bow canted flat so they fan out level, its upper limb laid back
+ * a little (`weaponB`) so side on it runs away into the picture as a short, foreshortened bow
+ * rather than standing across her as a long diagonal; front on and from behind it still lies
+ * level across her.
+ */
+const FAN_DRAW = pose(FULL_DRAW, { y: 5, lean: 6, twist: 26, head: 2, look: -10, footF: [10, 0, 5.6], footB: [-11, 0, 5], handF: [2, 3, 0.5], handB: [17, 1.5, 1], weaponB: -30, rollB: 78, draw: 1, nock: true, wind: 0.25, phase: 0.1, face: 'grit' });
+/** Loosed: the bow held flat where it was while the fan leaves it. */
 const FAN_LOOSE = pose(FAN_DRAW, { handF: [-2, 1, 3.5], elbowF: [-1, 0.6, 0.8], draw: 0, nock: false, wind: 0.5, lift: 0.1, phase: 0.2, face: 'shout' });
-/** Five streaks: the middle one is the bow's own trail, two either side of it. */
-const FAN = [-25, -12.5, 12.5, 25];
+/** Five streaks: the middle one and two either side of it. */
+const FAN = [-25, -12.5, 0, 12.5, 25];
+
+/**
+ * The fan's flash and streaks, along the line the arrows were drawn on (from her drawing hand at
+ * full draw through the bow's grip, which stays where it was), fanned across the flat bow: the
+ * slack bow faces off to one side, so its own aim would send them astray.
+ */
+const fanShots =
+  (flashK: number, k: number, len: number): Extra =>
+  (x) => {
+    const d = norm3(sub3(x.rig.offhand.o, add3(x.rig.neck, [2, -3, 0.5], 1)));
+    const at = add3(x.rig.offhand.o, d, 2);
+    const side = across(x, d);
+    for (const deg of FAN) trail(x, at, swing(d, side, deg), deg === 0 ? k * 1.05 : k, { len: deg === 0 ? len + 4 : len });
+    if (flashK > 0) flash(x, at, d, flashK);
+  };
 
 const r: ChibiPose[] = [
   withFx(FAN_DRAW, { runeB: 0.5 }),
-  withFx(FAN_LOOSE, { flash: { k: 1.2 }, trail: { k: 1, len: 56 }, extra: streaks(FAN.map((deg) => ({ deg, k: 0.95, len: 52 }))) }),
-  withFx(pose(FAN_LOOSE, { handF: [-4, 1, 5], wind: 0.4, lift: 0.2, phase: 0.35, face: 'stern' }), { trail: { k: 0.45, len: 70 }, extra: streaks(FAN.map((deg) => ({ deg, k: 0.4, len: 66 }))) }),
+  withFx(FAN_LOOSE, { extra: fanShots(1.2, 0.95, 52) }),
+  withFx(pose(FAN_LOOSE, { handF: [-4, 1, 5], wind: 0.4, lift: 0.2, phase: 0.35, face: 'stern' }), { extra: fanShots(0, 0.42, 68) }),
+  // To the quiver, the bow coming upright again.
   pose(mix(FAN_LOOSE, BATTLE0, 0.35), { ...REACH_QUIVER, wind: 0.3, lift: 0.15, phase: 0.5, face: 'stern' }),
   pose(mix(FAN_LOOSE, BATTLE0, 0.55), { ...DRAW_ARROW, wind: 0.25, phase: 0.62, face: 'stern' }),
   settle(FAN_LOOSE, 0.75, { handF: [7, 7, 0], weapon: 90, drop: true, nock: true, draw: 0.05, phase: 0.75, face: 'stern' }),
@@ -460,12 +483,12 @@ const FLIP = { handB: [6, 6, 10] as const, weaponB: 20, rollB: 40, yawB: 0, drop
 const cast: ChibiPose[] = [
   // A quick dip to spring from.
   fromReady(pose(READY, { y: 9, lean: 16, twist: 4, head: 4, footF: [7, 0, 5], footB: [-7, 0, 4.6], handF: [-4, 12, 9], ...FLIP, handB: [4, 12, 9], wind: 0.2, phase: 0.05, face: 'grit' }), 0.7),
-  // Up and back, arching.
-  pose(READY, { x: -4, y: -11, lean: -60, twist: 0, head: -30, footF: [7, -6, 5], footB: [4, -4, 4.6], handF: [-10, -4, 12], ...FLIP, handB: [-6, -2, 12], wind: -0.6, lift: 0.6, phase: 0.2, face: 'stern', fx: { dust: 0.6 } }),
+  // Up and back, arching, the knees drawn up, her face still to the front.
+  pose(READY, { x: -4, y: -11, lean: -60, twist: 0, head: -10, footF: [2, -14, 5], footB: [-2, -12, 4.6], handF: [-10, -4, 12], ...FLIP, handB: [-6, -2, 12], wind: -0.6, lift: 0.6, phase: 0.2, face: 'stern', fx: { dust: 0.6 } }),
   // Over the top, tucked.
   pose(READY, { x: -8, y: -20, lean: -150, twist: 0, head: -80, footF: [-4, -46, 5], footB: [-8, -44, 4.6], handF: [-14, 4, 12], ...FLIP, handB: [-10, 6, 12], wind: -0.4, lift: 0.9, flare: 0.3, phase: 0.35, face: 'closed' }),
-  // Coming round.
-  pose(READY, { x: -10, y: -12, lean: -280, twist: 0, head: 150, footF: [-16, -20, 5], footB: [-20, -22, 4.6], handF: [-6, 6, 12], ...FLIP, handB: [-4, 8, 12], wind: 0.2, lift: 0.8, flare: 0.2, phase: 0.5, face: 'stern' }),
+  // Coming round, tucked tight, her head up and her face to the front again.
+  pose(READY, { x: -10, y: -12, lean: -300, twist: 0, head: 160, footF: [-4, -24, 5], footB: [-8, -23, 4.6], handF: [-6, 6, 12], ...FLIP, handB: [-4, 8, 12], wind: 0.2, lift: 0.8, flare: 0.2, phase: 0.5, face: 'stern' }),
   // Landing in a crouch, a hand to the floor.
   pose(READY, { x: -10, y: 12, lean: 26, twist: 6, head: 2, footF: [-6, 0, 5.6], footB: [-26, 0, 5], kneel: 'B', handF: [10, 22, 8], ...FLIP, handB: [8, 10, 9], wind: 0.6, lift: 0.4, phase: 0.65, face: 'stern', fx: { dust: 0.9 } }),
   pose(READY, { x: -9, y: 9, lean: 18, twist: 10, head: 2, footF: [-4, 0, 5.6], footB: [-24, 0, 5], handF: [8, 16, 6], ...FLIP, handB: [10, 9, 6], wind: 0.35, lift: 0.2, phase: 0.8, face: 'stern', fx: { dust: 0.4 } }),

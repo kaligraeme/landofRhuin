@@ -7,7 +7,7 @@ import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
 import type { ChibiDesign } from '../design.js';
 import { chibiHero, paintChibi } from '../painter.js';
 import type { ChibiPose } from '../rig.js';
-import { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_VOLLEY } from './design.js';
+import { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SLIDING, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_TWIRL_SLIDING, BOWMASTER_VOLLEY } from './design.js';
 import { CORE_MOVES } from './moves-core.js';
 import { SKILL_MOVES } from './moves-skills.js';
 import { STATE_MOVES } from './moves-states.js';
@@ -48,6 +48,9 @@ const MOVES = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
  */
 const VARIANTS: Partial<Record<ChibiClip, ChibiDesign>> = { q: BOWMASTER_VOLLEY, e: BOWMASTER_SNARE, r: BOWMASTER_FAN, ult: BOWMASTER_RUIN, victory: BOWMASTER_TWIRL };
 
+/** Single frames painted with a variant of their own: the frame her hood slides back off her hair, between worn up and worn down. */
+const FRAME_VARIANTS: Partial<Record<ChibiClip, Record<number, ChibiDesign>>> = { ko: { 2: BOWMASTER_SLIDING }, victory: { 5: BOWMASTER_TWIRL_SLIDING } };
+
 /**
  * Frames: side on there is room ahead of her for the streaks of her shots (the Charged Shot's runs
  * about 120 px past her) and behind for her fall when knocked out; toward and away from the viewer
@@ -70,5 +73,8 @@ const BASE = chibiHero(BOWMASTER, MOVES, TIMING, FRAMES, 2.1 / 84, 80);
  */
 export const BOWMASTER_HERO: ChibiHero = {
   ...BASE,
-  paint: (clip, i, view) => paintChibi(VARIANTS[clip] ?? BOWMASTER, MOVES[clip][Math.max(0, Math.min(i, MOVES[clip].length - 1))] as ChibiPose, view, FRAMES[view]),
+  paint: (clip, i, view) => {
+    const k = Math.max(0, Math.min(i, MOVES[clip].length - 1));
+    return paintChibi(FRAME_VARIANTS[clip]?.[k] ?? VARIANTS[clip] ?? BOWMASTER, MOVES[clip][k] as ChibiPose, view, FRAMES[view]);
+  },
 };

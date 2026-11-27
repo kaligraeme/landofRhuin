@@ -12,13 +12,13 @@
  *              with an arrow nocked and the string just taken up; a springy bounce, the head
  *              and the cape a frame behind
  *   move    8  a light, quick run, the bow carried low ahead of her in the left hand, the right
- *              arm pumping, the cape streaming
+ *              arm pumping, the cape streaming back and down over her hips
  *   atk1    7  (1 wind-up) Quick Arrow I: a snap to full draw, the string to her chin; loosed
  *              with a flash at the arrowhead and a streak, the string snapping straight; the
  *              drawing hand flicked back past her ear, then to the quiver, an arrow drawn over
  *              her shoulder and nocked again
- *   atk2    7  (1 wind-up) Quick Arrow II: the same from a lower crouch with the bow canted
- *              well over, a quick instinctive shot
+ *   atk2    7  (1 wind-up) Quick Arrow II: a snap shot, a shuffle forward into a low crouch,
+ *              the bow canted well over with its upper limb tipped toward the target
  *   atk3    9  (1 wind-up) Quick Arrow III: a skip back and a full draw, loosed hard as she lands
  *              (a bigger flash, a longer streak, dust, the cape flung out behind her), then the
  *              same reload
@@ -32,7 +32,8 @@
  * across the screen, as the game's own arrow does. Seen from behind, a bow held out ahead is
  * hidden by her body, so it is canted (`rollB` 18 to 35) to show its upper limb beside her hood.
  */
-import { type ChibiPose, mix, pose, wave } from '../rig.js';
+import { flash, trail } from '../fx.js';
+import { add3, type ChibiPose, type FxContext, mix, norm3, pose, sub3, type V3, wave } from '../rig.js';
 
 // ── Stances ──────────────────────────────────────────────────────────────────────────────────
 
@@ -205,7 +206,10 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     weaponB: 34 + swing * 6,
     rollB: 14,
     yawB: 0,
-    wind: 0.8,
+    // The cape streams back and down from her shoulders over her back and hips, not level, its
+    // hem fluttering.
+    wind: 0.6,
+    lift: -0.5 + Math.sin((2 * Math.PI * i) / 4) * 0.1,
     phase: i / 8,
     sway: swing * 0.2,
     fx: { speed: 0.7, dust: i % 4 === 0 ? 0.7 : 0 },
@@ -219,14 +223,30 @@ const SHOT = { flash: { k: 1 }, trail: { k: 1 } };
 const SHOT_FADE = { trail: { k: 0.45, len: 64 } };
 
 /**
- * A shot from a stance: full draw (the wind-up), loosed, the hand flicked back, to the quiver, an
- * arrow drawn over the shoulder, nocked and settled back into the battle stance.
+ * A shot's flash and streak along the line its arrow was drawn on, from `hand` (where the drawing
+ * hand was at full draw: a side-plane point from the base of her neck, as the pose's `handF`)
+ * through the bow's grip, which stays where it was: for a bow canted so far that, slack, it faces
+ * well away from the shot, so its own aim would send the streak astray. `flashK` 0 paints no flash.
  */
-function quick(draw: ChibiPose, loosed: ChibiPose): ChibiPose[] {
+export const alongDraw =
+  (hand: V3, flashK: number, k: number, len?: number) =>
+  (x: FxContext): void => {
+    const d = norm3(sub3(x.rig.offhand.o, add3(x.rig.neck, [hand[0], -hand[1], hand[2]], 1)));
+    const at = add3(x.rig.offhand.o, d, 2);
+    trail(x, at, d, k, { len });
+    if (flashK > 0) flash(x, at, d, flashK);
+  };
+
+/**
+ * A shot from a stance: full draw (the wind-up), loosed, the hand flicked back, to the quiver, an
+ * arrow drawn over the shoulder, nocked and settled back into the battle stance. `shot` and `fade`
+ * are the release's effects and the next frame's.
+ */
+function quick(draw: ChibiPose, loosed: ChibiPose, shot: ChibiPose['fx'] = SHOT, fade: ChibiPose['fx'] = SHOT_FADE): ChibiPose[] {
   return [
     draw,
-    withFx(loosed, SHOT),
-    withFx(pose(loosed, { handF: [-4, 0, 5], wind: 0.3, lift: 0.15, phase: 0.3, face: 'stern' }), SHOT_FADE),
+    withFx(loosed, shot),
+    withFx(pose(loosed, { handF: [-4, 0, 5], wind: 0.3, lift: 0.15, phase: 0.3, face: 'stern' }), fade),
     pose(mix(loosed, BATTLE0, 0.3), { ...REACH_QUIVER, wind: 0.24, lift: 0.1, phase: 0.45, face: 'stern' }),
     pose(mix(loosed, BATTLE0, 0.55), { ...DRAW_ARROW, wind: 0.2, phase: 0.6, face: 'stern' }),
     settle(loosed, 0.8, { handF: [7, 7, 1], weapon: 90, nock: true, draw: 0.05, drop: true, phase: 0.75, face: 'stern' }),
@@ -237,9 +257,18 @@ function quick(draw: ChibiPose, loosed: ChibiPose): ChibiPose[] {
 // atk1: a level shot from the stance.
 const atk1 = quick(pose(FULL_DRAW, { wind: 0.2, phase: 0.1, fx: { runeB: 0.3 } }), pose(LOOSED, { phase: 0.15 }));
 
-// atk2: lower, the bow canted well over, a snap shot.
-const A2_DRAW = pose(FULL_DRAW, { y: 6, lean: 10, twist: 26, head: 2, footF: [10, 0, 5.4], footB: [-10, 0, 4.8], handF: [1, 3, 0], handB: [17, 1, 1], weaponB: -10, rollB: 48, wind: 0.25, phase: 0.1, fx: { runeB: 0.3 } });
-const atk2 = quick(A2_DRAW, pose(A2_DRAW, { handF: [-2, 2, 3], elbowF: [-1, 0.6, 0.8], draw: 0, nock: false, wind: 0.4, phase: 0.15, face: 'shout', fx: undefined }));
+/**
+ * atk2: a snap shot, quite unlike the first: a shuffle forward into a low crouch, the bow canted
+ * well over with its upper limb tipped toward the target, drawn and loosed from there.
+ */
+const A2_HAND: V3 = [1, 3, 0];
+const A2_DRAW = pose(FULL_DRAW, { x: 3, y: 11, lean: 14, twist: 26, head: 3, footF: [12, 0, 5.6], footB: [-11, 0, 5], handF: A2_HAND, handB: [17, 1, 1], weaponB: 30, rollB: 40, yawB: -10, wind: 0.25, phase: 0.1, fx: { runeB: 0.3 } });
+const atk2 = quick(
+  A2_DRAW,
+  pose(A2_DRAW, { handF: [-2, 2, 3], elbowF: [-1, 0.6, 0.8], draw: 0, nock: false, wind: 0.4, phase: 0.15, face: 'shout', fx: undefined }),
+  { extra: alongDraw(A2_HAND, 1, 1) },
+  { extra: alongDraw(A2_HAND, 0, 0.45, 64) },
+);
 
 // atk3: a skip back with a full draw, loosed hard as she lands.
 const A3_SKIP = pose(FULL_DRAW, { x: -4, y: -6, lean: -2, footF: [5, -6, 5], footB: [-8, -5, 4.4], wind: -0.2, lift: 0.3, flare: 0.1, phase: 0.1, face: 'grit', fx: { runeB: 0.9, aura: 0.25 } });
