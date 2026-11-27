@@ -1,17 +1,19 @@
 /**
  * The Guardian's states, in the chibi pose format (rig.ts, ChibiPose).
  *
- *   special  6  (1 wind-up) Aegis, her special: the shield swung up before her and set, braced
- *               low behind it, a gold glint sweeping across its face as it blazes, held steady for
- *               the two seconds it lasts
+ *   special  6  (1 wind-up) Aegis, her special: the shield swung up square before her chest and
+ *               set, braced low behind it, peeking over its rim, the sword pulled back low; a gold
+ *               glint runs down its face as it blazes, and the last frame eases back up toward the
+ *               battle stance for the hand-off
  *   hurt     3  a flinch: knocked back, head snapped back, eyes squeezed shut, the shield arm
  *               flung wide, the cape flicked forward
  *   kneel    4  (loop) low health: down on her right knee behind the shield, its point planted on
- *               the floor before her, her sword hand resting on its rim; panting, a bead of sweat
+ *               the floor before her and its face out, her sword hand resting against its edge
+ *               with the sword point down; panting (the planted shield stays put), a bead of sweat
  *   ko       6  (hold) a stagger, down onto her knees, then onto her back, turned so she lies
  *               across the screen in every view, the shield fallen flat beside her
- *   victory  8  (hold) the sword wheeled round beside her head and raised high with a glint, the
- *               shield on her arm, a smile
+ *   victory  8  (hold) the sword wheeled round and raised upright beside her head with a glint,
+ *               the shield on her arm with its face out, a smile
  *
  * The effects these clips paint for themselves (the glint over the shield, the sweat, the glint at
  * the sword's point, the dust of her fall) are `fx.extra` painters defined beside them. The guard's

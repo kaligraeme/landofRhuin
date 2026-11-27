@@ -15,9 +15,10 @@
  *                 glowing, eyes closed; a column of gold light pours down on her, motes rise round
  *                 her and a soft ring of light pulses out over the floor
  *   r         10  (1 wind-up) Shield's Up!: planted low behind the shield, a dome of gold hexagons
- *                 forms over her and holds for the three seconds of the brace; then the shield is
- *                 thrust out and the dome bursts outward in shards, a shockwave and a blaze of
- *                 rays (the burst shows from 3.0 s, when the server's lands)
+ *                 rises over her from the floor and holds for the three seconds of the brace, a
+ *                 shimmer running round it; then the shield is thrust out and the dome breaks
+ *                 outward in gold shards all round her, a ring of light rolling out from her feet
+ *                 and a blaze of rays (the burst shows from 3.0 s, when the server's lands)
  *   ult       14  (3 wind-up) Luminaire: light gathers on the sword as she raises it high beside
  *                 her head through the 0.6 s wind-up, the shield lowered at her side; then she thrusts
  *                 it up and rays of light burst out all round her and flood over the floor, and she

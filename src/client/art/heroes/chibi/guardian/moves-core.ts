@@ -6,11 +6,11 @@
  * `wind`/`lift`/`phase`.
  *
  *   idle    8  at ease and upright, the sword hanging point down at her right, the kite shield
- *              resting forward on her left, its point near the floor: a slow breath, a blink, the
+ *              resting point down beside her front foot, its face out: a slow breath, a blink, the
  *              cape and her tail swaying
- *   battle  8  on guard behind the shield: the shield up before her chest, the sword raised over
- *              its rim, point forward; a springy bounce on her knees, the cape and hair a frame
- *              behind
+ *   battle  8  on guard behind the shield: the shield low before her, its face turned toward the
+ *              viewer, the sword cocked high over her right shoulder to cut over its rim; a
+ *              springy bounce in whole pixels, the head, sword, cape and hair a frame behind
  *   move    8  a sprint, the shield carried forward on her left, the sword trailing low behind
  *              in her right hand, the cape streaming
  *   atk1    7  (1 wind-up) a diagonal cut over the shield's rim, from high behind her right
@@ -24,7 +24,8 @@
  * the cape and hair streaming hardest a frame after the blow and floating up as she stops. A cut
  * leaves a swoosh that starts where the sword was (`trail`): the frame before on the smear frame,
  * the start of the swing on the hit frame, so the whole stroke shows as one arc that then fades.
- * The shield stays up before her through the cuts, its face to the foe. The chibi head is too big
+ * The shield stays before her through the cuts, its face turned toward the viewer (each pose sets
+ * its own hand and aim for that, as her twists swing the forearm). The chibi head is too big
  * for the hands to get above it, so a raised sword hand goes beside it, out to her right
  * (`handF` about `[-7, -8, 13]`), clear of her face side on and from the front.
  */
