@@ -64,7 +64,10 @@ export class Game {
     start: InstanceStart,
   ) {
     this.world = new World(start);
-    preloadClan(start.theme, start.entities.flatMap((e) => (e.kind === 'player' && e.hero ? [e.hero] : [])));
+    // Your own hero is painted first (a hero shows only once their side view is painted), then the
+    // rest of the party.
+    const party = start.entities.filter((e) => e.kind === 'player' && e.hero).sort((a, b) => Number(b.id === start.you) - Number(a.id === start.you));
+    preloadClan(start.theme, party.flatMap((e) => (e.hero ? [e.hero] : [])));
     this.renderer = new Renderer(this.canvas);
     this.hud = new Hud(this.world, {
       useSlot: (i) => this.useSlot(i),
