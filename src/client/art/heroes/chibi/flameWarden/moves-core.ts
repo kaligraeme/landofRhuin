@@ -13,8 +13,9 @@
  *   move    8  a sprint, leaning hard, the blade trailing low behind him, the coat streaming
  *   atk1    7  (1 wind-up) a rising slash from low behind him up across his front, a blazing arc
  *   atk2    7  (1 wind-up) a downward diagonal cut from high over his right shoulder to low in front
- *   atk3    9  (2 wind-up) the wide, heavy one: a full turn with the blade held out level inside a
- *              ring of fire, finishing in a forward sweep that bursts into flame
+ *   atk3    9  (1 wind-up) the wide, heavy one: coiled to his right, a full turn the other way with
+ *              the blade held out level inside a ring of fire, finishing in a forehand sweep that
+ *              bursts into flame
  *
  * His basic attack strikes every 0.4 s, the quickest of the Duelists, so each blow is short: an
  * anticipation, a smear frame, a hit frame and a recovery into the battle stance, the coat and hair

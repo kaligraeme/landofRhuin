@@ -135,17 +135,17 @@ const firebeast: ChibiPose[] = [
 // ── Cast ─────────────────────────────────────────────────────────────────────────────────────
 
 /** The left hand thrust out ahead of him, palm out, the flare burning in it; the blade lowered at his right. */
-const RAISE: ChibiPose = pose(S, { x: 0, y: 5, lean: 6, twist: 18, head: -4, look: -2, footF: [11, 0, 6.5], footB: [-10, 0, 6], handF: [-1, 16, 11], weapon: -210, roll: -18, yaw: -10, handB: [15, 4, 3], elbowB: [-0.2, -0.6, 1], face: 'shout', wind: 0.25, lift: 0.5 });
+const RAISE: ChibiPose = pose(S, { x: 0, y: 5, lean: 6, twist: 18, head: -4, look: -2, footF: [11, 0, 6.5], footB: [-10, 0, 6], handF: [-1, 16, 11], weapon: -210, roll: -18, yaw: -10, handB: [15, 9, 3], elbowB: [-0.2, -0.6, 1], face: 'shout', wind: 0.25, lift: 0.5 });
 
 const cast: ChibiPose[] = [
   // Drawn in: the left fist brought to his chest, fire kindling in it.
   fromReady(pose(S, { x: 0, y: 8, lean: 14, twist: 10, head: 6, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [0, 15, 11], weapon: -190, roll: -10, yaw: -10, handB: [6, 6, -2], face: 'grit', wind: 0.15, fx: { rune: 0.6, extra: flare(0.3, 0, 0) } }), 0.6),
-  pose(S, { x: 0, y: 7, lean: 8, twist: 4, head: 2, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [1, 15, 11], weapon: -194, roll: -12, yaw: -10, handB: [10, 6, 4], face: 'grit', wind: 0.2, lift: 0.3, phase: 0.1, fx: { rune: 0.8, extra: flare(0.6, 0.05, 0.3) } }),
+  pose(S, { x: 0, y: 7, lean: 8, twist: 4, head: 2, footF: [10, 0, 6.5], footB: [-10, 0, 6], handF: [1, 15, 11], weapon: -194, roll: -12, yaw: -10, handB: [11, 9, 4], face: 'grit', wind: 0.2, lift: 0.3, phase: 0.1, fx: { rune: 0.8, extra: flare(0.6, 0.05, 0.3) } }),
   // Raised: the flare bursts, ringed with green light; motes of healing rise round him.
-  pose(RAISE, { phase: 0.2, fx: { rune: 1, impact: 0.6, extra: flare(1, 0.12) } }),
+  pose(RAISE, { phase: 0.2, fx: { rune: 1, extra: flare(1, 0.12) } }),
   pose(RAISE, { y: 3.5, head: -9, phase: 0.35, lift: 0.6, fx: { rune: 1, extra: flare(0.9, 0.2) } }),
   pose(RAISE, { y: 4, head: -6, phase: 0.5, lift: 0.5, face: 'smirk', fx: { rune: 0.8, extra: flare(0.7, 0.28) } }),
-  pose(RAISE, { y: 5.5, head: -2, handB: [12, 7, 4], phase: 0.65, lift: 0.4, face: 'smirk', fx: { rune: 0.6, extra: flare(0.45, 0.36) } }),
+  pose(RAISE, { y: 5.5, head: -2, handB: [12, 11, 4], phase: 0.65, lift: 0.4, face: 'smirk', fx: { rune: 0.6, extra: flare(0.45, 0.36) } }),
   settle(RAISE, 0.6, { phase: 0.8, fx: { rune: 0.5, extra: both(flare(0.2, 0.44, 0.6), flames(0.5, 71)) } }),
   settle(RAISE, 0.92, { phase: 0.95, fx: { rune: 0.4, extra: flames(0.5, 72) } }),
 ];

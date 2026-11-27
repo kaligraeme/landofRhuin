@@ -22,7 +22,7 @@
 import type { Canvas, RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
 import { afterimages, motes, puff, rays } from '../fx.js';
-import { add3, at3, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, norm3, rad, sub3, TO_CAMERA, type V3, weaponAxes } from '../rig.js';
+import { add3, at3, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, norm3, rad, TO_CAMERA, type V3, weaponAxes } from '../rig.js';
 
 /** The fire ramp, hottest first. */
 export const WHITE_HOT: RGB = [255, 251, 232];
@@ -630,9 +630,3 @@ export const flare =
       motes({ ...x, aura: { core: GREEN, edge: GREEN, hot: GREEN_PALE } }, green * Math.min(1, k * 1.2), { n: 16, rise });
     }
   };
-
-/** A point `d` pixels ahead of a pose's pelvis at height `h` (hero space). */
-export const ahead = (x: FxContext, d: number, h: number): V3 => [x.rig.pelvis.o[0] + d, h, x.rig.pelvis.o[2]];
-
-/** Where the blade's point is, pushed `d` further along the blade. */
-export const pastTip = (x: FxContext, d: number): V3 => add3(x.tip, norm3(sub3(x.tip, x.rig.weapon.o)), d);

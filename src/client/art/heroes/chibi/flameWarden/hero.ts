@@ -13,7 +13,8 @@ import { STATE_MOVES } from './moves-states.js';
 
 /**
  * His clip timing (frame counts match his moves files). His basic attack strikes every 0.4 s, the
- * quickest of the Duelists, so each slash plays out in about that, wind-up included. His weapon
+ * quickest of the Duelists, so each slash plays out in about that, wind-up included (the third
+ * coils for two frames, but only the first waits on the server). His weapon
  * skills: `special` Blazing Crescent, `q` Flashfire, `e` Inferno Burst, `r` Kindle, `ult` Firebeast
  * (the game plays it in the first half of the form's 0.8 s emergence, whatever its seconds);
  * `cast` his role skills and the Elixir. None has a server wind-up, so wind-up frames take 0.06 s
@@ -23,9 +24,9 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
   idle: { frames: 8, seconds: 1.6, windup: 0 },
   battle: { frames: 8, seconds: 0.75, windup: 0 },
   move: { frames: 8, seconds: 0.52, windup: 0 },
-  atk1: { frames: 7, seconds: 0.32, windup: 1 },
-  atk2: { frames: 7, seconds: 0.32, windup: 1 },
-  atk3: { frames: 9, seconds: 0.4, windup: 2 },
+  atk1: { frames: 7, seconds: 0.3, windup: 1 },
+  atk2: { frames: 7, seconds: 0.3, windup: 1 },
+  atk3: { frames: 9, seconds: 0.34, windup: 1 },
   special: { frames: 7, seconds: 0.42, windup: 1 },
   q: { frames: 8, seconds: 0.42, windup: 1 },
   e: { frames: 9, seconds: 0.6, windup: 1 },

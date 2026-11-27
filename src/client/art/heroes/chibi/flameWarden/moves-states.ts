@@ -53,10 +53,10 @@ const hurt: ChibiPose[] = [
 const KNELT: ChibiPose = {
   x: 0,
   y: 13,
-  lean: 16,
+  lean: 13,
   twist: 4,
   tilt: 6,
-  head: 14,
+  head: 3,
   look: 8,
   footF: [-12, 0, 7],
   footB: [6, 0, 12],
@@ -64,7 +64,7 @@ const KNELT: ChibiPose = {
   handF: [0, 0, 0],
   handB: [3, 19, 9.5],
   drop: true,
-  dropAt: [9, 37, 10],
+  dropAt: [9, 33, 13],
   weapon: 176,
   roll: -6,
   yaw: 30,
@@ -123,8 +123,8 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
   return handOnGrip(
     pose(KNELT, {
       y: 13 + b,
-      lean: 16 + b * 5,
-      head: 12 + b * 5,
+      lean: 13 + b * 4,
+      head: 3 + b * 3,
       handB: [3 - 2 * b, 19 - 1.6 * b, 9.5],
       phase: i / 4,
       sway: (b - 0.5) * 0.2,
