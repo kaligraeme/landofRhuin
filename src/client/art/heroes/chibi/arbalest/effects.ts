@@ -239,7 +239,7 @@ export const shrapnel =
     const half = star ? Math.PI : rad(33);
     if (k < 0.3) {
       // The blast: a fan (or a disc seen end on) of light, hottest at its apex.
-      const R = (star ? 16 : 40) * (0.9 + k);
+      const R = (star ? 16 : 40) * (0.95 + k);
       const fade = 1 - k / 0.3;
       const ri = Math.ceil(R);
       for (let dy = -ri; dy <= ri; dy++) {
@@ -250,16 +250,18 @@ export const shrapnel =
           off = Math.atan2(Math.sin(off), Math.cos(off));
           if (Math.abs(off) > half) continue;
           const t = r / R;
-          // Ragged at its rim: tongues of flame along the cone.
-          if (t > 0.7 && hash(Math.round(off * 9) + 40, 65) < (t - 0.7) * 2.5) continue;
-          const col = t < 0.18 ? WHITE : t < 0.45 ? mixc(GOLD, AMBER, (t - 0.18) / 0.27) : mixc(AMBER, EMBER, (t - 0.45) / 0.55);
-          c.glow(A[0] + dx, A[1] + dy, col, fade * (t < 0.18 ? 1 : 1 - t * 0.45) * (1 - (Math.abs(off) / half) * 0.3), under);
+          // Streaked with the shrapnel flying in it, ragged at its rim, fading out toward it.
+          const streakK = 0.55 + 0.45 * hash(Math.round(off * 16) + 40, 65);
+          if (t > 0.6 && hash(Math.round(off * 9) + 40, 66) < (t - 0.6) * 2) continue;
+          const col = t < 0.15 ? WHITE : t < 0.4 ? mixc(GOLD, AMBER, (t - 0.15) / 0.25) : mixc(AMBER, EMBER, (t - 0.4) / 0.6);
+          const a = t < 0.15 ? 1 : Math.min(1, Math.pow(1 - t, 0.4) * 1.1) * streakK;
+          c.glow(A[0] + dx, A[1] + dy, col, fade * a * (1 - (Math.abs(off) / half) * 0.25), under);
         }
       }
       if (star) starburst(c, A, 1.6, WHITE, AMBER, fade, under);
     }
     // The sparks: flying out from the prod along the cone, some still close to it.
-    const reach = (star ? 10 : 16) + k * (star ? 26 : 62);
+    const reach = (star ? 12 : 30) + k * (star ? 24 : 50);
     const n = k > 0.8 ? 18 : 40;
     for (let i = 0; i < n; i++) {
       const ang = base + (hash(i, 61) * 2 - 1) * half * (star ? 1 : 0.95);
