@@ -36,24 +36,26 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
 };
 
 /**
- * Frames: side on there is room ahead of him for the point of his thrusts and the drill of wind
- * off it, and behind for the halberd trailing as he runs, the scarf tails, the ponytail and the
- * afterimages of his charge; toward and away from the viewer he stands centred, with room either
- * side for the halberd on his shoulder and his sweeps. All are tall enough for the vault
- * (the point about 130 px up) and deep enough below the ground point for the shockwaves, which
- * roll out toward the viewer. The game crops every frame to what is painted, so the spare room
- * costs nothing there. He stands about 85 px tall at ease (87 standing straight): 2.1 tiles per 84
- * px, as the Dark Knight, so he stands a little taller in game.
+ * Frames: side on there is room ahead of him for the point of his thrusts and the spiral of energy
+ * off it, and behind for the lance trailing as he runs, the cape, the ponytail and the afterimages
+ * of his charge; toward and away from the viewer he stands centred, with room either side for the
+ * lance on his shoulder and his sweeps. All are tall enough for the dive of his jump to come back
+ * in at the top (his launch takes him out of the top of every frame for two frames, leaving only
+ * the beam he rose on) and deep enough below the ground point for the rings, which roll out toward
+ * the viewer. The game crops every frame to what is painted, so the spare room costs nothing there.
+ * He stands about 93 px tall at ease from the tips of his helm's frills to his soles (84 to the
+ * top of the helm): 2.1 tiles per 84 px, as the Dark Knight, so his helm stands a little taller in
+ * game.
  */
 export const DRAGOON_HERO: ChibiHero = chibiHero(
   DRAGOON,
   { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES },
   TIMING,
   {
-    side: { w: 384, h: 256, ax: 160, ay: 196 },
-    front: { w: 256, h: 256, ax: 128, ay: 188 },
-    back: { w: 256, h: 256, ax: 128, ay: 188 },
+    side: { w: 306, h: 238, ax: 110, ay: 192 },
+    front: { w: 184, h: 238, ax: 92, ay: 193 },
+    back: { w: 184, h: 238, ax: 92, ay: 193 },
   },
   2.1 / 84,
-  85,
+  93,
 );

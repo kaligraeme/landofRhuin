@@ -1,17 +1,19 @@
 /**
  * The Dragoon's states, in the chibi pose format (rig.ts, ChibiPose).
  *
- *   hurt     3  a flinch: knocked back and sideways, head jolted back, eyes squeezed shut, the
- *               lead hand torn off the haft and the point knocked down, the scarf tails flicked
- *               forward
+ *   hurt     3  a flinch: thrown back and sideways on buckling knees, head snapped back, eyes
+ *               squeezed shut, the lead hand torn off the haft and the lance jerked up and back,
+ *               the cape and ponytail flicked forward
  *   kneel    4  (loop) low health: down on his right knee, the left knee up, leaning on the
- *               halberd planted upright beside him, his right hand on the haft at his shoulder;
- *               heaving, head down but his face to the viewer, a bead of sweat
+ *               lance planted upright beside him, his right hand on the haft at his shoulder,
+ *               the cape fallen behind him to the floor; heaving, head down but his face to the
+ *               viewer, a bead of sweat
  *   ko       6  (hold) a stagger, onto his knees, toppling back, twisting so that he lies across
- *               the screen in every view, the halberd clattering down beside him
- *   victory  8  (hold) the halberd twirled round beside him in a wheel of wind and swept down,
+ *               the screen in every view, the lance clattering down beside him, the cape spilling
+ *               out over the floor
+ *   victory  8  (hold) the lance twirled round beside him in a violet wheel and swept down,
  *               then planted upright beside him: weight on one leg, hip cocked and a fist on it,
- *               head tilted with a grin, the scarf streaming
+ *               head tilted with a grin, the cape streaming, motes of violet light drifting up
  *
  * The effects these clips paint for themselves (the sweat, the clatter, the glint) are `fx.extra`
  * painters defined beside them. The flinch ends most of the way back into the battle stance.
@@ -27,12 +29,12 @@ const WHITE: RGB = [255, 255, 255];
 // ── Hurt ─────────────────────────────────────────────────────────────────────────────────────
 
 const hurt: ChibiPose[] = [
-  // The blow: thrown back and sideways, the head jolted back (only a little further than the
-  // body, so his hair and ponytail keep their shape), the lead hand torn off the haft and flung
-  // out, the point knocked down, the scarf tails whipped forward past him.
-  pose(S, { x: -4, y: 6, lean: -16, twist: 8, tilt: -8, head: 0, look: -8, footF: [-13, 0, 5], footB: [9, -2, 5.4], handF: [-6, 15, 9], handB: [-2, 8, 14], weapon: 106, roll: -6, yaw: -34, grip: -8, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0, sway: -0.5, phase: 0.2 }),
-  // Knocked back a step.
-  pose(S, { x: -6, y: 7, lean: -8, twist: 12, tilt: -5, head: -4, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-5, 16, 8], handB: [2, 11, 12], weapon: 100, roll: -4, yaw: -40, grip: -8, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0, sway: -0.3, phase: 0.4 }),
+  // The blow: thrown back and sideways, the knees buckling, the head snapped back, wincing, the
+  // lead hand torn off the haft and flung out, the lance jerked up and back as his grip slips down
+  // it, the cape and ponytail whipped forward past him.
+  pose(S, { x: -4, y: 8, lean: -20, twist: 8, tilt: -10, head: -14, look: -8, footF: [-13, 0, 5], footB: [9, -2, 5.4], handF: [-9, 13, 9], handB: [-2, 8, 14], weapon: 20, roll: -10, yaw: -40, grip: -14, face: 'hurt', wind: -0.9, lift: 0.5, flare: 0, sway: -0.5, phase: 0.2 }),
+  // Knocked back a step, half recovered, teeth gritted, the point swinging back down.
+  pose(S, { x: -6, y: 7.5, lean: -10, twist: 12, tilt: -5, head: -7, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-7, 15, 8], handB: [2, 11, 12], weapon: 40, roll: -6, yaw: -42, grip: -10, face: 'grit', wind: -0.4, lift: 0.35, flare: 0, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
   settle(pose(S, { x: -3, y: 7, lean: 6, twist: 16, head: 4, handF: [-4, 16, 7], weapon: 50, yaw: -42 }), 0.7, { face: 'grit', wind: 0.45, phase: 0.6 }),
 ];
@@ -40,30 +42,31 @@ const hurt: ChibiPose[] = [
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Down on his right knee, the left foot planted forward and out with its knee up, leaning on the
- * halberd planted upright beside his right knee: his right hand on the haft at his shoulder, out
- * beside him so his arm never crosses his face, his left on the raised knee, head down but his
- * face still turned to the viewer. The skirt hangs straight (no flare), draping over the thigh.
+ * Down on his right knee, low, the left foot planted forward with its knee up, leaning on the
+ * lance planted upright beside his right knee: his right hand on the haft at his shoulder, out
+ * beside him and a little back so neither his arm nor the haft crosses his face, his left on the
+ * raised knee, head down but his face still turned to the viewer. The tassets hang straight (no
+ * flare) and a light breeze lays the cape back over his heel to the floor.
  */
 const KNELT: ChibiPose = {
   x: 0,
-  y: 12.5,
+  y: 15,
   lean: 10,
   twist: 6,
   tilt: 4,
   head: 4,
   look: 2,
-  footF: [-12, 0, 6],
-  footB: [9, 0, 11],
+  footF: [-13, 0, 5],
+  footB: [12, 0, 7],
   kneel: 'F',
-  handF: [-2, 3, 15],
+  handF: [-5, 4, 15],
   handB: [3, 19, 9],
   weapon: -4,
   roll: -6,
   yaw: 0,
   grip: 4,
   face: 'grit',
-  wind: 0.08,
+  wind: 0.35,
   flare: 0,
 };
 
@@ -99,7 +102,7 @@ const DROP: [number, number, RGB][] = [
 
 /**
  * A bead of sweat on his temple, at the edge of the head on screen: on the face's side side on,
- * and on the side away from the planted halberd toward or away from the viewer. `k` runs it down
+ * and on the side away from the planted lance toward or away from the viewer. `k` runs it down
  * his temple, 0 to 1.
  */
 const sweat =
@@ -107,8 +110,8 @@ const sweat =
   ({ c, cam, rig, proj }: FxContext): void => {
     const h = proj(rig.head.o);
     const dir = cam.view === 'front' ? 1 : cam.view === 'back' ? -1 : 1;
-    const x = Math.round(h[0] + dir * 11);
-    const y = Math.round(h[1] - 7 + k * 4);
+    const x = Math.round(h[0] + dir * 10);
+    const y = Math.round(h[1] - 1 + k * 3);
     for (const [dx, dy, col] of DROP) c.glow(x + dx, y + dy, col, 1);
   };
 
@@ -116,11 +119,11 @@ const sweat =
 const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
   const b = wave(i, 4);
   return pose(KNELT, {
-    y: 12.5 + b,
+    y: 15 + b,
     lean: 10 + b * 4,
     head: 3 + b * 4,
     // The neck moves about 1.6 forward and 1.4 down as he slumps: the hands stay put.
-    handF: [-2 - 1.6 * b, 3 - 1.4 * b, 15],
+    handF: [-5 - 1.6 * b, 4 - 1.4 * b, 15],
     handB: [3 - 1.6 * b, 19 - 1.4 * b, 9],
     phase: i / 4,
     sway: (b - 0.5) * 0.2,
@@ -133,7 +136,7 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
 
 /**
  * He falls on his back with his feet toward the way he faced, twisting as he goes (`turn` to
- * -60), so he lies across the screen in all three views. The halberd lies flat beside him, on his
+ * -60), so he lies across the screen in all three views. The lance lies flat beside him, on his
  * right, by his outflung hand.
  */
 const DOWN: ChibiPose = pose(S, {
@@ -155,8 +158,9 @@ const DOWN: ChibiPose = pose(S, {
   roll: 86,
   yaw: -6,
   face: 'closed',
-  wind: 0,
-  lift: -0.4,
+  wind: 0.5,
+  lift: 0.4,
+  sway: -0.6,
 });
 
 /** Dust thrown up from the floor all along him as he lands flat: puffs beside his hips, his back and his head. */
@@ -179,7 +183,7 @@ const thud = ({ c, rig, proj, hash }: FxContext): void => {
   });
 };
 
-/** The halberd hitting the floor: a few sparks and a puff of dust along the haft where it lands. */
+/** The lance hitting the floor: a few sparks and a puff of dust along the haft where it lands. */
 const clatter = ({ c, rig, proj, hash }: FxContext): void => {
   const w = rig.weapon;
   for (let i = 0; i < 4; i++) {
@@ -191,11 +195,12 @@ const clatter = ({ c, rig, proj, hash }: FxContext): void => {
 const ko: ChibiPose[] = [
   // Stagger back, the haft slipping in his grip.
   pose(S, { x: -4, y: 6, lean: -13, twist: 6, tilt: -6, head: -2, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-4, 14, 8], handB: [-3, 9.5, 13.5], weapon: 104, roll: -10, yaw: -34, grip: -8, face: 'hurt', sway: -0.4, lift: 0.3 }),
-  // His knees give: down on both, the halberd's butt striking the floor as it tips.
-  pose(S, { x: -2, y: 15, lean: 8, twist: 0, head: 18, footF: [-9, -1, 5], footB: [-10, -1, 4.6], kneel: 'F', handF: [6, 16, 8], weapon: 28, roll: -16, yaw: -20, grip: 4, face: 'hurt', wind: 0, flare: 0.2 }),
-  // He sways back, turning, the halberd falling away from his loosening grip.
+  // His knees give: down on both, the lance's butt striking the floor as it tips across him,
+  // below his face.
+  pose(S, { x: -2, y: 15, lean: 8, twist: 0, head: 18, footF: [-9, -1, 5], footB: [-10, -1, 4.6], kneel: 'F', handF: [6, 16, 8], weapon: 42, roll: -16, yaw: -40, grip: 4, face: 'hurt', wind: 0, flare: 0.2 }),
+  // He sways back, turning, the lance falling away from his loosening grip.
   pose(S, { x: -2, y: 16, lean: -10, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-7, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [6, 18, 14], handB: [2, 18, 11], weapon: 60, roll: 40, yaw: -10, grip: 4, face: 'closed', wind: 0, lift: 0.2 }),
-  // Toppling back, the scarf flying up; the halberd hits the floor beside him.
+  // Toppling back, the cape flying up; the lance hits the floor beside him.
   pose(DOWN, { x: -5, y: 18, lean: -45, turn: -45, head: -8, look: 10, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 16], handB: [0, 6, 13], dropAt: [-4, 2.5, 26], weapon: 86, lift: 0.6, fx: { extra: clatter } }),
   // Down: the thud raises dust and bounces his boots.
   pose(DOWN, { lean: -82, head: -12, footF: [16, -4, 7], footB: [14, -5, 2], lift: 0.25, fx: { dust: 0.9, extra: thud } }),
@@ -205,12 +210,12 @@ const ko: ChibiPose[] = [
 // ── Victory ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * A glint of light at the point: a white four-pointed star with a pale jade halo, `k` its size
+ * A glint of light at the point: a white four-pointed star with a pale lilac halo, `k` its size
  * (1 = rays 7 pixels long).
  */
 const glint =
   (k: number) =>
-  ({ c, tip, proj }: FxContext): void => {
+  ({ c, tip, proj, aura }: FxContext): void => {
     const [x, y] = proj(tip);
     const r = Math.round(7 * k);
     for (let i = -r; i <= r; i++) {
@@ -218,35 +223,35 @@ const glint =
       c.glow(x + i, y, WHITE, a);
       c.glow(x, y + i, WHITE, a);
     }
-    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) if (Math.abs(i) + Math.abs(j) <= 2) c.glow(x + i, y + j, [210, 255, 240], Math.abs(i) + Math.abs(j) === 0 ? 1 : 0.5);
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) if (Math.abs(i) + Math.abs(j) <= 2) c.glow(x + i, y + j, aura.edge, Math.abs(i) + Math.abs(j) === 0 ? 1 : 0.5);
     for (const [i, j] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.glow(x + i * 2, y + j * 2, WHITE, 0.6);
   };
 
-/** The twirl: his right hand out beside him at shoulder height, the halberd wheeling round in it in a plane he faces side on. */
+/** The twirl: his right hand out beside him at shoulder height, the lance wheeling round in it in a plane he faces side on. */
 const TWIRL: ChibiPose = pose(S, { x: 0, y: 4, lean: -2, twist: 10, tilt: -3, head: -4, look: 6, footF: [-8, 0, 6.5], footB: [8, 0, 6], handF: [4, 6, 16], handB: [1, 14, 11], weapon: 0, roll: 10, yaw: 0, grip: 12, face: 'smirk', wind: 0.5, flare: 0.3 });
 
 /**
- * The last pose, held: the halberd planted upright beside him, his right hand high on it, and a
+ * The last pose, held: the lance planted upright beside him, his right hand high on it, and a
  * cocky contrapposto: his weight on his right leg, the left knee bent and its heel lifted, the hip
  * cocked and his left fist on it, the head tilted with a grin for the viewer. A light breeze
- * streams the scarf and ponytail out on his left, away from the halberd, while the heavier skirt
- * stays round his hips.
+ * streams the cape and ponytail out on his left, away from the lance, while the tassets stay
+ * round his hips.
  */
-const PROUD: ChibiPose = pose(S, { x: 1.5, y: 1.5, lean: -3, twist: 10, tilt: 7, head: -4, look: 4, footF: [-1, 0, 4.5], footB: [5, -1.2, 8.5], handF: [-9, 0, 14], handB: [2, 16, 10.5], weapon: 0, roll: -4, yaw: 0, grip: 6, face: 'smirk', wind: 0.55, lift: 0.3, sway: -0.5 });
+const PROUD: ChibiPose = pose(S, { x: 1.5, y: 1.5, lean: -3, twist: 10, tilt: 7, head: -4, look: 4, footF: [-1, 0, 4.5], footB: [5, -1.2, 8.5], handF: [-9, 0, 14], handB: [2, 16, 10.5], weapon: 0, roll: -4, yaw: 0, grip: 6, face: 'smirk', wind: 0.8, lift: 0.35, sway: -0.35 });
 
 const victory: ChibiPose[] = [
-  // A breath first: the halberd lifted out of the stance, upright in his right hand.
+  // A breath first: the lance lifted out of the stance, upright in his right hand.
   fromReady(pose(TWIRL, { y: 6, lean: 6, twist: 6, head: 1, handF: [5, 10, 13.8], weapon: 20, roll: 16, yaw: 20, face: 'smirk', wind: 0.4 }), 0.8),
   // It wheels round beside him, once...
   pose(TWIRL, { weapon: 170, grip: 22, handF: [4, 1, 16], phase: 0.1, fx: { smear: { from: 20, roll: 10, width: 0.6 }, rune: 0.8 } }),
   pose(TWIRL, { weapon: 325, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
   // ...and is swept down and planted beside him with a glint at the point.
-  pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.7, lift: 0.55, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, extra: glint(1) } }),
-  pose(PROUD, { y: 2, phase: 0.5, wind: 0.65, lift: 0.4, fx: { rune: 0.5, extra: glint(0.5) } }),
-  // Settled: chin up, a grin, the scarf still streaming.
-  pose(PROUD, { phase: 0.65, wind: 0.6 }),
-  pose(PROUD, { phase: 0.82, wind: 0.57 }),
-  pose(PROUD, { phase: 0.95 }),
+  pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.7, lift: 0.55, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, aura: 0.6, rays: { k: 0.8, at: 'main', n: 8, len: 22 }, extra: glint(1) } }),
+  pose(PROUD, { y: 2, phase: 0.5, wind: 0.9, lift: 0.45, fx: { rune: 0.7, aura: 0.3, motes: { k: 0.9, n: 12, rise: 0.1 }, extra: glint(0.5) } }),
+  // Settled: chin up, a grin, the cape still streaming, motes of violet light drifting up round him.
+  pose(PROUD, { phase: 0.65, wind: 0.86, fx: { rune: 0.6, motes: { k: 0.9, n: 12, rise: 0.2 } } }),
+  pose(PROUD, { phase: 0.82, wind: 0.83, fx: { rune: 0.5, motes: { k: 0.75, n: 12, rise: 0.3 } } }),
+  pose(PROUD, { phase: 0.95, fx: { rune: 0.45, motes: { k: 0.6, n: 12, rise: 0.38 } } }),
 ];
 
 /** The state clips' poses, by clip. */
