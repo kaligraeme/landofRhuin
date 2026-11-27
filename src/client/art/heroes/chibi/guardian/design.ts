@@ -16,12 +16,11 @@
  */
 import { hex } from '../../paint.js';
 import { blade } from '../blade.js';
-import type { BodyDesign, ChibiDesign, DrawItem, Lock, Piece, PieceContext } from '../design.js';
+import { type BodyDesign, type ChibiDesign, type DrawItem, GEAR_ID, type HeadPiece, type Lock, type Piece, type PieceContext } from '../design.js';
 import { FACE_SOFT } from '../head.js';
-import { circlet } from '../headgear.js';
 import { cape, collar, skirt } from '../pieces.js';
 import { flat, type Hit, type Mat, mat4 } from '../raster.js';
-import { at3, type Build, clamp, dot3, type Frame3, mul3, norm3, rotate, sub3, type V3 } from '../rig.js';
+import { at3, type Build, clamp, dirIn, dot3, type Frame3, lerp, mul3, norm3, rad, rotate, sub3, type V3 } from '../rig.js';
 import { heaterOutline, type Outline, roundOutline, shield, starOutline } from '../shield.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
@@ -42,10 +41,17 @@ const BLUE = { ...mat4('#6a9cf0', '#3a64c0', '#22397a', '#121e44', '#0a1028', 0.
 const CLOTH = { ...mat4('#6a9cf0', '#3a64c0', '#22397a', '#121e44', '#0a1028', 0.1), gain: 0.6 };
 const CLOTH_IN = mat4('#2a4688', '#1c3066', '#121e44', '#0a1230', '#060a1c');
 const GOLD = mat4('#fff0b0', '#e8c25a', '#a8802c', '#5e4414', '#2e2008', 0.1);
-// The cape: dark violet-navy outside, crimson inside. Its light spread a little wide, so its folds
-// stand out from behind as the Dark Knight's coat's pleats do.
-const CAPE = { ...mat4('#5c5ca8', '#3a3a7a', '#262654', '#161632', '#0a0a1c', 0), gain: 1.15 };
+// The cape: dark violet-navy outside, crimson inside. Its light tone is the dark navy #3a3a7a,
+// with the shadow tones in its folds; the pale violet highlight is left for the rim light along
+// the top edges of its lit folds and shoulders, so from behind she reads as a knight in a navy
+// cape, not a mage in a lavender robe.
+const CAPE = { ...mat4('#5c5ca8', '#3a3a7a', '#262654', '#161632', '#0a0a1c', -0.05), gain: 0.9 };
 const CRIMSON = mat4('#e0505e', '#b02c3c', '#7c1a2a', '#4a0e18', '#22060c');
+// The circlet: fine silver, mostly its light tone with a bright glint, outlined in the hair's own
+// brown so it lies in the hair as a slim band rather than a white bar ruled in ink.
+const CIRCLET_SILVER: Mat = { ...mat4('#f2f4fa', '#b8c0d4', '#8a93aa', '#5a6278', '#8a5418', 0.05), gain: 0.7 };
+// The ribbon tying her tail: a bright blue bow.
+const RIBBON = mat4('#9cc4ff', '#5a8ae0', '#3a64c0', '#22397a', '#0a1028', 0.1);
 const SAPPHIRE = mat4('#eef8ff', '#9ad6ff', '#3e8ee0', '#1c4e9c', '#0c2250', 0.05);
 // The sword: bright steel with a white edge, a blue leather grip bound in gold thread.
 const STEEL = mat4('#ffffff', '#e2e7f2', '#aeb6ca', '#6e7890', '#262a38', 0.12);
@@ -82,13 +88,14 @@ const BUILD: Build = {
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 const LOCKS: Lock[] = [
-  // Broad clumps swept back from the brow over the top of her head toward the tie at the nape,
-  // lying close, so the head reads smooth and neat under the circlet.
-  L(0, 58, [-1, 0.1, 0], 12, 4.8, [-0.2, -0.45, 0], 0.5, 0.4),
-  L(34, 46, [-1, 0.05, 0.1], 11.5, 4.4, [-0.15, -0.4, 0.05], 0.5, 0.4),
-  L(-34, 46, [-1, 0.05, -0.1], 11.5, 4.4, [-0.15, -0.4, -0.05], 0.5, 0.4),
-  L(70, 30, [-1, -0.25, 0.1], 10, 3.8, [-0.1, -0.3, 0], 0.5, 0.4),
-  L(-70, 30, [-1, -0.25, -0.1], 10, 3.8, [-0.1, -0.3, 0], 0.5, 0.4),
+  // Broad clumps swept back from the brow either side of the crown toward the tie at the nape,
+  // lying close, so the head reads smooth and neat under the circlet. They end on the crown: any
+  // longer (or one up the middle), their tips stood up past the back of the head and notched its
+  // outline seen from behind, where the hair is drawn down to the tie (the whorl, below).
+  L(34, 46, [-1, 0.05, 0.1], 7, 4.6, [-0.15, -0.5, 0.05], 0.5, 0.4),
+  L(-34, 46, [-1, 0.05, -0.1], 7, 4.6, [-0.15, -0.5, -0.05], 0.5, 0.4),
+  L(70, 30, [-1, -0.25, 0.1], 9, 3.8, [-0.1, -0.35, 0], 0.5, 0.4),
+  L(-70, 30, [-1, -0.25, -0.1], 9, 3.8, [-0.1, -0.35, 0], 0.5, 0.4),
   // A soft fringe parted a little to her left, falling over her brow to either side of the part.
   L(-20, 44, [0.5, -1, -0.35], 7, 2.8, [0.15, -0.05, -0.15], 0.3, 0.3),
   L(8, 46, [0.55, -1, 0.2], 6.4, 2.6, [0.15, -0.05, 0.12], 0.3, 0.3),
@@ -313,6 +320,62 @@ const KITE_SHIELD = shield({
   strap: { at: 0.6, out: 3 },
 });
 
+// ── The circlet ──────────────────────────────────────────────────────────────────────────────
+
+/** Its height on the hair's shell (head space) at the brow and round the sides, and its depth. */
+const CIRCLET_AT = { front: 4.4, side: 7.6, w: 1.1 };
+/** How far round the head from the brow it shows (degrees): behind that it is under her hair. */
+const CIRCLET_REACH = 118;
+
+/**
+ * A slim silver circlet: a band a pixel deep lying over the hair round her brow and the sides of
+ * her head, dipping at the front to a small blue gem, and passing under her hair at the back (so
+ * seen from behind only its ends show by her temples). Like headgear.ts `circlet`, it stands proud
+ * of the locks in the head's depth test, so the fringe does not cover it.
+ */
+const CIRCLET: HeadPiece = {
+  blobs: (ctx, head) => {
+    const e = 0.5;
+    const r: V3 = [SHELL.r[0] + e, SHELL.r[1] + e, SHELL.r[2] + e];
+    const yawAt = (p: V3): number => Math.abs((Math.atan2(p[2], p[0] - SHELL.c[0]) * 180) / Math.PI);
+    // Lower at the brow than round the sides, the dip held near the front.
+    const at = (yaw: number): number => lerp(CIRCLET_AT.front, CIRCLET_AT.side, Math.min(1, (1 - Math.cos(rad(Math.min(90, yaw) * 2))) / 2));
+    const ku = clamp((CIRCLET_AT.front - SHELL.c[1]) / r[1], -1, 1);
+    const f = SHELL.c[0] + r[0] * Math.sqrt(1 - ku * ku);
+    return [
+      {
+        frame: head,
+        blobs: [{ c: SHELL.c, r, id: GEAR_ID + 10 }],
+        shade: (h) => {
+          if (h.back) return null;
+          const yaw = yawAt(h.p);
+          if (yaw > CIRCLET_REACH) return null;
+          if (Math.abs(h.p[1] - at(yaw)) > CIRCLET_AT.w / 2) return null;
+          const l = ctx.cam.light(dirIn(head, h.n[0], h.n[1], h.n[2]));
+          return { m: CIRCLET_SILVER, light: l, lift: 3.5 };
+        },
+      },
+      { frame: head, blobs: [{ c: [f + 0.3, CIRCLET_AT.front, 0], r: [0.8, 1.3, 1.1], id: GEAR_ID + 11 }], shade: (h) => (h.back ? null : { m: SAPPHIRE, lift: 3.5 }) },
+    ];
+  },
+};
+
+// ── The cape in the wind ─────────────────────────────────────────────────────────────────────
+
+/**
+ * A cape that billows: the wind that streams it back also lifts it (a third as much again), so
+ * as she runs or swings it rises off her shoulders, its top sloping back from them, its panels
+ * ripple apart and its crimson lining shows along the underside, instead of standing straight
+ * back at her hips like a flag. The hair keeps the pose's own wind.
+ */
+function billowing(piece: Piece): Piece {
+  return (ctx: PieceContext): DrawItem[] => {
+    const p = ctx.pose;
+    const wind = Math.max(0, p.wind ?? 0);
+    return piece({ ...ctx, pose: { ...p, wind: (p.wind ?? 0) * 0.85, lift: (p.lift ?? 0) + wind * 0.35 } });
+  };
+}
+
 // ── The design ───────────────────────────────────────────────────────────────────────────────
 
 const GUARDIAN: ChibiDesign = {
@@ -328,20 +391,21 @@ const GUARDIAN: ChibiDesign = {
     hairline: { faceYaw: 72, brow: 3.8, temple: 0, nape: -9, ear: -2 },
     locks: LOCKS,
     lockLine: hex('#8a5418'),
-    // The back of the head: clumps drawn down together from all round toward the tie at the nape
-    // (the whorl sits just over the tie, so they fan out from it).
-    whorl: { yaw: 180, pitch: -6, reach: 110, clumps: 8, twist: 0 },
+    // The back of the head: four broad locks drawn down together from all round toward the tie at
+    // the nape (the whorl sits just over the tie, so they sweep in to it).
+    whorl: { yaw: 180, pitch: -6, reach: 110, clumps: 4, twist: 0.15 },
     long: {
-      // A short, slim tail tied low at the nape with a blue ribbon, falling over the cape between
-      // her shoulders (no broader than the back of her neck, so seen from behind the head stays
-      // round and neat over it).
-      tail: { yaw: 180, pitch: -20, dir: [-0.3, -1, 0], stiff: 0.2, len: 21, w: 2.5, give: 0.9, tie: { mat: CLOTH, r: 1.7, ends: 4 } },
+      // A short, slim tail tied low at the nape with a blue ribbon bow, falling over the cape
+      // between her shoulders: three or four pixels wide and a tone deeper than its light side
+      // would paint it, so from behind it reads as hair, the same gold as her head, not a bib.
+      tail: { yaw: 180, pitch: -20, dir: [-0.3, -1, 0], stiff: 0.2, len: 20, w: 1.7, give: 0.9, sheen: -0.15, tie: { mat: RIBBON, r: 2, ends: 5 } },
       // A strand framing her face on either side, down past her jaw: long enough to show beside
       // her cheeks toward the viewer, rooted far enough round to hang in front of the ear side on
-      // rather than over her eye.
+      // rather than over her eye, and to lie against her cheek front on (rooted nearer the face,
+      // a pixel of floor showed between them).
       front: [
-        { yaw: 60, pitch: 12, dir: [0.35, -1, 0.1], len: 12, w: 2.2, taper: 0.7, give: 0.6 },
-        { yaw: -60, pitch: 12, dir: [0.35, -1, -0.1], len: 13, w: 2.3, taper: 0.7, give: 0.6 },
+        { yaw: 63, pitch: 12, dir: [0.35, -1, 0.1], len: 12, w: 2.2, taper: 0.7, give: 0.6 },
+        { yaw: -64, pitch: 12, dir: [0.35, -1, -0.1], len: 13, w: 2.3, taper: 0.7, give: 0.6 },
       ],
       lie: 1.8,
     },
@@ -363,8 +427,8 @@ const GUARDIAN: ChibiDesign = {
   },
   body: BODY,
   headPieces: [
-    // A slim silver circlet over the hair, a small blue gem at the brow.
-    circlet({ mat: SILVER, shell: SHELL, front: 5.2, back: 8.2, w: 1.5, gem: { mat: SAPPHIRE, r: 1.4 } }),
+    // A slim silver circlet over the hair, dipping to a small blue gem at the brow.
+    CIRCLET,
     // A gorget of two lames, closed round her neck.
     collar({ outer: SILVER, lining: CLOTH_IN, c: [0, 19.8, 0], r: [6, 5, 7.4], bottom: 19.8, top: { back: 24.4, side: 23.8, front: 23.2 }, open: 0, lames: 2 }),
   ],
@@ -390,13 +454,16 @@ const GUARDIAN: ChibiDesign = {
         { from: 260, to: 324, len: 10, jag: 1 },
       ],
     }),
-    // The cape, from the shoulders to the calves, in two panels that part a little at the hem.
-    cape({ outer: CAPE, inner: CRIMSON, top: 19.6, ring: [5.4, 8.2], from: 106, to: 254, len: 36, jag: 2.2, taper: 1.25, panels: 2, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 1 } }),
+    // The cape, from the shoulders to the calves, in three panels that part at the hem.
+    billowing(cape({ outer: CAPE, inner: CRIMSON, top: 19.6, ring: [5.4, 8.2], from: 106, to: 254, len: 36, jag: 3, taper: 1.25, panels: 3, folds: true, trim: GOLD, over: { chest: BODY.chest, hips: BODY.hips, pad: 1 } })),
   ],
   weapon: SWORD,
   offhand: KITE_SHIELD,
-  // Holy light: gold, white-hot at its heart, a pale blue edge.
-  aura: { core: hex('#ffe08c'), edge: hex('#a8d4ff'), hot: hex('#ffffff') },
+  // Holy light: a saturated gold body, white-hot at its leading edge and heart (pale gold between,
+  // where the engine mixes the two), a deep amber where it fades, so it stays gold over the floor
+  // at the size the game shows her rather than thinning to beige or slate. Her own floor rings
+  // add a pale blue fringe (moves-skills.ts SKY).
+  aura: { core: hex('#ffbe3a'), edge: hex('#e8962c'), hot: hex('#ffffff') },
 };
 
 export { GUARDIAN, KITE };

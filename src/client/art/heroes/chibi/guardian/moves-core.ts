@@ -85,33 +85,53 @@ const smear = (start: ChibiPose, p: ChibiPose, width: number, alpha = 1): ChibiP
 // ── Stances ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * The shield up before her chest, its face to the foe: the forearm across her body, the elbow out
- * (a shield's face is square to the forearm). Spread into a pose for a block or a guard.
+ * The kite shield carried before her on guard: low on a lowered forearm, its point near the floor
+ * ahead of her front foot and its top rim at her collar, its face turned about 35 degrees out
+ * toward her right. Side on (the view seen most) it then shows its whole face, the sun and the
+ * tower, as her biggest shape; front on it stands to her left, beside her face rather than over
+ * it. A shield's face is square to the forearm, so the forearm hangs down and out from the elbow
+ * for the face to turn this way: held across her chest, it would face her left and show its edge.
  */
-export const SHIELD_UP: Partial<ChibiPose> = { handB: [10, 13, 0], elbowB: [0.35, -0.3, 1], yawB: -10, rollB: 4, weaponB: 0 };
+export const SHIELD_UP: Partial<ChibiPose> = { handB: [6, 16, 14], elbowB: [0.5, -0.2, 0.4], yawB: -30, rollB: 10, weaponB: 0 };
+
+/**
+ * The shield through a blow: as on guard, a little higher and nearer her (she crouches into a
+ * cut, and its point must stay off the floor), its rim at her chin front on. The blows twist her
+ * body, which swings the forearm and the shield's face with it, so each pose of a blow sets its
+ * own hand and aim on top of this to keep the face toward the viewer and off her face.
+ */
+export const SHIELD_CARRY: Partial<ChibiPose> = { handB: [2, 16, 10], elbowB: [0.5, -0.2, 0.4], yawB: -40, rollB: -10, weaponB: 0 };
+
+/**
+ * The shield raised square before her chest and the lower half of her face, its face still turned
+ * toward the viewer side on, its rim at her nose front on: she peeks over it (a block, Aegis,
+ * Shield's Up!).
+ */
+export const SHIELD_RAISED: Partial<ChibiPose> = { handB: [4, 6, 0], elbowB: [0.5, -0.2, 0.4], yawB: -10, rollB: 0, weaponB: 0 };
 
 /**
  * The battle stance, and the guard the skill and state clips build their poses from: low and
- * wide behind the shield, the sword raised over its rim on her right, point forward and up.
+ * wide behind the shield, the sword cocked high over her right shoulder, ready to cut down over
+ * the shield's rim, its blade standing clear against the sky in every view.
  */
 export const READY: ChibiPose = {
   x: 0,
-  y: 5,
+  y: 4,
   lean: 8,
   twist: -2,
   head: 2,
   look: -2,
   footF: [11, 0, 5.4],
   footB: [-11, 0, 5],
-  handF: [3, 6, 11],
-  weapon: 50,
-  roll: 34,
-  yaw: 0,
+  handF: [-2, -1, 12],
+  weapon: -24,
+  roll: 26,
+  yaw: -6,
   ...SHIELD_UP,
   wind: 0.2,
 };
 
-/** At ease: upright, the sword hanging point down at her right, the shield resting forward on her left. */
+/** At ease: upright, the sword hanging point down at her right, the shield resting point down on the floor beside her front foot, its face out. */
 export const AT_EASE: ChibiPose = {
   x: 0,
   y: 1,
@@ -125,9 +145,10 @@ export const AT_EASE: ChibiPose = {
   weapon: 165,
   roll: 8,
   yaw: 12,
-  handB: [8, 13, 5],
-  elbowB: [0.2, -0.6, 1],
-  yawB: 0,
+  handB: [4, 18, 12],
+  elbowB: [0.5, -0.2, 0.4],
+  yawB: -30,
+  rollB: 0,
   weaponB: 0,
   wind: 0.06,
 };
@@ -142,7 +163,7 @@ const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
   return pose(AT_EASE, {
     y: 0.6 + out,
     handF: [3, 14 - out * 0.4, 8],
-    handB: [8, 13 - out * 0.4, 5],
+    handB: [4, 18 - out * 0.4, 12],
     sway: Math.sin((2 * Math.PI * (i + 1)) / 8) * 0.25,
     phase: i / 8,
     wind: 0.06 + wave(i, 8) * 0.08,
@@ -154,19 +175,23 @@ const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
 
 const BOUNCE = 8;
 const bounce = (i: number): number => wave(((i % BOUNCE) + BOUNCE) % BOUNCE, BOUNCE);
+/**
+ * How far she sinks on each frame of the bounce: whole pixels, with her lean held, so everything
+ * above her knees (the shield and its emblem above all) moves down and up in whole-pixel steps
+ * and keeps its shape instead of shimmering as it bobs.
+ */
+const SINK = [0, 1, 2, 3, 3, 2, 1, 0];
 
 const battle = Array.from({ length: BOUNCE }, (_, i): ChibiPose => {
-  // Down on the beat and springing back. The head nods a frame behind the body, and the cape and
-  // hair lag too: they lift as she drops and settle as she rises. The shield rides with her.
+  // Down on the beat and springing back. The head nods a frame behind the body, the sword bobs
+  // with it, and the cape and hair lag too: they lift as she drops and settle as she rises.
   const b = bounce(i);
   const lag = b - bounce(i - 1);
   return pose(READY, {
-    y: 3.8 + b * 3.4,
-    lean: 7 + b * 2.5,
+    y: READY.y + (SINK[i] as number),
     head: 1 + bounce(i - 1) * 2.5,
-    handF: [3, 5.5 + b * 1.4, 11],
-    handB: [10, 12.6 + b * 1.2, 0],
-    weapon: 48 + b * 5,
+    handF: [-2, -1 + bounce(i - 1) * 1.2, 12],
+    weapon: -24 + bounce(i - 1) * 6,
     wind: 0.2 + Math.max(0, lag) * 0.2,
     lift: lag * 0.4,
     sway: Math.sin((2 * Math.PI * (i - 1)) / BOUNCE) * 0.2,
@@ -213,15 +238,16 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     look: -2,
     footF,
     footB,
-    // The sword trails low behind her; the shield is carried forward on her left, bobbing with the stride.
+    // The sword trails low behind her; the shield is carried low on her left, its face out toward
+    // her right as on guard, bobbing with the stride.
     handF: [-4 - swing * 2, 15 - Math.abs(swing), 9],
     weapon: -112 + swing * 5,
     roll: 0,
     yaw: -30,
-    handB: [7 + swing * 1.5, 10 - Math.abs(swing) * 1.2, 3],
-    elbowB: [0.3, -0.4, 1],
-    yawB: 14,
-    rollB: 0,
+    handB: [4 + swing * 1.5, 16 - Math.abs(swing), 10],
+    elbowB: [0.5, -0.2, 0.4],
+    yawB: -40,
+    rollB: -10,
     weaponB: 0,
     wind: 1,
     phase: i / 8,
@@ -232,13 +258,13 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
 
 // ── The combo ────────────────────────────────────────────────────────────────────────────────
 
-/** The shield kept up before her through a cut, tucked a little tighter. */
-const TUCK: Partial<ChibiPose> = { handB: [7, 11, 1], elbowB: [0.35, -0.3, 1], yawB: 4, rollB: 4, weaponB: 0 };
+/** The shield kept before her through a cut. */
+const TUCK = SHIELD_CARRY;
 
 // atk1: high behind her right shoulder, down across to low in front, over the shield's rim.
 const A1_COCK = pose(READY, { x: -2, y: 4, lean: -4, twist: -24, head: -2, look: 2, footF: [9, -1, 5], footB: [-9, 0, 4.6], handF: [-7, -8, 12.5], weapon: -42, roll: 44, yaw: -6, ...TUCK, wind: 0.25, lift: 0.2, sway: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.3 } });
-const A1_SWING = pose(READY, { x: 3, y: 4, lean: 10, twist: -4, head: 2, footF: [12, 0, 5.2], handF: [11, 3, 8], weapon: 68, roll: 44, yaw: 0, ...TUCK, wind: 0.45, lift: 0, phase: 0.25, face: 'shout', fx: { rune: 0.5 } });
-const A1_HIT = pose(READY, { x: 5, y: 7, lean: 20, twist: 14, head: 1, look: -4, footF: [14, 0, 5.4], footB: [-11, 0, 4.6], handF: [15, 13, -2], weapon: 116, roll: 40, yaw: 0, handB: [6, 11, 3], elbowB: [0.3, -0.4, 1], yawB: 10, rollB: 0, weaponB: 0, wind: 0.8, lift: -0.1, phase: 0.4, face: 'shout', fx: { impact: 0.8, dust: 0.6, rune: 0.6 } });
+const A1_SWING = pose(READY, { x: 3, y: 4, lean: 10, twist: -4, head: 2, footF: [12, 0, 5.2], handF: [11, 3, 8], weapon: 68, roll: 44, yaw: 0, ...TUCK, handB: [8, 16, 14], yawB: -30, wind: 0.45, lift: 0, phase: 0.25, face: 'shout', fx: { rune: 0.5 } });
+const A1_HIT = pose(READY, { x: 5, y: 7, lean: 20, twist: 14, head: 1, look: -4, footF: [14, 0, 5.4], footB: [-11, 0, 4.6], handF: [15, 13, -2], weapon: 116, roll: 40, yaw: 0, ...TUCK, handB: [10, 14, 14], yawB: -30, wind: 0.8, lift: -0.1, phase: 0.4, face: 'shout', fx: { impact: 0.8, dust: 0.6, rune: 0.6 } });
 const A1_FOLLOW = pose(A1_HIT, { y: 8, lean: 22, twist: 18, head: 2, handF: [14, 15, -3], weapon: 126, wind: 0.9, lift: 0.15, phase: 0.55, face: 'grit', fx: { dust: 0.3, rune: 0.4 } });
 
 const atk1: ChibiPose[] = [
@@ -252,12 +278,12 @@ const atk1: ChibiPose[] = [
 ];
 
 // atk2: from low on her left, up across her body to high on her right: a rising backhand.
-const A2_COCK = pose(READY, { x: 1, y: 7, lean: 8, twist: 26, head: 0, look: -6, footF: [11, 0, 5.2], handF: [7, 15, -3], weapon: 156, roll: 30, yaw: 0, handB: [5, 10, 6], elbowB: [0.1, -0.5, 1], yawB: 24, rollB: 0, weaponB: 0, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.3 } });
-const A2_SWING = pose(READY, { x: 3, y: 5, lean: 12, twist: 6, head: 2, footF: [13, 0, 5.2], handF: [12, 5, 4], weapon: 68, roll: 30, yaw: 0, ...TUCK, wind: 0.45, lift: -0.2, phase: 0.25, face: 'shout', fx: { rune: 0.5 } });
+const A2_COCK = pose(READY, { x: 1, y: 7, lean: 8, twist: 26, head: 0, look: -6, footF: [11, 0, 5.2], handF: [7, 15, -3], weapon: 156, roll: 30, yaw: 0, ...TUCK, handB: [10, 14, 12], rollB: 0, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fx: { rune: 0.3 } });
+const A2_SWING = pose(READY, { x: 3, y: 5, lean: 12, twist: 6, head: 2, footF: [13, 0, 5.2], handF: [12, 5, 4], weapon: 68, roll: 30, yaw: 0, ...TUCK, handB: [8, 16, 14], rollB: 10, wind: 0.45, lift: -0.2, phase: 0.25, face: 'shout', fx: { rune: 0.5 } });
 const A2_HIT = pose(READY, { x: 5, y: 3, lean: -2, twist: -22, head: -4, look: 2, footF: [14, 0, 5.4], footB: [-10, -1, 4.6], handF: [-5, -9, 13], weapon: -22, roll: 30, yaw: 0, ...TUCK, wind: 0.75, lift: 0.1, phase: 0.4, face: 'shout', fx: { impact: 0.7, rune: 0.6 } });
 const A2_FOLLOW = pose(A2_HIT, { y: 3, lean: -4, twist: -26, head: -5, handF: [-6, -8, 13], weapon: -40, wind: 0.9, lift: 0.25, phase: 0.55, face: 'grit', fx: { rune: 0.4 } });
 /** The way down from the high finish: the hand dropped to her right side, the sword tipped out that way, clear of her face. */
-const A2_DOWN = pose(READY, { x: 3, y: 4, lean: 6, twist: -12, head: 0, footF: [12, 0, 5.2], handF: [7, 7, 9.5], weapon: 8, roll: 50, yaw: -8, wind: 0.35, lift: 0.15, phase: 0.85, face: 'stern' });
+const A2_DOWN = pose(READY, { x: 3, y: 4, lean: 6, twist: -12, head: 0, footF: [12, 0, 5.2], handF: [7, 7, 9.5], weapon: 8, roll: 50, yaw: -8, ...TUCK, handB: [4, 16, 12], yawB: -30, rollB: 10, wind: 0.35, lift: 0.15, phase: 0.85, face: 'stern' });
 
 const atk2: ChibiPose[] = [
   A2_COCK,
@@ -271,11 +297,11 @@ const atk2: ChibiPose[] = [
 
 // atk3: coil behind the shield, drive it into the foe, then raise the sword high over her right
 // shoulder and bring it down in a heavy chop in front.
-const A3_COIL = pose(READY, { x: -2, y: 7, lean: 4, twist: -20, head: 4, look: 2, footF: [10, 0, 5.4], footB: [-11, 0, 4.8], handF: [-2, 12, 10], weapon: -100, roll: 10, yaw: -20, handB: [4, 9, 6], elbowB: [-0.4, -0.4, 1], yawB: 30, rollB: 0, weaponB: 0, wind: 0.3, face: 'grit', fx: { runeB: 0.15 } });
-const A3_COIL2 = pose(A3_COIL, { y: 8, lean: 6, twist: -26, head: 5, handB: [3, 9.5, 7], phase: 0.1, lift: 0.15, fx: { runeB: 0.25, rune: 0.3 } });
-const A3_BASH = pose(READY, { x: 7, y: 6, lean: 18, twist: 22, head: 0, look: -4, footF: [16, 0, 5.4], footB: [-12, 0, 4.6], handF: [-3, 12, 10], weapon: -90, roll: 10, yaw: -24, handB: [11, 8, -3], elbowB: [0.1, -0.2, 1], yawB: -8, rollB: 0, weaponB: 0, wind: 0.6, phase: 0.25, face: 'shout', fx: { runeB: 0.35, impactB: 0.9, ghosts: { k: 0.4 }, dust: 0.7 } });
-const A3_TOP = pose(READY, { x: 6, y: 2, lean: -6, twist: -12, head: -4, look: 0, footF: [15, 0, 5.4], footB: [-10, -2, 4.6], handF: [-6, -9, 13], weapon: -34, roll: 24, yaw: -6, handB: [8, 9, 2], elbowB: [0.3, -0.3, 1], yawB: 4, rollB: 0, weaponB: 0, wind: 0.45, lift: 0.3, phase: 0.4, face: 'shout', fx: { rune: 0.9, runeB: 0.15, aura: 0.3 } });
-const A3_CHOP = pose(READY, { x: 8, y: 9, lean: 28, twist: 8, head: 2, look: -2, footF: [16, 0, 5.6], footB: [-11, 0, 4.8], handF: [16, 13, 2], weapon: 130, roll: 16, yaw: 0, handB: [5, 12, 4], elbowB: [0.2, -0.5, 1], yawB: 14, rollB: 0, weaponB: 0, wind: 0.8, lift: 0.2, phase: 0.55, face: 'shout', fx: { impact: 1.25, shock: 0.05, dust: 1, rune: 1 } });
+const A3_COIL = pose(READY, { x: -2, y: 7, lean: 4, twist: -20, head: 4, look: 2, footF: [10, 0, 5.4], footB: [-11, 0, 4.8], handF: [-2, 12, 10], weapon: -100, roll: 10, yaw: -20, ...TUCK, handB: [6, 14, 12], yawB: -30, rollB: 0, wind: 0.3, face: 'grit', fx: { runeB: 0.15 } });
+const A3_COIL2 = pose(A3_COIL, { y: 8, lean: 6, twist: -26, head: 5, handB: [5, 14, 12], phase: 0.1, lift: 0.15, fx: { runeB: 0.25, rune: 0.3 } });
+const A3_BASH = pose(READY, { x: 7, y: 6, lean: 18, twist: 22, head: 0, look: -4, footF: [16, 0, 5.4], footB: [-12, 0, 4.6], handF: [-3, 12, 10], weapon: -90, roll: 10, yaw: -24, ...TUCK, handB: [10, 14, 12], rollB: 0, wind: 0.6, phase: 0.25, face: 'shout', fx: { runeB: 0.35, impactB: 0.9, ghosts: { k: 0.4 }, dust: 0.7 } });
+const A3_TOP = pose(READY, { x: 6, y: 2, lean: -6, twist: -12, head: -4, look: 0, footF: [15, 0, 5.4], footB: [-10, -2, 4.6], handF: [-6, -9, 13], weapon: -34, roll: 24, yaw: -6, ...TUCK, handB: [6, 16, 14], rollB: 10, wind: 0.45, lift: 0.3, phase: 0.4, face: 'shout', fx: { rune: 0.9, runeB: 0.15, aura: 0.3 } });
+const A3_CHOP = pose(READY, { x: 8, y: 9, lean: 28, twist: 8, head: 2, look: -2, footF: [16, 0, 5.6], footB: [-11, 0, 4.8], handF: [16, 13, 2], weapon: 130, roll: 16, yaw: 0, ...TUCK, handB: [8, 8, 14], yawB: -50, rollB: 10, wind: 0.8, lift: 0.2, phase: 0.55, face: 'shout', fx: { impact: 1.25, shock: 0.05, dust: 1, rune: 1 } });
 const A3_HOLD = pose(A3_CHOP, { y: 10, lean: 30, handF: [16, 15, 2], weapon: 134, wind: 0.6, lift: 0.15, phase: 0.7, face: 'grit', fx: { shock: 0.45, dust: 0.7, rune: 0.6 } });
 
 const atk3: ChibiPose[] = [

@@ -38,6 +38,9 @@ const S = READY;
 
 type Extra = (x: FxContext) => void;
 
+/** The pale blue fringe of her light, along the outer edge of the rings she sends over the floor. */
+const SKY: RGB = [168, 212, 255];
+
 /** Runs several extra painters in turn. */
 const both =
   (...fs: Extra[]): Extra =>
@@ -67,7 +70,7 @@ const ringOfLight =
     const n = Math.ceil(R * 7);
     for (let i = 0; i < n; i++) {
       const th = (i / n) * Math.PI * 2;
-      for (const [dr, col, a] of [[0, aura.hot, 0.95], [1, aura.core, 0.75], [2.2, aura.edge, 0.45]] as [number, RGB, number][]) {
+      for (const [dr, col, a] of [[0, aura.hot, 0.95], [1, aura.core, 0.75], [2.2, SKY, 0.45]] as [number, RGB, number][]) {
         const px = p[0] + Math.cos(th) * (R + dr);
         const py = p[1] + Math.sin(th) * (R + dr) * 0.78;
         if (onHead(x, px, py)) continue;
@@ -154,7 +157,7 @@ const pulse =
     for (let i = 0; i < n; i++) {
       const th = (i / n) * Math.PI * 2;
       const front = Math.sin(th + cam.yaw) > 0;
-      for (const [rr, col, a] of [[1, aura.hot, 0.8], [0.93, aura.core, 0.6], [0.85, aura.core, 0.3], [1.07, aura.edge, 0.35]] as [number, RGB, number][]) {
+      for (const [rr, col, a] of [[1, aura.hot, 0.8], [0.93, aura.core, 0.6], [0.85, aura.core, 0.3], [1.07, SKY, 0.35]] as [number, RGB, number][]) {
         const p = x.proj([g[0] + Math.cos(th) * R * rr, 0, g[2] + Math.sin(th) * R * rr]);
         c.glow(p[0], p[1], col, a * fade, !front);
       }
@@ -214,7 +217,7 @@ const flood =
     for (let i = 0; i < n; i++) {
       const th = (i / n) * Math.PI * 2;
       const front = Math.sin(th + cam.yaw) > 0;
-      for (const [rr, col, a] of [[1, aura.hot, 0.9], [0.95, aura.core, 0.8], [0.88, aura.core, 0.45], [1.05, aura.edge, 0.4]] as [number, RGB, number][]) {
+      for (const [rr, col, a] of [[1, aura.hot, 0.9], [0.95, aura.core, 0.8], [0.88, aura.core, 0.45], [1.05, SKY, 0.4]] as [number, RGB, number][]) {
         const p = x.proj([g[0] + Math.cos(th) * R * rr, 0, g[2] + Math.sin(th) * R * rr]);
         c.glow(p[0], p[1], col, a * fade, !front);
       }
@@ -266,15 +269,15 @@ const shards =
 const PLANT = { footF: [10, 0, 7] as const, footB: [-10, 0, 6.5] as const };
 
 /** The strike: the sword's flat brought down across the top of the raised shield. */
-const STRIKE: ChibiPose = pose(S, { y: 6, lean: 8, twist: 4, head: 3, look: -2, ...PLANT, handF: [9, 6, 6], weapon: 84, roll: -40, yaw: -50, handB: [9, 10, 0.5], elbowB: [0.4, -0.3, 1], yawB: 4, rollB: 6, weaponB: 0, face: 'shout', wind: 0.3 });
+const STRIKE: ChibiPose = pose(S, { y: 6, lean: 8, twist: 4, head: 3, look: -2, ...PLANT, handF: [9, 6, 6], weapon: 84, roll: -40, yaw: -50, handB: [10, 14, 14], elbowB: [0.5, -0.2, 0.4], yawB: -40, rollB: 10, weaponB: 0, face: 'shout', wind: 0.3 });
 
 /** The rally: the sword raised high out to her right, point up, the shield arm swept down and out, head up. */
-const RALLY: ChibiPose = pose(S, { y: 2, lean: -6, twist: -4, head: -8, look: 2, ...PLANT, handF: [-6, -9, 14], weapon: -4, roll: 16, yaw: 0, handB: [4, 12, 9], elbowB: [0, -0.6, 1], yawB: 30, rollB: 0, weaponB: 0, face: 'shout', wind: 0.4, lift: 0.35 });
+const RALLY: ChibiPose = pose(S, { y: 2, lean: -6, twist: -4, head: -8, look: 2, ...PLANT, handF: [-6, -9, 14], weapon: -4, roll: 16, yaw: 0, handB: [4, 16, 10], elbowB: [0.5, -0.2, 0.4], yawB: -40, rollB: -10, weaponB: 0, face: 'shout', wind: 0.4, lift: 0.35 });
 
 const cast: ChibiPose[] = [
   // Gather: the shield brought up before her, the sword drawn back high on her right.
-  fromReady(pose(S, { y: 5, lean: 2, twist: -10, head: 0, ...PLANT, handF: [-4, -2, 12], weapon: -30, roll: 30, yaw: -10, handB: [9, 9.5, 0.5], elbowB: [0.4, -0.3, 1], yawB: 4, rollB: 8, face: 'grit', fx: { runeB: 0.15, rune: 0.3 } }), 0.6),
-  pose(S, { y: 5, lean: 0, twist: -16, head: -2, ...PLANT, handF: [-6, -6, 13], weapon: -40, roll: 34, yaw: -12, handB: [9, 9.5, 0.5], elbowB: [0.4, -0.3, 1], yawB: 4, rollB: 8, face: 'grit', lift: 0.2, fx: { runeB: 0.2, rune: 0.6, aura: 0.3 } }),
+  fromReady(pose(S, { y: 5, lean: 2, twist: -10, head: 0, ...PLANT, handF: [-4, -2, 12], weapon: -30, roll: 30, yaw: -10, handB: [10, 14, 14], elbowB: [0.5, -0.2, 0.4], yawB: -40, rollB: 10, face: 'grit', fx: { runeB: 0.15, rune: 0.3 } }), 0.6),
+  pose(S, { y: 5, lean: 0, twist: -16, head: -2, ...PLANT, handF: [-6, -6, 13], weapon: -40, roll: 34, yaw: -12, handB: [10, 14, 14], elbowB: [0.5, -0.2, 0.4], yawB: -40, rollB: 10, face: 'grit', lift: 0.2, fx: { runeB: 0.2, rune: 0.6, aura: 0.3 } }),
   // Struck: a clang, and a ring of light rung off the rim.
   pose(STRIKE, { phase: 0.15, fx: { clang: 1, runeB: 0.35, rune: 1, aura: 0.5, circle: 0.4, extra: ringOfLight(0) } }),
   pose(STRIKE, { y: 6.5, lean: 9, phase: 0.3, face: 'grit', fx: { clang: 0.3, runeB: 0.25, rune: 0.8, aura: 0.6, circle: 0.7, extra: ringOfLight(0.45) } }),
@@ -381,8 +384,8 @@ const mend: ChibiPose[] = [
 /** Planted low behind the shield, its point on the floor before her, the sword ready over it. */
 const PLANTED: ChibiPose = pose(S, {
   x: 0,
-  y: 11,
-  lean: 10,
+  y: 8,
+  lean: 8,
   twist: -4,
   head: 6,
   look: 0,
@@ -392,10 +395,10 @@ const PLANTED: ChibiPose = pose(S, {
   weapon: 52,
   roll: 30,
   yaw: -8,
-  handB: [10, 12, -0.5],
-  elbowB: [0.4, -0.3, 1],
-  yawB: 0,
-  rollB: 0,
+  handB: [2, 12, 6],
+  elbowB: [0.5, -0.2, 0.4],
+  yawB: -30,
+  rollB: 10,
   weaponB: 0,
   face: 'grit',
   wind: 0.2,
@@ -419,16 +422,16 @@ const braced = (k: number, spin: number, phase: number, over: Partial<ChibiPose>
 
 const shieldsUp: ChibiPose[] = [
   // Wind-up: down behind the shield.
-  fromReady(pose(PLANTED, { y: 9, fx: { runeB: 0.15 } }), 0.6),
+  fromReady(pose(PLANTED, { y: 7, fx: { runeB: 0.15 } }), 0.6),
   // Set, the dome rising round her.
   braced(0.3, 0, 0.1, { fx: { dust: 0.8 } }),
   braced(0.6, 4, 0.2),
   braced(0.85, 8, 0.3),
   braced(1, 12, 0.4),
-  braced(1, 16, 0.5, { y: 11.4, lean: 11 }),
+  braced(1, 16, 0.5, { y: 8.4, lean: 9 }),
   braced(1, 20, 0.6),
   // Straining as it fills with light.
-  braced(1, 24, 0.7, { y: 11.6, lean: 12, face: 'shout', fx: { runeB: 0.4, aura: 0.6 } }),
+  braced(1, 24, 0.7, { y: 8.6, lean: 10, face: 'shout', fx: { runeB: 0.4, aura: 0.6 } }),
   // The burst: the shield thrust out, the dome flung outward in shards.
   pose(PLANTED, { x: 3, y: 9, lean: 16, twist: 14, head: 2, handB: [13, 10, -2], elbowB: [0.1, -0.2, 1], yawB: -6, handF: [-1, 10, 10], weapon: 40, face: 'shout', wind: 0.6, lift: 0.2, phase: 0.85, fx: { runeB: 0.8, impactB: 1.4, aura: 1, shock: 0.12, shockAt: [0, 0, 0], rays: { k: 1, at: 'off', n: 12, len: 30 }, extra: shards(0.2) } }),
   settle(pose(PLANTED, { x: 3, y: 7, lean: 10, twist: 6, handB: [11, 10, -1] }), 0.65, { phase: 1, wind: 0.4, lift: 0.2, fx: { runeB: 0.15, aura: 0.3, shock: 0.6, shockAt: [0, 0, 0], extra: shards(0.75) } }),

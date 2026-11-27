@@ -21,11 +21,12 @@ import type { RGB } from '../../paint.js';
 import { DUST, DUST_DARK } from '../fx.js';
 import { add3, type ChibiPose, type FxContext, lerp3, pose, wave } from '../rig.js';
 import { KITE } from './design.js';
-import { AT_EASE, fromReady, READY, settle } from './moves-core.js';
+import { AT_EASE, fromReady, READY, SHIELD_RAISED, settle } from './moves-core.js';
 
 const S = READY;
 const WHITE: RGB = [255, 255, 255];
 const PALE_GOLD: RGB = [255, 240, 190];
+const GLINT_GOLD: RGB = [255, 210, 90];
 
 // ── Aegis ────────────────────────────────────────────────────────────────────────────────────
 
@@ -41,9 +42,17 @@ function onShield(u: number, v: number): boolean {
 }
 
 /**
- * A glint sweeping across the shield's face: a slanting band of white light with a gold fringe,
- * `k` how far down the face it has run (0 at its top, 1 past its point), `a` its strength. Painted
- * only where the face is turned toward the viewer.
+ * The points of the shield's face a glint is laid over, [u, v] in its plane a pixel apart: found
+ * once, so a frame only projects the ones the band crosses.
+ */
+const FACE_PTS: (readonly [number, number])[] = [];
+for (let u = -32; u <= 17; u += 1) for (let v = -13; v <= 13; v += 1) if (onShield(u, v)) FACE_PTS.push([u, v]);
+
+/**
+ * A glint sweeping down the shield's face: a slanting band of white light with a gold fringe,
+ * `k` how far down the face it has run (0 at its top, 1 past its point), `a` its strength. Each
+ * point of the face lights a 2 by 2 block, so the band is solid at any angle the shield is seen
+ * at. Painted only where the face is turned toward the viewer.
  */
 const shieldGlint =
   (k: number, a = 1) =>
@@ -52,51 +61,57 @@ const shieldGlint =
     if (cam.facing(g.n) < 0.15) return;
     // The band runs across the face on a slant (u + 0.55 v constant), from above its top to below its point.
     const s = 22 - k * 58;
-    for (let u = -32; u <= 17; u += 0.5) {
-      for (let v = -13; v <= 13; v += 0.5) {
-        const d = u + v * 0.55 - s;
-        if (Math.abs(d) > 3.4 || !onShield(u, v)) continue;
-        const p = proj(add3(add3(add3(g.o, g.u, u), g.v, v), g.n, 3.6));
-        const core = Math.abs(d) < 1.3;
-        c.glow(p[0], p[1], core ? WHITE : PALE_GOLD, a * (core ? 0.85 : 0.45));
-      }
+    for (const [u, v] of FACE_PTS) {
+      const d = u + v * 0.55 - s;
+      if (Math.abs(d) > 4) continue;
+      const p = proj(add3(add3(add3(g.o, g.u, u), g.v, v), g.n, 3.6));
+      const core = Math.abs(d) < 1.6;
+      const col = core ? WHITE : GLINT_GOLD;
+      const al = a * (core ? 0.9 : 0.6);
+      c.glow(p[0], p[1], col, al);
+      c.glow(p[0] + 1, p[1], col, al);
+      c.glow(p[0], p[1] + 1, col, al);
+      c.glow(p[0] + 1, p[1] + 1, col, al);
     }
   };
 
-/** Raised and set: braced low behind the shield, its face square to the foe, the sword drawn back ready over it. */
+/**
+ * Raised and set: braced low behind the shield, which stands square before her chest and the
+ * lower half of her face (she peeks over its rim), its face turned toward the viewer side on; the
+ * sword drawn back low behind it, out of its way.
+ */
 const AEGIS: ChibiPose = pose(S, {
   x: -1,
-  y: 8,
+  y: 6.5,
   lean: 6,
   twist: -2,
   head: 5,
   look: 0,
   footF: [11, 0, 6.5],
   footB: [-11, 0, 6],
-  handF: [0, 9, 10],
-  weapon: 62,
-  roll: 30,
-  yaw: -10,
-  handB: [9.5, 9, -0.5],
-  elbowB: [0.4, -0.25, 1],
+  handF: [-3, 13, 10],
+  weapon: -112,
+  roll: 10,
+  yaw: -20,
+  ...SHIELD_RAISED,
+  handB: [2, 10, 4],
   yawB: 0,
-  rollB: 8,
-  weaponB: 0,
+  rollB: 10,
   face: 'grit',
   wind: 0.3,
 });
 
 const guard: ChibiPose[] = [
   // Wind-up (a blink): the shield swung up out of the stance.
-  fromReady(pose(AEGIS, { y: 6, lean: 8, handB: [9, 10, 0.5], rollB: 4, face: 'grit', fx: { runeB: 0.15 } }), 0.6),
-  // Set: it locks into place with a flash of gold; the glint starts across its face.
-  pose(AEGIS, { wind: 0.5, lift: 0.2, phase: 0.2, fx: { runeB: 0.3, aura: 0.3, dust: 0.7, extra: shieldGlint(0.1) } }),
-  // Braced, the glint running down the face as the light settles over it.
-  pose(AEGIS, { y: 8.5, lean: 7, phase: 0.35, wind: 0.4, fx: { runeB: 0.35, aura: 0.35, extra: shieldGlint(0.45) } }),
-  pose(AEGIS, { y: 8.5, lean: 7, phase: 0.5, wind: 0.35, face: 'stern', fx: { runeB: 0.3, aura: 0.2, extra: shieldGlint(0.85, 0.7) } }),
-  // Held steady.
-  pose(AEGIS, { y: 8, lean: 6, phase: 0.65, wind: 0.3, face: 'stern', fx: { runeB: 0.25 } }),
-  pose(AEGIS, { y: 8.4, lean: 6.5, phase: 0.8, wind: 0.28, face: 'stern', fx: { runeB: 0.2 } }),
+  fromReady(pose(AEGIS, { y: 5, lean: 7, face: 'grit', fx: { runeB: 0.15 } }), 0.6),
+  // Set: it locks into place, she drops into her brace, the cape flung out and dust kicked up.
+  pose(AEGIS, { wind: 0.6, lift: 0.3, flare: 0.25, phase: 0.2, fx: { runeB: 0.35, aura: 0.35, dust: 0.8 } }),
+  // Braced, a glint of white and gold running down the shield's face as the light settles on it.
+  pose(AEGIS, { y: 6.8, lean: 6.5, phase: 0.35, wind: 0.4, lift: 0.1, fx: { runeB: 0.4, aura: 0.3, extra: shieldGlint(0.18) } }),
+  pose(AEGIS, { y: 6.8, lean: 6.5, phase: 0.5, wind: 0.35, face: 'stern', fx: { runeB: 0.35, aura: 0.2, extra: shieldGlint(0.52) } }),
+  pose(AEGIS, { phase: 0.65, wind: 0.3, face: 'stern', fx: { runeB: 0.3, aura: 0.1, extra: shieldGlint(0.88, 0.8) } }),
+  // Held, easing up toward the battle stance, which takes over when the guard ends.
+  settle(AEGIS, 0.7, { phase: 0.8, wind: 0.26, face: 'stern', fx: { runeB: 0.2 } }),
 ];
 
 // ── Hurt ─────────────────────────────────────────────────────────────────────────────────────
