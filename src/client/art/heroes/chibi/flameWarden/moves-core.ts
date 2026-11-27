@@ -271,7 +271,7 @@ const spin = (turn: number, phase: number): ChibiPose =>
   pose(READY, { x: 1, y: 5, lean: 8, twist: 0, turn, head: 1, look: 10, footF: [9, -1, 6], footB: [-9, 0, 6], handF: [5, 11, 12], weapon: 90, roll: 0, yaw: 86, handB: [-2, 11, 11], wind: 0.6, flare: 1, lift: 0.2, sway: 0.4, phase, face: 'shout', fx: { rune: 1, extra: both(fireRing(turn + 176, turn + 86, 38, 50), flames(0.9, phase * 10)) } });
 const A3_SWEEP = pose(READY, { x: 8, y: 11, lean: 30, twist: -18, turn: -360, head: -4, look: -2, footF: [18, 0, 6.4], footB: [-14, 0, 6], handF: [15, 10, -3], weapon: 94, roll: 0, yaw: -50, handB: [-3, 9, 13], wind: 1.1, flare: 1, lift: 0.3, phase: 0.6, face: 'shout', fx: { impact: 1.4, rune: 1, dust: 1 } });
 /** The sweep's band of fire, from behind him on his right round his front to his left (`alpha` its strength). */
-const blaze = (alpha: number, seed: number, from = -130): ChibiPose['fx'] => ({ extra: both(sweep(from, -412, { height: 30, radius: 52, thick: 0.75, dip: 18, bank: 12, alpha, seed }), flames(1.2 * alpha, seed)) });
+const blaze = (alpha: number, seed: number, from = -130): ChibiPose['fx'] => ({ extra: both(sweep(from, -412, { height: 30, radius: 54, thick: 0.78, dip: 26, bank: 12, alpha, seed }), flames(1.2 * alpha, seed)) });
 
 const atk3: ChibiPose[] = [
   A3_COIL,

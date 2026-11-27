@@ -5,8 +5,9 @@
  * after its hotbar slot.
  *
  *   special   7  (1 wind-up) Blazing Crescent: coiled low with the blade blazing behind him, then
- *                a rising slash that throws a great crescent of flame off the blade; it flies about
- *                two tiles ahead, thinning, as the game's own crescent flies on
+ *                a rising slash, a white-hot star at the blade's tip and a crescent of flame born
+ *                off its edge on the first frame after the wind-up; it is gone a frame later,
+ *                leaving embers and the blade's afterglow, as the game's own crescent flies on
  *   q         8  (1 wind-up) Flashfire: a crouch, then a low dash in place, the blade trailing,
  *                afterimages in his fire behind him and a lane of fire on the floor, then a skid
  *                to a stop in a spray of embers
@@ -128,8 +129,8 @@ const ROAR: ChibiPose = pose(S, { x: 0, y: 4, lean: -10, twist: 0, head: -14, lo
 
 const firebeast: ChibiPose[] = [
   // Doubled over, fists clenched, fire catching at his feet.
-  pose(S, { x: 0, y: 10, lean: 28, twist: 0, head: 14, footF: [9, 0, 8], footB: [-9, 0, 7.5], handF: [4, 15, 9], weapon: 160, roll: -10, yaw: -10, handB: [5, 15, 7], face: 'grit', wind: 0, lift: 0.4, fx: { rune: 1, aura: 0.8, extra: both(pillar(0.15, 61), flames(1, 61)) } }),
-  pose(S, { x: 0, y: 8, lean: 14, twist: 0, head: 4, footF: [9, 0, 8], footB: [-9, 0, 7.5], handF: [4, 10, 13], weapon: 140, roll: -30, yaw: -16, handB: [4, 10, 13], face: 'shout', lift: 0.7, phase: 0.1, fx: { rune: 1, aura: 1, extra: both(pillar(0.32, 62), flames(1, 62)) } }),
+  pose(S, { x: 0, y: 10, lean: 28, twist: 0, head: 14, footF: [9, 0, 8], footB: [-9, 0, 7.5], handF: [4, 15, 9], weapon: 118, roll: -10, yaw: -10, handB: [5, 15, 7], face: 'grit', wind: 0, lift: 0.4, fx: { rune: 1, aura: 0.8, extra: both(pillar(0.15, 61), flames(1, 61)) } }),
+  pose(S, { x: 0, y: 8, lean: 14, twist: 0, head: 4, footF: [9, 0, 8], footB: [-9, 0, 7.5], handF: [4, 10, 13], weapon: 124, roll: -30, yaw: -16, handB: [4, 10, 13], face: 'shout', lift: 0.7, phase: 0.1, fx: { rune: 1, aura: 1, extra: both(pillar(0.32, 62), flames(1, 62)) } }),
   pose(ROAR, { phase: 0.2, fx: { rune: 1, aura: 1, extra: pillar(0.48, 63) } }),
   pose(ROAR, { y: 3.5, head: -15, phase: 0.3, fx: { rune: 1, aura: 1, extra: pillar(0.62, 64) } }),
   pose(ROAR, { y: 3, head: -16, phase: 0.4, fx: { rune: 1, aura: 1, extra: pillar(0.76, 65) } }),

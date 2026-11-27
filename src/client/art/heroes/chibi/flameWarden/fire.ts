@@ -526,9 +526,10 @@ export const crescent =
       const t1 = (i + 1) / n;
       for (const [f0, f1, col] of bands) fill(c, [at(t0, f0 * th(t0)), at(t1, f0 * th(t1)), at(t1, f1 * th(t1)), at(t0, f1 * th(t0))], col, Math.min(1, 0.5 + k));
     }
-    // Flames trailing back off its inner edge (shorter seen end on), embers behind them.
-    const trailK = side ? 1 : away ? 0.25 : 0.45;
-    for (let i = 0; i < 7; i++) {
+    // Flames trailing back off its inner edge (shorter seen end on; none flying away from the
+    // viewer, where they would hang under it as drips), embers behind them.
+    const trailK = side ? 1 : away ? 0 : 0.45;
+    for (let i = 0; i < 7 && trailK > 0; i++) {
       const t = 0.14 + hash(i, 140 + seed) * 0.72;
       const p = at(t, th(t) * 0.9);
       const len = (4 + hash(i, 141 + seed) * 12) * (0.5 + 0.5 * k) * (0.5 + Math.sin(Math.PI * t)) * trailK;
@@ -556,7 +557,7 @@ export const fireball =
     const { c, hash, rig } = x;
     const { side, away } = facing(x);
     const g = rig.pelvis.o;
-    const spot: V3 = side ? at : away ? [g[0] + (at[0] - g[0]) * 0.55, at[1] + 64, at[2]] : [g[0] + (at[0] - g[0]) * 0.72, 7, at[2]];
+    const spot: V3 = side ? at : away ? [g[0] + (at[0] - g[0]) * 0.55, at[1] + 58, at[2]] : [g[0] + (at[0] - g[0]) * 0.72, 7, at[2]];
     const R = side ? R0 : R0 * 0.62;
     const P = x.proj(spot);
     const under = side && x.behind(spot);
@@ -694,14 +695,45 @@ export const kindle =
   };
 
 /**
+ * A tongue of fire as `tongue` paints it, but no hotter at its root than `heat` along the fire
+ * ramp (0 white-hot, 0.2 gold, 0.45 his orange core): the tongues that climb over him burn gold
+ * and orange, and only the pillar's heart is white.
+ */
+function lick(c: Canvas, x: number, y: number, h: number, w: number, sway: number, a: number, heat: number, under = false): void {
+  const n = Math.max(1, Math.round(h));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const half = w * (1 - t) * (0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, t * 2 + 0.3)));
+    const cx = x + sway * t * t * h * 0.35;
+    for (let dx = -Math.ceil(half); dx <= Math.ceil(half); dx++) {
+      const edge = Math.abs(dx) / Math.max(0.5, half);
+      if (edge > 1) continue;
+      c.glow(cx + dx, y - i, fireAt(Math.min(1, heat + t * 0.7 + edge * 0.3)), a * (1 - t * 0.25), under);
+    }
+  }
+}
+
+/** Smooth seeded noise in [0, 1) over the plane (value noise on a unit grid). */
+function noise2(hash: FxContext['hash'], x: number, y: number, salt: number): number {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const sx = (x - xi) * (x - xi) * (3 - 2 * (x - xi));
+  const sy = (y - yi) * (y - yi) * (3 - 2 * (y - yi));
+  const h = (i: number, j: number): number => hash(i * 7919 + j * 104729, salt);
+  return lerp(lerp(h(xi, yi), h(xi + 1, yi), sx), lerp(h(xi, yi + 1), h(xi + 1, yi + 1), sx), sy);
+}
+
+/**
  * Firebeast (k 0 to about 1.3): fire rises from a ring on the floor up his body, `k` how high it
  * has climbed (1 just over the top of his hair), into a pillar of flame that swallows him. The ring
- * is a thin ellipse of fire on the floor with flames standing up off it. Below the fire line flames
- * stream upward round and over him: behind him a column as wide as he is; over him, at first,
- * separate tongues of orange and gold climbing his body with his dark outline showing between
- * them, thickening the longer they have burnt there until, past k 1, he is all but lost in the
- * flame. Every tongue's height changes with `seed` (advance it every frame) so it flickers; the
- * white-hot heart is a narrow core. Tongues lick up off its top and sides, embers fly.
+ * is a thin ellipse of fire on the floor with flames standing up off it. As it climbs, separate
+ * tongues of gold and orange lick up over him from the floor to the fire line, his dark figure and
+ * its outline showing between them in the warm light, and behind him a column of flame rises as
+ * wide as he is. From about k 0.85 the pillar closes over him: a body of flame that streams upward
+ * (a field of noise drawn out tall and carried up a few pixels every frame, so its tongues and
+ * streaks change with `seed`: advance it every frame), gold inside, orange then red toward its
+ * ragged edges, with a narrow white-hot heart; tongues lick up off its rounded top and its sides,
+ * embers fly.
  */
 export const pillar =
   (k: number, seed = 0): Extra =>
@@ -737,44 +769,47 @@ export const pillar =
       const flick = 0.9 + 0.08 * Math.sin(y * 0.21 + seed * 2.1) + 0.06 * Math.sin(y * 0.53 - seed * 1.3);
       return half * flick * (0.12 + 0.88 * Math.sqrt(top));
     };
-    // Tongues streaming up: each column of two pixels is a tongue of its own, its tip a
-    // flickering way below the fire line, red-orange at the tip, gold lower down, white only in a
-    // narrow core deep inside a grown pillar. Its tips and gaps change with every frame.
-    const tipOf = (col: number): number => line + hash(col + 300, Math.floor(seed) * 7 + 3) * (8 + 14 * (1.3 - k)) + (k < 0.6 ? 6 : 0);
-    const ink = (px: number, y: number): boolean => {
-      const i = (y * c.w + px) * 4;
-      return (c.data[i] as number) < 40 && (c.data[i + 1] as number) < 32 && (c.data[i + 2] as number) < 40;
-    };
+    // How far the column behind him has grown, and how far the pillar has closed over him.
     const grown = clamp((k - 0.45) / 0.5, 0, 1);
+    const engulf = clamp((k - 0.8) / 0.32, 0, 1);
+    const rise = seed * 6;
+    // The body of flame: hot in the middle, cooling to its edges and toward the fire line, broken
+    // up by the streaming noise into tongues and streaks.
     for (let y = Math.floor(line); y <= Math.ceil(bottom) - 1; y++) {
       const hw = w(y) * (0.75 + 0.25 * grown);
+      const nearTop = 1 - clamp((y - line) / 16, 0, 1);
       for (let dx = -Math.ceil(hw); dx <= Math.ceil(hw); dx++) {
         const px = Math.round(cx + dx);
-        const col = Math.floor((px + 400) / 2);
-        const tip = tipOf(col);
-        if (y < tip) continue;
         const r = Math.abs(dx + 0.5) / hw;
         if (r > 1) continue;
-        const into = clamp((y - tip) / (10 + 26 * grown), 0, 1);
-        const core = r < 0.13 + 0.05 * Math.sin(y * 0.3 + seed) && into > 0.7 && k > 0.85;
-        let colr: RGB = core ? WHITE_HOT : into < 0.15 ? RED : into < 0.4 ? ORANGE : into < 0.72 || r > 0.7 ? FLAME : GOLD;
-        // Some tongues burn lower than others, so the pillar is streaked as it streams.
-        const lane = hash(col, Math.floor(seed) * 3 + 11);
-        if (!core && lane < 0.4 && colr === GOLD) colr = FLAME;
+        const broad = noise2(hash, px * 0.24, (y + rise) * 0.085, 61);
+        const n = broad * 0.65 + noise2(hash, px * 0.55, (y + rise * 1.4) * 0.2, 62) * 0.35;
+        const heat = 1.08 - r * r * 0.75 - n * 0.55 - nearTop * 0.45;
+        if (heat < 0.06 && r > 0.6) continue;
+        const core = r < 0.12 + 0.05 * Math.sin(y * 0.3 + seed) && heat > 0.55 && engulf > 0.6;
+        const colr: RGB = core ? WHITE_HOT : heat > 0.62 ? GOLD : heat > 0.4 ? FLAME : heat > 0.2 ? ORANGE : RED;
         if (c.opaque(px, y)) {
-          // Over him: separate tongues at first (his dark body and outline between them),
-          // thickening to nearly solid flame once the fire has burnt there a while.
-          const burnt = clamp((k - 0.5) * 1.6, 0, 1) * clamp((y - line) / 30, 0, 1);
-          if (lane < 0.55 - burnt * 0.6) continue;
-          if (ink(px, y) && burnt < 0.7 && k < 0.95) continue;
-          if (burnt < 0.8 && (colr === GOLD || colr === WHITE_HOT)) colr = FLAME;
-          c.glow(px, y, colr, clamp(0.6 + burnt * 0.4, 0, 0.96));
-        } else {
-          // Behind him the column rises only once the fire has climbed past his waist.
-          if (grown <= 0 || lane < 0.35 - grown * 0.35) continue;
-          c.glow(px, y, colr, clamp(0.75 + into * 0.25, 0, 1) * Math.min(1, grown * 2), true);
+          if (engulf <= 0) continue;
+          // Closing over him from his feet up: his head and shoulders still show dark through
+          // gaps in the flame at first, then it is solid.
+          if (broad > engulf * 1.4 - 0.15 + clamp((y - y0) / Math.max(1, bottom - y0), 0, 1) * 0.7) continue;
+          c.glow(px, y, colr, 0.86 + 0.12 * engulf);
+        } else if (grown > 0) {
+          c.glow(px, y, colr, Math.min(1, grown * 2.2), true);
         }
       }
+    }
+    // Tongues climbing over him from the floor toward the fire line, gold at their roots and red at
+    // their tips, his dark figure between them: taller toward his middle, new every frame.
+    const climb = bottom - line;
+    const nt = Math.round(7 + 4 * Math.min(1, k));
+    for (let i = 0; i < nt && engulf < 0.6; i++) {
+      const t = (i + 0.2 + hash(i, 300 + seed) * 0.6) / nt;
+      const ox = (t - 0.5) * 2 * half * 0.85;
+      const mid = 1 - Math.abs(t - 0.5) * 1.2;
+      const h = climb * (0.45 + 0.45 * hash(i, 301 + seed)) * (0.6 + 0.4 * mid);
+      const base = bottom - climb * 0.08 * hash(i, 302 + seed);
+      lick(c, cx + ox, base, h, 3 + 2 * hash(i, 303 + seed), (hash(i, 304 + seed) - 0.5) * 1.4, 0.92 * (1 - engulf * 1.6), 0.22);
     }
     // Tongues licking up off its rounded top and its sides.
     for (let i = 0; i < 11; i++) {
@@ -783,13 +818,13 @@ export const pillar =
       let by = line;
       while (by < bottom && w(by) < Math.abs(dx) + 1) by++;
       const h = (8 + hash(i, 183 + seed) * 14) * (1.1 - Math.abs(t - 0.5)) * Math.min(1, k * 1.5);
-      tongue(c, cx + dx, by + 3, h, 2 + hash(i, 184) * 1.8, (t - 0.5) * 1.2 + (hash(i, 185 + seed) - 0.5), 0.95);
+      lick(c, cx + dx, by + 3, h, 2 + hash(i, 184) * 1.8, (t - 0.5) * 1.2 + (hash(i, 185 + seed) - 0.5), 0.95, 0.12);
     }
     for (let i = 0; i < 10; i++) {
       const side = i % 2 ? 1 : -1;
       const yy = lerp(line + 26, bottom - 4, hash(i, 188 + seed));
       if (yy > bottom - 4) continue;
-      tongue(c, cx + side * (w(yy) - 1), yy, 5 + hash(i, 189 + seed) * 8, 1.6, side * 0.8, 0.9);
+      lick(c, cx + side * (w(yy) - 1), yy, 5 + hash(i, 189 + seed) * 8, 1.6, side * 0.8, 0.9, 0.3);
     }
     // The ring of fire on the floor round him where it began: a thin ellipse of flame, and flames
     // standing up off it (those behind him under the figure).
@@ -802,8 +837,8 @@ export const pillar =
       c.glow(p[0], p[1], i % 2 ? ORANGE : GOLD, 0.9, under);
       c.glow(p[0], p[1] - 1, RED, 0.5, under);
     }
-    for (let i = 0; i < 16; i++) {
-      const th = (i / 16) * Math.PI * 2 + hash(i, 190 + seed) * 0.3;
+    for (let i = 0; i < 12; i++) {
+      const th = (i / 12) * Math.PI * 2 + hash(i, 190 + seed) * 0.3;
       const p3: V3 = [g[0] + Math.cos(th) * R, 0, g[2] + Math.sin(th) * R];
       const p = x.proj(p3);
       tongue(c, p[0], p[1], (4 + hash(i, 186 + seed) * 8) * Math.min(1, k * 2.5), 1.5, hash(i, 187 + seed) - 0.5, 0.9, x.behind(p3));
@@ -823,7 +858,10 @@ export const flare =
     if (k <= 0) return;
     const { c, rig, hash } = x;
     const P = x.proj(rig.armL.end);
-    const under = x.behind(rig.armL.end) && x.cam.view === 'side';
+    // Behind him side on, and from behind while the hand is still drawn in at his chest (raised
+    // beside his head it shows over his shoulder from every side).
+    const low = rig.armL.end[1] < rig.head.o[1] - 20;
+    const under = x.behind(rig.armL.end) && (x.cam.view === 'side' || (x.cam.view === 'back' && low));
     const r = 4 + 6 * Math.min(1, k);
     for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
       for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {

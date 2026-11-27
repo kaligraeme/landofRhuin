@@ -40,7 +40,7 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
 };
 
 /**
- * Frames: side on there is room ahead of him for the Blazing Crescent (about two tiles out) and
+ * Frames: side on there is room ahead of him for the Blazing Crescent as it leaves the blade and
  * Inferno Burst's fireball and shock ring, and behind for the coat tails, the trail of fire and
  * afterimages of Flashfire; toward and away from the viewer he stands centred, with room either
  * side for the ring of fire round his spin. All are tall enough for the pillar of fire that takes
@@ -70,6 +70,22 @@ const HEAT: Partial<Record<ChibiClip, readonly number[]>> = {
   ult: [2, 2, 3, 3, 3, 3, 3, 3, 3, 3],
 };
 
+/**
+ * Toward the viewer a head tipped down hides his eyes under the fringe, so front on the head (with
+ * the half of the torso's lean it takes on) tips down at most this many degrees, whatever the
+ * clip asks; side on and from behind it tips as posed. A KO and his transformation keep their
+ * bowed heads.
+ */
+const FRONT_NOD = 2;
+const NOD_FREE: ReadonlySet<ChibiClip> = new Set(['ko', 'ult']);
+
+/** A pose as the view shows it: front on, the head lifted to FRONT_NOD. */
+function forView(p: ChibiPose, clip: ChibiClip, view: ChibiView): ChibiPose {
+  if (view !== 'front' || NOD_FREE.has(clip)) return p;
+  const nod = (p.lean ?? 0) * 0.5 + (p.head ?? 0);
+  return nod > FRONT_NOD ? { ...p, head: (p.head ?? 0) - (nod - FRONT_NOD) } : p;
+}
+
 const HERO = chibiHero(FLAME_WARDEN, CLIPS, TIMING, FRAMES, 2.1 / 84, 84);
 
 export const FLAME_WARDEN_HERO: ChibiHero = {
@@ -78,6 +94,6 @@ export const FLAME_WARDEN_HERO: ChibiHero = {
     const poses = CLIPS[clip];
     const f = Math.max(0, Math.min(i, poses.length - 1));
     const design = FLAME_WARDEN_LIT[HEAT[clip]?.[f] ?? 0] ?? FLAME_WARDEN;
-    return paintChibi(design, poses[f] as ChibiPose, view, FRAMES[view]);
+    return paintChibi(design, forView(poses[f] as ChibiPose, clip, view), view, FRAMES[view]);
   },
 };

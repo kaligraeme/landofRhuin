@@ -3,7 +3,7 @@
  * amber-orange eyes, black hair in spikes swept back from his face whose ends flick up like
  * flames (a few strands left over his forehead), a long black coat with a high collar and
  * coat-tails to the calves, lined in ember orange, a short black hooded cape over his shoulders
- * (the hood down), a crimson shirt under a dark leather harness, a blackened-iron pauldron and
+ * (the hood down), a crimson shirt crossed by a dark leather strap, a blackened-iron pauldron and
  * gauntlet on his sword arm, dark trousers and armoured boots, and a single-edged longsword of dark
  * steel whose edge glows with heat from orange to white-hot, with a plain black guard and grip.
  * His fire is orange with a gold edge and a white-hot heart. Everything here is data for the
@@ -52,7 +52,7 @@ const COLLAR_IN = mat4('#7a2220', '#4e1212', '#320a0c', '#1e0608', '#0e0204');
 const CAPE_TRIM = mat4('#ff7a64', '#d8382c', '#9a1a18', '#5a0c0c', '#2a0404', 0.05);
 // The crimson shirt.
 const SHIRT = { ...mat4('#ff8a74', '#e84a3c', '#b0221e', '#64100e', '#320606', 0.05), gain: 0.7 };
-// Dark leather: the harness and the belt.
+// Dark leather: the strap across his shirt and the belt.
 const LEATHER = mat4('#7a5444', '#54382c', '#36241c', '#20140f', '#0e0806', -0.05);
 const BELT_EDGE = flat(hex('#170e0a'));
 // Blackened iron, with dull steel edges.
@@ -101,19 +101,22 @@ const LOCKS: Lock[] = [
   L(-4, 60, [-1, 0.2, 0.05], 13.5, 4.8, [-0.05, 0.5, 0], 0.7, 0.3),
   L(30, 54, [-1, 0.14, 0.4], 12.5, 4.4, [0, 0.46, 0.14], 0.7, 0.3),
   L(-36, 54, [-1, 0.14, -0.4], 12.5, 4.4, [0, 0.46, -0.14], 0.7, 0.3),
-  // The back of the head: spikes swept back from the crown fanning out and down toward the nape
-  // in pairs either side of the middle (none runs down the middle), their tips flicking up and out
-  // like flames, the lowest breaking the outline over the collar.
-  L(168, 64, [-0.9, -0.1, 0.25], 14, 5, [0, 0.3, 0.15], 1, 0.3),
-  L(-168, 64, [-0.9, -0.1, -0.25], 14, 5, [0, 0.3, -0.15], 1, 0.3),
-  L(145, 44, [-0.75, -0.35, 0.6], 13, 4.4, [0, 0.4, 0.25], 1, 0.3),
-  L(-145, 44, [-0.75, -0.35, -0.6], 13, 4.4, [0, 0.4, -0.25], 1, 0.3),
-  L(164, 22, [-0.65, -0.7, 0.35], 11, 4.2, [0, 0.55, 0.4], 1, 0.3),
-  L(-164, 22, [-0.65, -0.7, -0.35], 11, 4.2, [0, 0.55, -0.4], 1, 0.3),
+  // The back of the head: spikes swept back from the crown and down over the skull toward the
+  // nape in pairs either side of the middle (none runs down the middle), fanning out as they fall,
+  // their tips flicking out like flames: the lower pairs break the outline at the sides, and two
+  // short ones flick out over the collar.
+  L(165, 62, [-0.5, -0.7, 0.3], 15, 4.8, [-0.2, 0.2, 0.25], 1, 0.3),
+  L(-165, 62, [-0.5, -0.7, -0.3], 15, 4.8, [-0.2, 0.2, -0.25], 1, 0.3),
+  L(140, 44, [-0.45, -0.75, 0.5], 13, 4.4, [-0.1, 0.3, 0.38], 1, 0.3),
+  L(-140, 44, [-0.45, -0.75, -0.5], 13, 4.4, [-0.1, 0.3, -0.38], 1, 0.3),
+  L(172, 16, [-0.4, -0.95, 0.3], 10.5, 3.8, [-0.3, 0.45, 0.65], 1, 0.3),
+  L(-172, 16, [-0.4, -0.95, -0.3], 10.5, 3.8, [-0.3, 0.45, -0.65], 1, 0.3),
+  L(170, -6, [-0.3, -1, 0.3], 7, 2.8, [-0.3, 0.2, 0.6], 0.9, 0.3),
+  L(-170, -6, [-0.3, -1, -0.3], 7, 2.8, [-0.3, 0.2, -0.6], 0.9, 0.3),
   // Lower spikes above the ears, sweeping back and out and flicking up, so the outline is a row
   // of flames from every side.
-  L(120, 20, [-0.7, -0.35, 0.65], 10, 3.6, [0, 0.5, 0.2], 0.9, 0.3),
-  L(-120, 20, [-0.7, -0.35, -0.65], 10, 3.6, [0, 0.5, -0.2], 0.9, 0.3),
+  L(118, 20, [-0.5, -0.6, 0.7], 10, 3.6, [-0.1, 0.4, 0.35], 0.9, 0.3),
+  L(-118, 20, [-0.5, -0.6, -0.7], 10, 3.6, [-0.1, 0.4, -0.35], 0.9, 0.3),
   // Short layers close round the ears, so front on the ears show under the spikes.
   L(108, 0, [-0.35, -1, 0.2], 5, 2.4, [-0.05, 0.1, 0.05], 0.8, 0.3),
   L(-108, 0, [-0.35, -1, -0.2], 5, 2.4, [-0.05, 0.1, -0.05], 0.8, 0.3),
@@ -159,7 +162,7 @@ const FACE_WARDEN: FaceStyle = {
   },
 };
 
-// ── The torso: belt, the crimson shirt and harness in the coat's opening, coat over the rest ─
+// ── The torso: belt, the crimson shirt and its strap in the coat's opening, coat over the rest
 
 const deg = (h: Hit): number => Math.abs((Math.atan2(h.p[2], h.p[0]) * 180) / Math.PI);
 
@@ -175,11 +178,11 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   }
   // The coat opens in a long V from the belt to the collar over the crimson shirt, an ember edge
   // of its lining showing; one leather strap crosses the shirt from his right shoulder to his left hip.
-  const open = 14 + (u - 7.2) * 2.3;
+  const open = 10 + (u - 7.2) * 2.9;
   if (yaw < open) {
-    if (yaw > open - 3.5) return LINING;
-    const across = u - 13 - h.p[2] * 0.7;
-    if (Math.abs(across) < 1.1) return LEATHER;
+    if (yaw > open - 2.6) return LINING;
+    const across = u - 15.5 - h.p[2] * 1.1;
+    if (Math.abs(across) < 1) return LEATHER;
     return SHIRT;
   }
   // A seam down the middle of the back.
@@ -410,9 +413,9 @@ const FLAME_WARDEN: ChibiDesign = {
 
 /**
  * The same design with his hair lit by his fire, by how hot (hero.ts picks one per frame of his
- * skill clips): 0 his own cool black, 1 the highlights half warmed, 2 warmed, 3 the light tone
- * warmed too (the peaks of Kindle and his transformation).
+ * skill clips): 0 his own cool black, 1 the highlights a little warmed, 2 mostly warmed, 3 the
+ * light tone warmed too (the peaks of Kindle and his transformation).
  */
-const FLAME_WARDEN_LIT: readonly ChibiDesign[] = [HAIR, hairLit(0.5), hairLit(1), hairLit(1, true)].map((hair) => ({ ...FLAME_WARDEN, head: { ...FLAME_WARDEN.head, hair } }));
+const FLAME_WARDEN_LIT: readonly ChibiDesign[] = [HAIR, hairLit(0.3), hairLit(0.55), hairLit(1, true)].map((hair) => ({ ...FLAME_WARDEN, head: { ...FLAME_WARDEN.head, hair } }));
 
 export { FLAME_WARDEN, FLAME_WARDEN_LIT };
