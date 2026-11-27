@@ -26,7 +26,7 @@ import { buckles, goggles, type LeverSpec, withLever } from './gear.js';
 const SKIN = mat4('#f8d2ac', '#e6aa80', '#c4845c', '#8e5640', '#4e2618', 0.18);
 // Ginger, worn as dark hair is (design `darkHair`): the clumps in a warm ginger, their lit sides a
 // pale ginger with a near-white glint on the brightest, rust in their hollows and a deep brown line.
-const HAIR = mat4('#ffc890', '#f4a066', '#d0723a', '#9c4a1e', '#5e2a0e', -0.05);
+const HAIR = mat4('#ffb46e', '#f4a066', '#d0723a', '#9c4a1e', '#5e2a0e', -0.08);
 // The beard a touch deeper than the hair on his head, so it reads as a beard and not as more of the face.
 const BEARD = mat4('#f4a066', '#d0723a', '#9c4a1e', '#5e2a0e', '#2e1206', -0.2);
 // Weathered brown leather: the coat, its sleeves and its collar.
@@ -37,8 +37,10 @@ const COAT_IN = mat4('#6a4a34', '#4e3424', '#36221a', '#22150e', '#120a06');
 // The padded jerkin under the coat, slate blue, quilted in bands.
 const JERKIN = mat4('#8a9eb8', '#6a7e9a', '#46566e', '#2c3646', '#161c26', -0.05);
 const JERKIN_SEAM = mat4('#46566e', '#3a4860', '#2c3646', '#1e2632', '#161c26');
-// Darker, redder leather: the belt, the bandolier, the bracers and gloves.
+// Darker, redder leather: the belt, the bracers and the lever's grip.
 const STRAP = mat4('#8a5a3c', '#664028', '#462a1a', '#2a180e', '#140b05', -0.05);
+// The bandolier, a warmer leather than the coat, so its strap shows crossing his back.
+const BANDOLIER = mat4('#b87448', '#8e5232', '#663820', '#402212', '#1a0c06');
 // Gloves in a darker, redder leather than the coat, with a tan highlight.
 const GLOVE = mat4('#d4a878', '#9a5e3a', '#6e3e24', '#462414', '#1c0c06', -0.02);
 const TROUSERS = mat4('#5a5e6c', '#3e424e', '#2a2d36', '#1a1c22', '#0b0c10', -0.08);
@@ -57,6 +59,8 @@ const GOGGLE_STRAP = mat4('#5a3a26', '#42281a', '#2e1a10', '#1e1008', '#0e0804')
 const WALNUT = mat4('#d49a62', '#a8683c', '#7a4424', '#4c2814', '#1e0c04', 0.05);
 const PROD = mat4('#e8ecf4', '#a0a6b4', '#70768a', '#464b5c', '#1c1e27', -0.15);
 const IRON = mat4('#a8acb8', '#7c8090', '#565a6a', '#363946', '#16181f');
+// The cocking lever's arm, a brighter iron, so it shows when thrown.
+const LEVER_IRON = mat4('#d0d4de', '#a0a4b2', '#707484', '#464a5a', '#16181f', 0.05);
 const STRING = mat4('#e0d2b0', '#e0d2b0', '#e0d2b0', '#e0d2b0', '#e0d2b0');
 // Bolts: pale ash shafts, steel heads, orange fletching.
 const SHAFT = mat4('#c09a68', '#9a7448', '#6e5030', '#48331e', '#22160a');
@@ -175,7 +179,7 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   }
   // The coat opens in a V over the jerkin, its lapels edged a shade paler; the jerkin is quilted
   // in bands, with a seam down its middle.
-  const open = 26 + (u - 8) * 1.5;
+  const open = 34 + (u - 8) * 1.6;
   if (yaw < open) {
     if (yaw < 2.2) return JERKIN_SEAM;
     if (u > 9.5 && u < 20 && (u - 9.5) % 3.4 < 0.7) return JERKIN_SEAM;
@@ -209,7 +213,7 @@ const GROOVE = 5.4;
 export const BOLT_V = -GROOVE - 0.4;
 
 /** The cocking lever along the right side of the fore-stock, hinged by the prod: folded back, its grip lies by his left hand. */
-export const LEVER: LeverSpec = { hinge: 21, len: 11, out: 2.2, v: -2.6, mat: IRON, grip: STRAP };
+export const LEVER: LeverSpec = { hinge: 21, len: 11, out: 2.2, v: -2.6, mat: LEVER_IRON, grip: STRAP };
 
 /**
  * A heavy crossbow about 46 px from butt to nose: a deep walnut butt, a long fore-stock standing
@@ -271,7 +275,7 @@ export const ARBALEST: ChibiDesign = {
     jaw: { c: [1.8, -4.1, 0], r: [8, 6.9, 8.4] },
     ear: { c: [-0.6, -3.2, 10], r: [2, 2.8, 1.6] },
     shell: SHELL,
-    hairline: { faceYaw: 72, brow: 6.6, temple: 2.2, nape: -6.5, ear: -1 },
+    hairline: { faceYaw: 72, brow: 6.6, temple: 1, nape: -6.5, ear: -1.8 },
     locks: LOCKS,
     darkHair: true,
     lockLine: hex('#6e2c0c'),
@@ -334,15 +338,15 @@ export const ARBALEST: ChibiDesign = {
     plates({
       side: -1,
       plates: [
-        { c: [0, 2.4, 1.2], r: [5.6, 4.2, 5.4] },
-        { c: [-0.2, -0.4, 2.2], r: [5, 3.5, 4.8] },
+        { c: [0, 3.2, 1.2], r: [6, 4.6, 5.8] },
+        { c: [-0.2, -0.2, 2.2], r: [5.2, 3.6, 5] },
         { c: [-0.3, -2.9, 2.8], r: [4.4, 3, 4.2] },
       ],
       mat: STEEL,
       rim: STEEL_EDGE,
     }),
     // The bandolier: over his left shoulder, down to his right hip, a row of bolts along it.
-    strap({ mat: STRAP, side: -1, w: 1.5, at: 13, over: { chest: BODY_CHEST, hips: BODY_HIPS, pad: 0.7 }, studs: { every: 2.4, r: 0.75, len: 3.4, mat: SHAFT, from: 0.22, to: 0.72, across: true } }),
+    strap({ mat: BANDOLIER, side: -1, w: 1.7, at: 13, over: { chest: BODY_CHEST, hips: BODY_HIPS, pad: 0.7 }, studs: { every: 2.4, r: 0.75, len: 3.4, mat: SHAFT, from: 0.22, to: 0.72, across: true } }),
     // The coat below the belt: two front flaps and two tails parted by a vent at the back, to mid-thigh.
     skirt({
       outer: COAT,

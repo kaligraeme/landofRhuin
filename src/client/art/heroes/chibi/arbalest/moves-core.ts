@@ -9,7 +9,7 @@
  *   battle  8  the crossbow shouldered, nose a little down, feet planted wide and braced: a
  *              soldier's steady breathing, the nose rising and falling a pixel
  *   move    8  a heavy run, the crossbow carried at his right hip, the left arm pumping, the coat
- *              streaming
+ *              tails trailing down and back and flicking in turn
  *   atk1    6  (1 wind-up) Bolt I: his cheek down to the stock, a squint, then the trigger: the
  *              string snaps forward with a flash at the bolt's point and a trail, a kick, and the
  *              lever racked forward and back to span and load it again
@@ -189,16 +189,20 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     look: -2,
     footF: right ? [k.f[0], k.f[1], 4.4] : [k.b[0], k.b[1], 4.4],
     footB: right ? [k.b[0], k.b[1], 4.2] : [k.f[0], k.f[1], 4.2],
-    // Carried at his right hip, pointing ahead and down, rocking with the stride; the left arm
-    // pumps against the legs.
-    handF: [1 - swing, 15 - Math.abs(swing) * 0.6, 8.5],
-    weapon: 112 + swing * 5,
+    // Carried low at his right hip, pointing ahead and down and turned in across him, so the butt
+    // tucks in by his side rather than standing out behind him, rocking with the stride; the left
+    // arm pumps forward against the legs and stays tucked in on the back swing, so the stride reads.
+    handF: [2 - swing, 14 - Math.abs(swing) * 0.6, 8],
+    weapon: 124 + swing * 4,
     roll: 0,
-    yaw: -12,
-    handB: [2 + swing * 7, 12 - Math.abs(swing) * 2.5, 8.5],
-    wind: 1,
-    phase: i / 8,
-    sway: swing * 0.2,
+    yaw: -35,
+    handB: [swing > 0 ? 3 + swing * 6 : 3 + swing * 2, 11 - Math.abs(swing) * 2, 7.5],
+    // The coat's tails trail down and back at an angle rather than streaming out flat, the two
+    // tails either side of the vent flicking in turn.
+    wind: 0.5 + Math.abs(swing) * 0.12,
+    lift: Math.sin((2 * Math.PI * i) / 4) * 0.15,
+    phase: i / 4,
+    sway: swing * 0.35,
     fx: { speed: 0.7, dust: i % 4 === 0 ? 0.8 : 0 },
   };
 });

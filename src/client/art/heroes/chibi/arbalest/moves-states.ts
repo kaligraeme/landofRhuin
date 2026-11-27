@@ -27,7 +27,7 @@ const hurt: ChibiPose[] = [
   // Knocked back a step.
   pose(S, { x: -6, y: 5, lean: -8, twist: 12, tilt: -4, head: -6, look: -4, footF: [11, 0, 6], footB: [-12, 0, 5.5], handF: [7, 4, 5], handB: [0, 10, 12], weapon: 72, roll: 6, yaw: -10, face: 'hurt', wink: undefined, wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance.
-  settle(pose(S, { x: -3, y: 5, lean: 2, head: 2, handF: [8, 4, 4.5], weapon: 90 }), 0.7, { face: 'grit', wind: 0.15, phase: 0.6 }),
+  settle(pose(S, { x: -3, y: 5, lean: 2, head: 2, handF: [8, 4, 4.5], weapon: 90 }), 0.88, { face: 'grit', wind: 0.15, phase: 0.6 }),
 ];
 
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────

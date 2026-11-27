@@ -242,7 +242,7 @@ export function withLever(bow: WeaponDesign, spec: LeverSpec, bands: BandSpec, b
       // Over the stock where it lies on the near side, behind it on the far side.
       const near = ctx.cam.facing(norm3([w.n[0] * side, w.n[1] * side, w.n[2] * side])) > 0;
       const lift = near ? 0.9 : -0.6;
-      part.capsule(proj(hinge), proj(end), 0.75, 0.6, spec.mat, 0.1, depth(hinge) + lift, depth(end) + lift, 7);
+      part.capsule(proj(hinge), proj(end), 0.95, 0.8, spec.mat, 0.1, depth(hinge) + lift, depth(end) + lift, 7);
       // The grip across its end.
       const g0 = add3(end, w.n, side * 0.2);
       const g1 = add3(end, w.n, side * 2.6);

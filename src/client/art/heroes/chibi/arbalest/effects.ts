@@ -309,6 +309,38 @@ export const bandage =
     }
   };
 
+/**
+ * The sweep of a backward roll: two arcs of pale gold and amber round his middle in the plane he
+ * rolls in (forward and up), from `a0` to `a1` degrees (0 ahead of him, 90 overhead, 180 behind),
+ * brightest at the leading end, `k` their strength, side on only. The part behind him goes under
+ * him.
+ */
+export const rollArc =
+  (k: number, a0: number, a1: number) =>
+  (x: FxContext): void => {
+    const { c, rig } = x;
+    // Seen from in front or behind he rolls toward or away from the viewer, and the arcs would
+    // fold into a line up his middle: they are left out then.
+    const side = x.cam.vec([1, 0, 0]);
+    if (Math.hypot(side[0], side[1]) < 0.6) return;
+    const centre = add3(rig.pelvis.o, [0, 1, 0], 7);
+    const steps = Math.max(8, Math.ceil(Math.abs(a1 - a0) / 3));
+    for (const [R, col, w] of [
+      [21, GOLD, 1],
+      [16, AMBER, 0.75],
+    ] as const) {
+      let prev: Vec | null = null;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const th = rad(a0 + (a1 - a0) * t);
+        const p3: V3 = [centre[0] + Math.cos(th) * R, Math.max(0.5, centre[1] + Math.sin(th) * R), centre[2]];
+        const p = x.proj(p3);
+        if (prev) glowLine(c, prev, p, col, k * w * (0.15 + 0.85 * t), x.behind(p3));
+        prev = p;
+      }
+    }
+  };
+
 /** A bead of sweat running down his temple, on the side of his head away from the viewer's centre: `k` runs it down, 0 to 1. */
 export const sweat =
   (k: number) =>

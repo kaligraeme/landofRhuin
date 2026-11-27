@@ -24,7 +24,7 @@
  *               a bandage bound round his left forearm in a glow of warm motes, then the crossbow
  *               taken back and shouldered
  */
-import { all, bandage, charged, fireburst, goldTrail, muzzleRays, shrapnel, smoke, spentSparks, streak, warmMotes } from './effects.js';
+import { all, bandage, charged, fireburst, goldTrail, muzzleRays, rollArc, shrapnel, smoke, spentSparks, streak, warmMotes } from './effects.js';
 import { ARBALEST } from './design.js';
 import { AIM, fromStance, loosed, onLever, releaseOf, settle, STANCE } from './moves-core.js';
 import { at3, type ChibiPose, mix, pose, solveRig } from '../rig.js';
@@ -66,7 +66,7 @@ const Q_AIM = pose(AIM, { y: 5, lean: 7, head: 7, footF: [11, 0, 6], footB: [-12
 const Q_KICK = pose(Q_AIM, { x: -2.5, y: 4.5, lean: 2, head: 3, look: -4, handF: [7, 0, 4], weapon: 84 });
 const Q_SHOT = releaseOf(Q_AIM, Q_KICK);
 const Q_FIRE = pose(Q_KICK, { draw: 0, nock: false, face: 'shout', wink: undefined, wind: 0.7, lift: 0.4, phase: 0.2, fx: { flash: { k: 1.5, from: Q_SHOT.tip, dir: Q_SHOT.dir }, extra: all(muzzleRays(0.75, 10, 22), fireburst(1.35, Q_SHOT), goldTrail(1, 56, Q_SHOT)) } });
-const Q_ROCK = pose(Q_FIRE, { x: -4, y: 3.5, lean: -12, head: -5, footF: [9, -3, 6], handF: [4.5, -3, 4], weapon: 72, face: 'grit', wind: 0.5, lift: 0.5, phase: 0.35, fx: { extra: all(fireburst(0.6, Q_SHOT), smoke(0.15, 3), goldTrail(0.4, 70, Q_SHOT)) } });
+const Q_ROCK = pose(Q_FIRE, { x: -4, y: 3.5, lean: -12, head: -5, footF: [9, -3, 6], handF: [4.5, -3, 4], weapon: 72, face: 'grit', wind: 0.5, lift: 0.5, phase: 0.35, fx: { extra: all(fireburst(0.6, { dir: Q_SHOT.dir }), smoke(0.15, 3), goldTrail(0.4, 70, Q_SHOT)) } });
 /** The next explosive bolt drawn from the bandolier while the smoke clears, his left hand at his chest. */
 const Q_LOAD = pose(STANCE, { x: -2, y: 5, lean: 8, twist: 14, head: 8, look: 0, handF: [8, 5, 5], handB: [3, 7, 1], weapon: 100, yaw: -4, nock: false, face: 'stern' });
 
@@ -94,28 +94,27 @@ const q: ChibiPose[] = [
 const CROUCH = pose(AIM, { x: 1, y: 9, lean: 16, twist: 12, head: 2, look: -4, footF: [9, 0, 5.6], footB: [-8, 0, 5], handF: [8, 7, 5], elbowF: undefined, weapon: 92, yaw: -10, wink: undefined, face: 'grit' });
 const E_KICK = pose(CROUCH, { x: -1, y: 8, lean: 8, head: 0, footF: [10, -2, 5.6], footB: [-8, 0, 5], handF: [7, 6, 5], weapon: 88 });
 const E_SHOT = releaseOf(CROUCH, E_KICK);
-/** Sat back into the roll, knees up, the crossbow hugged to his chest. */
-const ROLL_SIT = { x: -2, y: 15, lean: -40, twist: 0, head: 12, look: 0, footF: [8, -8, 5], footB: [5, -5, 4.6], handF: [5, 10, 6], handB: [6, 12, 2], weapon: 25, roll: 20, yaw: -20, draw: 0, nock: false, face: 'grit', wind: -0.4, lift: 0.5, phase: 0.3 } as const satisfies ChibiPose;
-/** Over on his shoulders, his knees tucked and his boots swinging up over his head. */
-const ROLL_OVER = pose(ROLL_SIT, { x: -3, y: 17, lean: -100, head: 34, footF: [-18, -24, 5], footB: [-15, -21, 4.6], handF: [6, 8, 6], handB: [7, 10, 2], weapon: 0, roll: 30, wind: -0.2, lift: 0.8, flare: 0.3, phase: 0.45 });
+/** Sat back into the roll, knees up, the crossbow hugged to his chest, the coat spreading on the floor. */
+const ROLL_SIT = { x: -2, y: 15, lean: -48, twist: 0, head: 14, look: 0, footF: [8, -10, 5], footB: [5, -7, 4.6], handF: [5, 10, 6], handB: [6, 12, 2], weapon: 25, roll: 20, yaw: -20, draw: 0, nock: false, face: 'grit', wind: -0.4, lift: 0.5, flare: 0.5, phase: 0.3 } as const satisfies ChibiPose;
+/** Upside down over his shoulders: the head tucked low behind him, his boots swung up over it, the coat tails flaring. */
+const ROLL_OVER = pose(ROLL_SIT, { x: 0, y: -1, lean: -135, head: -10, footF: [-24, -38, 5], footB: [-19, -36, 4.6], handF: [6, 8, 6], handB: [7, 10, 2], weapon: 0, roll: 30, wind: -0.2, lift: 0.9, flare: 0.7, phase: 0.45 });
 /** Coming over onto his right knee, the crossbow coming round. */
 const ROLL_UP = { x: -2, y: 13, lean: 30, twist: 6, head: 14, look: 0, footF: [-14, -1, 5], footB: [4, -3, 5], kneel: 'F', handF: [7, 10, 6], weapon: 60, roll: 10, yaw: -20, grip2: 11, draw: 0.8, nock: false, face: 'grit', wind: -0.3, lift: 0.3, phase: 0.6 } as const satisfies ChibiPose;
 /** Up on his right knee, the crossbow levelled at the shoulder. */
 const KNEE_AIM = pose(AIM, { x: 0, y: 12, lean: 8, twist: 20, head: 6, footF: [-12, 0, 6], footB: [8, 0, 6.5], kneel: 'F', handF: [9, 1.5, 4], face: 'stern', wink: 'L', wind: 0.1, phase: 0.75 });
-const GHOSTS = { k: 0.45, n: 2, gap: 9, dir: [1, 0, 0] as const };
 
 const e: ChibiPose[] = [
   fromStance(CROUCH, 0.75),
   // The snap shot as he springs back.
   pose(E_KICK, { draw: 0, nock: false, wind: -0.3, lift: 0.3, phase: 0.15, fx: { ...loosed(E_SHOT), dust: 0.6 } }),
-  pose(ROLL_SIT, { fx: { ghosts: GHOSTS, dust: 0.5 } }),
-  pose(ROLL_OVER, { fx: { ghosts: GHOSTS, speed: 0.5 } }),
-  pose(ROLL_UP, { fx: { ghosts: { ...GHOSTS, k: 0.3, n: 1 }, dust: 0.7 } }),
+  pose(ROLL_SIT, { fx: { dust: 0.7, extra: rollArc(0.7, -50, 50) } }),
+  pose(ROLL_OVER, { fx: { extra: rollArc(1, 10, 170) } }),
+  pose(ROLL_UP, { fx: { dust: 0.8, extra: rollArc(0.55, 120, 250) } }),
   pose(KNEE_AIM, { draw: 1, nock: true }),
   pose(KNEE_AIM, { y: 11.5, head: 5, wink: undefined, phase: 0.85 }),
   // Up off the knee into the stance.
   pose(mix(KNEE_AIM, STANCE, 0.55), { kneel: undefined, footF: [7, 0, 5.8], footB: [-8, 0, 5.2], face: 'stern', wink: undefined, phase: 0.92 }),
-  settle(KNEE_AIM, 0.9, { kneel: undefined, footF: STANCE.footF, footB: STANCE.footB, phase: 1 }),
+  settle(KNEE_AIM, 1, { kneel: undefined, phase: 1 }),
 ];
 
 // ── Scattershot ──────────────────────────────────────────────────────────────────────────────
@@ -242,7 +241,7 @@ const cast: ChibiPose[] = [
   // The crossbow taken back over his right shoulder...
   pose(STANCE, { y: 3, lean: 3, twist: 8, head: 3, handF: [-1, 1, 11], handB: [6, 10, 2], weapon: -58, roll: 14, yaw: -14, face: 'stern', phase: 0.9, fx: { extra: all(bandage(1, false), warmMotes(0.5, 0.6)) } }),
   // ...and shouldered.
-  settle(pose(STANCE, { y: 3.5, twist: 14, handF: [6, 2, 6], weapon: 70 }), 0.75, { phase: 1, fx: { extra: bandage(1, false) } }),
+  settle(pose(STANCE, { y: 3.5, twist: 14, handF: [6, 2, 6], weapon: 70 }), 1, { phase: 1, fx: { extra: bandage(1, false) } }),
 ];
 
 /** The skill clips' poses, by clip. */
