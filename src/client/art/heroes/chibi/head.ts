@@ -418,7 +418,8 @@ const LIGHT_2D: Vec = [-0.6, -0.8];
  * and tip a tone darker. It stands a little clear of the hair it lies on, so a coloured line parts
  * it from the mass and from the clumps behind it, except at its root where it grows out of them.
  * A lock seen end on (pointing at the viewer or away) would shrink to a nub: as a pixel artist
- * would, it is splayed out from the middle of the head and left to droop.
+ * would, it is splayed out from the middle of the head and left to droop (or, for a stiff spike,
+ * left standing straight out: `Lock.stand`).
  */
 function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk: Lock, id: number, push: V3, m: Mat, centre: Vec): void {
   const pts3 = lockPath(d, lk, push).map((p) => at3(fr, p[0], p[1], p[2]));
@@ -435,8 +436,10 @@ function paintLock(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, lk:
     const ol = Math.hypot(ox, oy) || 1;
     ox /= ol;
     oy /= ol;
-    let dx = ((P[n] as Vec)[0] - p0[0]) * (1 - k) + ox * 0.55 * want * k;
-    let dy = ((P[n] as Vec)[1] - p0[1]) * (1 - k) + (oy * 0.3 + 1) * want * k;
+    // A soft lock droops; a stiff spike (`stand`) stands out from the middle of the head.
+    const stand = lk.stand ?? 0;
+    let dx = ((P[n] as Vec)[0] - p0[0]) * (1 - k) + ox * (0.55 + 0.45 * stand) * want * k;
+    let dy = ((P[n] as Vec)[1] - p0[1]) * (1 - k) + (oy * (0.3 + 0.7 * stand) + 1 - stand) * want * k;
     const dl = Math.hypot(dx, dy) || 1;
     dx = (dx / dl) * want;
     dy = (dy / dl) * want;

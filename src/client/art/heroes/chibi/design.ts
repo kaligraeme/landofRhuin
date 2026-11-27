@@ -23,6 +23,13 @@ export interface Lock {
   give?: number;
   /** Where along it (0 root to 1 tip) the clump is widest (default 0.3). */
   belly?: number;
+  /**
+   * How a lock seen end on (pointing at the viewer or away, so it would shrink to a nub) is laid
+   * out instead: 0 (the default) splays it out from the middle of the head and lets it droop, as a
+   * soft lock falls; 1 sets it standing straight out from the middle of the head, as a stiff
+   * spike does (hair swept back, seen from in front or behind, as a ring of points).
+   */
+  stand?: number;
 }
 
 /** Eyes, brows and the rest of a face, in head space (the right eye; the left mirrors it). */

@@ -1,7 +1,7 @@
 /**
- * The Dark Knight, as a chibi: a stern young knight with dark chestnut hair in a backcomb (combed
- * straight back off his face, lifting over the brow in a soft pompadour and ending in short points
- * that flick out at the nape), blackened plate with dull silver edges over a dark padded suit, a
+ * The Dark Knight, as a chibi: a hard-eyed young knight with long, wild, nearly black-brown hair in
+ * big jagged spikes swept back from his face (spiky bangs falling over his brow, the longest
+ * spikes falling past his nape onto his upper back), blackened plate with dull silver edges over a dark padded suit, a
  * long open oxblood coat with a high collar and split swallowtail tails, and an oversized black
  * greatsword with a pale edge, a saw-toothed back and a crimson rune channel. Everything here is
  * data for the chibi engine; his moves are in the moves-*.ts files beside it, and hero.ts puts him
@@ -9,15 +9,17 @@
  */
 import { hex } from '../../paint.js';
 import { blade } from '../blade.js';
-import type { ChibiDesign, Tress } from '../design.js';
+import type { ChibiDesign, FaceStyle, Lock, Tress } from '../design.js';
 import { collar, plates, skirt } from '../pieces.js';
 import { flat, type Hit, type Mat, mat4 } from '../raster.js';
-import type { Build } from '../rig.js';
+import type { Build, V3 } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
 const SKIN = mat4('#f6d0a8', '#e2a67e', '#c2805e', '#8e5442', '#5c2a22', 0.16);
-const HAIR = mat4('#a87650', '#7c5236', '#583822', '#341f12', '#1e1009', -0.2);
+// Dark chestnut, nearly black-brown in the shadows: the light tones show only on the lit sides of
+// the spikes, so each spike stands out from the dark gaps between them.
+const HAIR = mat4('#7a4e36', '#523220', '#341d12', '#1c0f08', '#0e0603', -0.05);
 // Overlapping plates of the same steel are parted by a line where one stands clear of the other.
 const ARMOUR = { ...mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', -0.36), clear: 1.2 };
 const ARMOUR_RIDGE = mat4('#8a90a4', '#5c6274', '#3a3e4c', '#22242e', '#121319', 0.15);
@@ -59,42 +61,99 @@ const BUILD: Build = {
   headUp: 12,
 };
 
-// ── Hair: a backcomb ─────────────────────────────────────────────────────────────────────────
-// Combed and swept straight back off his face, with volume: no fringe, so his whole forehead and
-// brows show under a hairline that arches high over the middle of his brow, stays clear of his
-// brows at the temples and curves down round them to the tops of his ears. The hair lifts off the
-// hairline in a soft, rounded pompadour set on top of it, and sweeps back over a broad crown, a
-// little wider than his head and close at his temples, to a full back of the head that juts out
-// behind his skull and gathers low at the nape, where it ends in four short tapered points over
-// his high collar. Long combed partings fan out from under the middle of his forehead, rise over
-// the pompadour, run back over the top and along the sides above his ears, and meet again low at
-// the nape. Side on the pompadour rises over his brow and the mass sweeps back and down to the
-// points behind his neck; front on it is a raised, rounded top over a bare forehead; from behind
-// it is a rounded head of combed clumps converging on the points at the nape. The mass is combed
-// into place and holds its shape: in a run, a charge or a leap the points stream, lift and ripple.
+// ── Hair: long swept-back spikes ─────────────────────────────────────────────────────────────
+// Thick, wild hair made of big separate spikes, with dark gaps between them, swept back and a
+// little up from his crown: no smooth mass anywhere, so the outline is jagged all round. Three
+// big spikes rise off the crown and rake back; more fan out over his temples and behind his ears,
+// sticking out to the sides; the back of the crown and the back of the head throw long spikes
+// back and down, and four long tapered spikes fall from the nape over his collar onto his upper
+// back, flaring out at their ends. Four thin spiky bangs fall forward over his forehead, the
+// longest between his eyes, his eyes still showing under them, and short sideburns run down in
+// front of his ears. Side on it is a spray of points streaming back from his brow; front on a
+// spiky crown over a fringe of points, with spikes flaring out over his ears; from behind a ring
+// of points round his head over long spikes down his back.
 //
-// The mass is the hair's shell with four volumes joined to it (`head.volume`); the partings are
-// the whorl's clumps, combed (shaded by the light, with thin partings and lit streaks) and
-// gathering at its sink; the points are nape layers.
+// The shell is the hair close over his skull; every spike is a lock (`head.locks`), a pointed
+// clump that stands clear of the hair under it with a dark line round it. The spikes that leave
+// his head toward the viewer or away (the crown and the back, seen front on or from behind) are
+// stiff (`Lock.stand`): seen end on they stand straight out from the middle of his head, a ring of
+// points, rather than drooping as soft locks would. The long spikes over his collar are nape
+// layers (`long.nape`), painted with the head so they lie over the collar, and they stream and
+// lift a little in a run, a charge or a leap.
 
-/**
- * The points at the nape: four short tapered tresses that leave the back of the head low down and
- * run back and down over the top of his collar, their tips flicking out a little, the outer two
- * longer and spreading to the sides, the middle two short, so from behind the hem is a jagged row
- * of points with his collar showing between them; side on the outer ones end in points behind his
- * neck. They are nape layers (`long.nape`), painted with the head, so they lie over the collar
- * without popping in front of or behind his head from frame to frame, and a tone deeper where
- * they grow out from under the mass (`napeDeep` 1), so they read as its ends. They are combed into
- * place too: in a run or a charge they stream back only a little (`give` 0.6, so they stay points
- * at his nape rather than trailing like a tail), in a fall or a leap they sweep back and lift, and
- * they ripple with the pose.
- */
-const NAPE: Tress[] = [
-  { yaw: 160, pitch: -20, dir: [-1, -1.3, 0.45], len: 10, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.6 },
-  { yaw: 171, pitch: -22, dir: [-1.1, -1.1, 0.12], len: 5.5, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.8 },
-  { yaw: 189, pitch: -22, dir: [-1.1, -1.1, -0.12], len: 5.5, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.8 },
-  { yaw: 200, pitch: -20, dir: [-1, -1.3, -0.45], len: 9.5, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.6 },
+/** A spike: where it grows (yaw, pitch on the shell), which way (head space), how long and broad, how stiff seen end on, its curl, give and widest point. */
+const L = (yaw: number, pitch: number, dir: V3, len: number, w: number, stand: number, curl?: V3, give = 0.45, belly = 0.28): Lock => ({ yaw, pitch, dir, len, w, stand, curl, give, belly });
+
+const LOCKS: Lock[] = [
+  // Low at the back.
+  L(180, 18, [-0.8, -0.8, 0.15], 20, 5.2, 0, [0, 0.2, 0]),
+  L(140, 5, [-0.8, -0.6, 0.7], 21, 5, 0.4, [0, 0.25, 0.1]),
+  L(-140, 5, [-0.8, -0.6, -0.7], 20, 5, 0.4, [0, 0.25, -0.1]),
+  // The back of the crown.
+  L(165, 45, [-1, 0.1, 0.35], 21, 5.4, 0.2, [0, 0.1, 0]),
+  L(-165, 45, [-1, 0.1, -0.35], 20, 5.4, 0.2, [0, 0.1, 0]),
+  // Behind the ears, sticking out to the sides and back.
+  L(95, 28, [-0.8, -0.35, 0.8], 14, 4.6, 0.8, [0, 0.2, 0]),
+  L(-95, 28, [-0.8, -0.35, -0.8], 14, 4.6, 0.8, [0, 0.2, 0]),
+  L(125, 32, [-0.9, -0.05, 0.75], 23, 5.4, 0.7, [0, 0.15, 0]),
+  L(-125, 32, [-0.9, -0.05, -0.75], 22, 5.4, 0.7, [0, 0.15, 0]),
+  // Over the temples, raked back.
+  L(70, 35, [-1, 0.05, 0.4], 14, 4.4, 0.5, [0, 0.1, 0]),
+  L(-70, 35, [-1, 0.05, -0.4], 14, 4.4, 0.5, [0, 0.1, 0]),
+  // The crown: big spikes swept back and a little up.
+  L(40, 52, [-1, 0.3, 0.6], 23, 5.4, 0.5, [-0.05, -0.05, 0]),
+  L(-40, 52, [-1, 0.3, -0.6], 21, 5.4, 0.5, [-0.05, -0.05, 0]),
+  L(0, 64, [-1, 0.4, 0.25], 22, 5.6, 0.3, [-0.05, -0.08, 0]),
+  // Sideburns.
+  L(70, 6, [0.1, -1, 0.3], 5, 2, 0, [0.1, 0, 0.1], 0.3),
+  L(-70, 6, [0.1, -1, -0.3], 5, 2, 0, [0.1, 0, -0.1], 0.3),
+  // Bangs: spikes falling forward over his forehead, the longest between his eyes.
+  L(-30, 44, [0.3, -1, -0.4], 8, 1.8, 0, [0.1, 0, -0.1], 0.25, 0.2),
+  L(42, 40, [0.25, -1, 0.5], 6, 1.7, 0, [0.1, 0, 0.1], 0.25, 0.2),
+  L(14, 50, [0.4, -1, 0.25], 8.5, 1.8, 0, [0.12, 0, 0.05], 0.25, 0.2),
+  L(-4, 54, [0.45, -1, -0.05], 11, 2, 0, [0.15, 0, 0], 0.25, 0.2),
 ];
+
+/** The long spikes falling from his nape over his collar onto his upper back, the outer two flaring out to the sides. */
+const NAPE: Tress[] = [
+  { yaw: 125, pitch: -4, dir: [-0.64, -1.3, 0.8], len: 19, w: 4.2, stiff: 0.9, give: 0.5, taper: 0.8, flip: 0.9 },
+  { yaw: 160, pitch: -8, dir: [-1, -1, 0.35], len: 21, w: 4.4, stiff: 0.9, give: 0.5, taper: 0.8, flip: 0.8 },
+  { yaw: 205, pitch: -8, dir: [-1, -1, -0.4], len: 19, w: 4, stiff: 0.9, give: 0.5, taper: 0.8, flip: 0.9 },
+  { yaw: 235, pitch: -4, dir: [-0.64, -1.3, -0.8], len: 16, w: 3.6, stiff: 0.9, give: 0.5, taper: 0.8, flip: 0.9 },
+];
+
+// ── Face: hard, narrow eyes under heavy brows ────────────────────────────────────────────────
+// A narrow eye under a heavy upper lid (no lower lash, the iris cut off by the lid), and a thick
+// brow angled down toward his nose; at rest his mouth is a short, set line, over a broad jaw.
+
+const FACE_HARD: FaceStyle = {
+  eyes: {
+    full: { rows: ['..KKK', 'KKIhK', '.iIIW'], ax: 2, ay: 1 },
+    mid: { rows: ['.KKK', 'KIhK', 'iIIK'], ax: 1, ay: 1 },
+    narrow: { rows: ['.KK', 'KhK', 'iI.'], ax: 1, ay: 1 },
+    closed: { rows: ['..KKK', 'KKK..'], ax: 2, ay: 1 },
+    squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
+    wide: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '.KKK.'], ax: 2, ay: 1 },
+  },
+  brows: {
+    full: { rows: ['...BB', '.BBB.', 'BB...'], ax: 2, ay: 1 },
+    mid: { rows: ['..BB', 'BBB.', 'B...'], ax: 1, ay: 1 },
+    narrow: { rows: ['.BB', 'BB.'], ax: 1, ay: 1 },
+  },
+  browsUp: {
+    full: { rows: ['BB...', '.BBBB'], ax: 2, ay: 1 },
+    mid: { rows: ['BB..', '.BBB'], ax: 1, ay: 1 },
+    narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
+  },
+  mouths: {
+    stern: { rows: ['MMM'], ax: 1, ay: 0 },
+    shout: { rows: ['MMM', 'MrM', '.M.'], ax: 1, ay: 0 },
+    grit: { rows: ['MTTM'], ax: 2, ay: 0 },
+    hurt: { rows: ['.MMM.', 'MTTTM', 'MrrrM', '.MMM.'], ax: 2, ay: 1 },
+    closed: { rows: ['MM'], ax: 1, ay: 0 },
+    smirk: { rows: ['..M', 'MM.'], ax: 1, ay: 0 },
+  },
+};
 
 // ── The torso: belt, breastplate in the coat's opening, coat over the rest ───────────────────
 
@@ -129,45 +188,16 @@ const DARK_KNIGHT: ChibiDesign = {
   build: BUILD,
   head: {
     skin: SKIN,
-    // His chestnut, lit a little less than the material's own bias: the combed mass is smoother
-    // than a shaggy cut, so more of it faces the light, and this keeps it dark.
-    hair: { ...HAIR, bias: -0.3 },
+    hair: HAIR,
     skull: { c: [0, 0.5, 0], r: [9.4, 9.7, 10.3] },
-    jaw: { c: [1.7, -4.1, 0], r: [7.9, 6.8, 8.2] },
+    jaw: { c: [1.9, -4.3, 0], r: [8.1, 6.9, 8.6] },
     ear: { c: [-0.6, -3.2, 10], r: [2, 2.8, 1.6] },
-    // A little thicker than his skull, its front flush with his forehead.
-    shell: { c: [-2.6, 2.8, 0], r: [11.4, 11.4, 11] },
-    volume: [
-      // The pompadour: the hair lifting off the middle of his hairline, set on top of it rather
-      // than forward of it, so it stays off his brow when his head tips forward; its top is the
-      // highest point of his head, so front on the top is a dome.
-      { c: [1.6, 13.8, 0], r: [5.8, 6, 10.6] },
-      // The crown, broad and nearly as high: the widest part of his hair, so front on the top is
-      // rounded and from behind it is the top of his head, the pompadour showing over it only as
-      // a low curve.
-      { c: [-4.6, 10.2, 0], r: [8.8, 7.6, 13.8] },
-      // The back of the head, carried back past his skull: side on the mass sweeps back and down,
-      // from behind it rounds out his head, and front on it stays close at his temples.
-      { c: [-9.8, 4.4, 0], r: [7.8, 7.4, 13.6] },
-      // Where the hair gathers low at the back, over the roots of the points.
-      { c: [-11.8, -0.4, 0], r: [5.6, 5.5, 10] },
-    ],
-    // High over the middle of his brow and clear of his brows at the temples, curving down round
-    // them to the tops of his ears; the hair lifts off his forehead, so it shades only a pixel of
-    // skin under its edge.
-    hairline: { faceYaw: 76, brow: 8, temple: 3.2, nape: -5.5, ear: -0.8, shadow: 1 },
-    locks: [],
+    shell: { c: [-1.8, 1.4, 0], r: [11.4, 10.6, 11.2] },
+    hairline: { faceYaw: 74, brow: 6, temple: 2, nape: -6.5, ear: -1.6, shadow: 1 },
+    locks: LOCKS,
     long: { nape: NAPE, napeDeep: 1, lie: 1 },
-    // Dark chestnut: mostly the base and shadow tones, the light tone along the lit streaks.
     darkHair: true,
-    lockLine: hex('#341f12'),
-    // The combing: eleven clumps fanning out from under the middle of his forehead (the whorl sits
-    // low, so only its fan shows and the partings cross the hairline side by side; an odd number,
-    // so none runs up the middle of his forehead and one runs down the middle of the back of his
-    // head), running straight back over the top and along the sides, and meeting again low at the
-    // nape (the sink). Combed: each takes the tone the light gives it,
-    // parted from the next by a thin dark line, with a lit streak where it faces the light.
-    whorl: { yaw: 0, pitch: -20, reach: 178, clumps: 11, twist: 0, comb: true, sink: { yaw: 180, pitch: -36 } },
+    lockLine: hex('#1c0f08'),
     face: {
       eye: [8.8, -1.7, 3.9],
       lash: hex('#1e0e10'),
@@ -175,7 +205,8 @@ const DARK_KNIGHT: ChibiDesign = {
       irisLight: hex('#9a3e24'),
       white: hex('#f2e9e0'),
       shine: hex('#ffffff'),
-      brow: hex('#2c170c'),
+      brow: hex('#1a0c08'),
+      style: FACE_HARD,
       browUp: 3,
       mouth: hex('#4a1614'),
       mouthAt: [9.8, -6.5],
