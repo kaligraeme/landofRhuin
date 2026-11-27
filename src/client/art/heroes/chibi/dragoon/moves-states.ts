@@ -1,9 +1,9 @@
 /**
  * The Dragoon's states, in the chibi pose format (rig.ts, ChibiPose).
  *
- *   hurt     3  a flinch: knocked back and sideways, head jolted back, eyes squeezed shut, the
- *               lead hand torn off the haft and the point knocked down, the cape flicked
- *               forward
+ *   hurt     3  a flinch: thrown back and sideways on buckling knees, head snapped back, eyes
+ *               squeezed shut, the lead hand torn off the haft and the lance jerked up and back,
+ *               the cape and ponytail flicked forward
  *   kneel    4  (loop) low health: down on his right knee, the left knee up, leaning on the
  *               lance planted upright beside him, his right hand on the haft at his shoulder;
  *               heaving, head down but his face to the viewer, a bead of sweat
@@ -28,12 +28,12 @@ const WHITE: RGB = [255, 255, 255];
 // ── Hurt ─────────────────────────────────────────────────────────────────────────────────────
 
 const hurt: ChibiPose[] = [
-  // The blow: thrown back and sideways, the head jolted back (only a little further than the
-  // body, so his hair and ponytail keep their shape), the lead hand torn off the haft and flung
-  // out, the point knocked down, the cape whipped forward past him.
-  pose(S, { x: -4, y: 6, lean: -16, twist: 8, tilt: -8, head: 0, look: -8, footF: [-13, 0, 5], footB: [9, -2, 5.4], handF: [-6, 15, 9], handB: [-2, 8, 14], weapon: 106, roll: -6, yaw: -34, grip: -8, face: 'hurt', wind: -0.7, lift: 0.4, flare: 0, sway: -0.5, phase: 0.2 }),
-  // Knocked back a step.
-  pose(S, { x: -6, y: 7, lean: -8, twist: 12, tilt: -5, head: -4, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-5, 16, 8], handB: [2, 11, 12], weapon: 100, roll: -4, yaw: -40, grip: -8, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0, sway: -0.3, phase: 0.4 }),
+  // The blow: thrown back and sideways, the knees buckling, the head snapped back, wincing, the
+  // lead hand torn off the haft and flung out, the lance jerked up and back as his grip slips down
+  // it, the cape and ponytail whipped forward past him.
+  pose(S, { x: -4, y: 8, lean: -20, twist: 8, tilt: -10, head: -14, look: -8, footF: [-13, 0, 5], footB: [9, -2, 5.4], handF: [-9, 13, 9], handB: [-2, 8, 14], weapon: 20, roll: -10, yaw: -40, grip: -14, face: 'hurt', wind: -0.9, lift: 0.5, flare: 0, sway: -0.5, phase: 0.2 }),
+  // Knocked back a step, half recovered, teeth gritted, the point swinging back down.
+  pose(S, { x: -6, y: 7.5, lean: -10, twist: 12, tilt: -5, head: -7, look: -8, footF: [-14, 0, 5], footB: [8, 0, 5.4], handF: [-7, 15, 8], handB: [2, 11, 12], weapon: 40, roll: -6, yaw: -42, grip: -10, face: 'grit', wind: -0.4, lift: 0.35, flare: 0, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
   settle(pose(S, { x: -3, y: 7, lean: 6, twist: 16, head: 4, handF: [-4, 16, 7], weapon: 50, yaw: -42 }), 0.7, { face: 'grit', wind: 0.45, phase: 0.6 }),
 ];
@@ -48,23 +48,23 @@ const hurt: ChibiPose[] = [
  */
 const KNELT: ChibiPose = {
   x: 0,
-  y: 12.5,
+  y: 15,
   lean: 10,
   twist: 6,
   tilt: 4,
   head: 4,
   look: 2,
-  footF: [-12, 0, 6],
-  footB: [9, 0, 11],
+  footF: [-13, 0, 5],
+  footB: [12, 0, 7],
   kneel: 'F',
-  handF: [-2, 3, 15],
+  handF: [-5, 4, 15],
   handB: [3, 19, 9],
   weapon: -4,
   roll: -6,
   yaw: 0,
   grip: 4,
   face: 'grit',
-  wind: 0.08,
+  wind: 0.35,
   flare: 0,
 };
 
@@ -117,11 +117,11 @@ const sweat =
 const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
   const b = wave(i, 4);
   return pose(KNELT, {
-    y: 12.5 + b,
+    y: 15 + b,
     lean: 10 + b * 4,
     head: 3 + b * 4,
     // The neck moves about 1.6 forward and 1.4 down as he slumps: the hands stay put.
-    handF: [-2 - 1.6 * b, 3 - 1.4 * b, 15],
+    handF: [-5 - 1.6 * b, 4 - 1.4 * b, 15],
     handB: [3 - 1.6 * b, 19 - 1.4 * b, 9],
     phase: i / 4,
     sway: (b - 0.5) * 0.2,
