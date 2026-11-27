@@ -612,10 +612,9 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
   - the head (`head.ts`): its locks of hair (pointed clumps with their own curl, give and widest
     point; a lock with `bob` stands up from the crown and springs as he moves, an ahoge; one with
     `stand` stands straight out as a stiff spike where it is seen end on, so hair swept back reads
-    as a ring of points from in front or behind); the hair's `shell` with any `volume` joined to it
-    (a fuller crown or a lift over the brow, painted as one shape with it), the clumps painted on
-    the back of the shell fanning from a `whorl` (or, with `comb`, shaded as combed hair, gathering
-    at a `sink`), and a `hairline` whose `shadow` says how deep the fringe shades the brow; long
+    as a ring of points from in front or behind); the hair's `shell`, the clumps painted on the
+    back of the shell fanning from a `whorl`, and a `hairline` whose `shadow` says how deep the
+    fringe shades the brow; long
     hair if it has any (a curtain down the back laid out with `curtain`, locks over the shoulders,
     a tied ponytail with a `sheen` for glossy dark hair; short layers at the nape, painted with the
     head, whose ends can `flip` out, as in a layered cut); hair worn up (`buns`: one or two buns,
@@ -678,11 +677,14 @@ they act (`formShow` in `game/chibiState.ts`). A burst of fire and embers marks 
 `npx tsx scripts/chibi-sheet.ts --hero <id>` paints contact sheets of every clip in the three
 views, and `test/chibi.test.ts` checks every registered hero: that every frame paints cleanly
 and the same every time, stands on the ground, fits its frame and changes from frame to frame,
-that it stands as tall as its height says and paints fast enough. It also pins a few of the Dark
-Knight's frames pixel for pixel, so engine work for one hero cannot change another by accident.
-The test mannequins in `test/` (`chibi-mannequins.ts`, `chibi-gear-mannequin.ts`,
-`chibi-combined-mannequins.ts`, `chibi-kit-mannequins.ts`, `chibi-body-mannequins.ts`) show every
-engine option at work, for checking new ones, and `chibi-roster-mannequins.ts` puts the body,
+that it stands as tall as its height says and paints fast enough. `test/chibi-pinned.test.ts`
+pins every frame of every hero and form pixel for pixel (a checksum each, in
+`test/chibi-frames.json`), so engine work for one hero cannot change another by accident; when a
+change to a hero is meant, `UPDATE_CHIBI_FRAMES=1 npx vitest run test/chibi-pinned.test.ts`
+repaints the checksums, and the commit says which heroes changed. The test mannequins in `test/`
+(`chibi-mannequins.ts`, `chibi-gear-mannequin.ts`, `chibi-combined-mannequins.ts`,
+`chibi-kit-mannequins.ts`, `chibi-body-mannequins.ts`) show the engine's options at work, for
+checking new ones (the heroes themselves carry the rest), and `chibi-roster-mannequins.ts` puts the body,
 head and gear options together on one figure (a hooded archer, a bearded sage with a staff, a
 knight with a circlet, cape and shield, a crossbowman, a sabre fighter, a crested lancer) to check
 how they sort against each other. The paint-time checks time a hero against work painted in the

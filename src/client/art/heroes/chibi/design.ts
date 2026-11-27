@@ -204,13 +204,6 @@ export interface HeadDesign {
   /** The hair's shell over the skull. */
   shell: { c: V3; r: V3 };
   /**
-   * More hair joined to the shell, for volume one ellipsoid cannot give (a pompadour's lift over
-   * the brow, a fuller crown): ellipsoids in head space painted as the shell is, with its
-   * hairline, whorl and shading and no line where they meet it. Locks and long hair lie over them
-   * as over the shell; roots and the whorl's clumps still go by the shell. None by default.
-   */
-  volume?: readonly { c: V3; r: V3 }[];
-  /**
    * Where the face shows through the shell: within `faceYaw` degrees of the front and below the
    * fringe, whose height (head space u) runs from `brow` at the middle to `temple` at the face's
    * sides; and the sides and back are bare below `nape` (and around the ears, below `ear`). The
@@ -231,16 +224,10 @@ export interface HeadDesign {
    * Clumps painted on the shell, fanning out from the crown's whorl (where on the shell, as a
    * lock's root is given), out to `reach` degrees from it: how many there are round it and how
    * far they twist as they fall (radians of turn per radian out). By default each clump is banded
-   * the same all round the head (a dark parting, a lit band, the light tone, a darker far side).
-   * `comb` shades them as combed hair instead: the hair takes the tone the light gives it (as the
-   * raster shades any surface, the material's bias and gain included, so dark hair stays dark),
-   * each clump parted from the next by a thin dark line, with a streak a tone lighter along its
-   * lit side only where the hair faces the light (hair combed back from a whorl under the
-   * hairline).
-   * The clumps meet again at the point opposite the whorl, or at `sink` (where on the shell, as
-   * the whorl is given) if set: hair combed back from the brow gathering at the nape.
+   * the same all round the head (a dark parting, a lit band, the light tone, a darker far side),
+   * and they meet again at the point opposite the whorl.
    */
-  whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number; comb?: boolean; sink?: { yaw: number; pitch: number } };
+  whorl?: { yaw: number; pitch: number; reach: number; clumps: number; twist: number };
   face: FaceDesign;
   /** Hair longer than the locks: a curtain down the back, locks over the shoulders, a ponytail. */
   long?: LongHair;
