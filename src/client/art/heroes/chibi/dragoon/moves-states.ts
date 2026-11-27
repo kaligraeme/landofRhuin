@@ -5,8 +5,9 @@
  *               squeezed shut, the lead hand torn off the haft and the lance jerked up and back,
  *               the cape and ponytail flicked forward
  *   kneel    4  (loop) low health: down on his right knee, the left knee up, leaning on the
- *               lance planted upright beside him, his right hand on the haft at his shoulder;
- *               heaving, head down but his face to the viewer, a bead of sweat
+ *               lance planted upright beside him, his right hand on the haft at his shoulder,
+ *               the cape fallen behind him to the floor; heaving, head down but his face to the
+ *               viewer, a bead of sweat
  *   ko       6  (hold) a stagger, onto his knees, toppling back, twisting so that he lies across
  *               the screen in every view, the lance clattering down beside him, the cape spilling
  *               out over the floor
@@ -41,10 +42,11 @@ const hurt: ChibiPose[] = [
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Down on his right knee, the left foot planted forward and out with its knee up, leaning on the
+ * Down on his right knee, low, the left foot planted forward with its knee up, leaning on the
  * lance planted upright beside his right knee: his right hand on the haft at his shoulder, out
- * beside him so his arm never crosses his face, his left on the raised knee, head down but his
- * face still turned to the viewer. The tassets and cape hang straight (no flare).
+ * beside him and a little back so neither his arm nor the haft crosses his face, his left on the
+ * raised knee, head down but his face still turned to the viewer. The tassets hang straight (no
+ * flare) and a light breeze lays the cape back over his heel to the floor.
  */
 const KNELT: ChibiPose = {
   x: 0,
@@ -193,8 +195,9 @@ const clatter = ({ c, rig, proj, hash }: FxContext): void => {
 const ko: ChibiPose[] = [
   // Stagger back, the haft slipping in his grip.
   pose(S, { x: -4, y: 6, lean: -13, twist: 6, tilt: -6, head: -2, footF: [-13, 0, 5], footB: [9, -1, 5.4], handF: [-4, 14, 8], handB: [-3, 9.5, 13.5], weapon: 104, roll: -10, yaw: -34, grip: -8, face: 'hurt', sway: -0.4, lift: 0.3 }),
-  // His knees give: down on both, the lance's butt striking the floor as it tips.
-  pose(S, { x: -2, y: 15, lean: 8, twist: 0, head: 18, footF: [-9, -1, 5], footB: [-10, -1, 4.6], kneel: 'F', handF: [6, 16, 8], weapon: 28, roll: -16, yaw: -20, grip: 4, face: 'hurt', wind: 0, flare: 0.2 }),
+  // His knees give: down on both, the lance's butt striking the floor as it tips across him,
+  // below his face.
+  pose(S, { x: -2, y: 15, lean: 8, twist: 0, head: 18, footF: [-9, -1, 5], footB: [-10, -1, 4.6], kneel: 'F', handF: [6, 16, 8], weapon: 42, roll: -16, yaw: -40, grip: 4, face: 'hurt', wind: 0, flare: 0.2 }),
   // He sways back, turning, the lance falling away from his loosening grip.
   pose(S, { x: -2, y: 16, lean: -10, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-7, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [6, 18, 14], handB: [2, 18, 11], weapon: 60, roll: 40, yaw: -10, grip: 4, face: 'closed', wind: 0, lift: 0.2 }),
   // Toppling back, the cape flying up; the lance hits the floor beside him.

@@ -72,7 +72,8 @@ export const READY: ChibiPose = {
 /**
  * At ease, weight on his back foot: the lance shouldered and sloping up and back at about 50
  * degrees, its haft resting against his right shoulder, his right hand on it at his chest and its
- * butt down by his front foot, the point up behind his head; the left thumb hooked in his belt.
+ * butt resting on the floor by his front foot, the point up behind his head; the left thumb hooked
+ * in his belt.
  * Toward the viewer the lance rises on a diagonal past his right shoulder, away from the viewer
  * the same diagonal mirrored, clear of his face in every view.
  */
@@ -88,10 +89,10 @@ export const AT_EASE: ChibiPose = {
   footB: [-5, 0, 4.2],
   handF: [5, 13, 9.5],
   handB: [0, 17, 6.5],
-  weapon: -40,
+  weapon: -38,
   roll: 8,
-  yaw: -20,
-  grip: 10,
+  yaw: -35,
+  grip: 6,
   wind: 0.1,
   face: 'smirk',
 };
@@ -333,35 +334,38 @@ export const both =
 
 /**
  * Sparks shed off the glowing point as it rests or moves (strength k): a short wisp of violet
- * light curling back off the tip, and `n` motes that leave the point's channel and drift back
- * along the lance and up, fading as they go, each a white-hot heart in a violet cross; `phase`
- * (turns: advance it frame by frame) carries them on, each wrapping back to the point when it
- * fades, and curls the wisp. The trail the reference's lance leaves.
+ * light curling up and back off the tip, and `n` motes that leave the tip and drift up and back
+ * off it, clear of the lance's own glowing head, fading as they go: each a white-hot heart in a
+ * violet cross, the fresh ones a little larger. `phase` (turns: advance it frame by frame) carries
+ * them on, each wrapping back to the tip when it fades, and curls the wisp. Where the figure
+ * stands nearer the viewer than they are, it hides them. The trail the reference's lance leaves.
  */
 export const sparks =
   (k: number, phase: number, n = 7) =>
   (x: FxContext): void => {
     const { c, aura, hash } = x;
-    // The wisp: a curl of violet light from the tip back along the lance and up, brightest at the tip.
     const up: V3 = [0, 1, 0];
+    const hidden = (p3: V3, q: Vec): boolean => x.behind(p3) && c.opaque(Math.floor(q[0]), Math.floor(q[1]));
+    // The wisp: a curl of violet light rising off the tip, brightest at the tip.
     let prev: Vec | null = null;
     for (let s = 0; s <= 8; s++) {
       const t = s / 8;
-      const curl = Math.sin(t * Math.PI * 1.4 + phase * Math.PI * 2) * 2.2 * t;
-      const p3 = add3(add3(x.tip, x.dir, -2 - t * 13), up, t * 5 + curl);
+      const curl = Math.sin(t * Math.PI * 1.4 + phase * Math.PI * 2) * 2.4 * t;
+      const p3 = add3(add3(x.tip, x.dir, -1 - t * 9), up, 1 + t * 9 + curl);
       const p = x.proj(p3);
-      if (prev) glowLine(c, prev, p, t < 0.3 ? mixc(aura.hot, aura.core, 0.4) : aura.core, k * 0.75 * (1 - t), x.behind(p3));
+      if (prev) glowLine(c, prev, p, t < 0.35 ? mixc(aura.hot, aura.core, 0.35) : aura.core, k * 0.8 * (1 - t * 0.85), hidden(p3, p));
       prev = p;
     }
     for (let i = 0; i < n; i++) {
       const t = (((hash(i, 181) + phase * (0.8 + 0.4 * hash(i, 182))) % 1) + 1) % 1;
-      const back = 2 + t * 16 + hash(i, 183) * 8;
-      const p3 = add3(add3(x.tip, x.dir, -back), up, t * 12 + (hash(i, 184) - 0.5) * 5);
-      const q = x.proj([p3[0], p3[1], p3[2] + (hash(i, 185) - 0.5) * 4]);
-      const a = Math.min(1, k * Math.min(1, (1 - t) * 1.8) * (0.8 + 0.3 * hash(i, 186)));
-      const under = x.behind(p3);
+      const back = t * 11 + hash(i, 183) * 5;
+      const p3 = add3(add3(x.tip, x.dir, -back), up, 2 + t * 15 + (hash(i, 184) - 0.5) * 5);
+      const q = x.proj([p3[0], p3[1], p3[2] + (hash(i, 185) - 0.5) * 6]);
+      const a = Math.min(1, k * Math.pow(1 - t, 0.6) * (0.85 + 0.3 * hash(i, 186)));
+      const under = hidden(p3, q);
       c.glow(q[0], q[1], aura.hot, a, under);
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) c.glow(q[0] + dx, q[1] + dy, aura.core, a * 0.6, under);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) c.glow(q[0] + dx, q[1] + dy, aura.core, a * 0.65, under);
+      if (t < 0.3) for (const [dx, dy] of [[1, 1], [-1, -1], [1, -1], [-1, 1]] as const) c.glow(q[0] + dx, q[1] + dy, aura.edge, a * 0.3, under);
     }
   };
 

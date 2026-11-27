@@ -22,9 +22,10 @@
  *                middle in both hands, a violet ring round him that trails the point, the cape and
  *                ponytail flung out
  *   ult      12  (2 wind-up) Skewer: the lance couched low under his arm, a crouch while the
- *                energy gathers, then a charge in long bounding strides with violet afterimages
- *                and a cone of energy opening ahead of the point, a great burst and a ring at the
- *                point, and a skidding stop. The server moves him, so it plays in place.
+ *                energy gathers, then a charge in long bounding strides, crisp violet echoes of
+ *                his silhouette a stride apart behind him and a spearhead of light sheathing the
+ *                point, a great burst and a bright ring at the point, and a skidding stop. The
+ *                server moves him, so it plays in place.
  *   cast      8  (2 wind-up) role skills (Bloodrush, Second Wind) and the Elixir: the lance
  *                lifted upright beside his shoulder, spun once level round his hips and planted
  *                upright beside him, a flare of violet rays behind him and a burst round him
@@ -34,9 +35,9 @@
  */
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
-import { DUST, DUST_DARK, glowLine, puff, swirl } from '../fx.js';
+import { DUST, DUST_DARK, glowLine, puff } from '../fx.js';
 import { scanPoly } from '../raster.js';
-import { add3, type ChibiPose, clamp, cross3, type FxContext, norm3, pose, solveRig, type V3, weaponAxes } from '../rig.js';
+import { add3, type ChibiPose, clamp, cross3, type FxContext, norm3, pose, solveRig, type V3 } from '../rig.js';
 import { DRAGOON } from './design.js';
 import { alongOf, both, drill, flash, fromReady, gust, headUp, READY, settle, streak, thrust, tipOf, withExtra } from './moves-core.js';
 

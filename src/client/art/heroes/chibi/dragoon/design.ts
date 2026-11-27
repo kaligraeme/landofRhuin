@@ -1,20 +1,23 @@
 /**
  * The Dragoon, as a chibi: a lean, long-legged young lancer with narrow amber eyes and a cocky
- * half-smile, in light dragon-styled armour of dark violet steel with pale lilac edges. He wears an
- * open-faced dragon crest half-helm (a pale brow band dipping to a point over his nose, a row of
- * overlapping scales above it and down the cheek guards, a pale ridge over the crown, two
- * swept-back fins like folded dragon wings rising behind each temple), with his jet-black hair,
- * blue in its sheen, showing at the fringe and falling from under the back of the helm in a long
- * ponytail. A scale-patterned breastplate and a gorget, layered wing-like pauldrons swept back to
- * points, vambraces ending in claws over the knuckles, scaled tassets and greaves with a spur at
- * the knee, over a dark charcoal under-suit; a streaming violet-black cape to below the knee with a
- * crimson lining and a hem cut like a wing's trailing edge. His lance is taller than he is: a dark
- * steel shaft with violet wraps and silver bands, a long leaf point with a glowing violet channel,
- * a vamplate of spread dragon wings below it and a butt spike. His energy is violet with a pale
+ * half-smile, in light dragon-styled armour of dark indigo steel, its pale lilac edges kept to a
+ * few: the helm's brow band, the leading edges of its frills and the pauldrons' tips. He wears an
+ * open-faced dragon crest half-helm (a pale brow band dipping to a snout point over his nose, a
+ * row of overlapping scales above it and down the cheek guards, a dark keel over the crown lit
+ * only over the brow, and a frill of three swept-back blades rising behind each temple, like a
+ * dragon's folded wing), with his jet-black hair, blue in its sheen, showing at the fringe and
+ * falling from under the back of the helm in a long ponytail that parts into locks at its end. A
+ * scale-patterned breastplate and a gorget, layered wing-like pauldrons swept back to points with
+ * scales jutting past the shoulder, vambraces ending in claws over the knuckles, pointed tassets
+ * and greaves with a spur at the knee, over a dark charcoal under-suit; a streaming violet-black
+ * cape to below the knee, closed at the collar by a short mantle, with a crimson lining and a hem
+ * cut like a wing's trailing edge. His lance is taller than he is: a dark steel shaft with violet
+ * wraps and two small steel bands, a long leaf point that glows violet inside a soft halo, a
+ * vamplate of spread dragon wings below it and a butt spike. His energy is violet with a pale
  * lilac edge and a white-hot core. Everything here is data for the chibi engine (with the few
- * pieces of his own below: the helm's scaled cheek guards and brow point, the pauldrons, the spurs
- * and claws, the lance's wings); his moves are in the moves-*.ts files beside it, and hero.ts puts
- * him together.
+ * pieces of his own below: the helm's frills, scaled cheek guards and snout point, the pauldrons,
+ * the spurs and claws, the cape's mantle, the lance's wings and halo); his moves are in the
+ * moves-*.ts files beside it, and hero.ts puts him together.
  */
 import { hex, type RGB } from '../../paint.js';
 import { scaleAt } from '../armour.js';
@@ -722,7 +725,9 @@ const DRAGOON: ChibiDesign = {
     darkHair: true,
     whorl: { yaw: 180, pitch: 42, reach: 110, clumps: 7, twist: 0 },
     long: {
-      // Tied at the back of the head under the helm, falling from beneath it past his shoulder blades.
+      // Tied at the back of the head under the helm, falling from beneath it past his shoulder
+      // blades: black hair, loose enough to sway a beat behind him, with two shorter locks beside
+      // it that splay out at the end, so it ends in a split tip rather than one stiff point.
       tail: { yaw: 180, pitch: 30, dir: [-1, 0.3, 0], stiff: 0.16, len: 36, w: 1.8, give: 1.45, tie: { mat: RIM, r: 2.1 } },
       back: [
         { yaw: 170, pitch: 30, dir: [-1, -0.2, -0.35], stiff: 0.2, len: 30, w: 1.25, give: 1.5, taper: 0.5 },
