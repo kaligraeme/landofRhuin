@@ -1,8 +1,10 @@
 /** The client's copy of the dungeon: map, entities (interpolated between snapshots), telegraphs. */
 import { THEMES, type ThemeDef } from '../../shared/content/monsters.js';
+import { STATUSES } from '../../shared/content/statuses.js';
 import { lerp, lerpAngle } from '../../shared/geometry.js';
 import { decodeTiles, T_FLOOR, T_GATE, type TileMap } from '../../shared/map.js';
 import type { DutyState, EntitySnap, EntitySpawn, GateInfo, InstanceStart, MeSnap, ProjectileSnap, TelegraphSnap } from '../../shared/protocol.js';
+import type { FormSeen } from './chibiState.js';
 
 /** How far behind the newest snapshot other entities are drawn, for smooth motion. */
 export const INTERP_DELAY = 0.12;
@@ -65,6 +67,11 @@ export class World {
   downAt = new Map<number, number>();
   /** When the dungeon was completed (client seconds), for the victory pose. */
   completedAt: number | null = null;
+  /**
+   * Each hero's latest form (the Firebeast), from the status events, with snapshots catching any
+   * missed: when it began and when it ended (client seconds).
+   */
+  forms = new Map<number, FormSeen>();
   readonly meId: number;
   readonly hotbar: string[];
   me: MeSnap | null = null;
@@ -127,6 +134,12 @@ export class World {
         // Going down while we watch starts the fall; a hero already down when first seen just lies there.
         if (!s.d) this.downAt.delete(e.id);
         else if (!first && !e.snap.d && !this.downAt.has(e.id)) this.downAt.set(e.id, performance.now() / 1000);
+        // A form seen in a snapshot without its event (we joined mid-form) shows as long taken.
+        const form = (s.s ?? []).find(([id]) => STATUSES[id]?.form)?.[0] ?? null;
+        const seen = this.forms.get(e.id);
+        const now = performance.now() / 1000;
+        if (form && (!seen || seen.endedAt !== null || seen.id !== form)) this.forms.set(e.id, { id: form, at: now - 60, endedAt: null });
+        else if (!form && seen && seen.endedAt === null) seen.endedAt = now;
       }
       e.snap = s;
       e.samples.push({ t: time, x: s.x, y: s.y, f: s.f });
@@ -135,6 +148,25 @@ export class World {
       if (!s.d && e.spawn.kind === 'player') e.diedAt = null;
     }
     this.telegraphs = tgs;
+  }
+
+  /** A form begins or ends on an actor (a status event). Returns whether anything changed. */
+  formEvent(id: number, form: string, gain: boolean, now = performance.now() / 1000): boolean {
+    const seen = this.forms.get(id);
+    if (gain) {
+      if (seen && seen.id === form && seen.endedAt === null) return false;
+      this.forms.set(id, { id: form, at: now, endedAt: null });
+      return true;
+    }
+    if (!seen || seen.endedAt !== null) return false;
+    seen.endedAt = now;
+    return true;
+  }
+
+  /** Whether an entity is in a form right now, and which. */
+  formOf(id: number): string | null {
+    const seen = this.forms.get(id);
+    return seen && seen.endedAt === null ? seen.id : null;
   }
 
   /** Moves every entity to its interpolated position for this frame. */

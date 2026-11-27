@@ -7,14 +7,27 @@
  * They play the aggro game: a tank grabs whatever is loose and leans on its aggro skills; the
  * others watch their threat, ease off before they pull a monster off the tank, and run to the
  * tank when something comes for them anyway.
+ *
+ * A hero who has taken a form (the Flame Warden's Firebeast) only attacks: no skills, no rolls,
+ * no easing off and no running to the tank, since no monster can hurt it. It ignores only the
+ * markers that land while the form holds: one that lands after it ends is as deadly as ever. It
+ * still keeps clear of other heroes under a spread marker and joins a stack. A tank leaves the
+ * monsters on it be until the form is about to end, then takes them back.
+ *
+ * A tank-buster follows whoever it is on wherever they go. A hero with one on them never dashes or
+ * leaps to where it would cover anyone else: a tank charging through a boss to brace would land it
+ * among the Duelists behind, with no time for them to step out, so it charges another way. A hero
+ * who is not the tank (a Duelist who pulled the boss, or the Flame Warden whose claws kept it on
+ * him past the Firebeast) cannot outrun one either: they roll through it as it lands, the way that
+ * keeps it off the others.
  */
-import { PARTY_EFFECT_RADIUS, ROLL_STAMINA } from '../../shared/constants.js';
-import { skillDef, WEAPONS, type SkillDef } from '../../shared/content/classes.js';
+import { PARTY_EFFECT_RADIUS, ROLL_DISTANCE, ROLL_STAMINA } from '../../shared/constants.js';
+import { skillDef, WEAPONS, type FormDef, type SkillDef } from '../../shared/content/classes.js';
 import { STATUSES } from '../../shared/content/statuses.js';
 import { angleDiff, angleTo, dist, shapeHits, type Shape, type Vec } from '../../shared/geometry.js';
 import { circleFree, findPath, lineOfSight, moveCircle, segmentClear } from '../../shared/map.js';
 import { AGGRO } from '../sim/aggro.js';
-import { dodge, enemiesIn, getStatus, skillBlocker, skillShape, speedOf, useSkill } from '../sim/combat.js';
+import { basicChain, dodge, enemiesIn, formOf, getStatus, isMonsterImmune, skillBlocker, skillShape, speedOf, useSkill } from '../sim/combat.js';
 import type { Instance } from '../sim/instance.js';
 import type { Monster, Player, Telegraph } from '../sim/types.js';
 
@@ -53,6 +66,10 @@ interface Ctx {
   healer: boolean;
   ranged: boolean;
   reach: number;
+  /** The form the bot has taken (the Firebeast), if any. */
+  form: FormDef | null;
+  /** When that form ends (instance time), or 0 without one. */
+  formEnds: number;
 }
 
 export function updateBot(inst: Instance, p: Player, dt: number): void {
@@ -62,6 +79,8 @@ export function updateBot(inst: Instance, p: Player, dt: number): void {
   const allies = inst.players.filter((o) => !o.dead);
   const weapon = WEAPONS[p.weapon];
   const tgs = [...inst.telegraphs.values()];
+  const form = formOf(p);
+  const formEnds = form ? (getStatus(p, form.status)?.expires ?? 0) : 0;
   const ctx: Ctx = {
     inst,
     p,
@@ -78,6 +97,8 @@ export function updateBot(inst: Instance, p: Player, dt: number): void {
     healer: !!weapon?.healer,
     ranged: !!weapon?.ranged,
     reach: weapon?.reach ?? 1,
+    form,
+    formEnds,
   };
   ctx.target = pickTarget(ctx);
   p.targetId = ctx.target?.id ?? null;
@@ -99,20 +120,26 @@ export function updateBot(inst: Instance, p: Player, dt: number): void {
   } else mem.repositioning = false;
   if (gap <= 0.35) mem.repositioning = false;
 
-  // Roll out of anything about to land.
-  if (inDanger && here >= 50 && p.stamina >= ROLL_STAMINA && gap > 1 && soonestDanger(ctx) < 0.5) {
+  // Roll out of anything about to land (a form cannot roll).
+  if (!ctx.form && inDanger && here >= 50 && p.stamina >= ROLL_STAMINA && gap > 1 && soonestDanger(ctx) < 0.5) {
     const a = angleTo(p, dest);
     dodge(inst, p, Math.cos(a), Math.sin(a));
     return;
   }
+  // A buster on a hero who is not the tank follows them wherever they run: roll through it as it
+  // lands, or dash through it on a skill that cannot be hurt (Flashfire). A form that still holds
+  // when it lands is safe anyway.
+  if (evadeBuster(ctx, dest)) return;
 
   if (ctx.moving) moveToward(ctx, dest, speedOf(p) * dt);
   if (ctx.target) p.facing = angleTo(p, ctx.target);
 
-  // A damage dealer about to rip a monster off the tank holds its swing until the tank pulls ahead.
-  const tooHot = p.role !== 'tank' && !!ctx.target && !!ctx.tank && threatOn(inst, p, ctx.target) > 0.95;
+  // A damage dealer about to rip a monster off the tank holds its swing until the tank pulls ahead;
+  // a form no monster can hurt does not.
+  const tooHot = p.role !== 'tank' && !ctx.form && !!ctx.target && !!ctx.tank && threatOn(inst, p, ctx.target) > 0.95;
   p.attacking = !!ctx.target && ctx.inCombat && inBasicReach(ctx, ctx.target) && !tooHot;
-  if (!p.cast) chooseAndUseSkill(ctx);
+  // A form only attacks.
+  if (!p.cast && !ctx.form) chooseAndUseSkill(ctx);
 }
 
 // ── Aggro ──────────────────────────────────────────────────────────────────────────────────
@@ -127,6 +154,24 @@ export function threatOn(inst: Instance, p: Player, m: Monster): number {
   if (!holder || holder.dead) return 0;
   const held = (m.enmity.get(holder.id) ?? 0) * (holder.role === 'tank' ? AGGRO.tankStick : AGGRO.stick);
   return held > 0 ? (m.enmity.get(p.id) ?? 0) / held : 0;
+}
+
+/**
+ * Seconds before a form ends at which a tank takes back the monsters on it: late enough that the
+ * last claws do not pull them away again, early enough that they are back on the tank when it ends.
+ */
+export const TAKE_BACK = 0.8;
+
+/**
+ * Whether a monster is after a hero it cannot hurt (the Firebeast) for a while yet, so a tank can
+ * leave it there and keep its taunt for when the form ends.
+ */
+function heldByForm(inst: Instance, m: Monster): boolean {
+  const holder = m.targetId != null ? inst.players.find((o) => o.id === m.targetId) : undefined;
+  if (!holder || holder.dead || !isMonsterImmune(holder)) return false;
+  const form = formOf(holder);
+  const ends = form ? (getStatus(holder, form.status)?.expires ?? 0) : 0;
+  return ends - inst.now > TAKE_BACK;
 }
 
 /** Monsters that have turned on a hero who is not the tank. */
@@ -163,9 +208,9 @@ function nearest<T extends Vec>(from: Vec, list: T[]): T | null {
 
 function inBasicReach(ctx: Ctx, t: Monster): boolean {
   const { p, inst } = ctx;
-  const weapon = WEAPONS[p.weapon];
-  if (!weapon) return false;
-  const d = skillDef(weapon.basic.hits[p.chain % weapon.basic.hits.length] as string).delivery;
+  const basic = basicChain(p);
+  if (!basic) return false;
+  const d = skillDef(basic.hits[p.chain % basic.hits.length] as string).delivery;
   const edge = dist(p, t) - t.radius;
   switch (d.kind) {
     case 'arc':
@@ -205,6 +250,9 @@ function danger(ctx: Ctx, q: Vec): number {
   let d = 0;
   for (const t of inst.telegraphs.values()) {
     if (!cares(ctx, t) || !noticed(ctx, t)) continue;
+    // No monster can hurt a form: a marker that lands while it holds matters only if it hurts the
+    // others (spread, stack). One that lands after the form ends is as deadly as ever.
+    if ((t.style === 'aoe' || t.style === 'buster') && landsInForm(ctx, t)) continue;
     const s = t.shape;
     switch (t.style) {
       case 'aoe':
@@ -226,6 +274,105 @@ function danger(ctx: Ctx, q: Vec): number {
     }
   }
   return d;
+}
+
+/**
+ * Seconds before a form ends by which a marker must land for the bot to ignore it: the form ends
+ * on a tick, and a marker that lands on that same tick must not be counted as harmless.
+ */
+const FORM_MARGIN = 0.15;
+
+/** Whether a marker lands while the bot's form (the Firebeast) still holds. */
+function landsInForm(ctx: Ctx, t: Telegraph): boolean {
+  return t.end < ctx.formEnds - FORM_MARGIN;
+}
+
+/**
+ * Rolls (or uses a skill that cannot be hurt, Flashfire) through a tank-buster on a bot that is not
+ * the tank, as it lands: there is no stepping out of one, since it follows the bot wherever it
+ * goes, and it kills anyone but a braced tank. The bot goes the way that keeps the others out of
+ * it. A tank braces instead, and a form that still holds when it lands needs do nothing. Returns
+ * whether it did.
+ */
+function evadeBuster(ctx: Ctx, dest: Vec): boolean {
+  const { inst, p } = ctx;
+  if (p.role === 'tank') return false;
+  const buster = [...inst.telegraphs.values()].find((t) => t.style === 'buster' && t.followId === p.id && noticed(ctx, t) && !landsInForm(ctx, t));
+  if (!buster || buster.shape.kind !== 'circle') return false;
+  const left = buster.end - inst.now;
+  const radius = buster.shape.radius;
+  // A roll leaves the hero unhurt for 0.38s, Flashfire for 0.25s: start either just before it lands.
+  if (left < 0.3 && p.stamina >= ROLL_STAMINA) {
+    const a = clearHeading(ctx, ROLL_DISTANCE, radius, buster.end, dest);
+    return dodge(inst, p, Math.cos(a), Math.sin(a)) === null;
+  }
+  if (left < 0.2 && !p.cast) {
+    for (const id of p.hotbar) {
+      const skill = skillDef(id);
+      if (!skill.iframes || skill.slot === 'dodge' || skill.iframes <= left || skillBlocker(inst, p, skill)) continue;
+      const reach = skill.delivery.kind === 'dash' ? skill.delivery.distance : 0;
+      const a = clearHeading(ctx, reach, radius, buster.end, ctx.target ?? dest);
+      if (useSkill(inst, p, id, { x: p.x + Math.cos(a) * 3, y: p.y + Math.sin(a) * 3 }) === null) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * How many other heroes a marker of this radius that follows the bot would cover with the bot at q,
+ * landing at `at`: not those whose form (the Firebeast) still holds then, since it cannot hurt them.
+ */
+function crowdAt(ctx: Ctx, q: Vec, radius: number, at: number): number {
+  return ctx.allies.filter((o) => o !== ctx.p && dist(o, q) < radius + o.radius + 0.6 && !immuneAt(o, at)).length;
+}
+
+/** Whether no monster can hurt a hero at that moment (instance time): their form still holds. */
+function immuneAt(o: Player, at: number): boolean {
+  if (!isMonsterImmune(o)) return false;
+  const form = formOf(o);
+  return (form ? (getStatus(o, form.status)?.expires ?? 0) : 0) > at;
+}
+
+/**
+ * The way to roll or dash `reach` tiles so a marker of `radius` that follows the bot covers no
+ * other hero where it ends up, as near the way to `toward` as that allows.
+ */
+function clearHeading(ctx: Ctx, reach: number, radius: number, at: number, toward: Vec): number {
+  const { inst, p } = ctx;
+  const want = angleTo(p, toward);
+  let best = want;
+  let bestScore = -Infinity;
+  for (let i = 0; i < 16; i++) {
+    const a = want + (i / 16) * Math.PI * 2;
+    const to = moveCircle(inst.map, p, Math.cos(a) * reach, Math.sin(a) * reach, p.radius);
+    const score = -crowdAt(ctx, to, radius, at) * 10 - Math.abs(angleDiff(a, want));
+    if (score > bestScore) {
+      best = a;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/** Where a dash or a leap would leave the bot, or null for any other skill. */
+function landing(ctx: Ctx, skill: SkillDef, aim: Vec): Vec | null {
+  const { inst, p } = ctx;
+  const d = skill.delivery;
+  if (d.kind === 'dash') {
+    const a = angleTo(p, aim);
+    return moveCircle(inst.map, p, Math.cos(a) * d.distance, Math.sin(a) * d.distance, p.radius);
+  }
+  if (d.kind === 'leap') {
+    const shape = skillShape(inst, p, skill, aim);
+    return shape && shape.kind === 'circle' ? { x: shape.x, y: shape.y } : null;
+  }
+  return null;
+}
+
+/** The tank-buster that follows the bot wherever it goes, if one is on it: its radius and when it lands. */
+function busterOn(ctx: Ctx): { radius: number; end: number } | null {
+  for (const t of ctx.inst.telegraphs.values()) if (t.style === 'buster' && t.followId === ctx.p.id && t.shape.kind === 'circle') return { radius: t.shape.radius, end: t.end };
+  return null;
 }
 
 /** Seconds until the next damaging telegraph covering the bot lands. */
@@ -332,7 +479,7 @@ function chooseDestination(ctx: Ctx): Vec {
   const stackOnMe = marks.some((t) => t.style === 'stack' && t.followId === p.id);
   const spreadOnMe = marks.find((t) => t.style === 'spread' && t.followId === p.id && noticed(ctx, t));
   // Chased by a monster: run to the tank, if the tank is close enough to reach; otherwise fight it out.
-  const chased = p.role !== 'tank' && ctx.tank && ctx.tank !== p && dist(p, ctx.tank) < 30 && onMe(ctx).some((m) => m.kind !== 'boss');
+  const chased = p.role !== 'tank' && !ctx.form && ctx.tank && ctx.tank !== p && dist(p, ctx.tank) < 30 && onMe(ctx).some((m) => m.kind !== 'boss');
   if (ctx.inCombat && target) desired = stackOnMe ? { x: p.x, y: p.y } : spreadOnMe ? spreadSpot(ctx, spreadOnMe) : chased && ctx.tank ? besideTank(ctx, ctx.tank) : combatSpot(ctx, target);
   else desired = followSpot(ctx);
 
@@ -435,6 +582,23 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
   let aim: Vec = target ? { x: target.x, y: target.y } : { x: p.x + Math.cos(p.facing), y: p.y + Math.sin(p.facing) };
   let value = 0;
 
+  // A dash or leap with a tank-buster on us takes the buster along: never onto the others. A tank
+  // charging through a boss to brace would land it among the Duelists behind, so it charges the
+  // nearest way that keeps them clear, or not at all.
+  if (d.kind === 'dash' || d.kind === 'leap') {
+    const buster = busterOn(ctx);
+    if (buster) {
+      const to = landing(ctx, skill, aim);
+      if (to && crowdAt(ctx, to, buster.radius, buster.end) > 0) {
+        const reach = d.kind === 'dash' ? d.distance : d.range;
+        const a = clearHeading(ctx, reach, buster.radius, buster.end, aim);
+        aim = { x: p.x + Math.cos(a) * reach, y: p.y + Math.sin(a) * reach };
+        const there = landing(ctx, skill, aim);
+        if (!there || crowdAt(ctx, there, buster.radius, buster.end) > 0) return null;
+      }
+    }
+  }
+
   // Area heals aim at whoever needs it most.
   const areaHeal = skill.effects.some((e) => (e.kind === 'heal' || (e.kind === 'status' && STATUSES[e.status]?.hot)) && 'to' in e && e.to === 'area');
   if (areaHeal && d.kind === 'ground') {
@@ -499,8 +663,11 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
       case 'taunt':
       case 'aggro':
         if (p.role === 'tank') {
-          const loose = hits.filter((m) => m.engaged && m.targetId !== p.id);
+          // A monster on a hero no monster can hurt (the Firebeast) is no threat yet: the taunt
+          // is saved for the moment before the form ends, not spent turning it early.
+          const loose = hits.filter((m) => m.engaged && m.targetId !== p.id && !heldByForm(inst, m));
           if (loose.length) value += 600 + loose.length * 300;
+          else if (e.kind === 'taunt' && hits.some((m) => heldByForm(inst, m))) return null;
           // Keep a margin over the party on what is already ours.
           else if (e.kind === 'aggro' && hits.some((m) => m.engaged && threatMargin(m, p) < 1.6)) value += 250;
         }
@@ -522,6 +689,8 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
           const pressed = p.role === 'tank' ? ctx.busterOnMe || hpFrac(p) < 0.55 || ctx.enemies.filter((m) => m.targetId === p.id).length >= 4 : hpFrac(p) < 0.45;
           if (pressed) value += 900;
         } else if ((def.dmgDealt ?? 0) > 0 && ctx.inCombat && (ctx.enemies.some((m) => m.kind === 'boss') || ctx.enemies.length >= 3)) value += 600;
+        else if (((def.haste ?? 0) > 0 || def.ignite) && ctx.inCombat && target && inBasicReach(ctx, target)) value += 500;
+        else if (def.form) value += formValue(ctx);
         break;
       }
       case 'barrier':
@@ -550,6 +719,20 @@ function evaluate(ctx: Ctx, skill: SkillDef): Choice | null {
   if (skill.mp > 0 && p.maxMp > 0 && !ctx.healer && p.mp - skill.mp < 1500) value *= 0.5;
   if (ctx.healer && dmgPotency > 0 && !areaHeal && p.mp - skill.mp < 2500) value *= 0.3;
   return { skill, aim, value };
+}
+
+/**
+ * Whether to take a form (the Firebeast) now: when a fight worth it is on within reach of its
+ * claws, a boss or a pack with plenty of health left. A stray monster or the last of a pack is not
+ * worth a long cooldown.
+ */
+function formValue(ctx: Ctx): number {
+  const { p, target } = ctx;
+  if (!ctx.inCombat || !target || dist(p, target) - target.radius > 4) return 0;
+  const near = ctx.enemies.filter((m) => dist(p, m) - m.radius <= 6);
+  const health = near.reduce((sum, m) => sum + m.hp, 0);
+  const boss = near.some((m) => m.kind === 'boss');
+  return boss || (near.length >= 2 && health >= 12000) ? 2500 : 0;
 }
 
 /** How far ahead of the next hero the tank is on a monster's aggro table (Infinity if alone). */

@@ -2,14 +2,14 @@
  * Draws the dungeon on a canvas: textured floors, walls with height, braziers and darkness,
  * ground telegraphs, characters and monsters, effects and floating combat text.
  */
-import { ROLES, type RoleId } from '../../shared/content/classes.js';
+import { FORMS, ROLES, type RoleId } from '../../shared/content/classes.js';
 import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
-import { spriteFor, type ChibiAnim, type ChibiFrame, type Facing, type Sheet, type Sprite, type SpriteAnim } from '../art/sprites.js';
+import { formSprite, spriteFor, type ChibiAnim, type ChibiFrame, type Facing, type Sheet, type Sprite, type SpriteAnim } from '../art/sprites.js';
 import type { Clip } from '../art/animation.js';
-import { chibiClip, type ChibiPick } from './chibiState.js';
+import { chibiClip, formShow, type ChibiPick, type FormShow } from './chibiState.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -927,6 +927,7 @@ export class Renderer {
       g.beginPath();
       g.ellipse(e.x, e.y + 0.15, footW, footW * 0.38, 0, 0, Math.PI * 2);
       g.fill();
+      if (e.spawn.kind === 'player' && world.formOf(e.id) && !e.snap.d) this.drawFormGlow(e, now);
       if (e.spawn.team === 'enemy' && !e.diedAt) this.drawTargetCircle(e, view.targetId === e.id, now);
       if (e.id === world.meId) {
         g.strokeStyle = `rgba(255, 224, 140, ${0.6 + Math.sin(now * 3) * 0.15})`;
@@ -972,6 +973,7 @@ export class Renderer {
         g.fill();
       }
       g.globalAlpha = 1;
+      if (e.spawn.kind === 'player' && world.formOf(e.id) && !e.snap.d) this.drawEmbers(e, now);
       // Tank-buster markers float above whoever they target.
       for (const t of world.telegraphs) {
         if (t.style !== 'buster' || t.follow !== e.id) continue;
@@ -989,6 +991,42 @@ export class Renderer {
         g.fillRect(e.x - 0.05, y - 0.3, 0.1, 0.36);
         g.fillRect(e.x - 0.05, y + 0.14, 0.1, 0.1);
       }
+    }
+  }
+
+  /** A pool of firelight under a hero who has taken a form (the Firebeast). */
+  private drawFormGlow(e: ClientEntity, now: number): void {
+    const g = this.g;
+    const flicker = 0.85 + Math.sin(now * 17 + e.id) * 0.08 + Math.sin(now * 29) * 0.06;
+    const r = 1.5 * flicker;
+    g.save();
+    g.translate(e.x, e.y + 0.15);
+    g.scale(1, 0.42);
+    const glow = g.createRadialGradient(0, 0, 0, 0, 0, r);
+    glow.addColorStop(0, 'rgba(255, 214, 120, 0.55)');
+    glow.addColorStop(0.45, 'rgba(255, 110, 30, 0.35)');
+    glow.addColorStop(1, 'rgba(200, 40, 10, 0)');
+    g.fillStyle = glow;
+    g.beginPath();
+    g.arc(0, 0, r, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  }
+
+  /** Embers rising off a hero who has taken a form. */
+  private drawEmbers(e: ClientEntity, now: number): void {
+    const g = this.g;
+    const top = this.tops.get(e.id) ?? e.y - 2;
+    const height = Math.max(1.2, e.y - top + 0.4);
+    for (let i = 0; i < 10; i++) {
+      const seed = i * 2.399 + e.id;
+      const k = (now * (0.55 + (i % 3) * 0.18) + i * 0.137) % 1;
+      const x = e.x + Math.sin(seed * 3.1) * 0.55 + Math.sin(now * 3 + seed) * 0.12 * k;
+      const y = e.y + 0.1 - k * height;
+      const a = (1 - k) * 0.9;
+      g.fillStyle = i % 3 === 0 ? `rgba(255, 236, 160, ${a})` : `rgba(255, ${120 + (i % 4) * 25}, 40, ${a})`;
+      const size = 0.05 + (1 - k) * 0.05;
+      g.fillRect(x - size / 2, y - size / 2, size, size);
     }
   }
 
@@ -1160,11 +1198,23 @@ export class Renderer {
    * left. Flashes white when struck, trails after-images while dodging, and shows the fall of the
    * knocked-out clip, darkened, instead of lying a still down.
    */
-  private drawChibi(view: View, e: ClientEntity, sp: Sprite, chibi: ChibiAnim, m: { phase: number; speed: number; facing: Facing }, now: number): void {
+  private drawChibi(view: View, e: ClientEntity, sp: Sprite, own: ChibiAnim, m: { phase: number; speed: number; facing: Facing }, now: number): void {
     const g = this.g;
     const { world } = view;
-    const { hero, views } = chibi;
     const dead = !!e.snap.d;
+    const act = world.acts.get(e.id) ?? null;
+    // A hero who has taken a form (the Firebeast) is drawn as the form once its chibi is painted.
+    const seen = e.spawn.kind === 'player' ? world.forms.get(e.id) : undefined;
+    let chibi = own;
+    let show: FormShow | null = null;
+    if (seen) {
+      const form = formSprite(seen.id)?.chibi;
+      const painted = form?.views.side ? form : null;
+      show = formShow({ now, seen, act, down: dead, hero: own.hero.timing, form: painted?.hero.timing ?? null, emerge: FORMS[seen.id]?.emerge ?? 0.8 });
+      if (show.form && painted) chibi = painted;
+    }
+    const steady = !!show?.steady;
+    const { hero, views } = chibi;
     const moving = m.speed > 0.6 && !dead;
     const rolling = e.id === world.meId && view.rolling;
     // Strides advance with distance travelled, as for every hero.
@@ -1173,23 +1223,26 @@ export class Renderer {
     const facing = this.turnTo(e, m, (f) => !!views[f]);
     const sheet = views[facing] ?? (views.side as NonNullable<typeof views.side>);
     const flip = facing === 'side' && Math.cos(e.f) < -0.05;
-    const pick = chibiClip({
-      timing: hero.timing,
-      now,
-      id: e.id,
-      down: dead,
-      downAt: world.downAt.get(e.id) ?? null,
-      complete: world.completedAt !== null || world.duty.phase === 'complete',
-      completeAt: world.completedAt,
-      act: world.acts.get(e.id) ?? null,
-      rolling,
-      moving,
-      phase: m.phase,
-      hurtAt: world.hurtAt.get(e.id) ?? null,
-      hp: e.snap.hp,
-      maxHp: e.snap.mh,
-      fighting: this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16),
-    });
+    const pick =
+      show?.force ??
+      chibiClip({
+        timing: hero.timing,
+        now,
+        id: e.id,
+        down: dead,
+        downAt: world.downAt.get(e.id) ?? null,
+        complete: world.completedAt !== null || world.duty.phase === 'complete',
+        completeAt: world.completedAt,
+        act: show ? show.act : act,
+        rolling,
+        moving,
+        phase: m.phase,
+        // A form never flinches or kneels.
+        hurtAt: steady ? null : (world.hurtAt.get(e.id) ?? null),
+        hp: steady ? e.snap.mh : e.snap.hp,
+        maxHp: e.snap.mh,
+        fighting: this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16),
+      });
     this.chibiShown.set(e.id, { ...pick, view: facing });
     const clipFrames = sheet.frames[pick.clip];
     const f = (clipFrames[pick.frame] ?? clipFrames[0] ?? sheet.frames.idle[0]) as ChibiFrame;
@@ -1393,6 +1446,30 @@ export class Renderer {
           g.arc(-0.4, 0, pr.r + 0.4, -1, 1);
           g.stroke();
           break;
+        case 'flame': {
+          // A crescent of fire: a white-hot leading edge over orange flame, licking back as it flies.
+          const R = pr.r + 0.45;
+          const flick = Math.sin(now * 40 + pr.i) * 0.06;
+          for (const [back, width, color] of [
+            [0.55, 0.5, 'rgba(200, 50, 10, 0.35)'],
+            [0.3, 0.38, 'rgba(255, 110, 30, 0.75)'],
+            [0.12, 0.24, 'rgba(255, 190, 80, 0.95)'],
+            [0, 0.1, 'rgba(255, 246, 210, 1)'],
+          ] as const) {
+            g.strokeStyle = color;
+            g.lineWidth = width + flick;
+            g.beginPath();
+            g.arc(-R - back, 0, R, -1.05, 1.05);
+            g.stroke();
+          }
+          for (let k = 0; k < 4; k++) {
+            const a = -0.9 + k * 0.6;
+            const tail = 0.5 + ((now * 6 + k * 0.37 + pr.i) % 1) * 0.6;
+            g.fillStyle = `rgba(255, ${150 + k * 20}, 60, ${0.7 - tail * 0.5})`;
+            g.fillRect(Math.cos(a) * R - R - tail, Math.sin(a) * R - 0.04, 0.12, 0.08);
+          }
+          break;
+        }
         default: {
           // Orbs, sparks and enemy shots: glowing balls.
           const radius = pr.k === 'orb' ? pr.r + 0.25 : pr.r + 0.15;
@@ -1830,6 +1907,50 @@ export class Renderer {
         g.moveTo(f.x, f.y);
         g.lineTo(f.x2, f.y2);
         g.stroke();
+        break;
+      }
+      case 'flame': {
+        // A column of fire bursting from the ground, a ring of flame rolling out and embers flung up.
+        const ease = 1 - (1 - k) * (1 - k);
+        g.save();
+        g.translate(x, y);
+        g.globalAlpha = 1 - k;
+        const ring = g.createRadialGradient(0, 0, f.r * 0.2, 0, 0, f.r * (0.4 + ease * 0.8));
+        ring.addColorStop(0, 'rgba(255, 240, 190, 0.85)');
+        ring.addColorStop(0.45, 'rgba(255, 140, 40, 0.6)');
+        ring.addColorStop(1, 'rgba(190, 30, 10, 0)');
+        g.fillStyle = ring;
+        g.beginPath();
+        g.ellipse(0, 0.1, f.r * (0.4 + ease * 0.8), f.r * (0.4 + ease * 0.8) * 0.45, 0, 0, Math.PI * 2);
+        g.fill();
+        // Tongues of flame licking up.
+        for (let i = 0; i < 9; i++) {
+          const a = (i / 9) * Math.PI * 2 + f.seed;
+          const px = Math.cos(a) * f.r * 0.35 * (0.4 + ease);
+          const tall = (1.4 + Math.sin(f.seed + i * 1.7) * 0.5) * (k < 0.3 ? k / 0.3 : 1 - (k - 0.3) * 0.8);
+          const grad = g.createLinearGradient(px, 0, px, -tall);
+          grad.addColorStop(0, 'rgba(255, 230, 150, 0.9)');
+          grad.addColorStop(0.5, 'rgba(255, 110, 25, 0.7)');
+          grad.addColorStop(1, 'rgba(160, 20, 5, 0)');
+          g.fillStyle = grad;
+          g.beginPath();
+          g.moveTo(px - 0.22, 0.05);
+          g.quadraticCurveTo(px - 0.18, -tall * 0.5, px + Math.sin(now * 9 + i) * 0.12, -tall);
+          g.quadraticCurveTo(px + 0.18, -tall * 0.5, px + 0.22, 0.05);
+          g.closePath();
+          g.fill();
+        }
+        // Embers flung out and up.
+        for (let i = 0; i < 18; i++) {
+          const a = (i / 18) * Math.PI * 2 + f.seed * 1.3;
+          const sp = 0.6 + ((f.seed * 7 + i * 13) % 10) / 10;
+          const ex = Math.cos(a) * f.r * sp * ease;
+          const ey = Math.sin(a) * f.r * sp * ease * 0.5 - ease * (1.2 + (i % 4) * 0.35);
+          g.fillStyle = i % 3 ? 'rgba(255, 160, 50, 1)' : 'rgba(255, 240, 180, 1)';
+          g.fillRect(ex - 0.05, ey - 0.05, 0.1, 0.1);
+        }
+        g.restore();
+        g.globalAlpha = 1;
         break;
       }
       case 'rift': {

@@ -34,6 +34,16 @@ export interface StatusDef {
   /** When it ends, bursts on enemies within `counterRadius` tiles for this share of what it blocked. */
   counter?: number;
   counterRadius?: number;
+  /** Every foe the bearer strikes catches fire: burning of this potency for this many seconds. */
+  ignite?: { potency: number; duration: number };
+  /**
+   * A transformation (see FORMS in classes.ts): the bearer can only use the form's own basic attack.
+   * Every other skill, role skill, the Elixir and the dodge roll are refused. Clients hear when it
+   * starts and ends (status events).
+   */
+  form?: boolean;
+  /** Takes no damage from monsters: their blows, shots, ground mechanics and damage over time. */
+  monsterImmune?: boolean;
 }
 
 const list: StatusDef[] = [
@@ -67,6 +77,8 @@ const list: StatusDef[] = [
 
   // Melee
   { id: 'bloodrush', name: 'Bloodrush', description: '25% more damage dealt, but 15% more damage taken.', glyph: '✪', color: '#ff5a3c', debuff: false, dmgDealt: 0.25, dmgTaken: 0.15 },
+  { id: 'kindle', name: 'Kindle', description: 'Blade alight: attacks 25% faster, and every foe struck catches fire.', glyph: '♨', color: '#ff9a3c', debuff: false, haste: 0.25, ignite: { potency: 60, duration: 6 } },
+  { id: 'firebeast', name: 'Firebeast', description: 'Transformed into the Firebeast: only its claws answer (potency 1000 a blow), and no monster can hurt it.', glyph: '♞', color: '#ff5a1f', debuff: false, form: true, monsterImmune: true },
 ];
 
 export const STATUSES: Record<string, StatusDef> = Object.fromEntries(list.map((s) => [s.id, s]));

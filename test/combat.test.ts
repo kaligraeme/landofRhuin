@@ -41,7 +41,7 @@ describe('content', () => {
     expect(roster('tank')).toEqual(['Dark Knight · Greatsword', 'Guardian · Sword & Shield']);
     expect(roster('mage')).toEqual(['Sage · Staff', 'Spellblade · Mystic Sword & Wand']);
     expect(roster('ranger')).toEqual(['Arbalest · Crossbow', 'Bowmaster · Longbow']);
-    expect(roster('melee')).toEqual(['Dragoon · Lance', 'Blademaster · Twin Blades']);
+    expect(roster('melee')).toEqual(['Dragoon · Lance', 'Blademaster · Twin Blades', 'Flame Warden · Ember Blade']);
     expect(weaponFor('guardian')).toBe('sword_shield');
     expect(weaponFor(defaultHero('mage'))).toBe('staff');
     // Tanks are the sturdiest; rangers and melee are glass cannons, melee hitting hardest.

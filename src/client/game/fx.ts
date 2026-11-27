@@ -1,7 +1,8 @@
 /** Short-lived visual effects and floating combat text, all in world coordinates. */
 
 export interface Fx {
-  kind: 'proj' | 'slash' | 'burst' | 'heal' | 'buff' | 'dash' | 'rift' | 'impact' | 'shout' | 'spark' | 'arc' | 'thrust' | 'roll';
+  /** `flame`: a burst of fire and embers (a form taking shape or collapsing). */
+  kind: 'proj' | 'slash' | 'burst' | 'heal' | 'buff' | 'dash' | 'rift' | 'impact' | 'shout' | 'spark' | 'arc' | 'thrust' | 'roll' | 'flame';
   x: number;
   y: number;
   /** Destination or second point. */

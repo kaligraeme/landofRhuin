@@ -4,7 +4,7 @@
  * leap, and applies its effects to whatever it strikes.
  */
 import { CHAIN_RESET, CRIT_CHANCE, CRIT_MULT, PARTY_EFFECT_RADIUS, ROLL_STAMINA, ROLL_TIME, SKILL_LOCK, ROLL_DISTANCE } from '../../shared/constants.js';
-import { skillDef, WEAPONS, type Effect, type SkillDef } from '../../shared/content/classes.js';
+import { FORMS, skillDef, WEAPONS, type Effect, type FormDef, type SkillDef } from '../../shared/content/classes.js';
 import { STATUSES, statusDef } from '../../shared/content/statuses.js';
 import { angleTo, dist, shapeHits, type Shape, type Vec } from '../../shared/geometry.js';
 import { circleFree, lineOfSight, moveCircle, nearestFree } from '../../shared/map.js';
@@ -36,6 +36,53 @@ export function isInvulnerable(a: Actor): boolean {
   return a.statuses.some((s) => STATUSES[s.id]?.invulnerable);
 }
 
+/** The form the actor has taken (the Firebeast), if any. */
+export function formOf(a: Actor): FormDef | null {
+  for (const s of a.statuses) if (STATUSES[s.id]?.form) return FORMS[s.id] ?? null;
+  return null;
+}
+
+/** Takes no damage from monsters right now (the Firebeast). */
+export function isMonsterImmune(a: Actor): boolean {
+  return a.statuses.some((s) => STATUSES[s.id]?.monsterImmune);
+}
+
+/**
+ * A form's blows land on the very tick they are due. The clock adds up in twentieths of a second,
+ * which floating point cannot hold exactly, so a blow due "now" could otherwise slip a tick; the
+ * Firebeast's ten claws in five seconds are counted on it.
+ */
+const ON_TIME = 1e-6;
+
+/**
+ * A form begins: clients hear of it, and a hero's combo starts over on the form's first blow,
+ * which waits while the form takes shape.
+ */
+function formStarted(inst: Instance, a: Actor, id: string): void {
+  inst.emit({ e: 'status', i: a.id, id, gain: true });
+  if (a.team !== 'party') return;
+  const p = a as Player;
+  p.chain = 0;
+  p.chainResetAt = 0;
+  p.basicReadyAt = Math.max(p.basicReadyAt, inst.now + (FORMS[id]?.emerge ?? 0) - ON_TIME);
+}
+
+/** A form ends (it ran out, or its bearer fell): clients hear of it, and the combo starts over. */
+export function formEnded(inst: Instance, a: Actor, id: string): void {
+  inst.emit({ e: 'status', i: a.id, id, gain: false });
+  if (a.team !== 'party') return;
+  const p = a as Player;
+  p.chain = 0;
+  p.chainResetAt = 0;
+}
+
+/** Drops every status at once (a fall, a raise, a wipe), ending any form. */
+export function clearStatuses(inst: Instance, a: Actor): void {
+  const forms = a.statuses.filter((s) => STATUSES[s.id]?.form);
+  a.statuses = [];
+  for (const s of forms) formEnded(inst, a, s.id);
+}
+
 export function applyStatus(inst: Instance, target: Actor, id: string, duration: number, sourceId: number, potency = 0, value = 0): void {
   if (target.dead) return;
   const def = statusDef(id);
@@ -49,6 +96,7 @@ export function applyStatus(inst: Instance, target: Actor, id: string, duration:
     return;
   }
   target.statuses.push({ id, sourceId, expires: inst.now + duration, stacks: 1, potency, value });
+  if (def.form) formStarted(inst, target, id);
 }
 
 export function removeStatus(target: Actor, id: string): void {
@@ -92,6 +140,13 @@ export interface DamageOpts {
 
 export function applyDamage(inst: Instance, src: Actor | null, target: Actor, raw: number, opts: DamageOpts = {}): number {
   if (target.dead) return 0;
+  // The Firebeast shrugs off whatever monsters throw at it: blows, shots, ground mechanics and
+  // damage over time (a tick whose monster has since died has no source, and only monsters hurt
+  // heroes).
+  if (target.team === 'party' && (!src || src.team === 'enemy') && isMonsterImmune(target)) {
+    inst.emit({ e: 'fx', k: 'immune', t: target.id });
+    return 0;
+  }
   if (isInvulnerable(target) && !opts.tick) {
     inst.emit({ e: 'fx', k: 'evade', t: target.id });
     return 0;
@@ -236,6 +291,8 @@ export function cooldownReady(inst: Instance, p: Player, skill: SkillDef): boole
 export function skillBlocker(inst: Instance, p: Player, skill: SkillDef): string | null {
   if (p.dead) return 'You are knocked out';
   if (isStunned(p)) return 'You are stunned';
+  const form = formOf(p);
+  if (form && skill.slot !== 'basic') return form.refusal;
   if (!p.hotbar.includes(skill.id)) return 'Skill not on your hotbar';
   if (p.cast) return 'Already winding up';
   if (inst.now < p.lockUntil - 1e-6) return 'lock';
@@ -275,19 +332,28 @@ export function finishCast(inst: Instance, p: Player): void {
   executeSkill(inst, p, skill, cast.aim);
 }
 
-/** Swings the next hit of the weapon's basic attack chain toward the player's aim. */
+/** The basic attack chain the player swings: their form's while transformed, else their weapon's. */
+export function basicChain(p: Player): { interval: number; hits: string[] } | null {
+  return formOf(p)?.basic ?? WEAPONS[p.weapon]?.basic ?? null;
+}
+
+/**
+ * Swings the next hit of the basic attack chain toward the player's aim. A form's chain keeps its
+ * own rhythm whatever haste says (the Firebeast's claws are balanced on it); a weapon's hurries.
+ */
 export function basicAttack(inst: Instance, p: Player): void {
-  const weapon = WEAPONS[p.weapon];
-  if (!weapon) return;
+  const basic = basicChain(p);
+  if (!basic) return;
+  const form = formOf(p);
   if (inst.now > p.chainResetAt) p.chain = 0;
-  const hit = p.chain % weapon.basic.hits.length;
-  const id = weapon.basic.hits[hit] as string;
-  p.chain = (p.chain + 1) % weapon.basic.hits.length;
-  const interval = weapon.basic.interval * hasteMult(p);
+  const hit = p.chain % basic.hits.length;
+  const id = basic.hits[hit] as string;
+  p.chain = (p.chain + 1) % basic.hits.length;
+  const interval = form ? basic.interval - ON_TIME : basic.interval * hasteMult(p);
   p.basicReadyAt = inst.now + interval;
   p.chainResetAt = inst.now + interval + CHAIN_RESET;
   p.facing = angleTo(p, p.aim);
-  inst.emit({ e: 'act', i: p.id, k: 'atk', c: hit });
+  inst.emit({ e: 'act', i: p.id, k: 'atk', c: hit, ...(form ? { s: id } : {}) });
   executeSkill(inst, p, skillDef(id), p.aim);
 }
 
@@ -295,6 +361,8 @@ export function basicAttack(inst: Instance, p: Player): void {
 export function dodge(inst: Instance, p: Player, dx: number, dy: number): string | null {
   if (p.dead) return 'You are knocked out';
   if (isStunned(p)) return 'You are stunned';
+  const form = formOf(p);
+  if (form) return form.refusal;
   if (p.stamina < ROLL_STAMINA) return 'Not enough stamina';
   const len = Math.hypot(dx, dy);
   if (len < 1e-3) {
@@ -415,6 +483,14 @@ export function applyEffects(inst: Instance, p: Player, skill: SkillDef, hits: M
   if (buffs && skill.slot !== 'basic') inst.emit({ e: 'fx', k: 'buff', t: p.id, hue: skill.hue });
 }
 
+/** A burning blade (Kindle) sets every foe it strikes alight. */
+function ignite(inst: Instance, p: Player, m: Monster): void {
+  for (const s of p.statuses) {
+    const fire = STATUSES[s.id]?.ignite;
+    if (fire) applyStatus(inst, m, 'burning', fire.duration, p.id, outgoingDamage(inst, p, fire.potency, false).amount);
+  }
+}
+
 function recipients(inst: Instance, p: Player, to: 'self' | 'area' | 'party', area: Player[]): Player[] {
   return to === 'self' ? [p] : to === 'party' ? partyAround(inst, p) : area;
 }
@@ -427,6 +503,7 @@ function applyEffect(inst: Instance, p: Player, skill: SkillDef, effect: Effect,
         const pot = effect.potency * (skill.execute && m.hp < m.maxHp * 0.3 ? skill.execute : 1);
         const { amount, crit } = outgoingDamage(inst, p, pot, true);
         dealt.total += applyDamage(inst, p, m, amount, { crit, name: skill.name, aggro: skill.aggro });
+        if (!m.dead) ignite(inst, p, m);
       }
       break;
     case 'drain':

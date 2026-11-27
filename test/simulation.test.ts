@@ -24,6 +24,7 @@ describe('a full dungeon run with four AI companions', () => {
     [202, party('sword_shield', 'staff', 'crossbow', 'twin_blades')],
     [303, party('sword_shield', 'staff', 'bow', 'spear')],
     [404, party('tank_greatsword', 'mystic_sword', 'crossbow', 'twin_blades')],
+    [505, party('sword_shield', 'staff', 'bow', 'flame_sword')],
   ])('seed %i clears every boss', (seed, seats) => {
     const inst = clear(seats, seed);
     expect(inst.phase).toBe('complete');

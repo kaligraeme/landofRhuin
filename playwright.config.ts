@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Browser tests drive the built game (`npm run build`). The server runs with frail monsters
- * (--quick) and a one-second countdown so a run moves along quickly.
+ * (--quick) and a one-second countdown so a run moves along quickly, and sends an AI Duelist as
+ * the Flame Warden (--companions).
  */
 const PORT = Number(process.env.E2E_PORT ?? 18787);
 
@@ -18,7 +19,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } }],
   webServer: {
-    command: `node dist/server.mjs --port ${PORT} --quick --countdown 1`,
+    command: `node dist/server.mjs --port ${PORT} --quick --countdown 1 --companions flameWarden`,
     url: `http://127.0.0.1:${PORT}/healthz`,
     reuseExistingServer: false,
     timeout: 30_000,

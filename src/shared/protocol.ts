@@ -208,11 +208,13 @@ export interface MemberResult {
 export type GameEvent =
   | { e: 'dmg'; s: number; t: number; v: number; c?: 1; n?: string; ab?: number }
   | { e: 'heal'; s: number; t: number; v: number; c?: 1; n?: string }
-  | { e: 'fx'; k: 'proj' | 'slash' | 'burst' | 'heal' | 'buff' | 'dash' | 'rift' | 'impact' | 'shout' | 'arc' | 'thrust' | 'roll' | 'evade' | 'stagger'; s?: number; t?: number; x?: number; y?: number; hue?: number; r?: number; d?: number; a?: number; l?: number }
+  /** `evade`: a blow missed a rolling hero; `immune`: it struck a hero no monster can hurt (the Firebeast). */
+  | { e: 'fx'; k: 'proj' | 'slash' | 'burst' | 'heal' | 'buff' | 'dash' | 'rift' | 'impact' | 'shout' | 'arc' | 'thrust' | 'roll' | 'evade' | 'immune' | 'stagger'; s?: number; t?: number; x?: number; y?: number; hue?: number; r?: number; d?: number; a?: number; l?: number }
   | { e: 'death'; i: number }
   /**
    * An actor attacks (atk) or uses a skill (sk), winding up for d seconds first. Drives animation.
-   * For heroes, s is the skill used and c which hit of the basic attack's combo this is (0-2).
+   * For heroes, s is the skill used and c which hit of the basic attack's combo this is (0-2); a
+   * transformed hero's basic attack also names the form's hit in s (a Firebeast claw).
    */
   | { e: 'act'; i: number; k: 'atk' | 'sk'; d?: number; s?: string; c?: number }
   | { e: 'raise'; i: number }
@@ -222,6 +224,7 @@ export type GameEvent =
   | { e: 'banner'; text: string; sub?: string; style: 'duty' | 'boss' | 'wave' | 'wipe' | 'clear' | 'complete' | 'seal' }
   | { e: 'log'; text: string; cls?: 'sys' | 'warn' | 'boss' | 'party' | 'chat' | 'good' }
   | { e: 'interrupt'; i: number }
+  /** A form (StatusDef.form, such as the Firebeast) starts or ends on an actor. */
   | { e: 'status'; i: number; id: string; gain: boolean }
   | { e: 'duty'; duty: DutyState }
   | { e: 'complete'; results: MemberResult[]; time: number; wipes: number }

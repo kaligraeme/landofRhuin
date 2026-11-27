@@ -10,9 +10,24 @@ type Kebab<S extends string> = S extends `${infer C}${infer Rest}` ? `${C extend
 
 export type HeroArtId = `hero-${Kebab<HeroId>}`;
 
+/**
+ * Heroes painted only as chibis: they have no artwork in creatures/ and no design for the older
+ * painter. Until their chibi is registered (CHIBI_HEROES), another hero stands in for them (see
+ * heroLook.ts).
+ */
+export const CHIBI_ONLY = ['flameWarden'] as const satisfies readonly HeroId[];
+
+/** Heroes with artwork in creatures/ and a design for the older painter. */
+export type PaintedHeroId = Exclude<HeroId, (typeof CHIBI_ONLY)[number]>;
+export type PaintedArtId = `hero-${Kebab<PaintedHeroId>}`;
+
+export function isPainted(hero: HeroId): hero is PaintedHeroId {
+  return !(CHIBI_ONLY as readonly HeroId[]).includes(hero);
+}
+
 /** A hero's artwork id. */
-export function heroArtId(hero: HeroId): HeroArtId {
-  return `hero-${hero.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}` as HeroArtId;
+export function heroArtId<H extends HeroId>(hero: H): `hero-${Kebab<H>}` {
+  return `hero-${hero.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}` as `hero-${Kebab<H>}`;
 }
 
 /** The hero an artwork id belongs to, or undefined for a monster's. */

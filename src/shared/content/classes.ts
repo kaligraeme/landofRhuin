@@ -10,7 +10,7 @@
 export type RoleId = 'tank' | 'mage' | 'ranger' | 'melee';
 export const ROLE_ORDER: RoleId[] = ['tank', 'mage', 'ranger', 'melee'];
 
-export type ProjectileLook = 'arrow' | 'bolt' | 'orb' | 'axe' | 'shield' | 'wave' | 'spark' | 'enemy';
+export type ProjectileLook = 'arrow' | 'bolt' | 'orb' | 'axe' | 'shield' | 'wave' | 'spark' | 'flame' | 'enemy';
 
 /** How a skill reaches its targets. Directions and points come from the player's aim. */
 export type Delivery =
@@ -136,10 +136,10 @@ const dmg = (potency: number): Effect => ({ kind: 'damage', potency });
 const arc = (radius: number, degrees: number): Delivery => ({ kind: 'arc', radius, angle: (degrees * Math.PI) / 180 });
 const thrust = (length: number, width: number): Delivery => ({ kind: 'thrust', length, width });
 
-/** Builds a three-hit basic chain from deliveries and potencies. */
-function chain(weapon: string, name: string, glyph: string, hue: number, hits: { delivery: Delivery; potency: number; effects?: Effect[] }[]): string[] {
+/** Builds a three-hit basic chain from deliveries and potencies, with an optional note for every hit's description. */
+function chain(weapon: string, name: string, glyph: string, hue: number, hits: { delivery: Delivery; potency: number; effects?: Effect[] }[], note = ''): string[] {
   return hits.map((hit, i) =>
-    def({ id: `${weapon}.basic${i + 1}`, name: `${name} ${['I', 'II', 'III'][i]}`, glyph, hue, slot: 'basic', delivery: hit.delivery, description: `Basic attack, hit ${i + 1} of ${hits.length}: potency ${hit.potency}.`, effects: [dmg(hit.potency), ...(hit.effects ?? [])] }),
+    def({ id: `${weapon}.basic${i + 1}`, name: `${name} ${['I', 'II', 'III'][i]}`, glyph, hue, slot: 'basic', delivery: hit.delivery, description: `Basic attack, hit ${i + 1} of ${hits.length}: potency ${hit.potency}.${note ? ` ${note}` : ''}`, effects: [dmg(hit.potency), ...(hit.effects ?? [])] }),
   );
 }
 
@@ -263,7 +263,60 @@ const mgSkills: WeaponDef['skills'] = [
   def({ id: 'cataclysmBlade', name: 'Cataclysm Blades', glyph: '✹', hue: 10, slot: 'ult', cooldown: 40, windup: 0.6, delivery: { kind: 'self', radius: 5.5 }, description: 'Ultimate. A ruinous spinning strike: potency 900 around you.', effects: [dmg(900), { kind: 'stagger', amount: 50 }] }),
 ];
 
+// ── Duelist: Ember Blade (the Flame Warden) ────────────────────────────────────────────────
+const fwBasic = chain('flame_sword', 'Ember Slash', '⚔', 22, [
+  { delivery: arc(2.4, 130), potency: 125 },
+  { delivery: arc(2.4, 130), potency: 125 },
+  { delivery: arc(2.8, 200), potency: 180 },
+]);
+/** Burning, as the Meteor lights it: potency 60 every 3s. */
+const burning = (duration: number): Effect => ({ kind: 'status', status: 'burning', duration, to: 'hit', potency: 60 });
+const fwSkills: WeaponDef['skills'] = [
+  def({ id: 'blazingCrescent', name: 'Blazing Crescent', glyph: '☾', hue: 24, slot: 'special', cooldown: 6, delivery: { kind: 'projectile', speed: 22, radius: 0.9, range: 11, pierce: true, look: 'flame' }, description: 'Fling a crescent of flame that cuts through every foe in line: potency 260 to each.', effects: [dmg(260)] }),
+  def({ id: 'flashfire', name: 'Flashfire', glyph: '⇝', hue: 16, slot: 'q', cooldown: 8, iframes: 0.25, delivery: { kind: 'dash', distance: 6, width: 2.2 }, description: 'Dash 6 tiles in a streak of fire: potency 240 to every foe in your path, and they burn.', effects: [dmg(240), burning(9)] }),
+  def({ id: 'infernoBurst', name: 'Inferno Burst', glyph: '✺', hue: 30, slot: 'e', cooldown: 9, delivery: { kind: 'ground', radius: 3, range: 2.5 }, description: 'Blow the air ahead of you apart: potency 330 to every foe within 3 tiles of the blast, knocking them back.', effects: [dmg(330), { kind: 'knockback', distance: 2 }, { kind: 'stagger', amount: 15 }] }),
+  def({ id: 'kindle', name: 'Kindle', glyph: '♨', hue: 35, slot: 'r', cooldown: 20, description: 'Set your blade alight for 8s: you attack 25% faster, and every foe you strike catches fire.', effects: [{ kind: 'status', status: 'kindle', duration: 8, to: 'self' }] }),
+  def({ id: 'firebeast', name: 'Firebeast', glyph: '♞', hue: 12, slot: 'ult', cooldown: 90, description: 'Ultimate. Flames engulf you and you become the Firebeast for 5s: no monster can hurt it, and its claws are all it has, potency 1000 a swipe to every foe within 3 tiles in front of it. Your other skills, the Elixir and rolls wait until it ends. Bloodrush and the Echo of Rhuin still raise the claws’ damage (use Bloodrush first); Kindle does not hurry them, but its flames still catch on every foe they strike.', effects: [{ kind: 'status', status: 'firebeast', duration: 5, to: 'self' }] }),
+];
+
+/** The Firebeast's claw chain: the only attack it has (see FORMS). */
+const fbClaws = chain(
+  'firebeast',
+  'Firebeast Claw',
+  '⫻',
+  12,
+  [
+    { delivery: arc(3, 220), potency: 1000 },
+    { delivery: arc(3, 220), potency: 1000 },
+    { delivery: arc(3, 240), potency: 1000 },
+  ],
+  'Only as the Firebeast: a raking claw through every foe within 3 tiles in front of it, one every 0.45s whatever Kindle says (though Kindle’s flames still catch on what it strikes). Bloodrush and the Echo of Rhuin still raise its damage.',
+);
+
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(skills.map((s) => [s.id, s]));
+
+/**
+ * A transformation a status puts its bearer in (StatusDef.form): while it lasts the bearer's basic
+ * attack is the form's own chain, swung every `interval` seconds whatever haste says, and nothing
+ * else can be used.
+ */
+export interface FormDef {
+  /** The status that holds the form, which is also the form's id. */
+  status: string;
+  name: string;
+  basic: { interval: number; hits: string[] };
+  /**
+   * Seconds the form takes to take shape, from the moment it begins: flames engulf the hero for
+   * the first half and the form emerges in the second. Its first blow waits for it.
+   */
+  emerge: number;
+  /** Why a skill, the Elixir or a dodge roll is refused meanwhile. */
+  refusal: string;
+}
+
+export const FORMS: Record<string, FormDef> = {
+  firebeast: { status: 'firebeast', name: 'Firebeast', basic: { interval: 0.45, hits: fbClaws }, emerge: 0.8, refusal: 'The Firebeast only has its claws' },
+};
 
 export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
   (
@@ -276,6 +329,7 @@ export const WEAPONS: Record<string, WeaponDef> = Object.fromEntries(
       { id: 'crossbow', role: 'ranger', name: 'Crossbow', ranged: true, reach: 9, description: 'Rapid bolts, explosive shots, a shrapnel blast and a tumble to escape danger.', basic: { interval: 0.36, hits: cbBasic }, skills: cbSkills },
       { id: 'spear', role: 'melee', name: 'Lance', ranged: false, reach: 2.4, description: 'A long lance: fast thrusts with long reach, sweeping cuts, a vault and a skewering charge.', basic: { interval: 0.5, hits: spBasic }, skills: spSkills },
       { id: 'twin_blades', role: 'melee', name: 'Twin Blades', ranged: false, reach: 1.4, description: 'A blade in each hand and the biggest hits in Rhuin: sweeping slashes, whirlwinds and an executioner’s cross-cut.', basic: { interval: 0.8, hits: mgBasic }, skills: mgSkills },
+      { id: 'flame_sword', role: 'melee', name: 'Ember Blade', ranged: false, reach: 1.4, description: 'A blade that burns: the quickest cuts of any Duelist but the shortest reach, crescents of flame, a burning dash, a blast that throws foes back, and the Firebeast within.', basic: { interval: 0.4, hits: fwBasic }, skills: fwSkills },
     ] satisfies WeaponDef[]
   ).map((w) => [w.id, w]),
 );
@@ -339,7 +393,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     id: 'melee',
     name: 'Duelist',
     tagline: 'Melee glass cannon',
-    description: 'The highest damage in the party and the easiest to fall: low health and 20% more damage taken. Strike hard, dodge often.',
+    description: 'The highest damage in the party and the easiest to fall: low health and 20% more damage taken. Strike hard, dodge often. Three heroes: the Dragoon with a lance, the Blademaster with twin blades, and the Flame Warden with a burning blade and a beast inside.',
     color: '#ff7d5a',
     hp: 5600,
     mp: 0,
@@ -350,7 +404,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     defense: 1.2,
     enmity: 1,
     speed: 6.4,
-    heroes: ['dragoon', 'blademaster'],
+    heroes: ['dragoon', 'blademaster', 'flameWarden'],
     roleSkills: ['bloodrush', 'secondWind'],
   },
 };
@@ -374,7 +428,7 @@ export function isRole(role: unknown): role is RoleId {
   return typeof role === 'string' && role in ROLES;
 }
 
-export type HeroId = 'darkKnight' | 'guardian' | 'sage' | 'spellblade' | 'arbalest' | 'bowmaster' | 'dragoon' | 'blademaster';
+export type HeroId = 'darkKnight' | 'guardian' | 'sage' | 'spellblade' | 'arbalest' | 'bowmaster' | 'dragoon' | 'blademaster' | 'flameWarden';
 
 /**
  * A hero a player can pick once they have a role. Each carries one weapon of their own. A role may
@@ -398,6 +452,7 @@ export const HEROES: Record<HeroId, HeroDef> = {
   bowmaster: { id: 'bowmaster', role: 'ranger', name: 'Bowmaster', weapon: 'bow' },
   dragoon: { id: 'dragoon', role: 'melee', name: 'Dragoon', weapon: 'spear' },
   blademaster: { id: 'blademaster', role: 'melee', name: 'Blademaster', weapon: 'twin_blades' },
+  flameWarden: { id: 'flameWarden', role: 'melee', name: 'Flame Warden', weapon: 'flame_sword' },
 };
 
 /** Every hero, role by role, each role's in its own order. */

@@ -4,7 +4,7 @@ import { HERO_CHARGE, HERO_CLIP_LENGTH, HERO_WINDUP, heroClips, type HeroClip } 
 import { renderHero } from '../src/client/art/heroes/render.js';
 import { renderTurned, TURNED_H, TURNED_W, TURNED_Y } from '../src/client/art/heroes/turned.js';
 import { FRAME_H, FRAME_W, GROUND_Y, solveLimb } from '../src/client/art/heroes/skeleton.js';
-import { heroArtId } from '../src/client/art/heroArt.js';
+import { heroArtId, isPainted } from '../src/client/art/heroArt.js';
 import { HERO_ORDER, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
 
 const CLIPS: HeroClip[] = ['idle', 'battle', 'move', 'action', 'skill'];
@@ -23,8 +23,8 @@ const DRAWN_AS: Record<string, string> = {
 };
 
 describe('hero designs', () => {
-  it('dresses and arms every hero, each with their own weapon', () => {
-    for (const hero of HERO_ORDER) {
+  it('dresses and arms every hero it paints, each with their own weapon', () => {
+    for (const hero of HERO_ORDER.filter(isPainted)) {
       const d = HERO_DESIGNS[heroArtId(hero)];
       expect(d, hero).toBeDefined();
       const kit = weaponFor(hero);
