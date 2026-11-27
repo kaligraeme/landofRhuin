@@ -36,37 +36,41 @@ const hurt: ChibiPose[] = [
   // Knocked back a step.
   pose(S, { x: -6, y: 6, lean: -10, twist: -10, tilt: -6, head: -8, look: -6, footF: [11, 0, 6], footB: [-11, 0, 5.5], handF: [6, 15, 6], weapon: 70, roll: -10, yaw: 40, handB: [-1, 10, 12], weaponB: -10, rollB: 20, yawB: 0, face: 'hurt', wind: -0.3, lift: 0.3, flare: 0.15, sway: -0.3, phase: 0.4 }),
   // Recovering, teeth gritted: most of the way back into the battle stance, which follows.
-  settle(pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [8, 14, 7], weapon: 86, handB: [8, 9, 8], weaponB: 30 }), 0.7, { face: 'grit', wind: 0.15, phase: 0.6 }),
+  settle(pose(S, { x: -3, y: 6, lean: 8, twist: -12, tilt: 0, head: 4, handF: [8, 14, 7], weapon: 86, handB: [4, 12, 9], weaponB: 262 }), 0.7, { face: 'grit', wind: 0.15, phase: 0.6 }),
 ];
 
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Down on her right knee, the left knee up, the right sabre planted point down beside the knee
- * with her hand on the hilt; the left held back low behind her, point trailing, still ready.
+ * Down on her left knee, the right foot planted ahead with its knee up (so side on the near leg
+ * shows the kneel), the right sabre planted ahead of that knee, angled forward, her hand on its
+ * hilt at her chest, a hand's width in front of her face and out beside it seen from the front; the
+ * left sabre held back low behind her hip, its point raised clear of the coat-tails, which lie on
+ * the floor behind her.
  */
 const KNELT: ChibiPose = {
   x: 0,
-  y: 13,
-  lean: 16,
-  twist: 6,
-  tilt: 6,
-  head: 14,
-  look: 8,
-  footF: [-12, 0, 6],
-  footB: [6, 0, 7],
-  kneel: 'F',
-  handF: [8, 5, 13],
-  weapon: 180,
+  y: 12,
+  lean: 12,
+  twist: 4,
+  tilt: 4,
+  head: 8,
+  look: 6,
+  footF: [9, 0, 7],
+  footB: [-12, 0, 5.5],
+  kneel: 'B',
+  handF: [12, 5, 11],
+  weapon: 158,
   roll: 0,
   yaw: 0,
-  handB: [-3, 12, 11],
-  weaponB: -120,
+  handB: [-6, 17, 9],
+  weaponB: -66,
   rollB: 10,
-  yawB: -20,
+  yawB: -10,
   face: 'grit',
-  wind: 0.05,
-  flare: 0.4,
+  wind: 0.35,
+  lift: -0.2,
+  flare: 0,
 };
 
 /** Puts the right hand where the planted blade's point just bites the floor (its tip a pixel under it). */
@@ -126,11 +130,11 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
   const b = wave(i, 4);
   return planted(
     pose(KNELT, {
-      y: 13 + b,
-      lean: 16 + b * 5,
-      head: 12 + b * 5,
-      handB: [-3 - b, 12 + b * 0.6, 11],
-      weaponB: -120 + b * 4,
+      y: 12 + b,
+      lean: 12 + b * 5,
+      head: 7 + b * 4,
+      handB: [-6 - b, 17 + b * 0.6, 9],
+      weaponB: -66 + b * 4,
       phase: i / 4,
       sway: (b - 0.5) * 0.2,
       face: i === 2 ? 'hurt' : 'grit',
@@ -246,9 +250,11 @@ const TWIRL: ChibiPose = pose(S, { y: 3, lean: -3, twist: 0, head: -4, look: 6, 
 
 /**
  * The last pose, held: both blades crossed behind her back, the hands crossed at the small of her
- * back and the tips fanned out past her shoulders, an X behind her; chin up, a smirk for the viewer.
+ * back and the tips fanned out past her shoulders, an X behind her; her body turned a little away
+ * (so side on the blades show behind her back), a hip cocked, chin up, her head turned back over
+ * her shoulder to the viewer with a smirk and a wink.
  */
-const PROUD: ChibiPose = pose(AT_EASE, { x: 0, y: 1.5, lean: -2, twist: 6, tilt: 3, head: -6, look: 12, footF: [6, 0, 5.4], footB: [-5, 0, 4.6], handF: [-7, 15, -1], weapon: -8, roll: 50, yaw: -6, handB: [-7, 15, -1], weaponB: -8, rollB: 50, yawB: -6, face: 'smirk', wind: 0.5, lift: 0.4, sway: -0.6 });
+const PROUD: ChibiPose = pose(AT_EASE, { x: 0, y: 1.5, lean: -2, twist: 6, tilt: 6, turn: -20, head: -6, look: 24, footF: [6, 0, 5.4], footB: [-5, 0, 4.6], handF: [-7, 13, -1], weapon: -8, roll: 50, yaw: -6, handB: [-7, 13, -1], weaponB: -8, rollB: 50, yawB: -6, face: 'smirk', wind: 0.5, lift: 0.4, sway: -0.6 });
 
 const victory: ChibiPose[] = [
   // A breath first: the blades swung down out of her guard.
@@ -264,7 +270,7 @@ const victory: ChibiPose[] = [
   // Settled: chin up, a smirk, then a wink.
   pose(PROUD, { phase: 0.7, wind: 0.6 }),
   pose(PROUD, { phase: 0.85, wind: 0.55, wink: 'L' }),
-  pose(PROUD, { phase: 1 }),
+  pose(PROUD, { phase: 1, wink: 'L' }),
 ];
 
 /** The state clips' poses, by clip. */

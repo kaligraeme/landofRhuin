@@ -14,11 +14,11 @@
  */
 import { hex } from '../../paint.js';
 import { blade, type BladeSpec } from '../blade.js';
-import type { BodyDesign, ChibiDesign, DrawItem, HeadPiece, Lock, Piece, PieceContext, Tress } from '../design.js';
+import type { BodyDesign, ChibiDesign, DrawItem, FaceStyle, HeadPiece, Lock, Piece, PieceContext } from '../design.js';
 import { FACE_SHARP } from '../head.js';
 import { skirt } from '../pieces.js';
-import { dim, flat, type Hit, type Mat, mat4 } from '../raster.js';
-import { add3, at3, cross3, dirIn, type Frame3, type Limb, lerp, lerp3, norm3, rad, type V3 } from '../rig.js';
+import { dim, flat, type Hit, type Mat, mat4, toneLight } from '../raster.js';
+import { at3, dirIn, type Limb, lerp, lerp3, norm3, rad, type V3 } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
@@ -29,10 +29,11 @@ const SKIN = mat4('#fff6ee', '#fadcc8', '#e2b29a', '#ac7666', '#6c3c36', 0.3);
 const FACE_SKIN: Mat = { ...SKIN, line: hex('#a06a5e'), gain: 0.3, bias: 0.6 };
 const NECK: Mat = { ...mat4('#fff6ee', '#fadcc8', '#eec2a8', '#e0b098', '#b07a68', 0.2), gain: 0.4 };
 // Dark brown hair: its light tone along the lit side of each clump, a warm highlight on the brightest.
-const HAIR = mat4('#a27660', '#7a5442', '#523426', '#2e1c14', '#170d09', -0.05);
-// The coat: a soft black that keeps its shape at game size (its base tone over most of it, the
-// light tone on lit folds), the crimson lining showing where it turns.
-const COAT = { ...mat4('#67637a', '#4a4656', '#2c2a36', '#18161e', '#0c0b10', -0.02), gain: 0.6 };
+const HAIR = mat4('#7a5442', '#523426', '#2e1c14', '#1f120c', '#100906', -0.05);
+// The coat: a soft black that keeps its shape at game size: its light tone over the planes that
+// face the light (shoulders, sleeve tops, the outer folds of the tails) and its cool highlight along
+// the lit edge of her outline, the base tone elsewhere, the crimson lining showing where it turns.
+const COAT = { ...mat4('#67637a', '#4a4656', '#2c2a36', '#18161e', '#0c0b10', 0.1), gain: 0.85 };
 const CRIMSON = mat4('#ff98a4', '#e84a5c', '#b02234', '#68101c', '#30060c', 0.1);
 const LINING = mat4('#d03a4e', '#b02234', '#8a1828', '#5a0e1a', '#2c050c');
 // The vest: a deep wine-black, so it reads apart from the coat over it and carries her crimson in.
@@ -63,91 +64,85 @@ const GEM = mat4('#ffb0bc', '#ff4a62', '#c01830', '#700a18', '#30040a', 0.1);
 const BUILD = { hip: 26.5, thigh: 11.8, shin: 11.6, ankle: 4, torso: 22, neck: 2, shoulder: 7.2, hipWidth: 3.6, shoulderDrop: 3.2, upperArm: 8.4, foreArm: 8.2, headUp: 11.6 };
 
 // ── Hair: a short, messy bob ─────────────────────────────────────────────────────────────────
-// Chin-length all round and choppy: a rounded crown of broad pieces tumbling out and down, a choppy
-// fringe to her brows, swept a little to her left, broad pieces over her ears falling to her jaw
-// in uneven points, and short layers at the back that flick out at the nape. One springy lock
-// stands up off her crown. In a run the crown tosses back and the ends lift.
+// Chin-length all round, sleek on top and choppy at its ends: a smooth crown hugging her skull, a
+// short choppy fringe that leaves her brows and a strip of forehead bare, swept a little to her
+// left, the sides falling straight past her cheeks to her jaw in uneven points that curl in
+// under it, and the back cut level with her jaw. One springy lock stands up off her crown. In a
+// run the crown tosses back and the ends lift.
 
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 const LOCKS: Lock[] = [
-  // The crown: broad pieces lying back and down over the round of her head from high on it, to
-  // about the level of her ears, their tips flicking out a little, so the outline is rounded but
-  // choppy rather than a smooth helmet.
-  L(42, 60, [0.25, -1, 0.5], 8.5, 3.9, [0.1, 0, 0.15], 1.2, 0.3),
-  L(90, 62, [-0.15, -1, 0.5], 9, 4, [0, 0, 0.12], 1, 0.3),
-  L(136, 60, [-0.5, -1, 0.38], 9.5, 4.2, [-0.2, 0, 0.1], 1.4, 0.3),
-  L(180, 62, [-0.6, -1, 0], 9.5, 4.2, [-0.25, 0, 0], 1.4, 0.3),
-  L(-136, 60, [-0.5, -1, -0.38], 9.5, 4.2, [-0.2, 0, -0.1], 1.4, 0.3),
-  L(-90, 62, [-0.15, -1, -0.5], 9, 4, [0, 0, -0.12], 1, 0.3),
-  L(-42, 60, [0.25, -1, -0.5], 8.5, 3.9, [0.1, 0, -0.15], 1.2, 0.3),
-  // The bob's sides and back: broad pieces falling straight from over the ears to her jaw, uneven
-  // at their ends, the front ones turning in toward her cheeks and the ones behind flicking out.
-  L(70, 24, [0.14, -1, 0.06], 12.5, 3.1, [0.12, 0.02, -0.2], 0.5, 0.4),
-  L(102, 22, [-0.15, -1, 0.12], 12.5, 3.4, [-0.05, 0.04, 0.16], 0.7, 0.4),
-  L(140, 18, [-0.4, -1, 0.28], 11.5, 3.4, [-0.2, 0.06, 0.1], 0.9, 0.4),
-  L(-70, 24, [0.14, -1, -0.06], 13.5, 3.1, [0.12, 0.02, 0.2], 0.5, 0.4),
-  L(-102, 22, [-0.15, -1, -0.12], 11.5, 3.4, [-0.05, 0.04, -0.16], 0.7, 0.4),
-  L(-140, 18, [-0.4, -1, -0.28], 12.5, 3.4, [-0.2, 0.06, -0.1], 0.9, 0.4),
-  // The fringe: choppy pointed pieces to her brows, swept a little to her left.
-  L(-44, 38, [0.35, -1, -0.45], 5.5, 2, [0.1, 0, -0.15], 0.3, 0.25),
-  L(-18, 46, [0.5, -1, -0.35], 7, 2.2, [0.15, 0, -0.12], 0.3, 0.25),
-  L(8, 48, [0.5, -1, -0.12], 6, 2.2, [0.15, 0, -0.04], 0.3, 0.25),
-  L(32, 44, [0.5, -1, 0.2], 6.5, 2, [0.15, 0, 0.06], 0.3, 0.25),
-  // The top: a piece from the whorl tumbling forward over it.
-  L(170, 82, [0.95, 0.05, 0.2], 9, 4.4, [0.15, -0.5, 0], 1.6, 0.3),
+  // The crown: broad pieces lying close over the round of her head from high on it, sleek rather
+  // than tousled, so the bob keeps a smooth dome of an outline.
+  L(40, 62, [0.3, -1, 0.42], 7.5, 3.2, [0, 0, -0.05], 0.5, 0.35),
+  L(86, 64, [-0.1, -1, 0.4], 7.5, 3.3, [0, 0, -0.06], 0.5, 0.35),
+  L(132, 62, [-0.45, -1, 0.3], 8, 3.4, [0.05, 0, -0.05], 0.5, 0.35),
+  L(180, 64, [-0.55, -1, 0], 8, 3.4, [0.08, 0, 0], 0.5, 0.35),
+  L(-132, 62, [-0.45, -1, -0.3], 8, 3.4, [0.05, 0, 0.05], 0.5, 0.35),
+  L(-86, 64, [-0.1, -1, -0.4], 7.5, 3.3, [0, 0, 0.06], 0.5, 0.35),
+  L(-40, 62, [0.3, -1, -0.42], 7.5, 3.2, [0, 0, 0.05], 0.5, 0.35),
+  // The bob's sides and back: pieces falling straight from over her ears past her cheeks to her
+  // jaw, uneven at their ends, every one curling in a little under it; longest at the front.
+  L(74, 26, [0.08, -1, 0.14], 13.5, 2.6, [0.06, 0.04, -0.16], 0.45, 0.45),
+  L(94, 24, [-0.05, -1, 0.12], 12, 3, [0.02, 0.04, -0.12], 0.5, 0.45),
+  L(110, 22, [-0.12, -1, 0.08], 12.8, 3, [0.08, 0.04, -0.1], 0.55, 0.45),
+  L(136, 20, [-0.16, -1, 0.04], 11.2, 3.1, [0.12, 0.04, -0.06], 0.6, 0.45),
+  L(160, 18, [-0.16, -1, 0.02], 11.8, 3.1, [0.14, 0.04, -0.02], 0.6, 0.45),
+  L(-74, 26, [0.08, -1, -0.14], 14, 2.6, [0.06, 0.04, 0.16], 0.45, 0.45),
+  L(-94, 24, [-0.05, -1, -0.12], 12.6, 3, [0.02, 0.04, 0.12], 0.5, 0.45),
+  L(-110, 22, [-0.12, -1, -0.08], 11.6, 3, [0.08, 0.04, 0.1], 0.55, 0.45),
+  L(-136, 20, [-0.16, -1, -0.04], 12.4, 3.1, [0.12, 0.04, 0.06], 0.6, 0.45),
+  L(-160, 18, [-0.16, -1, -0.02], 11, 3.1, [0.14, 0.04, 0.02], 0.6, 0.45),
+  // The fringe: short, choppy pointed pieces stopping above her brows, swept a little to her left.
+  L(-46, 40, [0.4, -1, -0.5], 5, 1.9, [0.1, 0, -0.1], 0.3, 0.25),
+  L(-20, 46, [0.55, -1, -0.32], 5, 2.1, [0.12, 0, -0.08], 0.3, 0.25),
+  L(6, 48, [0.55, -1, -0.12], 4.4, 2.1, [0.12, 0, -0.04], 0.3, 0.25),
+  L(30, 46, [0.55, -1, 0.18], 4.8, 2, [0.12, 0, 0.04], 0.3, 0.25),
   // The upright lock on her crown, springing as she moves. (Shapes from the 21st lock on share
   // their numbers with the collar's, which this one never touches.)
   { yaw: 150, pitch: 80, dir: [0.12, 1, 0.12], len: 13, w: 2.4, curl: [0.4, -0.25, 0.05], give: 0.7, belly: 0.4, bob: 0.75 },
 ];
 
-/**
- * Short layers at the back of the bob, round the nape, their ends flicking out: from behind they
- * give the bob its jagged hem at the top of her collar.
- */
-const NAPE: Tress[] = [
-  { yaw: 128, pitch: -8, dir: [-0.4, -1.2, 0.6], len: 9, w: 3, stiff: 0.5, give: 0.8, taper: 0.4, flip: 1.6 },
-  { yaw: 155, pitch: -12, dir: [-0.8, -1, 0.3], len: 8, w: 2.6, stiff: 0.5, give: 0.8, taper: 0.55, flip: 1.4 },
-  { yaw: 180, pitch: -14, dir: [-1, -1, 0], len: 7, w: 2.4, stiff: 0.5, give: 0.8, taper: 0.6, flip: 1.2 },
-  { yaw: 205, pitch: -12, dir: [-0.8, -1, -0.3], len: 8, w: 2.6, stiff: 0.5, give: 0.8, taper: 0.55, flip: 1.4 },
-  { yaw: 232, pitch: -8, dir: [-0.4, -1.2, -0.6], len: 9, w: 3, stiff: 0.5, give: 0.8, taper: 0.4, flip: 1.6 },
-];
-
-const SHELL = { c: [-1.2, 1, 0] as V3, r: [10.9, 10, 11.2] as V3 };
+const SHELL = { c: [-1.4, 1.6, 0] as V3, r: [10.4, 9.8, 10.3] as V3 };
 
 // ── The hair clip ────────────────────────────────────────────────────────────────────────────
 
-/** Where the clip sits on the hair (degrees round the head and up, as a lock's root) and its size. */
-const CLIP = { yaw: 56, pitch: 34, r: 3, bar: 0.75 };
+/** Where the clip sits on the hair (degrees round the head and up, as a lock's root), and how far out from the shell. */
+const CLIP = { yaw: 56, pitch: 36, out: 1.07 };
+
+/** The clip as pixels: two crossed crimson bars, `h` the highlight on the upper one's lit end. */
+const CLIP_GLYPH = ['h...C', '.C.C.', '..C..', '.C.C.', 'C...C'];
+
+/** The clip's shape id inside the head's part (clear of the locks', the shell's and the collar's). */
+const CLIP_ID = 70;
 
 /**
- * A small crimson clip in her hair above her right temple, shaped like two crossed blades: a thin
- * disk lying on the hair, cut down to the two bars of an X.
+ * A small crimson clip in her hair above her right temple, shaped like two crossed blades: an X
+ * five pixels across, stamped on the hair over the temple wherever that faces the viewer, standing
+ * a little clear of the hair, and parted from it by a dark line all round. It turns with the head
+ * but keeps its whole shape, and where hair passes over most of it, or it turns away, it is not
+ * drawn at all rather than shrinking to a red speck.
  */
 function hairClip(shell: { c: V3; r: V3 }): HeadPiece {
   const cp = Math.cos(rad(CLIP.pitch));
   const dir: V3 = [Math.cos(rad(CLIP.yaw)) * cp, Math.sin(rad(CLIP.pitch)), Math.sin(rad(CLIP.yaw)) * cp];
-  // On the shell, standing a little clear of it so the locks round it do not cover it.
-  const at: V3 = [shell.c[0] + dir[0] * shell.r[0] * 1.08, shell.c[1] + dir[1] * shell.r[1] * 1.08, shell.c[2] + dir[2] * shell.r[2] * 1.08];
+  const at: V3 = [shell.c[0] + dir[0] * shell.r[0] * CLIP.out, shell.c[1] + dir[1] * shell.r[1] * CLIP.out, shell.c[2] + dir[2] * shell.r[2] * CLIP.out];
   const nrm = norm3([dir[0] / shell.r[0], dir[1] / shell.r[1], dir[2] / shell.r[2]]);
+  const cells: [number, number, number][] = [];
+  CLIP_GLYPH.forEach((row, y) => [...row].forEach((ch, x) => ch !== '.' && cells.push([x - 2, y - 2, ch === 'h' ? 0 : 1])));
   return {
-    blobs: (_ctx, head) => {
-      const out = dirIn(head, nrm[0], nrm[1], nrm[2]);
-      const u = norm3(add3(head.u, out, -(head.u[0] * out[0] + head.u[1] * out[1] + head.u[2] * out[2])));
-      const f = cross3(u, out);
-      const fr: Frame3 = { o: at3(head, at[0], at[1], at[2]), f, u, r: out };
-      return [
-        {
-          frame: fr,
-          blobs: [{ c: [0, 0, 0], r: [CLIP.r, CLIP.r, 1], id: 70 }],
-          shade: (h: Hit) => {
-            const a = Math.abs(h.p[0] - h.p[1]);
-            const b = Math.abs(h.p[0] + h.p[1]);
-            if (Math.min(a, b) > CLIP.bar * 1.414) return null;
-            return { m: CRIMSON, light: 0.45 };
-          },
-        },
-      ];
+    paint: (ctx, part, head) => {
+      if (ctx.cam.facing(dirIn(head, nrm[0], nrm[1], nrm[2])) < 0.3) return;
+      const p3 = at3(head, at[0], at[1], at[2]);
+      const p = ctx.proj(p3);
+      const cx = Math.round(p[0]);
+      const cy = Math.round(p[1]);
+      const z = ctx.depth(p3) + 5;
+      // Only where nearly all of it would show over the hair round it.
+      const shown = cells.filter(([x, y]) => part.zAt(cx + x, cy + y) <= z).length;
+      if (shown < cells.length * 0.8) return;
+      for (const [x, y, tone] of cells) part.plot(cx + x, cy + y, CRIMSON, toneLight(CRIMSON, tone), z, CLIP_ID, true);
     },
   };
 }
@@ -170,7 +165,7 @@ function crimsonCollar(spec: { c: V3; r: V3; bottom: number; top: { back: number
           if (p[1] > top || p[1] < spec.bottom) return null;
           if (h.back) return { m: LINING, id: 31 };
           // The crimson band along the top, and down the front edges of the opening.
-          const trim = p[1] > top - 1.2 || yaw < spec.open + 6;
+          const trim = p[1] > top - 1.8 || yaw < spec.open + 10;
           return { m: trim ? CRIMSON : COAT, id: trim ? 32 : 30 };
         },
       },
@@ -257,7 +252,7 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   // buttoned in silver down the middle.
   const open = 30 - (u - 8) * 0.55;
   if (yaw < open) {
-    if (yaw > open - 3.4) return CRIMSON;
+    if (yaw > open - 5) return CRIMSON;
     if (yaw < 3.2 && (Math.round(u) % 3 === 0) && u < 19) return BUTTON;
     return VEST;
   }
@@ -329,6 +324,30 @@ const SABRE = blade(SABRE_SPEC);
 
 // ── The face ─────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Her face: FACE_SHARP's mouths, with eyes and brows of her own. Each eye is a dark-framed shape:
+ * a thick lash along its top with a sharp flick up at the outer corner, a white each side of a
+ * deep crimson iris, its shine and a single brighter pixel under it; the brows are short and
+ * angled down toward her nose, so she looks fierce. The inner corners stay well apart, so at game
+ * size her eyes read as two eyes, not one red band.
+ */
+const FACE_DUELIST: FaceStyle = {
+  ...FACE_SHARP,
+  eyes: {
+    full: { rows: ['.....K', '.KKKKK', 'KWDhIK', '.WIiI.'], ax: 2, ay: 2 },
+    mid: { rows: ['....K', '.KKKK', 'KWhIK', '.WiI.'], ax: 2, ay: 2 },
+    narrow: { rows: ['...K', 'KKKK', 'KhIK', '.iI.'], ax: 1, ay: 2 },
+    closed: { rows: ['.....K', '.KKKK.'], ax: 2, ay: 1 },
+    squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
+    wide: { rows: ['.....K', 'KKKKKK', 'KWDhIK', 'KWIiIK', '.KKKK.'], ax: 2, ay: 2 },
+  },
+  brows: {
+    full: { rows: ['...BBB', 'BBB...'], ax: 2, ay: 1 },
+    mid: { rows: ['...BB', 'BBB..'], ax: 2, ay: 1 },
+    narrow: { rows: ['..B', 'BB.'], ax: 1, ay: 1 },
+  },
+};
+
 const BLADEMASTER: ChibiDesign = {
   id: 'hero-blademaster',
   build: BUILD,
@@ -339,26 +358,25 @@ const BLADEMASTER: ChibiDesign = {
     jaw: { c: [1.5, -4, 0], r: [7.4, 6.4, 7.6] },
     ear: { c: [-0.6, -3.2, 9.4], r: [1.8, 2.6, 1.5] },
     shell: SHELL,
-    hairline: { faceYaw: 72, brow: 3.8, temple: 0, nape: -8, ear: -2 },
+    hairline: { faceYaw: 72, brow: 4.4, temple: 0, nape: -8, ear: -2 },
     locks: LOCKS,
-    long: { nape: NAPE, lie: 1 },
     darkHair: true,
-    lockLine: hex('#2a170e'),
+    lockLine: hex('#140a06'),
     whorl: { yaw: 180, pitch: 56, reach: 84, clumps: 7, twist: 0.3 },
     face: {
-      eye: [8.3, -1.8, 4.2],
+      eye: [8.3, -2, 4.4],
       lash: hex('#1c0c12'),
       iris: hex('#b01830'),
-      irisLight: hex('#ff5a6e'),
+      irisLight: hex('#d02840'),
       irisDeep: hex('#5a0814'),
       white: hex('#fbf4f4'),
       shine: hex('#ffffff'),
-      brow: hex('#3a2218'),
+      brow: hex('#2e1810'),
       browUp: 3.4,
       mouth: hex('#a03848'),
       mouthAt: [9.1, -6.6],
       noseAt: [9.7, -4],
-      style: FACE_SHARP,
+      style: FACE_DUELIST,
       rest: 'smirk',
     },
   },
@@ -381,8 +399,8 @@ const BLADEMASTER: ChibiDesign = {
       legs: 3.7,
       panels: [
         { from: 40, to: 100, len: 13, jag: 1.5 },
-        { from: 100, to: 178, len: 21, jag: 3.5, taper: 1.05, kick: 0.25 },
-        { from: 182, to: 260, len: 21, jag: 3.5, taper: 1.05, kick: 0.25 },
+        { from: 104, to: 178, len: 21, jag: 2.5, taper: 1, kick: 0.12 },
+        { from: 182, to: 256, len: 21, jag: 2.5, taper: 1, kick: 0.12 },
         { from: 260, to: 320, len: 13, jag: 1.5 },
       ],
     }),
