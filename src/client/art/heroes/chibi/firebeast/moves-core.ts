@@ -161,7 +161,7 @@ export const jaws =
   };
 
 /** How far along the claws their points are, from the fist. */
-const CLAW_TIP = 15.5;
+const CLAW_TIP = 17;
 
 /**
  * The slash of fire a strike leaves (fire.ts `slash`): round the striking shoulder through where

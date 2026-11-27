@@ -144,9 +144,9 @@ const FACE_BEAST: FaceStyle = {
     narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
   },
   mouths: {
-    stern: { rows: ['MMMMMM', 'T....T'], ax: 3, ay: 0 },
+    stern: { rows: ['MMMMMM', '.T..T.'], ax: 3, ay: 0 },
     shout: { rows: ['MMMMMM', 'MTrrTM', 'MrrrrM', 'MTrrTM', '.MMMM.'], ax: 3, ay: 0 },
-    grit: { rows: ['MMMMMM', 'TTTTTT', 'MMMMMM'], ax: 3, ay: 1 },
+    grit: { rows: ['MMMMMM', 'MTrrTM', 'MTMMTM', '.M..M.'], ax: 3, ay: 1 },
     hurt: { rows: ['.MMMM.', 'MrrrrM', '.MMMM.'], ax: 3, ay: 1 },
     closed: { rows: ['MMMMM'], ax: 2, ay: 0 },
     smirk: { rows: ['MMMMMM', '....T.'], ax: 3, ay: 0 },
@@ -314,8 +314,8 @@ const FIREBEAST: ChibiDesign = {
     paws({ hide: HIDE, claw: CLAW, hot: CLAW_HOT, r: 3.6 }),
     cracks({ seam: SEAM, arms: [6, 5.6], thigh: 6.2 }),
   ],
-  weapon: claws({ len: 12, w: 2.6, spread: 2.8, hook: 4, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 14 }),
-  offhand: claws({ len: 12, w: 2.6, spread: 2.8, hook: 4, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 14 }),
+  weapon: claws({ len: 14.5, w: 2.8, spread: 3, hook: 4.6, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 16 }),
+  offhand: claws({ len: 14.5, w: 2.8, spread: 3, hook: 4.6, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 16 }),
   aura: { core: hex('#ff9a26'), edge: hex('#d8401a'), hot: hex('#fff4c8') },
 };
 
