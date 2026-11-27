@@ -147,10 +147,11 @@ easing off his aggro and no running to the Tank. He ignores only the markers tha
 form holds; one that lands after it is as deadly as ever, so he steps out of it as he would as the
 Warden. Like every AI damage dealer, he rolls through a buster on him as it lands, the way that
 keeps it off the others: one begun on the Firebeast, or one the boss begins on him after the form
-because the claws' aggro still holds it. An AI Tank leaves the monsters on the Firebeast be and saves its taunt until the form has
-0.8 seconds left, then takes them all back, the boss too, so they are on it when the form ends
-(sooner, and the last claws would pull them away again). A player Tank's hotbar says how many are on
-the Firebeast and for how long, and counts them as loose for its last second and a half.
+because the claws' aggro still holds it. An AI Tank leaves the monsters on the Firebeast be and
+saves its taunt until the form has 0.8 seconds left, then takes them all back, the boss too, so
+they are on it when the form ends (sooner, and the last claws would pull them away again). A player
+Tank's hotbar says how many are on the Firebeast and for how long, and counts them as loose for its
+last second and a half.
 
 What the sims show, with AI parties in the same 128 dungeons for each Duelist (64 seeds, each with
 a Guardian–Sage–Bowmaster party and a Dark Knight–Sage–Arbalest one):
@@ -165,8 +166,8 @@ a Guardian–Sage–Bowmaster party and a Dark Knight–Sage–Arbalest one):
   Firebeast comes out about nine times a run and deals about a fifth of his damage.
 - He falls about as often as the other Duelists: 0.6 times a run (0.55 and 0.69 in the two
   parties), against the Dragoon's 0.7 (0.45 and 1.03) and the Blademaster's 0.5 (0.39 and 0.63).
-  What kills him is what kills them: his own spread marker caught on someone (31 of his 79 deaths),
-  routine blows, ground areas and raid-wide blasts. Seven came within three seconds of a form
+  What kills him is what kills them: spread markers (31 of his 79 deaths), routine blows, ground
+  areas and raid-wide blasts. Seven came within three seconds of a form
   ending, none of them a tank-buster.
 - Busters used to be what killed him: about once a run, two in three of his deaths. An AI Tank
   charging to brace against a buster dragged it onto the Duelists behind the boss (0.7 to 0.8 deaths
@@ -179,10 +180,10 @@ a Guardian–Sage–Bowmaster party and a Dark Knight–Sage–Arbalest one):
   times a run with him, against 0.6 with the Dragoon and 0.4 with the Blademaster, and the party
   wipes 0.19 times a run against 0.14 and 0.05. The extra deaths are mostly the Mage and the Tank
   falling to routine blows (20 in 64 runs, against 6 with the Dragoon), which fits the monsters
-  the claws held coming back from the Firebeast all at once. In the Dark Knight's party he sits between the two (others 1.5 a run against 2.2
-  and 1.1, wipes 0.33 against 0.59 and 0.27). Halving the claws' aggro brings the Guardian's party
-  down to 0.6 and 0.08 for the same damage, but does nothing for the Dark Knight's (1.6 and 0.38),
-  so the claws keep their full aggro.
+  the claws held coming back from the Firebeast all at once. In the Dark Knight's party he sits
+  between the two (others 1.5 a run against 2.2 and 1.1, wipes 0.33 against 0.59 and 0.27).
+  Halving the claws' aggro brings the Guardian's party down to 0.6 and 0.08 for the same damage,
+  but does nothing for the Dark Knight's (1.6 and 0.38), so the claws keep their full aggro.
 - These counts are noisy. The two halves of the same 64 seeds can differ twofold for deaths and
   wipes (the others in the Blademaster's Dark Knight party: 0.75 and 1.41 deaths a run), so a
   difference of less than about half is not to be trusted, and 16 seeds are far too few to tune by.
