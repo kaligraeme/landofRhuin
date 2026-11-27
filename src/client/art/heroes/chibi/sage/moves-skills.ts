@@ -4,30 +4,36 @@
  * (Mending Light's 0.4 s, Resurrection's 1.5 s) or take 0.06 s each where there is none, and the
  * rest share the clip's seconds. A weapon skill's clip is named after its hotbar slot.
  *
- *   special  7  (2 wind-up) Mending Light: the staff raised and tilted toward the aim while
- *               gold-green light gathers in the orb, then tipped forward to release it: a burst
- *               at the orb, a soft wave of light rolling out over the floor toward the aim and
- *               motes rising round him
+ *   special  7  (2 wind-up) Mending Light: the staff raised in his right hand and tilted toward the
+ *               aim, out to his right, the left hand open beneath it, while gold-green light
+ *               gathers in the orb; then both hands tip it forward to release it: a burst at the
+ *               orb, a soft wave of light rolling out over the floor toward the aim and motes
+ *               rising round him
  *   q        8  (2 wind-up) Arcane Orb: the staff swung back over his shoulder while a great teal
  *               orb forms at its head, then swung forward in a teal arc, pushing the orb away
  *               along the aim
  *   e       10  (2 wind-up) Sanctuary: the staff lifted in both hands and struck down upright
- *               before him; a ring of runes pulses out over the floor from its foot and light
- *               rises from it while he bows his head over the staff
+ *               before him on his right, one hand over the other on it; a ring of his runes pulses
+ *               out over the floor from its foot and light rises from it while he bows his head
  *   r       10  (2 wind-up) Meteor: the staff thrust at the sky, a fiery sigil opening above the
- *               orb; then the staff swept down at the aim and the fire pulled down after it in a
- *               streak to the floor ahead, embers falling
+ *               orb; then the staff swept down at the aim, the sigil pulled after it to high over
+ *               the aim and its fire falling from there onto the floor in a burst, embers falling
  *   ult     16  (8 wind-up, stretched over the server's 1.5 s) Resurrection: a long chant, the
  *               staff raised high on his right and the left hand lifted open on his left, eyes
  *               closed; a pillar of gold light pours down on him, rings of light climb slowly round
  *               him and motes and feathers of light rise; then the staff thrust up in a burst of
  *               gold rays and a ring of light rolling out over the floor
  *   cast     8  (2 wind-up) role skills (Arcane Blink, Mana Font) and the Elixir: a quick twirl
- *               of the staff in a teal arc, then planted with the orb flaring, a teal circle on
- *               the floor under him and sparkles spiralling up
+ *               of the staff beside his head in a teal arc, then planted with the orb flaring, a
+ *               teal circle on the floor under him and sparkles spiralling up
  *
  * Each starts from the battle stance (`fromReady`) and ends in it (`settle`). Raised hands go out
- * beside his head, never across his face: his head is too big for a hand to get over it.
+ * beside his head, never across his face: his head is too big for a hand to get over it. The
+ * staff is long (about 100 px), so where it stands upright it is held well ahead of him (clear of
+ * his face side on) and out to his right (beside his head toward the viewer); on the way back to
+ * the stance, which holds it across to his left, its head is dipped so that toward the viewer it
+ * passes under his chin. His heals glow gold-green (LIFE), his Meteor burns orange (FIRE) and
+ * Resurrection shines gold (GOLD_LIGHT); the rest is his own teal.
  */
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
@@ -45,8 +51,8 @@ const under = (x: FxContext): V3 => [x.rig.pelvis.o[0], 0, x.rig.pelvis.o[2]];
 const footOf = (x: FxContext): V3 => add3(x.rig.weapon.o, x.rig.weapon.u, FOOT);
 
 /** A level ring of light round a point (hero space), `r` in radius, `k` its strength; the half behind him passes behind him. */
-function ringAt(x: FxContext, c: V3, r: number, col: RGB, k: number, step = 1): void {
-  const n = Math.max(12, Math.ceil(r * 6.5 / step));
+function ringAt(x: FxContext, c: V3, r: number, col: RGB, k: number): void {
+  const n = Math.max(12, Math.ceil(r * 6.5));
   for (let i = 0; i < n; i++) {
     const th = (i / n) * Math.PI * 2;
     const p3: V3 = [c[0] + Math.cos(th) * r, c[1], c[2] + Math.sin(th) * r];
@@ -341,7 +347,7 @@ const orbRays =
 // ── Mending Light ────────────────────────────────────────────────────────────────────────────
 
 /** The staff raised and tilted toward the aim in his right hand, out to his right, the orb above his brow ahead of him, the left hand open beneath it, his chin up to watch it. */
-const MEND_UP: ChibiPose = pose(S, { x: -1, y: 3, lean: -2, twist: 8, head: -5, look: -2, handF: [9, 4, 11], handB: [10, 9, 4], grip: -4, weapon: 26, roll: 12, yaw: 0, wind: 0.2, lift: 0.2, face: 'stern' });
+const MEND_UP: ChibiPose = pose(S, { x: -1, y: 3, lean: -2, twist: 8, head: -5, look: -2, handF: [16, 5, 10], handB: [10, 9, 4], grip: -4, weapon: 30, roll: 12, yaw: 0, wind: 0.2, lift: 0.2, face: 'stern' });
 /** Tipped forward to release it. */
 const MEND_OUT: ChibiPose = pose(S, { x: 2, y: 4, lean: 12, twist: 12, head: 2, look: -2, handF: [9, 12, 6], grip: -4, grip2: 9, weapon: 56, roll: -6, yaw: -28, wind: 0.45, lift: 0.1, face: 'stern' });
 
@@ -463,16 +469,22 @@ const chant = (i: number): ChibiPose => {
 /** The release: the staff thrust up, the arms flung wide, a burst of gold. */
 const RAISE: ChibiPose = pose(CHANT, { y: 1, lean: -8, head: -10, handF: [-8, -10, 14], handB: [-4, -6, 15], weapon: -2, wind: 0.5, lift: 0.8, face: 'shout' });
 
+/**
+ * On the way back to the stance: the staff lowered and tipped forward on his right, so that toward
+ * the viewer its head passes under his chin as it crosses to his left.
+ */
+const LOWERED: ChibiPose = pose(CHANT, { handF: [5, 9, 9], handB: [2, 10, 9], weapon: 52, roll: 6 });
+
 const ult: ChibiPose[] = [
   ...Array.from({ length: 8 }, (_, i) => (i === 0 ? fromReady(chant(0), 0.7) : chant(i))),
   pose(RAISE, { phase: 1, fx: { rune: 1, aura: 0.6, extra: both(tinted(GOLD_LIGHT, (x) => rays(x, x.rig.chest.o, 1.3, { n: 14, behind: true, len: 52 })), burst(1.3, GOLD_LIGHT, [0, 1, 0]), swell(0, 1, GOLD_LIGHT), feathers(1, 1)) } }),
   pose(RAISE, { y: 1.5, phase: 1.1, fx: { rune: 1, aura: 0.4, extra: both(tinted(GOLD_LIGHT, (x) => rays(x, x.rig.chest.o, 1, { n: 14, behind: true, len: 52, spin: 6 })), swell(0.35, 1, GOLD_LIGHT), feathers(1.12, 1), tinted(GOLD_LIGHT, (x) => motes(x, 1, { rise: 1.1 }))) } }),
   pose(RAISE, { y: 2, lean: -6, head: -8, phase: 1.2, face: 'closed', fx: { rune: 0.9, extra: both(tinted(GOLD_LIGHT, (x) => rays(x, x.rig.chest.o, 0.6, { n: 14, behind: true, len: 52, spin: 12 })), swell(0.7, 0.8, GOLD_LIGHT), feathers(1.24, 0.8), tinted(GOLD_LIGHT, (x) => motes(x, 0.8, { rise: 1.2 }))) } }),
   pose(CHANT, { y: 2.5, lean: -2, head: -4, handF: [0, 0, 11], handB: [-2, 2, 11], weapon: 6, wind: 0.35, lift: 0.4, phase: 1.3, face: 'stern', fx: { rune: 0.7, extra: both(swell(1, 0.5, GOLD_LIGHT), feathers(1.36, 0.6), tinted(GOLD_LIGHT, (x) => motes(x, 0.6, { rise: 1.3 }))) } }),
-  settle(pose(CHANT, { handF: [3, 8, 9], handB: [2, 10, 9], weapon: 20 }), 0.35, { wind: 0.3, lift: 0.25, phase: 1.4, face: 'stern', fx: { rune: 0.55, extra: both(feathers(1.48, 0.4), tinted(GOLD_LIGHT, (x) => motes(x, 0.4, { rise: 1.4 }))) } }),
-  settle(pose(CHANT, { handF: [3, 8, 9], handB: [2, 10, 9], weapon: 20 }), 0.65, { wind: 0.22, lift: 0.15, phase: 1.5, fx: { rune: 0.45, extra: feathers(1.6, 0.25) } }),
-  settle(pose(CHANT, { handF: [3, 8, 9], handB: [2, 10, 9], weapon: 20 }), 0.85, { wind: 0.18, lift: 0.05, phase: 1.6, fx: { rune: 0.4 } }),
-  settle(pose(CHANT, { handF: [3, 8, 9], handB: [2, 10, 9], weapon: 20 }), 0.96, { wind: 0.16, phase: 1.7, fx: { rune: 0.35 } }),
+  settle(LOWERED, 0.35, { wind: 0.3, lift: 0.25, phase: 1.4, face: 'stern', fx: { rune: 0.55, extra: both(feathers(1.48, 0.4), tinted(GOLD_LIGHT, (x) => motes(x, 0.4, { rise: 1.4 }))) } }),
+  settle(LOWERED, 0.65, { wind: 0.22, lift: 0.15, phase: 1.5, fx: { rune: 0.45, extra: feathers(1.6, 0.25) } }),
+  settle(LOWERED, 0.85, { wind: 0.18, lift: 0.05, phase: 1.6, fx: { rune: 0.4 } }),
+  settle(LOWERED, 0.96, { wind: 0.16, phase: 1.7, fx: { rune: 0.35 } }),
 ];
 
 // ── Cast ─────────────────────────────────────────────────────────────────────────────────────
@@ -483,7 +495,7 @@ const ult: ChibiPose[] = [
  */
 export const TWIRL: ChibiPose = pose(S, { x: 0, y: 3, lean: 2, twist: 10, head: -2, look: 4, handF: [-2, -6, 15], handB: [4, 13, 9], grip: 6, weapon: -10, roll: -5, yaw: 0, wind: 0.3, face: 'stern' });
 /** Planted beside him, the orb flaring, the left hand lifted open. */
-const FLARE: ChibiPose = plant(pose(S, { x: 0, y: 2.5, lean: 4, twist: 14, head: -3, look: -2, footF: [6, 0, 5.4], footB: [-6, 0, 5], handF: [16, 3, 8], handB: [8, 8, 11], grip: 0, weapon: 8, roll: 12, yaw: 0, wind: 0.3, lift: 0.3, face: 'stern' }));
+const FLARE: ChibiPose = plant(pose(S, { x: 0, y: 2.5, lean: 4, twist: 14, head: -3, look: -2, footF: [6, 0, 5.4], footB: [-6, 0, 5], handF: [19, 3, 6], handB: [8, 8, 11], grip: 0, weapon: 10, roll: 10, yaw: 0, wind: 0.3, lift: 0.3, face: 'stern' }));
 
 const cast: ChibiPose[] = [
   fromReady(TWIRL, 0.6, { fx: { rune: 0.6 } }),

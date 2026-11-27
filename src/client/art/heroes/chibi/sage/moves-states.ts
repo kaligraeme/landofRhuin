@@ -52,12 +52,12 @@ const KNELT: ChibiPose = plant({
   footF: [-12, 0, 6.5],
   footB: [6, 0, 7],
   kneel: 'F',
-  handF: [16, 8, 9],
+  handF: [18, 8, 9],
   handB: [6, 11, 4],
   // His hand low on the haft, so the staff's head stands well above him and side on the haft
   // stands ahead of his bowed face.
   grip: -14,
-  weapon: 10,
+  weapon: 13,
   roll: 6,
   yaw: 0,
   face: 'grit',
@@ -109,7 +109,7 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
       y: 12.5 + b * 0.8,
       lean: 12 + b * 4,
       head: 12 + b * 4,
-      handF: [16 - 1.4 * b, 8, 9],
+      handF: [18 - 0.8 * b, 8, 9],
       handB: [6 - 1.2 * b, 11 + b * 0.8, 4],
       phase: i / 4,
       sway: (b - 0.5) * 0.2,
@@ -172,9 +172,9 @@ const thud = ({ c, rig, proj, hash }: FxContext): void => {
 
 const ko: ChibiPose[] = [
   // Stagger back, the staff tipping away.
-  pose(S, { x: -4, y: 4, lean: -14, twist: 0, tilt: -6, head: -14, handF: [1, 13, 9], handB: [-3, 10, 12], weapon: 20, roll: -12, yaw: -20, face: 'hurt', sway: -0.4, lift: 0.3 }),
+  pose(S, { x: -4, y: 4, lean: -14, twist: 0, tilt: -6, head: -14, handF: [2, 13, 8], handB: [-3, 10, 12], weapon: 40, roll: -16, yaw: -52, face: 'hurt', sway: -0.4, lift: 0.3 }),
   // His knees give: down on both, leaning on the staff a last moment.
-  plant(pose(S, { x: -2, y: 13.5, lean: 10, twist: 0, head: 16, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [10, 8, 9], handB: [4, 16, 8], grip: 0, weapon: 10, roll: 6, yaw: 0, face: 'hurt', wind: 0, flare: 0.2 })),
+  plant(pose(S, { x: -2, y: 13.5, lean: 10, twist: 0, head: 16, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [16, 8, 9], handB: [4, 16, 8], grip: -14, weapon: 12, roll: 6, yaw: 0, face: 'hurt', wind: 0, flare: 0.2 })),
   // He sways back, turning, the staff slipping from his grip.
   pose(S, { x: -2, y: 15, lean: -12, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-6, -1, 5], footB: [-8, -1, 4.6], kneel: 'F', handF: [8, 16, 14], handB: [2, 18, 11], grip: 0, weapon: 40, roll: 30, yaw: 0, face: 'closed', wind: 0, lift: 0.2 }),
   // Toppling back, the robe and beard flying up; the staff has hit the floor.

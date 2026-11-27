@@ -11,10 +11,11 @@
  *              orb ahead of him at his brow, pulsing; a slow, steady sway rather than a bounce
  *   move    8  an old man's hurried run: short strides under the robe, a forward lean, the staff
  *              carried slanted ahead in his right hand, the beard, hair and robe streaming
- *   atk1    7  (1 wind-up) Arcane Bolt I: the staff drawn back, then flicked forward at the aim
- *              and a spark of teal light leaves the orb
- *   atk2    7  (1 wind-up) Arcane Bolt II: the staff cocked across to his left, then swept back
- *              out to the aim in a short teal arc, the spark leaving the orb
+ *   atk1    7  (1 wind-up) Arcane Bolt I: the staff drawn back upright, then flicked forward at
+ *              the aim and a spark of teal light leaves the orb
+ *   atk2    7  (1 wind-up) Arcane Bolt II: a backhand, the staff in his right hand cocked low
+ *              across to his left, then swept up and out to the aim in a short teal arc, the left
+ *              hand thrown open after the spark as it leaves the orb
  *   atk3    9  (2 wind-up) Arcane Bolt III: the staff raised in both hands while a ball of light
  *              swells in the orb, then a two-handed thrust that hurls it at the aim
  *
@@ -30,7 +31,6 @@
  */
 import type { RGB } from '../../paint.js';
 import { hex } from '../../paint.js';
-import { mixc } from '../raster.js';
 import { add3, type ChibiPose, clamp, type FxContext, mix, pose, solveRig, type V3, wave } from '../rig.js';
 import { SAGE } from './design.js';
 
@@ -125,7 +125,7 @@ export const gather =
     const P = x.proj(x.tip);
     for (let i = 0; i < 6; i++) {
       const th = (i / 6) * Math.PI * 2 + t * 2.4 + x.hash(i, 501);
-      const rr = r * (0.6 + 0.5 * (((x.hash(i, 502) + t) % 1) + 0)) ;
+      const rr = r * (0.6 + 0.5 * ((x.hash(i, 502) + t) % 1));
       const px = P[0] + Math.cos(th) * rr;
       const py = P[1] + Math.sin(th) * rr * 0.85;
       x.c.glow(px, py, WHITE, k);
@@ -183,9 +183,6 @@ export const pool =
       }
     }
   };
-
-/** A colour part way between two of an aura's (for a ring fading out from its heart). */
-export const shade = (aura: Aura, t: number): RGB => (t < 0.5 ? mixc(aura.hot, aura.core, t * 2) : mixc(aura.core, aura.edge, (t - 0.5) * 2));
 
 // ── Stances ──────────────────────────────────────────────────────────────────────────────────
 

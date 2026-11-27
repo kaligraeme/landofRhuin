@@ -45,7 +45,7 @@ const PARCHMENT = mat4('#fffaea', '#f2e4c0', '#d4bf8e', '#9c865a', '#4a3e24', 0.
 const TIE = mat4('#ff8a7a', '#e04848', '#a82830', '#6a141c', '#30080c', 0.05);
 // The staff: gnarled dark wood, bright silver fittings and a teal orb.
 const WOOD = mat4('#8a6a4c', '#62462e', '#43301e', '#291c10', '#140c06', -0.06);
-const SILVER = mat4('#ffffff', '#d4d8e2', '#9aa0b0', '#5e6474', '#24272f', 0.12);
+const SILVER = mat4('#eef2f8', '#c6ccd8', '#9096a8', '#585e70', '#24272f', 0.08);
 const ORB = mat4('#eafff8', '#94f2d8', '#3cc8a6', '#187a68', '#08362e', 0.1);
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────
@@ -96,8 +96,9 @@ const SHELL = { c: [-1.8, 1.8, 0] as const, r: [11.2, 10.8, 11] as const };
 
 /**
  * His face glyphs: the plain style's level eyes with a crease of age under them, and bushy white
- * brows, heavy at their inner ends and drooping past the eyes' outer corners. Calm when closed;
- * his `smirk` is a warm smile under the moustache.
+ * brows drooping past the eyes' outer corners, with a line of shadow under them so they stand
+ * out from his skin. Calm when closed; his `smirk` is a warm smile under the moustache (his mouth
+ * sits a little lower than a young face's, so it shows below the moustache).
  */
 const FACE_ELDER: FaceStyle = {
   ...FACE_PLAIN,

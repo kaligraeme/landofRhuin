@@ -39,23 +39,24 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
 };
 
 /**
- * Frames: side on there is room ahead of him for the staff held out and the bolts, orbs and fire
- * that leave it, and behind for the staff swung back; toward and away from the viewer he stands
- * centred. All are tall enough for the staff raised high and the pillar of light over him, and
- * deep enough below the ground point for the rings and ripples that roll out over the floor
- * toward the viewer. The game crops every frame to what is painted, so the spare room costs
- * nothing there. He stands about 80 px tall (2 tiles in game, at the Dark Knight's scale); his
- * staff's orb rises well above him, to about 97 px at rest, which is what `height` measures.
+ * Frames, each fitted to what his clips paint (with a few pixels to spare), since every pixel of
+ * the frame costs paint time: side on there is room ahead of him for the staff thrust out and the
+ * bolts, the Arcane Orb and the Meteor's fire that leave it, and behind for the staff swung back;
+ * toward and away from the viewer room either side for the staff's twirl. All are tall enough for
+ * the Meteor's sigil over the staff thrust at the sky and the pillar of light over him, and deep
+ * enough below the ground point for the rings that roll out over the floor toward the viewer. He
+ * stands about 80 px tall (2 tiles in game, at the Dark Knight's scale); his staff's orb rises
+ * above him, to about 92 px at rest, which is what `height` measures.
  */
 export const SAGE_HERO: ChibiHero = chibiHero(
   SAGE,
   { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES },
   TIMING,
   {
-    side: { w: 320, h: 288, ax: 128, ay: 216 },
-    front: { w: 256, h: 288, ax: 128, ay: 208 },
-    back: { w: 256, h: 288, ax: 128, ay: 208 },
+    side: { w: 200, h: 188, ax: 66, ay: 154 },
+    front: { w: 144, h: 200, ax: 82, ay: 162 },
+    back: { w: 144, h: 192, ax: 62, ay: 156 },
   },
   2.1 / 84,
-  97,
+  92,
 );
