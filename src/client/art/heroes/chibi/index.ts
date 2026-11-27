@@ -27,6 +27,7 @@ import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
 import { DRAGOON_HERO } from './dragoon/hero.js';
 import type { ChibiDesign } from './design.js';
 import { GUARDIAN_HERO } from './guardian/hero.js';
+import { SAGE_HERO } from './sage/hero.js';
 import { SPELLBLADE_HERO } from './spellblade/hero.js';
 import type { ChibiPose, ChibiView } from './rig.js';
 
@@ -119,4 +120,5 @@ export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
   'hero-spellblade': SPELLBLADE_HERO,
   'hero-dragoon': DRAGOON_HERO,
   'hero-guardian': GUARDIAN_HERO,
+  'hero-sage': SAGE_HERO,
 };
