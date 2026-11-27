@@ -12,13 +12,13 @@
  * chibi engine; his moves are in the moves-*.ts files beside it, and hero.ts puts him together.
  */
 import { hex } from '../../paint.js';
-import type { BodyDesign, ChibiDesign, FaceStyle, Held, Lock, Piece, PieceContext, WeaponDesign } from '../design.js';
+import type { BodyDesign, ChibiDesign, FaceGlyph, FaceStyle, Held, Lock, Piece, PieceContext, WeaponDesign } from '../design.js';
 import { beard, curtain, FACE_PLAIN } from '../head.js';
 import { clipToGround, heldAxes, mainHeld } from '../held.js';
 import { hood } from '../headgear.js';
-import { skirt } from '../pieces.js';
+import { cowl, skirt } from '../pieces.js';
 import { pole } from '../pole.js';
-import { type Hit, type Mat, mat4 } from '../raster.js';
+import { type Blob, type Hit, type Mat, mat4 } from '../raster.js';
 import { add3, at3, type Build, type V3 } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
@@ -27,6 +27,13 @@ import { add3, at3, type Build, type V3 } from '../rig.js';
 const SKIN = mat4('#fde4c8', '#efbf98', '#cf9570', '#965f45', '#5e3024', 0.18);
 // White hair and beard: the light tone over most of it, the highlight on the lit streaks.
 const HAIR = mat4('#ffffff', '#e4e4ea', '#acacb6', '#6e6e7a', '#3c3c4a', 0.08);
+/**
+ * The beard and moustache: the same whites a step lighter, since they hang facing ahead, out of
+ * the light from above. The hair's light tone covers them, its highlight runs along the lit
+ * strands and its base tone only fills the partings and the underside, so beard and hair read as
+ * one white.
+ */
+const BEARD = mat4('#ffffff', '#ffffff', '#e4e4ea', '#acacb6', '#4c4c58', 0.08);
 // The robe reads as one deep blue: its base tone over most of it, the light tone on lit folds.
 const ROBE = { ...mat4('#6a7ed4', '#3a4a9c', '#232c66', '#121838', '#080a1e', -0.02), gain: 0.6 };
 const LINING = mat4('#2a3060', '#1c2048', '#121434', '#0a0c20', '#060712');
@@ -71,51 +78,56 @@ const BUILD: Build = {
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
 
 /**
- * A mane of white hair swept straight back from a high forehead: broad clumps over the crown
- * lying back and down, fuller at the sides over his ears, and wisps standing a little off the
- * crown so the outline is soft rather than a smooth cap.
+ * A mane of white hair swept straight back from a high forehead: the shell's clumps fan back and
+ * down from the crown (the whorl), so the top of his head is a smooth dome with strands running
+ * back over it, even bowed; these locks make it fuller at the sides, over and behind his ears,
+ * and flick out behind his head side on.
  */
 const LOCKS: Lock[] = [
-  // Swept back from the forehead over the crown.
-  L(0, 54, [-0.95, 0.12, 0], 12, 5.4, [-0.2, -0.35, 0], 0.5, 0.4),
-  L(36, 44, [-0.9, 0, 0.4], 11, 5, [-0.2, -0.4, 0.05], 0.5, 0.4),
-  L(-36, 44, [-0.9, 0, -0.4], 11, 5, [-0.2, -0.4, -0.05], 0.5, 0.4),
-  // Full at the sides, over and behind the ears.
   L(78, 18, [-0.55, -0.8, 0.45], 8.5, 4, [-0.15, -0.2, 0.1], 0.5, 0.35),
   L(-78, 18, [-0.55, -0.8, -0.45], 8.5, 4, [-0.15, -0.2, -0.1], 0.5, 0.35),
   L(112, 30, [-0.7, -0.5, 0.55], 9, 4.4, [-0.2, -0.3, 0.15], 0.7, 0.35),
   L(-112, 30, [-0.7, -0.5, -0.55], 9, 4.4, [-0.2, -0.3, -0.15], 0.7, 0.35),
-  // Wisps lying back off the crown and the back, so the top of the mane reads soft.
-  L(150, 54, [-0.9, 0.1, 0.35], 7, 3.6, [-0.1, -0.5, 0], 0.9, 0.3),
-  L(-160, 52, [-0.9, 0.1, -0.35], 7, 3.6, [-0.1, -0.5, 0], 0.9, 0.3),
-  L(60, 60, [-0.8, 0.2, 0.5], 6.5, 3.4, [-0.1, -0.45, 0.1], 0.9, 0.3),
-  L(-64, 60, [-0.8, 0.2, -0.5], 6.5, 3.4, [-0.1, -0.45, -0.1], 0.9, 0.3),
 ];
 
 const SHELL = { c: [-1.8, 1.8, 0] as const, r: [11.2, 10.8, 11] as const };
 
 /**
- * His face glyphs: the plain style's level eyes with a crease of age at their outer corners, and bushy white
- * brows drooping past the eyes' outer corners, with a line of shadow under them so they stand
- * out from his skin. Calm when closed; his `smirk` is a warm smile under the moustache (his mouth
- * sits a little lower than a young face's, so it shows below the moustache).
+ * An eye glyph with a wrinkle of the forehead `up` rows above the eye's centre, `w` cells long from
+ * over its inner corner (eyes are stamped in the skin's shadow tone where `l` is, on skin only).
+ */
+const creased = (g: FaceGlyph, w: number, up = 7): FaceGlyph => {
+  const width = Math.max(...g.rows.map((r) => r.length));
+  const blank = '.'.repeat(width);
+  const top = up - g.ay;
+  return { rows: ['l'.repeat(w).padEnd(width, '.'), ...Array.from({ length: top - 1 }, () => blank), ...g.rows], ax: g.ax, ay: up };
+};
+
+/**
+ * His face glyphs: the plain style's level eyes with a crease of age at their outer corners and a
+ * wrinkle across the forehead above them, and bushy white brows drooping past the eyes' outer
+ * corners. Calm when closed; his `smirk` is a warm smile under the moustache (his mouth sits a
+ * little lower than a young face's, so it shows below the moustache).
  */
 const FACE_ELDER: FaceStyle = {
   ...FACE_PLAIN,
   eyes: {
-    ...FACE_PLAIN.eyes,
-    full: { rows: ['.KKKK', 'KIhIW', 'KiIIW', '...ll'], ax: 2, ay: 1 },
-    mid: { rows: ['KKKK', 'IhIW', 'iIIK', '..ll'], ax: 1, ay: 1 },
+    full: creased({ rows: ['.KKKK', 'KIhIW', 'KiIIW', '...ll'], ax: 2, ay: 1 }, 3),
+    mid: creased({ rows: ['KKKK', 'IhIW', 'iIIK', '..ll'], ax: 1, ay: 1 }, 2),
+    narrow: FACE_PLAIN.eyes.narrow,
+    closed: creased(FACE_PLAIN.eyes.closed, 3, 6),
+    squeeze: creased(FACE_PLAIN.eyes.squeeze, 3),
+    wide: creased(FACE_PLAIN.eyes.wide, 3),
   },
   brows: {
-    full: { rows: ['.BBB..', 'BBBBBB', 'llBBBB', '....lB'], ax: 2, ay: 1 },
-    mid: { rows: ['.BB..', 'BBBBB', 'lBBBB', '...lB'], ax: 1, ay: 1 },
-    narrow: { rows: ['BB.', 'BBB', 'lBB'], ax: 1, ay: 1 },
+    full: { rows: ['.BBB..', 'BBBBBB', '..BBBB', '.....B'], ax: 2, ay: 1 },
+    mid: { rows: ['.BB..', 'BBBBB', '.BBBB', '....B'], ax: 1, ay: 1 },
+    narrow: { rows: ['BB.', 'BBB', '.BB'], ax: 1, ay: 1 },
   },
   browsUp: {
-    full: { rows: ['BB....', 'BBBBB.', 'llBBBB', '....lB'], ax: 2, ay: 1 },
-    mid: { rows: ['BB...', 'BBBB.', 'lBBBB', '...lB'], ax: 1, ay: 1 },
-    narrow: { rows: ['B..', 'BBB', 'lBB'], ax: 1, ay: 1 },
+    full: { rows: ['BB....', 'BBBBB.', '..BBBB', '.....B'], ax: 2, ay: 1 },
+    mid: { rows: ['BB...', 'BBBB.', '.BBBB', '....B'], ax: 1, ay: 1 },
+    narrow: { rows: ['B..', 'BBB', '.BB'], ax: 1, ay: 1 },
   },
   mouths: { ...FACE_PLAIN.mouths, smirk: { rows: ['M...M', '.MMM.'], ax: 2, ay: 1 } },
 };
@@ -127,9 +139,20 @@ const HOOD = hood({ outer: ROBE, inner: LINING, rim: GOLD, shell: SHELL, opening
 
 const deg = (h: Hit): number => Math.abs((Math.atan2(h.p[2], h.p[0]) * 180) / Math.PI);
 
-/** Where the stole lies over the chest: a band each side of the opening, from the shoulders to the belt. */
-const STOLE_IN_DEG = 16;
-const STOLE_OUT_DEG = 34;
+/**
+ * Where the stole lies: a band each side, how far out from the middle of him its centre runs at a
+ * height up the torso (chest frame). In front it climbs from beside the robe's opening at the belt
+ * to the tops of his shoulders beside the beard; it lies over the shoulders and behind meets in a
+ * V between the shoulder blades.
+ */
+const STOLE_W = 1.25;
+function stoleAt(front: boolean, u: number): number | null {
+  if (u >= 20.5) return 5;
+  if (front) return u < 8.2 ? null : 2.2 + ((u - 8.2) / (20.5 - 8.2)) * 2.8;
+  return u < 10.5 ? null : 0.6 + ((u - 10.5) / (20.5 - 10.5)) * 4.4;
+}
+/** The ends of the stole hanging from the belt: the panel's yaw each side of the front. */
+const STOLE_ENDS_DEG = [18, 29] as const;
 
 function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   const u = h.p[1];
@@ -141,17 +164,26 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
     const twist = (((Math.atan2(h.p[2], h.p[0]) * 180) / Math.PI / 9 + u * 0.9) % 2 + 2) % 2;
     return twist < 1 ? GOLD : CORD;
   }
+  // The stole, gold with a darker embroidered cross every few pixels down its middle.
+  const c = stoleAt(h.p[0] > -0.5, u);
+  if (c !== null) {
+    const mid = Math.abs(Math.abs(h.p[2]) - c);
+    if (mid < STOLE_W) {
+      const along = (u + (h.p[0] < -0.5 ? 2.5 : 0)) % 5;
+      if ((along > 2 && along < 3 && mid < 0.9) || (mid < 0.4 && along > 1 && along < 4)) return EMBROIDERY;
+      return STOLE;
+    }
+  }
   // The robe's opening, edged in gold down the middle.
   if (yaw < 5) return GOLD;
-  // The stole, gold with a darker embroidered cross every few pixels.
-  if (yaw > STOLE_IN_DEG && yaw < STOLE_OUT_DEG && u < 20.5) {
-    const along = u % 5;
-    const mid = Math.abs(yaw - (STOLE_IN_DEG + STOLE_OUT_DEG) / 2);
-    if ((along > 1.8 && along < 3.2 && mid < 2.2) || (mid < 0.9 && along > 1 && along < 4)) return EMBROIDERY;
-    return STOLE;
-  }
   return ROBE;
 }
+
+const BODY_HIPS: Blob[] = [{ c: [0, 3, 0], r: [5.2, 5.6, 6.6], id: 1 }];
+const BODY_CHEST: Blob[] = [
+  { c: [0, 8.5, 0], r: [4.8, 5.2, 6.4], id: 1 },
+  { c: [0.2, 14.5, 0], r: [5.5, 8.4, 7.6], id: 1 },
+];
 
 // ── Outfit pieces of his own ─────────────────────────────────────────────────────────────────
 
@@ -219,6 +251,31 @@ const ROBE_SKIRT = skirt({
   ],
 });
 
+/**
+ * The stole over his shoulders: a short gold mantle wrapping them from the base of the neck, so
+ * gold shows on each shoulder beside the beard and over the upper arms side on, and behind falls
+ * to a point between the shoulder blades, its hem embroidered.
+ */
+const MANTLE = cowl({
+  outer: STOLE,
+  inner: STOLE_IN,
+  top: 22.6,
+  ring: [3.4, 4.2],
+  spread: 1.1,
+  give: 0.5,
+  folds: false,
+  trim: EMBROIDERY,
+  panels: [
+    { from: -45, to: 45, len: 5 },
+    { from: 45, to: 115, len: 6.5, jag: 1 },
+    { from: 115, to: 165, len: 8, jag: 1 },
+    { from: 165, to: 195, len: 10.5, taper: 0.5 },
+    { from: 195, to: 245, len: 8, jag: 1 },
+    { from: 245, to: 315, len: 6.5, jag: 1 },
+  ],
+  over: { chest: BODY_CHEST, hips: BODY_HIPS },
+});
+
 /** The ends of the stole hanging from his belt down the front of the robe to his shins. */
 const STOLE_ENDS = skirt({
   outer: STOLE,
@@ -232,8 +289,8 @@ const STOLE_ENDS = skirt({
   trim: EMBROIDERY,
   legs: 4.6,
   panels: [
-    { from: STOLE_IN_DEG - 2, to: STOLE_OUT_DEG - 2, len: 18, jag: 1 },
-    { from: -STOLE_OUT_DEG + 2, to: -STOLE_IN_DEG + 2, len: 18, jag: 1 },
+    { from: STOLE_ENDS_DEG[0], to: STOLE_ENDS_DEG[1], len: 18, jag: 1 },
+    { from: -STOLE_ENDS_DEG[1], to: -STOLE_ENDS_DEG[0], len: 18, jag: 1 },
   ],
 });
 
@@ -294,11 +351,8 @@ const BODY: BodyDesign = {
   cuff: { mat: GOLD, r: 4.2, at: 0.7 },
   hand: { mat: SKIN, r: 2.7 },
   neck: { mat: SKIN, r: 2.3 },
-  hips: [{ c: [0, 3, 0], r: [5.2, 5.6, 6.6], id: 1 }],
-  chest: [
-    { c: [0, 8.5, 0], r: [4.8, 5.2, 6.4], id: 1 },
-    { c: [0.2, 14.5, 0], r: [5.5, 8.4, 7.6], id: 1 },
-  ],
+  hips: BODY_HIPS,
+  chest: BODY_CHEST,
   torso,
 };
 
@@ -312,15 +366,15 @@ export const SAGE: ChibiDesign = {
     jaw: { c: [1.6, -4.1, 0], r: [7.7, 6.7, 8] },
     ear: { c: [-0.6, -3.2, 9.7], r: [2, 2.8, 1.6] },
     shell: SHELL,
-    hairline: { faceYaw: 70, brow: 5.8, temple: 1.6, nape: -8, ear: -1.6 },
+    hairline: { faceYaw: 70, brow: 7.8, temple: 3.8, nape: -8, ear: -1.6 },
     locks: LOCKS,
-    whorl: { yaw: 180, pitch: 40, reach: 90, clumps: 7, twist: 0.2 },
+    whorl: { yaw: 180, pitch: 72, reach: 110, clumps: 10, twist: 0.05 },
     long: {
       back: curtain({ from: 112, to: 248, count: 7, pitch: 8, len: 18, w: 3.2, jag: 0.4, taper: 0.8 }),
       lie: 1.8,
     },
     // The beard grows from lower on his cheeks than the preset's, so they show under his eyes.
-    beard: beard({ kind: 'full', len: 16, w: 3, give: 0.35, cheek: -7.2, mouth: [2.6, 1.6] }),
+    beard: beard({ kind: 'full', len: 16, w: 3, give: 0.35, cheek: -7.2, mouth: [2.6, 1.6], mat: BEARD }),
     // The moustache hangs from a little lower under his nose than usual, so his cheeks show
     // between it and his eyes; his mouth sits lower still, below it.
     moustache: { len: 4.2, w: 1.4, droop: 2.4, at: [9.8, -6] },
@@ -341,7 +395,7 @@ export const SAGE: ChibiDesign = {
   },
   body: BODY,
   headPieces: [HOOD.up],
-  outfit: [HOOD.down, ROBE_SKIRT, STOLE_ENDS, beltGear],
+  outfit: [HOOD.down, MANTLE, ROBE_SKIRT, STOLE_ENDS, beltGear],
   weapon: STAFF,
   aura: { core: hex('#6fe8c8'), edge: hex('#d6fff2'), hot: hex('#ffffff') },
 };
