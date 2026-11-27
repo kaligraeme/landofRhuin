@@ -46,8 +46,18 @@ const CRIMSON = mat4('#ff8a8a', '#e04848', '#a82830', '#6a141c', '#30080c', 0.02
 /** The aura of the shield and staff mannequins: a warm holy gold. */
 const HOLY = { core: hex('#ffd66e'), edge: hex('#fff4c8'), hot: hex('#ffffff') };
 
-/** The Dark Knight's body and head without his coat and collar. */
-const BARE: ChibiDesign = { ...DARK_KNIGHT, headPieces: [], outfit: [] };
+/**
+ * The Dark Knight's body and head without his coat and collar, his hair cropped short (only his
+ * bangs and short locks, none of his long spikes or the layers at his nape), so the gear on him is
+ * tested on its own: his long spikes would hide a crossbow's string from behind and widen him past
+ * its prod from in front.
+ */
+const BARE: ChibiDesign = {
+  ...DARK_KNIGHT,
+  head: { ...DARK_KNIGHT.head, locks: DARK_KNIGHT.head.locks.filter((l) => l.len < 12), long: undefined },
+  headPieces: [],
+  outfit: [],
+};
 
 // ── Shields ──────────────────────────────────────────────────────────────────────────────────
 
