@@ -515,7 +515,8 @@ const hexBurst =
     const g: V3 = [rig.pelvis.o[0], 0, rig.pelvis.o[2]];
     const fade = (1 - k) ** 1.3;
     CELLS.forEach((cell, i) => {
-      if (i % 2 === 1 && k > 0.3) return;
+      // Half of them go out at once, and only a few are left as they fade.
+      if ((i % 2 === 1 && k > 0.3) || (i % 6 !== 0 && k > 0.9)) return;
       const { p, n, e, t } = onDome(g, cell);
       // Out over the floor more than up, so they scatter round her rather than into the sky.
       const out = k * (0.8 + 0.6 * hash(i, 141));
@@ -529,7 +530,9 @@ const hexBurst =
       });
       hexagon(x, pts, aura.core, 0.45 * fade, i % 3 === 0 ? aura.hot : aura.core, 0.9 * fade, back);
     });
-    // The ring rolling out from her feet: white-hot at its front, gold behind it, a pale blue fringe.
+    // The ring rolling out from her feet: white-hot at its front, gold behind it, a pale blue fringe
+    // (gone once it has all but faded).
+    if (fade < 0.06) return;
     const R = 12 + 46 * k;
     const m = Math.ceil(R * 8);
     for (let i = 0; i < m; i++) {
@@ -561,7 +564,7 @@ const shieldsUp: ChibiPose[] = [
   // The burst: the shield thrust out, the dome breaking outward in shards of light all round her.
   pose(PLANTED, { x: 3, y: 8, lean: 14, twist: 10, head: 2, handB: [6, 12, 8], handF: [-1, 10, 10], weapon: 40, face: 'shout', wind: 0.6, lift: 0.3, phase: 0.85, fx: { runeB: 0.8, impactB: 1.2, aura: 1, rays: { k: 1, n: 14, len: 40 }, extra: hexBurst(0.22) } }),
   // The shards fly and fade as she settles back into her guard.
-  settle(pose(PLANTED, { x: 3, y: 7, lean: 10, twist: 6 }), 0.7, { phase: 1, wind: 0.4, lift: 0.2, fx: { runeB: 0.15, aura: 0.15, extra: hexBurst(0.85) } }),
+  settle(pose(PLANTED, { x: 3, y: 7, lean: 10, twist: 6 }), 0.7, { phase: 1, wind: 0.4, lift: 0.2, fx: { runeB: 0.1, extra: hexBurst(0.93) } }),
 ];
 
 // ── Luminaire ────────────────────────────────────────────────────────────────────────────────
