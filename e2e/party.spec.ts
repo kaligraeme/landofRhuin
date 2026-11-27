@@ -169,7 +169,7 @@ test('a party with an AI Flame Warden clears the first room', async ({ browser }
     transformed ||= (await seen()).transformed;
   }
   expect(cleared).toBeGreaterThanOrEqual(2);
-  // He is drawn as a chibi hero once its frames are painted: his own, or a stand-in until his are.
+  // He is drawn as his own chibi once its side view is painted.
   await expect.poll(async () => (await seen()).drawn, { timeout: 30_000 }).toBe(true);
   test.info().annotations.push({ type: 'firebeast', description: transformed ? 'The AI Flame Warden took the Firebeast form.' : 'The first room fell before the Firebeast was worth it.' });
   expect(errors).toEqual([]);
@@ -191,7 +191,7 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
   await expect.poll(async () => (await world(page))?.phase, { timeout: 10_000 }).toBe('running');
 
   type Game = {
-    world: { meId: number; formOf(id: number): string | null; meEntity(): { x: number; y: number } | undefined; enemies(): { x: number; y: number; snap: { a?: number } }[] };
+    world: { meId: number; formOf(id: number): string | null; meEntity(): { x: number; y: number; snap: { d?: number } } | undefined; enemies(): { x: number; y: number; snap: { a?: number } }[] };
     roll: unknown;
     fx: { texts: { text: string }[] };
     hud: { error(text: string): void };
@@ -214,6 +214,7 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
       const near = me ? g.world.enemies().filter((e) => Math.hypot(e.x - me.x, e.y - me.y) < 3.5) : [];
       return {
         form: g.world.formOf(g.world.meId),
+        down: !!me?.snap.d,
         rolling: g.roll !== null,
         near: near.length,
         onMe: near.some((e) => e.snap.a === g.world.meId),
@@ -222,7 +223,8 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
     });
 
   // Follow the AI tank in and fight. Take the form once a monster in reach is after Dana (its blows
-  // will show Immune), or beside any monster if none turns on her soon.
+  // will show Immune), or beside any monster if none turns on her soon, and never while she is
+  // knocked out (a boss can floor her on the way in; the Sage raises her).
   await page.keyboard.press('t');
   await page.mouse.move(720, 300);
   await page.mouse.down();
@@ -230,7 +232,7 @@ test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the cl
   const deadline = Date.now() + 90_000;
   for (;;) {
     const s = await state();
-    if (s.onMe || (s.near && Date.now() > patience)) break;
+    if (!s.down && (s.onMe || (s.near && Date.now() > patience))) break;
     expect(Date.now()).toBeLessThan(deadline);
     await page.waitForTimeout(50);
   }
