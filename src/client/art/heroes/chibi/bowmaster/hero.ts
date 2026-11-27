@@ -7,7 +7,7 @@ import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
 import type { ChibiDesign } from '../design.js';
 import { chibiHero, paintChibi } from '../painter.js';
 import type { ChibiPose } from '../rig.js';
-import { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE } from './design.js';
+import { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_VOLLEY } from './design.js';
 import { CORE_MOVES } from './moves-core.js';
 import { SKILL_MOVES } from './moves-skills.js';
 import { STATE_MOVES } from './moves-states.js';
@@ -41,11 +41,12 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
 const MOVES = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
 
 /**
- * Clips painted with a variant of her design: the snare in her hand for Snare Trap, five arrows
- * on the string for Fan of Arrows, the dark arrow and her effects turned violet-black for Rain of
- * Ruin.
+ * Clips painted with a variant of her design: the bow raised over her head for Volley, the snare
+ * in her hand for Snare Trap, five arrows on the string for Fan of Arrows, the dark arrow and her
+ * effects turned violet-black for Rain of Ruin, and the arrow held at its middle to twirl for the
+ * victory.
  */
-const VARIANTS: Partial<Record<ChibiClip, ChibiDesign>> = { e: BOWMASTER_SNARE, r: BOWMASTER_FAN, ult: BOWMASTER_RUIN };
+const VARIANTS: Partial<Record<ChibiClip, ChibiDesign>> = { q: BOWMASTER_VOLLEY, e: BOWMASTER_SNARE, r: BOWMASTER_FAN, ult: BOWMASTER_RUIN, victory: BOWMASTER_TWIRL };
 
 /**
  * Frames: side on there is room ahead of her for the streaks of her shots (the Charged Shot's runs

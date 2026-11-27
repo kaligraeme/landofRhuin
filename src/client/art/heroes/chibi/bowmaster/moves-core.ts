@@ -50,9 +50,9 @@ export const AT_EASE: ChibiPose = {
   handB: [7, 13, 7],
   weapon: 170,
   drop: true,
-  weaponB: 10,
-  rollB: 8,
-  yawB: 20,
+  weaponB: 8,
+  rollB: 20,
+  yawB: 65,
   face: 'stern',
   wind: 0.08,
 };

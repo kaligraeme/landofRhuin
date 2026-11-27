@@ -15,13 +15,13 @@
 import { hex } from '../../paint.js';
 import { quiver } from '../back.js';
 import { arrow, arrowHeads, type ArrowSpec, bow, type BowSpec, flatShaft, nocked, paintArrow } from '../bow.js';
-import { type BodyDesign, type ChibiDesign, type DrawItem, type Held, type HeldItem, type Lock, type Piece, type PieceContext, WEAPON_TAG, type WeaponDesign } from '../design.js';
+import { type BodyDesign, type ChibiDesign, type DrawItem, type HeadPiece, type Held, type HeldItem, type Lock, OFFHAND_TAG, type Piece, type PieceContext, WEAPON_TAG, type WeaponDesign } from '../design.js';
 import { FACE_SOFT } from '../head.js';
 import { hood } from '../headgear.js';
 import { mainHeld } from '../held.js';
 import { cowl } from '../pieces.js';
-import { dim, flat, type Hit, type Mat, mat4, type Part } from '../raster.js';
-import { add3, at3, cross3, type Limb, lerp3, norm3, rad, sub3, type V3 } from '../rig.js';
+import { dim, flat, type Hit, type Mat, mat4, type Part, toneLight } from '../raster.js';
+import { add3, at3, cross3, dirIn, type Limb, lerp3, norm3, rad, sub3, type V3 } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
@@ -32,9 +32,14 @@ const FACE_SKIN: Mat = { ...SKIN, line: hex('#a8705a'), gain: 0.3, bias: 0.6 };
 const NECK: Mat = { ...mat4('#fff0e0', '#f6cfab', '#ecbc96', '#e0ae88', '#b47c62', 0.2), gain: 0.4 };
 // Dark brown hair.
 const HAIR = mat4('#8e6448', '#6e4a36', '#4a2e20', '#2a1a10', '#160c06', -0.05);
-// The hood and cape: forest green, its base tone over most of it and the light tone on the folds.
-const GREEN = { ...mat4('#8cc866', '#62a046', '#4a8436', '#2a5422', '#132a12', -0.12), gain: 0.6 };
+// The hood and cape: forest green, lit from the top planes (the light tone) down through the
+// base to a deep shadow under the drape and in the folds.
+export const GREEN = { ...mat4('#a4d878', '#7cbc5a', '#4e8a3a', '#2e5a26', '#122810', -0.34), gain: 0.95 };
 const GREEN_IN = mat4('#3a6a2e', '#2e5a26', '#1f4019', '#132a10', '#081208');
+// The cape: the same green with more contrast, so its pleats read as folds with lit edges.
+const CAPE_GREEN = { ...GREEN, bias: -0.74, gain: 1.5 };
+// The deepest green: the shadow where the hood's drape lies on the shoulders.
+const GREEN_DEEP = mat4('#2e5a26', '#24481e', '#1c3a18', '#173016', '#0a160a');
 // The band round the hood's opening, a shade lighter.
 const GREEN_RIM = { ...mat4('#b4e48c', '#8cc866', '#6aa84c', '#3e6e30', '#173016', 0.05), gain: 0.65 };
 // The jerkin: fitted dark brown leather.
@@ -51,6 +56,8 @@ const BRACER_RIM = mat4('#e0b07a', '#c08c58', '#966438', '#5e3c1e', '#2a180a', 0
 const GLOVE = mat4('#b07a52', '#8a5a3a', '#6a4228', '#40260f', '#1e1006', 0);
 const BELT = mat4('#8a5a3a', '#6a4228', '#4a2c18', '#2c190c', '#140a04', -0.05);
 const BRASS = mat4('#fff2c4', '#e8c86a', '#b08a3a', '#6e5220', '#382808', 0.05);
+// The quiver's bands: an old, dull brass, so on her back they do not outshine her hood.
+const OLD_BRASS = mat4('#b08a3a', '#8e6c2c', '#6e5220', '#4a3614', '#221806', -0.1);
 // Tan trousers.
 const TROUSERS = { ...mat4('#ecd6a8', '#d8bc8a', '#b0925e', '#7a6038', '#3e2e18', 0), gain: 0.8 };
 // Tall brown boots, their turned cuffs a lighter suede.
@@ -99,7 +106,35 @@ const LOCKS: Lock[] = [
 const SHELL = { c: [-1.4, 1.2, 0] as V3, r: [11, 10.2, 10.9] as V3 };
 
 /** The hood: worn up over her hair, its opening's band a shade lighter, a soft point at its crown. */
-const HOOD = hood({ outer: GREEN, inner: GREEN_IN, rim: GREEN_RIM, shell: SHELL, opening: { top: 6.4, bottom: -12.5, side: 8.4 }, peak: { pitch: 34, size: 4.4 }, folds: true });
+const HOOD_DRAPE = -15;
+const HOOD = hood({ outer: GREEN, inner: GREEN_IN, rim: GREEN_RIM, shell: SHELL, opening: { top: 6.4, bottom: -12.5, side: 8.4 }, drape: HOOD_DRAPE, peak: { pitch: 34, size: 4.4 }, folds: true, down: { size: 1.4 } });
+
+/**
+ * The hood worn up, shaped further than the engine's plain hood so its back is not one flat dome:
+ * a seam down the middle of its back from the peak, the lower half of its back falling into
+ * shadow, and a band of the deepest green where its drape lies on her shoulders.
+ */
+const HOOD_UP: HeadPiece = {
+  ...HOOD.up,
+  blobs: (ctx, head) =>
+    (HOOD.up.blobs?.(ctx, head) ?? []).map((g) => ({
+      ...g,
+      shade: (h: Hit) => {
+        const out = g.shade(h);
+        if (!out || h.back || out.m !== GREEN) return out;
+        const p = h.p;
+        const behind = SHELL.c[0] - p[0];
+        // The drape's lower edge on the shoulders.
+        if (p[1] < HOOD_DRAPE + 2.6) return { ...out, m: GREEN_DEEP, light: toneLight(GREEN_DEEP, p[1] < HOOD_DRAPE + 1.3 ? 3 : 2) };
+        const light = out.light ?? ctx.cam.light(dirIn(head, h.n[0], h.n[1], h.n[2]));
+        // The seam down the back, from the peak to the drape.
+        if (behind > 4 && Math.abs(p[2]) < 0.6 && p[1] < SHELL.c[1] + 9) return { ...out, light: toneLight(GREEN, 3) };
+        // The lower back half in shadow, deepening toward the shoulders.
+        if (behind > 1 && p[1] < SHELL.c[1] - 2) return { ...out, light: light - 0.25 - Math.min(0.35, (SHELL.c[1] - 2 - p[1]) * 0.04) };
+        return out;
+      },
+    })),
+};
 
 // ── The torso: a laced jerkin and a belt ─────────────────────────────────────────────────────
 
@@ -241,14 +276,59 @@ export const DARK_ARROW: ArrowSpec = {
 const BOW_SPEC: BowSpec = {
   limb: { len: 28.5, w0: 1.7, w1: 0.85, mat: BOW_WOOD },
   grip: { len: 7, r: 1.7, mat: BOW_GRIP },
-  brace: 4.5,
-  bend: 7,
-  recurve: 3.5,
+  brace: 8.5,
+  bend: 3.5,
+  recurve: 4.5,
   tips: HORN,
   string: STRING,
   arrow: ARROW,
 };
-const LONGBOW = bow(BOW_SPEC);
+
+/**
+ * A bow sorted against her head by its upper limb rather than by its grip alone. The painter
+ * sorts the off-hand item by a point near its grip, and her big chibi head decides whether a bow
+ * raised beside it reads: whenever the middle of the upper limb is clearly nearer the viewer than
+ * the head's middle, the bow goes over the head (a bow raised high and canted toward the viewer
+ * for Volley lies over the front of her hood), and whenever it is well beyond it, under it (a bow
+ * held up beyond her hood seen from behind stays behind it). Otherwise it sorts as the painter
+ * would. The limbs are painted as one of its own items; the painter's call paints nothing.
+ *
+ * `overhead` is for a bow raised over her head (Volley): from the front its grip is just ahead of
+ * her face and its limb would lie across her eyes, so seen from the front it keeps behind her hood
+ * (it is only a few pixels in front of it); seen from behind, its upper limb lies over the hood
+ * where it passes over the crown.
+ */
+function headSorted(item: HeldItem, overhead = false): HeldItem {
+  return {
+    ...item,
+    paint: () => {},
+    items: (ctx: PieceContext, held: Held): DrawItem[] => {
+      const { rig, depth } = ctx;
+      const g = held.grip;
+      const headZ = depth(at3(rig.chest, 0, 14, 0)) + ctx.upper + 1;
+      let z = ctx.upperZ(depth(add3(g.o, g.u, item.reach[1] * 0.3)));
+      const limb = depth(add3(g.o, g.u, 17)) - depth(rig.head.o);
+      if (held.tag === OFFHAND_TAG && !ctx.pose.dropB && !ctx.pose.slingB) {
+        if (overhead && ctx.cam.view === 'front') z = Math.min(z, headZ - 0.1);
+        else if (limb > 2 || (overhead && ctx.cam.view === 'back')) z = Math.max(z, headZ + 0.1);
+        else if (limb < -3) z = Math.min(z, headZ - 0.1);
+      }
+      return [
+        {
+          z,
+          draw: () => {
+            const part = ctx.part(OFFHAND_TAG);
+            item.paint(ctx, part, held);
+            part.commit();
+          },
+        },
+        ...(item.items ? item.items(ctx, held) : []),
+      ];
+    },
+  };
+}
+
+const LONGBOW = headSorted(bow(BOW_SPEC));
 
 /**
  * The arrow in her drawing hand (bow.ts `arrow`, which hides itself while one is on the string):
@@ -262,6 +342,24 @@ function heldArrow(spec: ArrowSpec): WeaponDesign {
     paint: (ctx, part, held) => {
       if (ctx.pose.drop && !ctx.pose.dropAt) return;
       a.paint(ctx, part, held);
+    },
+  };
+}
+
+/**
+ * An arrow twirled in her fingers (the victory): held at its middle, so it spins about the hand
+ * rather than sweeping its whole length round; dropped with nowhere to lie, it is not painted.
+ */
+function twirlArrow(spec: ArrowSpec): WeaponDesign {
+  const A = flatShaft(spec);
+  const heads = arrowHeads(A);
+  return {
+    grip2: 0,
+    reach: [0, A.len / 2],
+    tip: A.len / 2,
+    paint: (ctx, part, held = mainHeld(ctx)) => {
+      if (ctx.pose.drop && !ctx.pose.dropAt) return;
+      paintArrow(ctx, part, A, heads, add3(held.grip.o, held.grip.u, -A.len / 2), held.grip.u, held.blaze, 0);
     },
   };
 }
@@ -345,23 +443,84 @@ export const SNARE: WeaponDesign = {
   },
 };
 
-/** The quiver on her back: its mouth up behind her right shoulder, raised so the fletchings show over the hood's drape. */
-const QUIVER_PIECE = quiver({
-  mouth: [-6.6, 23.5, 3.8],
-  foot: [-6, 6, -3.6],
-  r: [2.6, 2.1],
+/**
+ * The quiver on her back: slanting up across it to its mouth at her right shoulder, its arrows
+ * leaning out past the shoulder so their fletchings fan above it beside the hood's drape (from the
+ * side and the front too), its bands an old dull brass.
+ */
+const QUIVER_SPEC = {
+  mouth: [-6.4, 23.2, 7.2] as V3,
+  foot: [-6, 6, -3.6] as V3,
+  r: [2.6, 2.1] as const,
   mat: QUIVER,
-  band: BRASS,
-  arrows: { n: 5, out: 7, shaft: flat(hex('#d8b080')), fletch: FLETCH, len: 3.5 },
-  strap: { mat: BELT, side: 1, w: 1, over: { chest: BODY.chest, hips: BODY.hips } },
-});
+  band: OLD_BRASS,
+  arrows: { n: 5, out: 9.5, shaft: flat(hex('#d8b080')), fletch: FLETCH, len: 4.5, spread: 2.2 },
+  strap: { mat: BELT, side: 1 as const, w: 1, over: { chest: BODY.chest, hips: BODY.hips } },
+};
+const QUIVER_BASE = quiver(QUIVER_SPEC);
+/** The quiver's strap (chest frame): from its mouth up over her right shoulder, and from its foot round her left side under the arm. */
+const STRAP_RUNS: readonly (readonly V3[])[] = [
+  [
+    [-6.2, 21.4, 6.2],
+    [-4.6, 24.4, 6.6],
+    [-1.6, 25.6, 6.9],
+    [1.6, 24.8, 6.6],
+  ],
+  [
+    [-6.4, 7.4, -3.4],
+    [-6.4, 9.6, -5.6],
+    [-4.4, 11.6, -7.2],
+    [-1, 12.8, -7.4],
+  ],
+];
+
+/**
+ * The quiver and its strap where it rises from the quiver's mouth over her right shoulder (over
+ * the cape, so it shows from behind). Whenever her back is turned from the viewer (a backflip seen
+ * from the front, or on its side), the quiver sorts behind her torso and head rather than over them.
+ */
+const QUIVER_PIECE: Piece = (ctx: PieceContext): DrawItem[] => {
+  const { rig, cam, depth, proj } = ctx;
+  const cf = rig.chest;
+  const torsoZ = depth(at3(cf, 0, 14, 0)) + ctx.upper;
+  const turnedAway = cam.facing([-cf.f[0], -cf.f[1], -cf.f[2]]) < -0.25;
+  const items = QUIVER_BASE(ctx).map((it) => (turnedAway ? { ...it, z: Math.min(it.z, torsoZ - 0.3) } : it));
+  for (const run of STRAP_RUNS) {
+    const path = run.map((q) => at3(cf, ...q));
+    const mid = path[1] as V3;
+    items.push({
+      z: turnedAway ? torsoZ - 0.25 : ctx.upperZ(depth(mid)) + 0.5,
+      draw: () => {
+        const part = ctx.part();
+        for (let i = 0; i + 1 < path.length; i++) {
+          const a = path[i] as V3;
+          const b = path[i + 1] as V3;
+          part.capsule(proj(a), proj(b), 1, 1, BELT, 0.1, depth(a) + 0.3, depth(b) + 0.3, 1);
+        }
+        part.commit();
+      },
+    });
+  }
+  return items;
+};
+
+/**
+ * The hood worn down and the quiver: the fallen hood lies bunched on her upper back under the
+ * quiver (the engine lays a hood worn down over a quiver's mouth), so its tube and strap still
+ * cross her back when the hood is down.
+ */
+const BACK_GEAR: Piece = (ctx: PieceContext): DrawItem[] => {
+  const quiverItems = QUIVER_PIECE(ctx);
+  const under = Math.min(...quiverItems.map((it) => it.z)) - 0.02;
+  return [...HOOD.down(ctx).map((it) => ({ ...it, z: Math.min(it.z, under) })), ...quiverItems];
+};
 
 /**
  * The hooded cape: a short capelet at the front (so the laced jerkin shows), over the shoulders
  * and upper arms at the sides, and down to the backs of her knees behind, its hem cut in points.
  */
 const CAPE = cowl({
-  outer: GREEN,
+  outer: CAPE_GREEN,
   inner: GREEN_IN,
   top: 21.4,
   ring: [3.6, 4.2],
@@ -415,15 +574,21 @@ const BOWMASTER: ChibiDesign = {
     },
   },
   body: BODY,
-  headPieces: [HOOD.up],
-  outfit: [HOOD.down, CAPE, QUIVER_PIECE, pouch, bootCuffs],
+  headPieces: [HOOD_UP],
+  outfit: [CAPE, BACK_GEAR, pouch, bootCuffs],
   weapon: heldArrow(ARROW),
   offhand: LONGBOW,
   aura: AURA,
 };
 
 /** Fan of Arrows: five arrows on the string. */
-const BOWMASTER_FAN: ChibiDesign = { ...BOWMASTER, offhand: fanBow(BOW_SPEC) };
+const BOWMASTER_FAN: ChibiDesign = { ...BOWMASTER, offhand: headSorted(fanBow(BOW_SPEC)) };
+
+/** The victory: the arrow she twirls held at its middle. */
+const BOWMASTER_TWIRL: ChibiDesign = { ...BOWMASTER, weapon: twirlArrow(ARROW) };
+
+/** Volley: the bow raised over her head, sorted against the hood as such (see `headSorted`). */
+const BOWMASTER_VOLLEY: ChibiDesign = { ...BOWMASTER, offhand: headSorted(bow(BOW_SPEC), true) };
 
 /** Snare Trap: the coiled snare in her right hand in place of an arrow. */
 const BOWMASTER_SNARE: ChibiDesign = { ...BOWMASTER, weapon: SNARE };
@@ -443,11 +608,11 @@ function darkBow(spec: BowSpec): HeldItem {
   };
 }
 
-/** Rain of Ruin: a single dark arrow, and her effects turned violet-black with green sparks. */
+/** Rain of Ruin: a single dark arrow on a bow raised over her head (sorted as Volley's), and her effects turned violet-black with green sparks. */
 const BOWMASTER_RUIN: ChibiDesign = {
   ...BOWMASTER,
-  offhand: darkBow(BOW_SPEC),
-  aura: { core: hex('#9a46f0'), edge: hex('#3c0e6a'), hot: hex('#d4ffb4') },
+  offhand: headSorted(darkBow(BOW_SPEC), true),
+  aura: { core: hex('#7a34c8'), edge: hex('#1a0a2a'), hot: hex('#e4ffd0') },
 };
 
-export { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE };
+export { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_VOLLEY };

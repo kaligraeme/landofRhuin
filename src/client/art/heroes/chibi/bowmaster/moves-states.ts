@@ -18,10 +18,20 @@
  */
 import type { RGB } from '../../paint.js';
 import { DUST, DUST_DARK } from '../fx.js';
-import { type ChibiPose, type FxContext, lerp3, pose, wave } from '../rig.js';
+import type { Vec } from '../../skeleton.js';
+import { scanPoly } from '../raster.js';
+import { GREEN } from './design.js';
+import { add3, type ChibiPose, type FxContext, lerp3, pose, wave, weaponAxes } from '../rig.js';
 import { AT_EASE, fromReady, READY, settle } from './moves-core.js';
 
 const WHITE: RGB = [255, 255, 255];
+
+/** Runs several extra painters in turn. */
+const both =
+  (...fs: ((x: FxContext) => void)[]) =>
+  (x: FxContext): void => {
+    for (const f of fs) f(x);
+  };
 
 // ── Hurt ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -55,10 +65,10 @@ const KNELT: ChibiPose = {
   elbowF: [-0.6, -0.6, 1],
   weapon: 90,
   drop: true,
-  handB: [10, 6, 9],
+  handB: [14, 6, 11.5],
   weaponB: 2,
-  rollB: 6,
-  yawB: 35,
+  rollB: 14,
+  yawB: 65,
   face: 'grit',
   wind: 0.05,
   flare: 0.2,
@@ -115,7 +125,7 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
     lean: 12 + b * 5,
     head: 10 + b * 5,
     // The neck moves forward and down as she slumps; the bow hand stays on the grip.
-    handB: [10 - 2 * b, 6 - 1.6 * b, 9],
+    handB: [14 - 2 * b, 6 - 1.6 * b, 11.5],
     handF: [1 - b, 13 - b, 7],
     phase: i / 4,
     sway: (b - 0.5) * 0.2,
@@ -179,6 +189,48 @@ const thud = ({ c, rig, proj, hash }: FxContext): void => {
   });
 };
 
+/**
+ * Her cape and fallen hood spread on the floor under her as she lies on her back: a cloak shape
+ * on the ground from her hips (narrow) to her shoulders (widest) and round past her head, painted
+ * under the figure so it shows as a band of green round her outline; `k` how far it has spread
+ * (0 to 1). In the cape's greens, edged with its line colour, with a lit fold down each side.
+ */
+const groundCloak =
+  (k: number) =>
+  ({ c, rig, proj }: FxContext): void => {
+    const [hx, , hz] = rig.pelvis.o;
+    const [cx, , cz] = rig.head.o;
+    const L = Math.hypot(cx - hx, cz - hz) || 1;
+    // Along the body on the floor, and across it.
+    const a: [number, number] = [(cx - hx) / L, (cz - hz) / L];
+    const n: [number, number] = [-a[1], a[0]];
+    // Along the body from the hips (t 0) to past the head (t 1.45), its half-width at each step.
+    const width = (t: number): number => k * (t < 0.6 ? 9 + 26 * t : t < 1.1 ? 24.6 - (t - 0.6) * 8 : 20.6 * Math.sqrt(Math.max(0, 1 - ((t - 1.1) / 0.62) ** 2)));
+    const N = 20;
+    const side = (s: number): Vec[] =>
+      Array.from({ length: N + 1 }, (_, i) => {
+        const t = -0.15 + (1.87 * i) / N;
+        const w = width(t) * s;
+        return proj([hx + a[0] * L * t + n[0] * w, 0, hz + a[1] * L * t + n[1] * w]);
+      });
+    const left = side(1);
+    const right = side(-1).reverse();
+    const pts = [...left, ...right];
+    const [, light, base, dark] = GREEN.tones;
+    // Folds fanning out from her shoulders.
+    const fan = proj(rig.neck);
+    const inside = new Set<number>();
+    scanPoly(pts, c.w, c.h, (x, y) => inside.add(y * c.w + x));
+    for (const i of inside) {
+      const x = i % c.w;
+      const y = Math.floor(i / c.w);
+      const edge = !inside.has(i - 1) || !inside.has(i + 1) || !inside.has(i - c.w) || !inside.has(i + c.w);
+      const fold = Math.sin(Math.atan2((y - fan[1]) * 2.5, x - fan[0]) * 9);
+      const col: RGB = edge ? GREEN.line : !inside.has(i - c.w * 2) || fold > 0.72 ? light : fold < -0.78 ? dark : base;
+      c.glow(x, y, col, 1, true);
+    }
+  };
+
 const ko: ChibiPose[] = [
   // Stagger back, the bow arm flung out.
   pose(READY, { x: -4, y: 4, lean: -14, twist: -6, tilt: -6, head: -16, footF: [10, 0, 5.6], footB: [-9, 0, 5], handF: [0, 12, 9], elbowF: undefined, handB: [4, 8, 12], weaponB: 50, rollB: 40, draw: 0, nock: false, drop: true, face: 'hurt', sway: -0.4, lift: 0.3 }),
@@ -189,8 +241,8 @@ const ko: ChibiPose[] = [
   // Toppling back, the cape flying up; the bow has hit the floor.
   pose(DOWN, { x: -5, y: 17, lean: -45, turn: -45, head: -8, look: 10, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 14], handB: [0, 6, 12], dropAtB: [-12, 2.5, 14], lift: 0.6 }),
   // Down: the thud raises dust and bounces her boots.
-  pose(DOWN, { lean: -82, head: -12, footF: [14, -4, 6], footB: [12, -5, 2], lift: 0.2, fx: { dust: 0.9, extra: thud } }),
-  pose(DOWN, {}),
+  pose(DOWN, { lean: -82, head: -12, footF: [14, -4, 6], footB: [12, -5, 2], lift: 0.2, fx: { dust: 0.9, extra: both(groundCloak(0.8), thud) } }),
+  pose(DOWN, { fx: { extra: groundCloak(1) } }),
 ];
 
 // ── Victory ──────────────────────────────────────────────────────────────────────────────────
@@ -209,24 +261,43 @@ const glint =
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) if (Math.abs(i) + Math.abs(j) <= 2) c.glow(x + i, y + j, [236, 255, 200], Math.abs(i) + Math.abs(j) === 0 ? 1 : 0.5);
   };
 
-/** The arrow held up ahead of her face in her right hand, spinning in her fingers; the bow lowered in her left. */
-const SPIN: ChibiPose = pose(AT_EASE, { y: 1, lean: -2, twist: 10, head: -2, look: 10, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [11, 1, 7], elbowF: [0, -1, 1], drop: false, weapon: 0, roll: 24, yaw: 0, handB: [1, 15, 8], weaponB: 6, rollB: 10, face: 'smirk', wind: 0.2, phase: 0.2 });
+/**
+ * The arrow held out ahead of her chest in her right hand, twirled in her fingers about its middle
+ * (the victory's design holds it there) in a plane turned toward the viewer, so it shows as a shaft
+ * side on and front on and never crosses her face; the bow lowered at her left side as at ease.
+ */
+const SPIN: ChibiPose = pose(AT_EASE, { y: 1, lean: -2, twist: 10, head: -2, look: 10, footF: [5, 0, 5], footB: [-5, 0, 4.4], handF: [15, 7, 5], elbowF: [0, -1, 1], drop: false, weapon: 0, roll: 0, yaw: -50, face: 'smirk', wind: 0.2, phase: 0.2 });
 
 /** The last pose, held: the hood pushed back, a smile for the viewer, a hand on her hip, the cape stirring in the breeze. */
 const PROUD: ChibiPose = pose(AT_EASE, { y: 1, lean: -3, twist: 12, tilt: 2, head: -5, look: 14, footF: [6, 0, 6], footB: [-5, 0, 5], handF: [2, 14, 10], elbowF: [-0.4, -0.6, 1], handB: [6, 14, 7], weaponB: 10, rollB: 10, hood: 'down', face: 'smirk', wind: 0.25, lift: 0.15, sway: -0.3 });
 
-/** The arrow's spin: a bright arc swept behind it. */
-const twirl = (from: number): ChibiPose['fx'] => ({ smear: { from, width: 0.5, alpha: 0.85 } });
+/**
+ * The arrow's spin: two faint copies of its shaft a little behind it in the turn (`back` degrees
+ * apart), a tight blur round the hand.
+ */
+const twirl =
+  (back: number) =>
+  ({ c, rig, proj, aura }: FxContext): void => {
+    const p = rig.pose;
+    const o = rig.weapon.o;
+    [1, 2].forEach((k) => {
+      const u = weaponAxes(p.weapon - back * k, p.roll ?? 0, p.yaw ?? 0).u;
+      const a = proj(add3(o, u, -12));
+      const b = proj(add3(o, u, 12));
+      const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]));
+      for (let i = 0; i <= n; i++) c.glow(a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n, k === 1 ? WHITE : aura.core, k === 1 ? 0.42 : 0.22);
+    });
+  };
 
 const victory: ChibiPose[] = [
   // The arrow eased off the string, the bow lowered.
   fromReady(pose(SPIN, { handF: [10, 5, 4], weapon: 80, face: 'stern', draw: 0, nock: false, phase: 0.05 }), 0.6),
-  // Spun in her fingers, up ahead of her face.
-  pose(SPIN, { weapon: -10, phase: 0.15, fx: twirl(-120) }),
-  pose(SPIN, { weapon: 160, phase: 0.25, fx: twirl(-10) }),
-  pose(SPIN, { weapon: 360, phase: 0.35, fx: { ...twirl(160), extra: glint(0.9) } }),
+  // Twirled in her fingers ahead of her chest, a new angle each frame.
+  pose(SPIN, { weapon: 160, phase: 0.15, fx: { extra: twirl(20) } }),
+  pose(SPIN, { weapon: 260, phase: 0.25, fx: { extra: twirl(20) } }),
+  pose(SPIN, { weapon: 380, look: 14, phase: 0.35, fx: { extra: both(twirl(20), glint(0.9)) } }),
   // Slid back into the quiver over her shoulder.
-  pose(SPIN, { handF: [-5, -2, 6], elbowF: [0.2, 0.8, 0.6], weapon: 196, roll: 10, look: 6, phase: 0.45, face: 'stern' }),
+  pose(SPIN, { handF: [-5, -2, 6], elbowF: [0.2, 0.8, 0.6], weapon: 196, roll: 10, yaw: 0, look: 6, phase: 0.45, face: 'stern' }),
   // The hood pushed back off her hair, the hand passing over the crown.
   pose(SPIN, { handF: [1, -15, 6], elbowF: [0.2, 0.6, 1], drop: true, lean: -4, head: -4, look: 8, phase: 0.55, face: 'closed', wind: 0.25, lift: 0.15 }),
   pose(PROUD, { handF: [-3, -12, 7], elbowF: [-0.2, 0.6, 1], drop: true, phase: 0.7, wind: 0.3, lift: 0.2 }),
