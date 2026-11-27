@@ -514,9 +514,10 @@ indigo steel with pale lilac edges. His open-faced half-helm is low and smooth o
 gem in its pale brow band and a row of scales above it, scaled cheek guards and a low ridge of small
 spines down the back; its sides are a pair of dragon's wings folded down and back round his head.
 Each wing's wrist sits high over the temple, with a pale thumb claw hooking forward over the end of
-his brow; its pale leading bone runs back along the side of the helm and down behind it, a finger
-bone fans down past the ear, and behind the ear the wing leaves the helm, its two points trailing
-down and back clear of his head beside the ponytail with a deep scallop between them. Nothing on it
+his brow; its pale leading bone runs back along the side of the helm and down behind the ear toward
+the nape, a finger bone fans down past the ear, and low behind the ear the wing leaves the helm, its
+two points trailing down and back under the ponytail with a deep scallop between them, so the
+ponytail streams clear above them; face or back on, they flare out past his ears. Nothing on it
 rises above the crown. His jet-black hair, blue in its sheen, shows at the fringe and falls from
 under the back of the helm in a long ponytail. A scale-patterned breastplate, layered wing-like
 pauldrons swept back to points, vambraces ending in claws over the knuckles and greaves with a spur
@@ -638,7 +639,9 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
     says which), an open-faced `helm` (a brow band, cheek guards, a ridge, `scales` and swept-back
     `fins`, painted as flat plates with `Part.facet`) and a `circlet` or headband with a gem. Gear
     over the hair hides the hair under it but for a fringe hanging out from under its edge; long
-    hair grown under it comes out from under its edge (below a helm, out of a hood's opening);
+    hair grown under it comes out from under its edge (below a helm, out of a hood's opening); a
+    design's `headGaps` fills with ink the small see-through gaps such gear leaves enclosed beside
+    the head;
   - the limbs and boots (`BodyDesign`; a boot's `foot` can taper a soft boot to a point) and the
     torso's materials point by point (`armour.ts` `scaleAt` patterns a scaled breastplate);
   - outfit pieces (`pieces.ts`): pauldrons (`plates`, scaled with `scales`), a skirt of panels (a

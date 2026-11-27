@@ -7,22 +7,23 @@
  * of scales above it, scaled cheek guards, and a low ridge of three small spines down the back like
  * a dragon's spine. Each wing's wrist sits high over the temple, a pale thumb claw hooking forward
  * and out from it over the outer end of his brow; from it the pale leading bone runs back high
- * along the side of the helm and curves down behind it, and a finger bone fans down past the ear,
- * with the membrane between them a step lighter than the steel. Behind the ear the wing leaves the
- * helm, so its two points trail down and back clear of the head beside the ponytail, a deep scallop
- * between them. Nothing on it rises above the crown. His jet-black hair, blue in its sheen, shows
- * at the fringe and falls from under the back of the helm in a long ponytail that parts into locks
- * at its end. A scale-patterned breastplate and a gorget, layered wing-like pauldrons swept back to
- * points with scales jutting past the shoulder, vambraces ending in claws over the knuckles,
- * pointed tassets and greaves with a spur at the knee, over a dark charcoal under-suit; a streaming
- * violet-black cape to below the knee, closed at the collar by a short mantle, with a crimson
- * lining and a hem cut like a wing's trailing edge. His lance is taller than he is: a dark steel
- * shaft with violet wraps and two small steel bands, a long leaf point that glows violet inside a
- * soft halo, a vamplate of spread dragon wings below it and a butt spike. His energy is violet with
- * a pale lilac edge and a white-hot core. Everything here is data for the chibi engine (with the
- * few pieces of his own below: the helm's folded wings, ridge, gem and scaled cheek guards, the
- * pauldrons, the spurs and claws, the cape's mantle, the lance's wings and halo); his moves are in
- * the moves-*.ts files beside it, and hero.ts puts him together.
+ * along the side of the helm and curves down behind the ear toward the nape, and a finger bone fans
+ * down past the ear, with the membrane between them a step lighter than the steel. Both lie close
+ * along the helm until low behind the ear, where the wing leaves it, so its two points trail down
+ * and back under the ponytail, a deep scallop between them, and the ponytail streams clear above
+ * them; face or back on, they flare out past his ears. Nothing on it rises above the crown. His
+ * jet-black hair, blue in its sheen, shows at the fringe and falls from under the back of the helm
+ * in a long ponytail that parts into locks at its end. A scale-patterned breastplate and a gorget,
+ * layered wing-like pauldrons swept back to points with scales jutting past the shoulder, vambraces
+ * ending in claws over the knuckles, pointed tassets and greaves with a spur at the knee, over a
+ * dark charcoal under-suit; a streaming violet-black cape to below the knee, closed at the collar
+ * by a short mantle, with a crimson lining and a hem cut like a wing's trailing edge. His lance is
+ * taller than he is: a dark steel shaft with violet wraps and two small steel bands, a long leaf
+ * point that glows violet inside a soft halo, a vamplate of spread dragon wings below it and a butt
+ * spike. His energy is violet with a pale lilac edge and a white-hot core. Everything here is data
+ * for the chibi engine (with the few pieces of his own below: the helm's folded wings, ridge, gem
+ * and scaled cheek guards, the pauldrons, the spurs and claws, the cape's mantle, the lance's wings
+ * and halo); his moves are in the moves-*.ts files beside it, and hero.ts puts him together.
  */
 import { hex, type RGB, type Vec } from '../../paint.js';
 import { scaleAt } from '../armour.js';
@@ -33,7 +34,7 @@ import { clipToGround, heldAxes, mainHeld } from '../held.js';
 import { cape, collar, skirt } from '../pieces.js';
 import { pole, type PoleSpec } from '../pole.js';
 import { type Blob, flat, type Hit, type Mat, mat4, type Part, toneLight } from '../raster.js';
-import { add3, at3, type Build, clamp, cross3, dot3, type Frame3, type Limb, mul3, norm3, rotate, sub3, type V3 } from '../rig.js';
+import { add3, at3, type Build, clamp, cross3, DEPTH, dot3, type Frame3, type Limb, mul3, norm3, rotate, sub3, type V3 } from '../rig.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
@@ -168,14 +169,15 @@ type WP = readonly [number, number, number];
 const WRIST: WP = [70, 34, 0.5];
 /**
  * The bones of the wing folded down and back over his right side, from the wrist: the leading bone
- * running back high along the side of the helm and curving down behind it toward the nape, and a
- * finger bone fanned under it, dropping past the ear. Both lie close along the helm until behind
- * the ear, then stand off it, so their points leave the helm and trail down, back and out beside
- * the ponytail.
+ * running back high along the side of the helm and curving down behind the ear toward the nape,
+ * and a finger bone fanned under it, dropping past the ear. Both lie close along the helm (so side
+ * on, where the near wing lies over the back of the head, the ponytail comes out from under the
+ * helm clear of it) and stand off it only low behind the ear, where their points leave the helm and
+ * trail down and back under the ponytail.
  */
 const WING_BONES: readonly (readonly WP[])[] = [
-  [WRIST, [96, 40, 0.6], [122, 36, 1], [138, 18, 2.6], [146, -2, 8], [146, -16, 16]],
-  [WRIST, [86, 18, 0.6], [102, 2, 0.9], [118, -12, 2.4], [130, -20, 6], [132, -28, 12.5]],
+  [WRIST, [96, 40, 0.6], [122, 36, 0.8], [138, 18, 0.8], [148, -2, 1], [154, -20, 5], [158, -32, 12]],
+  [WRIST, [86, 18, 0.6], [102, 2, 0.8], [116, -10, 1], [124, -20, 3], [128, -30, 8]],
 ];
 /**
  * The thumb claw at the wrist: a hook from its root along the leading bone forward, down and out
@@ -184,6 +186,8 @@ const WING_BONES: readonly (readonly WP[])[] = [
  * forward past the brow.
  */
 const CLAW: readonly WP[] = [[86, 42, 0.5], [68, 27, 0.5], [58, 20, 2.6], [48, 15, 5.2], [58, 29, 3.6], [72, 37, 1.6]];
+/** How far out to the side the wings' free ends flare when the sides of his head are edge-on to the viewer (face or back on). */
+const FLARE = 6;
 /** How far the membrane's trailing edge sags in toward the wrist between the two points (a scallop), as a share of the bones' length. */
 const SAG = 0.35;
 /** Over how many of the last steps along the finger bone its point is pale. */
@@ -230,23 +234,35 @@ function edge(ctx: PieceContext, part: Part, P: readonly V3[], m: Mat, light: nu
  * depth, cut back in a scallop between the two points; along its upper edge the leading bone, two
  * pixels thick with a pale upper edge, and along its lower edge the finger bone, a pixel of the
  * duller lilac with a pixel of the steel on the membrane's side, its point pale; and at the wrist
- * the thumb claw. The far wing passes behind the head and shows only where it clears it.
+ * the thumb claw. The far wing passes behind the head and shows only where it clears it. Face or
+ * back on, their free ends flare out to the sides (`FLARE`) and the finger bone is pale nearly all
+ * along, so the two bones read as a wing's ribs. Nothing rises above the top of the cap, on screen
+ * as in the round, so even their outlines stay within the crown.
  */
 function paintWingGuards(ctx: PieceContext, part: Part, head: Frame3): void {
-  // The top of the helm's cap, hero space: the wings never rise above it.
-  const top = at3(head, SHELL.c[0], SHELL.c[1], SHELL.c[2])[1] + Math.hypot((SHELL.r[0] + EASE) * head.f[1], (SHELL.r[1] + EASE) * head.u[1], (SHELL.r[2] + EASE) * head.r[1]);
+  // The top of the helm's cap, hero space, and the highest it reaches on screen (as a height: up,
+  // less the depth toward the viewer, which shows lower): the wings never rise above either, and
+  // stay a pixel under the second, so their outlines do too.
+  const mid = at3(head, SHELL.c[0], SHELL.c[1], SHELL.c[2]);
+  const top = mid[1] + Math.hypot((SHELL.r[0] + EASE) * head.f[1], (SHELL.r[1] + EASE) * head.u[1], (SHELL.r[2] + EASE) * head.r[1]);
+  const up: V3 = [-DEPTH * ctx.depth([1, 0, 0]), 1, -DEPTH * ctx.depth([0, 0, 1])];
+  const crown = dot3(up, mid) + Math.hypot((SHELL.r[0] + EASE) * dot3(head.f, up), (SHELL.r[1] + EASE) * dot3(head.u, up), (SHELL.r[2] + EASE) * dot3(head.r, up)) - 1;
+  // Face or back on, the sides of the head are edge-on to the viewer, where wings folded flat
+  // against them would show only as their bones: there their free ends flare out to the sides.
+  const edgeOn = clamp((0.6 - Math.abs(ctx.cam.facing(head.r))) / 0.4, 0, 1);
   for (const side of [1, -1]) {
     // Lying down, a wing pressed to the floor lies flat on it rather than passing through it, and
     // the wing on top lies flat at the height of the helm rather than standing up from it.
     const at = (w: WP): V3 => {
       const p = onHelm(EASE + w[2], w[0], w[1]);
-      const q = at3(head, p[0], p[1], side * p[2]);
-      return [q[0], clamp(q[1], FLOOR, top), q[2]];
+      const out = FLARE * edgeOn * clamp((w[2] - 1) / 11, 0, 1);
+      const q = at3(head, p[0], p[1], side * (p[2] + out));
+      const y = Math.min(top, q[1] - Math.max(0, dot3(up, q) - crown));
+      return [q[0], Math.max(FLOOR, y), q[2]];
     };
     const id = WING_GUARD + (side > 0 ? 0 : 5);
     // The membrane's outer face is lit from its outward normal, never darker than the steel's base
     // tone; its inner face, seen where the wing turns away, lies a tone deeper in its shadow.
-    const mid = at3(head, SHELL.c[0], SHELL.c[1], SHELL.c[2]);
     const tri = (p: V3, q: V3, r: V3): void => {
       let n = cross3(sub3(q, p), sub3(r, p));
       if (dot3(n, sub3(add3(add3(p, q), r), mul3(mid, 3))) < 0) n = mul3(n, -1);
@@ -295,8 +311,9 @@ function paintWingGuards(ctx: PieceContext, part: Part, head: Frame3): void {
     edge(ctx, part, lead, BRIGHT, 0.45, id + 3);
     const finger = B.map(at);
     edge(ctx, part, finger.slice(0, k + 1).map((p) => add3(p, head.u, 0.7)), ARMOUR, 0.5, id + 4, 0.5);
-    edge(ctx, part, finger.slice(0, k + 1), RIM, 0.3, id + 4);
-    edge(ctx, part, finger.slice(k), BRIGHT, 0.3, id + 4);
+    const pale = edgeOn > 0.6 ? 2 : k;
+    edge(ctx, part, finger.slice(0, pale + 1), RIM, 0.3, id + 4);
+    edge(ctx, part, finger.slice(pale), BRIGHT, 0.3, id + 4);
   }
 }
 
@@ -853,6 +870,8 @@ const DRAGOON: ChibiDesign = {
   weapon: LANCE_WEAPON,
   // Violet energy: a pale lilac edge and a white-hot core.
   aura: { core: hex('#a46cff'), edge: hex('#d4c0ff'), hot: hex('#ffffff') },
+  // Fill the small windows the folded wings leave beside his nape, cheeks and collar.
+  headGaps: 20,
 };
 
 export { DRAGOON };

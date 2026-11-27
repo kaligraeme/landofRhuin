@@ -158,6 +158,10 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   for (const it of items) it.draw();
   c.outline(INK);
   closePinholes(c);
+  if (d.headGaps) {
+    const sh = d.head.shell;
+    closeHeadGaps(c, proj(at3(headFr, sh.c[0], sh.c[1], sh.c[2])), 2 * Math.max(...sh.r), d.headGaps);
+  }
   paintFx(ctx, d, pose.fx ?? {}, torsoTrue + up - 3);
   return c.flatten();
 }
@@ -247,6 +251,52 @@ function closePinholes(c: Canvas): void {
     }
     if (!fill.length) return;
     for (let i = 0; i < fill.length; i += 2) c.setPx(fill[i] as number, fill[i + 1] as number, INK);
+  }
+}
+
+/**
+ * Fills with ink each see-through gap of at most `max` pixels that the figure (with any soft glow
+ * already on it) encloses wholly within `r` of the head's centre `at` (ChibiDesign.headGaps).
+ */
+function closeHeadGaps(c: Canvas, at: Vec, r: number, max: number): void {
+  const x0 = Math.max(0, Math.floor(at[0] - r));
+  const x1 = Math.min(c.w - 1, Math.ceil(at[0] + r));
+  const y0 = Math.max(0, Math.floor(at[1] - r));
+  const y1 = Math.min(c.h - 1, Math.ceil(at[1] + r));
+  // A pixel is see-through only if nothing is painted there, not even a soft glow (a lance's halo).
+  const clear = (x: number, y: number): boolean => {
+    const i = (y * c.w + x) * 4 + 3;
+    return !c.opaque(x, y) && !(c.fx[i] as number) && !(c.under[i] as number);
+  };
+  const seen = new Uint8Array(c.w * c.h);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (seen[y * c.w + x] || !clear(x, y)) continue;
+      // The whole gap this pixel belongs to, within the head's box: it qualifies only if it is that
+      // small and lies wholly within reach of the head (so never runs out of the box or the frame).
+      const gap: number[] = [];
+      const stack = [y * c.w + x];
+      seen[y * c.w + x] = 1;
+      let ok = true;
+      while (stack.length) {
+        const p = stack.pop() as number;
+        const px = p % c.w;
+        const py = (p - px) / c.w;
+        gap.push(p);
+        if (gap.length > max || Math.hypot(px + 0.5 - at[0], py + 0.5 - at[1]) > r) ok = false;
+        for (const [qx, qy] of [[px - 1, py], [px + 1, py], [px, py - 1], [px, py + 1]] as const) {
+          if (qx < x0 || qx > x1 || qy < y0 || qy > y1) {
+            ok = false;
+            continue;
+          }
+          const q = qy * c.w + qx;
+          if (seen[q] || !clear(qx, qy)) continue;
+          seen[q] = 1;
+          stack.push(q);
+        }
+      }
+      if (ok) for (const p of gap) c.setPx(p % c.w, Math.floor(p / c.w), INK);
+    }
   }
 }
 

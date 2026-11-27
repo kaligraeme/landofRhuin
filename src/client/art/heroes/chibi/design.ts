@@ -514,4 +514,11 @@ export interface ChibiDesign {
   offhand?: HeldItem;
   /** Skill aura: core, edge and the white-hot colour of a smear's cutting edge (every effect is painted in these). */
   aura: { core: RGB; edge: RGB; hot: RGB };
+  /**
+   * Fills with ink, after the outline (as one-pixel pinholes are everywhere), each see-through gap
+   * of at most this many pixels that the figure encloses wholly within twice the hair shell's
+   * largest radius of the head's centre: the small windows a helm's own plates can leave against
+   * the hair, the cheeks, the collar or the shoulders. Off when left out.
+   */
+  headGaps?: number;
 }
