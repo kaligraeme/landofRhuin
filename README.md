@@ -15,7 +15,7 @@ under the Tank's. The names, art, skills and bosses are the game's own; a few he
 colours and feel of familiar fantasy archetypes (the Dragoon's dark violet dragon armour and
 leaping lance, for one) without copying any particular character.
 
-![Fighting Gnashtusk the War Boar in an Orc stronghold](docs/screenshots/orc-boss.jpg)
+![Fighting Old Ironjaw the Ogre in an Orc stronghold](docs/screenshots/orc-boss.jpg)
 
 ![The title screen with every hero](docs/screenshots/title.jpg)
 
