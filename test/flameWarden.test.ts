@@ -8,6 +8,7 @@ import { taunt } from '../src/server/sim/aggro.js';
 import { applyDamage, applyStatus, basicAttack, dodge, formOf, getStatus, useSkill } from '../src/server/sim/combat.js';
 import { Instance, type Seat } from '../src/server/sim/instance.js';
 import { startAbility } from '../src/server/sim/mechanics.js';
+import { TAKE_BACK } from '../src/server/ai/botAI.js';
 import type { Monster, Player } from '../src/server/sim/types.js';
 import { FORMS, HEROES, hotbarFor, ROLES, SKILLS, WEAPONS, weaponFor, type Delivery } from '../src/shared/content/classes.js';
 import type { AbilityDef } from '../src/shared/content/monsters.js';
@@ -101,7 +102,7 @@ describe('the Flame Warden’s kit', () => {
     expect(ult!.cooldown).toBeGreaterThan(Math.max(...ults));
     // The tooltip says how buffs treat the claws.
     expect(ult!.description).toMatch(/Bloodrush and the Echo of Rhuin still raise the claws’ damage/);
-    expect(ult!.description).toMatch(/Kindle does not hurry them/);
+    expect(ult!.description).toMatch(/Kindle does not hurry them, but its flames still catch on every foe they strike/);
 
     // The Firebeast's claw chain.
     const claws = FORMS.firebeast!.basic.hits.map((id) => SKILLS[id]!);
@@ -236,6 +237,8 @@ describe('the Firebeast', () => {
       expect(c.v).toBeGreaterThanOrEqual(Math.floor(base * 0.95));
       expect(c.v).toBeLessThanOrEqual(Math.ceil(base * 1.05));
     }
+    // Kindle does not hurry the claws, but its flames catch on what they strike, as the tooltip says.
+    expect(getStatus(dummy, 'burning')).toMatchObject({ sourceId: warden.id });
 
     // Bloodrush (used before the form: role skills wait during it) raises every claw by a quarter.
     run(inst, 1);
@@ -361,6 +364,46 @@ describe('the Firebeast', () => {
     expect(tank.hp).toBeLessThan(tankHp);
   });
 
+  it('still stands in the way: it takes its share of a stack, and stops a shot meant for someone behind it', () => {
+    /** Damage the Mage takes from a stack on her, with the Tank beside her and the Warden in it or not. */
+    const stack = (beastInside: boolean): number => {
+      const { inst, warden, tank, mage, dummy } = setup();
+      for (const p of [tank, mage]) p.maxHp = p.hp = 1e6;
+      mage.x = warden.x;
+      mage.y = warden.y + 1;
+      tank.x = warden.x - 1;
+      tank.y = warden.y + 1;
+      transform(inst, warden, dummy);
+      if (!beastInside) warden.y -= 12;
+      let taken = 0;
+      let immune = 0;
+      startAbility(inst, dummy, { id: 'verdict', name: 'Verdict', cast: 0.5, potency: 6000, pattern: { kind: 'stack', radius: 4 } });
+      // The stack falls on a hero who is not the tank: make sure it is the Mage.
+      const marker = [...inst.telegraphs.values()].find((t) => t.style === 'stack')!;
+      marker.followId = mage.id;
+      run(inst, 1, (ev) => {
+        if (ev.e === 'dmg' && ev.t === mage.id && ev.n === 'Verdict') taken += ev.v;
+        if (ev.e === 'fx' && ev.k === 'immune' && ev.t === warden.id) immune++;
+      });
+      expect(warden.hp).toBe(warden.maxHp);
+      expect(immune > 0).toBe(beastInside);
+      return taken;
+    };
+    // Three in the stack, the Firebeast among them, split it three ways, though it takes nothing.
+    expect(stack(true) / stack(false)).toBeCloseTo(2 / 3, 1);
+
+    const { inst, warden, mage, dummy } = setup();
+    mage.x = warden.x - 3;
+    mage.y = warden.y;
+    const hp = mage.hp;
+    transform(inst, warden, dummy);
+    let immune = 0;
+    inst.spawnProjectile({ ownerId: dummy.id, team: 'enemy', x: warden.x + 3, y: warden.y, dir: Math.PI, speed: 20, radius: 0.4, range: 12, pierce: false, explode: 0, look: 'enemy', hue: 0, skill: null, potency: 2000, name: 'Arrow' });
+    run(inst, 0.8, (ev) => ev.e === 'fx' && ev.k === 'immune' && ev.t === warden.id && immune++);
+    expect(immune).toBe(1);
+    expect(mage.hp).toBe(hp);
+  });
+
   it('ends when he falls, and does not come back with him', () => {
     const { inst, warden, tank, dummy } = setup();
     transform(inst, warden, dummy);
@@ -467,37 +510,119 @@ describe('an AI Flame Warden', () => {
     expect(usedAfter).toBeGreaterThan(0);
   });
 
-  it('leaves the AI tank’s taunt for when the form ends: a monster on the Firebeast cannot hurt it', () => {
+  it('leaves the AI tank’s taunt until the form is about to end, then takes the monsters back before it does', () => {
     const inst = new Instance('taunt', [{ ...seats(null)[0]!, ownerId: null }, ...seats('h4').slice(1)], { seed: 5, countdown: 0 });
     inst.tick();
     const [tank, , , warden] = inst.players as [Player, Player, Player, Player];
     for (const o of inst.players.slice(1, 3)) o.x += 400;
     tank.x = warden.x + 1;
     tank.y = warden.y + 1;
+    // A boss as well as a brute: neither is a threat while the form holds, and both must be back on
+    // the tank by the time it ends.
+    const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss')!;
     const brute = inst.spawnMob('brute', warden.x + 2, warden.y, 0, 0);
-    brute.hp = brute.maxHp = 1e9;
-    inst.engage(brute);
-    taunt(brute, warden);
-    applyStatus(inst, warden, 'firebeast', 60, warden.id);
-    const taunts = (seconds: number): number => {
-      let n = 0;
-      for (let i = 0; i < seconds * 20; i++) {
-        brute.enmity.set(warden.id, 1e9);
-        inst.tick();
-        for (const ev of inst.drainEvents()) if (ev.e === 'act' && ev.i === tank.id && ev.s === 'challenge') n++;
-      }
-      return n;
-    };
-    expect(taunts(3)).toBe(0);
-    expect(brute.targetId).toBe(warden.id);
-    getStatus(warden, 'firebeast')!.expires = inst.now;
-    let n = 0;
-    for (let i = 0; i < 60 && !n; i++) {
-      inst.tick();
-      for (const ev of inst.drainEvents()) if (ev.e === 'act' && ev.i === tank.id && ev.s === 'challenge') n++;
+    boss.x = warden.x + 2;
+    boss.y = warden.y - 2.5;
+    boss.speed = 0;
+    for (const m of [brute, boss]) {
+      m.hp = m.maxHp = 1e9;
+      inst.engage(m);
+      taunt(m, warden);
     }
-    expect(n).toBe(1);
+    boss.mob = boss.mob ? { ...boss.mob, abilities: [] } : boss.mob;
+    applyStatus(inst, warden, 'firebeast', 4, warden.id);
+    const ends = getStatus(warden, 'firebeast')!.expires;
+    let tauntAt = -1;
+    while (formOf(warden)) {
+      // The claws keep them on the Firebeast until the tank takes them.
+      if (tauntAt < 0) for (const m of [brute, boss]) m.enmity.set(warden.id, 1e9);
+      inst.tick();
+      for (const ev of inst.drainEvents()) if (ev.e === 'act' && ev.i === tank.id && ev.s === 'challenge' && tauntAt < 0) tauntAt = inst.now;
+    }
+    expect(tauntAt).toBeGreaterThan(ends - TAKE_BACK - 0.2);
+    expect(tauntAt).toBeLessThan(ends);
     expect(brute.targetId).toBe(tank.id);
+    expect(boss.targetId).toBe(tank.id);
+  });
+
+  /** A boss buster on a player tank, with the AI Warden beside it and his form ending just before it lands. */
+  function lateBuster(formLeft: number | null, seed: number): boolean {
+    const inst = new Instance('late', seats(null).map((s, i) => ({ ...s, ownerId: i === 0 ? 'h1' : null })), { seed, countdown: 0 });
+    inst.tick();
+    const warden = inst.players[3] as Player;
+    const tank = inst.players[0] as Player;
+    for (const o of inst.players.slice(1, 3)) o.x += 400;
+    tank.maxHp = tank.hp = 1e9;
+    warden.cooldowns.set('firebeast', 1e9);
+    const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss')!;
+    const brute = inst.spawnMob('brute', warden.x + 2.2, warden.y, 0, 0);
+    brute.hp = brute.maxHp = 2e6;
+    brute.speed = 0;
+    inst.engage(brute);
+    taunt(brute, tank);
+    tank.x = warden.x + 1.2;
+    tank.y = warden.y + 1;
+    const cast = 4;
+    if (formLeft !== null) applyStatus(inst, warden, 'firebeast', cast - formLeft, warden.id);
+    boss.targetId = tank.id;
+    startAbility(inst, boss, { id: 'judgment', name: 'Final Judgment', cast, potency: 4800, pattern: { kind: 'tankbuster', radius: 3 } });
+    let struck = false;
+    for (let i = 0; i < (cast + 0.5) * 20; i++) {
+      brute.enmity.set(tank.id, 1e12);
+      inst.tick();
+      for (const ev of inst.drainEvents()) if (ev.e === 'dmg' && ev.t === warden.id && ev.n === 'Final Judgment') struck = true;
+    }
+    return struck;
+  }
+
+  it('steps out of a marker that lands after the form ends, as he would out of the form', () => {
+    for (const seed of [1, 2, 3, 4]) {
+      expect(lateBuster(null, seed), `no form, seed ${seed}`).toBe(false);
+      for (const left of [0.5, 0.2, 0.1]) expect(lateBuster(left, seed), `form ends ${left}s before it lands, seed ${seed}`).toBe(false);
+    }
+  });
+
+  it('rolls through a buster begun on the Firebeast that lands after it, and it strikes no one', () => {
+    for (const seed of [1, 2, 3]) {
+      for (const after of [0.05, 0.5, 2]) {
+        // The Mage (an AI companion) beside him steps out of it; he rolls the way that keeps it off her.
+        const inst = new Instance('busted', seats(null).map((s, i) => (i === 3 || i === 1 ? { ...s, ownerId: null } : { ...s, ownerId: `h${i}` })), { seed, countdown: 0 });
+        inst.tick();
+        const warden = inst.players[3] as Player;
+        const [tank, mage] = inst.players as [Player, Player];
+        inst.players[2]!.x += 400;
+        tank.x += 300;
+        tank.maxHp = tank.hp = 1e9;
+        mage.x = warden.x - 1.5;
+        mage.y = warden.y;
+        mage.maxHp = mage.hp = 1e9;
+        warden.cooldowns.set('firebeast', 1e9);
+        const boss = [...inst.monsters.values()].find((m) => m.kind === 'boss')!;
+        const brute = inst.spawnMob('brute', warden.x + 2.2, warden.y, 0, 0);
+        brute.hp = brute.maxHp = 2e6;
+        brute.speed = 0;
+        inst.engage(brute);
+        taunt(brute, tank);
+        const cast = 4;
+        applyStatus(inst, warden, 'firebeast', cast - after, warden.id);
+        boss.targetId = warden.id;
+        startAbility(inst, boss, { id: 'judgment', name: 'Final Judgment', cast, potency: 4800, pattern: { kind: 'tankbuster', radius: 3 } });
+        const struck = new Set<number>();
+        let rolled = false;
+        for (let i = 0; i < (cast + 0.5) * 20; i++) {
+          brute.enmity.set(tank.id, 1e12);
+          inst.tick();
+          for (const ev of inst.drainEvents()) {
+            if (ev.e === 'dmg' && ev.n === 'Final Judgment') struck.add(ev.t);
+            if (ev.e === 'fx' && ev.k === 'roll' && ev.s === warden.id) rolled = true;
+          }
+        }
+        const label = `form ends ${after}s before it lands, seed ${seed}`;
+        expect(warden.dead, label).toBe(false);
+        expect(rolled, label).toBe(true);
+        expect([...struck], label).toEqual([]);
+      }
+    }
   });
 
   it('keeps the form for a fight worth it, not for a stray foe nearly done', () => {

@@ -57,7 +57,8 @@ export interface LobbyOptions {
   instance?: InstanceOptions;
   /**
    * AI companions play these heroes where their role has one of them (to try a hero alongside
-   * you, and for browser tests); otherwise one of the role's heroes at random.
+   * you, and for browser tests); otherwise one of the role's heroes at random. An asked-for Mage
+   * comes even when it is not the healer: the party then has the Ward of Rhuin instead.
    */
   companions?: HeroId[];
   /** How long a disconnected player is kept for reconnecting (ms). */
@@ -342,8 +343,8 @@ export class Lobby {
         const name = BOT_NAMES.filter((n) => !usedNames.has(n))[Math.floor(Math.random() * 8)] ?? 'Companion';
         usedNames.add(name);
         // An AI companion plays one of the role's heroes at random, but always a healer where the
-        // role has one (the Mage's Sage), so an AI-filled party has one; heroes asked for in the
-        // options come first.
+        // role has one (the Mage's Sage), so an AI-filled party has one. Heroes asked for in the
+        // options come before both: whoever asks for a Spellblade companion gets one.
         const heroes = ROLES[role].heroes;
         const asked = (this.opts.companions ?? []).filter((h) => heroes.includes(h));
         const healers = heroes.filter((h) => WEAPONS[weaponFor(h)]?.healer);

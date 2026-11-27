@@ -41,7 +41,7 @@ it into **Party code** and press **Join**. The party leader then joins the queue
 | `--quick` | Monsters have a quarter of their health. Good for trying things out. |
 | `--countdown 5` | Seconds before the entrance barrier drops. |
 | `--clan orc` | Make every dungeon belong to one clan: `orc`, `dragon` or `undead`. |
-| `--companions flameWarden` | AI companions play these heroes (comma-separated hero ids) where their role has one. |
+| `--companions flameWarden` | AI companions play these heroes (comma-separated hero ids) where their role has one, even a Mage who is not the healer. |
 
 For development, `npm run dev` runs the server with reload on port 8787 and the Vite client on
 http://localhost:5173 (it forwards the game socket to the server).
@@ -102,10 +102,11 @@ Role skills: the Tank has **Challenge** (taunt everything nearby) and **Rallying
 Mage has **Arcane Blink** and **Mana Font**. The Ranger has **Vault** and **Field Dressing**. The
 Duelist has **Bloodrush** (more damage dealt, more taken) and **Second Wind**.
 
-The Sage's Staff is the party's healer. An AI companion filling the Mage slot is always the Sage;
-the other AI companions play any of their role's heroes. A party without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
+The Sage's Staff is the party's healer. An AI companion filling the Mage slot is always the Sage
+(unless the server is started with `--companions` naming another Mage, which comes first); the other
+AI companions play any of their role's heroes. A party without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
 
-In AI-only test runs, Duelists deal about 1,500 damage per second (the Flame Warden about 1,850),
+In AI-only test runs, Duelists deal about 1,500 damage per second (the Flame Warden about 1,900),
 Rangers about 1,150, Mages about 700 and Tanks 550 (Guardian) to 700 (Dark Knight).
 
 ### The Flame Warden and the Firebeast
@@ -125,35 +126,71 @@ the Firebeast.
   counting the form's seconds down).
 - **No monster can hurt it.** Blows, bolts and arrows, every ground mechanic and damage over time
   (even from a monster that has since died) show **Immune** instead of a number. Knockbacks still
-  move it, and the heroes around it are hit as ever.
+  move it, and the heroes around it are hit as ever. It still stands in the way: in a stack it takes
+  its share, so the others' shares are smaller, and a shot that crosses it stops on it rather than
+  flying on to whoever is behind.
 - **Buffs.** The potency is fixed at 1000, and Kindle does not hurry the claws: the form is balanced
-  on its ten swipes. Bloodrush, the Echo of Rhuin and a staggered boss's weakness still raise the
-  claws' damage, as they do every blow, because they multiply damage, not potency; Bloodrush has to
-  be used first, since role skills wait during the form, and its cost (15% more damage taken) only
-  bites once the form ends.
+  on its ten swipes. Kindle's flames still catch on them, though: while it lasts, every foe a claw
+  strikes burns, as it would under the Ember Blade. Bloodrush, the Echo of Rhuin and a staggered
+  boss's weakness still raise the claws' damage, as they do every blow, because they multiply
+  damage, not potency; Bloodrush has to be used first, since role skills wait during the form, and
+  its cost (15% more damage taken) only bites once the form ends.
 - **Aggro works as ever.** Ten claws at 1000 potency pull monsters onto the Firebeast. They cannot
   hurt it, but they are still after the Warden when the form ends, so he needs to be near the Tank
-  by then (the hotbar warns him).
+  by then (the hotbar warns him), and the Tank needs to take them back. A boss that begins a
+  tank-buster on the Firebeast in its last four seconds lands it on the Warden once the form is gone:
+  he has to roll through it (a roll is ready, since the form cannot spend stamina).
 
 An AI Flame Warden takes the form when a fight worth it is on (a boss, or a pack with plenty of
 health left in reach of his claws), and while transformed only attacks: no skills, no rolls, no
-easing off his aggro and no running to the Tank. An AI Tank leaves the monsters on the Firebeast be
-and saves its taunt for the moment the form ends.
+easing off his aggro and no running to the Tank. He ignores only the markers that land while the
+form holds; one that lands after it is as deadly as ever, so he steps out of it as he would as the
+Warden. Like every AI damage dealer, he rolls through a buster on him as it lands, the way that
+keeps it off the others: one begun on the Firebeast, or one the boss begins on him after the form
+because the claws' aggro still holds it. An AI Tank leaves the monsters on the Firebeast be and saves its taunt until the form has
+0.8 seconds left, then takes them all back, the boss too, so they are on it when the form ends
+(sooner, and the last claws would pull them away again). A player Tank's hotbar says how many are on
+the Firebeast and for how long, and counts them as loose for its last second and a half.
 
-What the sims show, with AI parties in the same 32 dungeons (16 seeds, each with a
-Guardian–Sage–Bowmaster party and a Dark Knight–Sage–Arbalest one):
+What the sims show, with AI parties in the same 128 dungeons for each Duelist (64 seeds, each with
+a Guardian–Sage–Bowmaster party and a Dark Knight–Sage–Arbalest one):
 
 - Against a training dummy for two minutes, without his ultimate, the Flame Warden deals about
   1,600 damage per second to the Dragoon's 1,350 and the Blademaster's 1,300; with it, about 2,250
   to their 1,500. Against a pack of four his short reach tells: about 2,400 (4,100 with the
   Firebeast), behind the Dragoon's 2,750 and far behind the Blademaster's sweeping 4,950.
-- Over whole dungeons he deals about 1,850 damage per second to the other Duelists' 1,450 to 1,550,
-  and every party clears every dungeon in about the same time. The Firebeast comes out about nine
-  times a run and deals about a fifth of his damage.
-- He falls more often than the others, about 1.7 times a run to their 0.9 to 1.5: his claws pull
-  monsters onto him, and they are still after him when the form ends.
-- The cooldown: at 60 seconds his damage would rise by about a tenth again, at 120 it falls by a few
-  percent; 90 keeps him about a quarter ahead of the other Duelists.
+- Over whole dungeons he deals about 1,900 damage per second (1,917 and 1,868 in the two parties)
+  to the Dragoon's 1,450 to 1,500 and the Blademaster's 1,500 to 1,550, about a quarter more, and
+  every party clears every dungeon, his a little faster (about 12:20, against 12:50 to 14:10). The
+  Firebeast comes out about nine times a run and deals about a fifth of his damage.
+- He falls about as often as the other Duelists: 0.6 times a run (0.55 and 0.69 in the two
+  parties), against the Dragoon's 0.7 (0.45 and 1.03) and the Blademaster's 0.5 (0.39 and 0.63).
+  What kills him is what kills them: his own spread marker caught on someone (31 of his 79 deaths),
+  routine blows, ground areas and raid-wide blasts. Seven came within three seconds of a form
+  ending, none of them a tank-buster.
+- Busters used to be what killed him: about once a run, two in three of his deaths. An AI Tank
+  charging to brace against a buster dragged it onto the Duelists behind the boss (0.7 to 0.8 deaths
+  a run for him and the Blademaster, 0.25 for the Dragoon, whose reach keeps him further back); it
+  now charges a way that keeps them clear. And no AI damage dealer tried to escape a buster begun on
+  them, which cost him 0.3 deaths a run (the others 0.1), many of them from a boss his claws held on
+  him past the Firebeast; now they roll through it as it lands. Those two fixes took his deaths from
+  1.6 a run to 0.6, the Blademaster's from 1.5 to 0.5 and the Dragoon's from 0.9 to 0.7.
+- The rest of his party pays a little for his claws in the Guardian's party: the others fall 0.9
+  times a run with him, against 0.6 with the Dragoon and 0.4 with the Blademaster, and the party
+  wipes 0.19 times a run against 0.14 and 0.05. The extra deaths are mostly the Mage and the Tank
+  falling to routine blows (20 in 64 runs, against 6 with the Dragoon), which fits the monsters
+  the claws held coming back from the Firebeast all at once. In the Dark Knight's party he sits between the two (others 1.5 a run against 2.2
+  and 1.1, wipes 0.33 against 0.59 and 0.27). Halving the claws' aggro brings the Guardian's party
+  down to 0.6 and 0.08 for the same damage, but does nothing for the Dark Knight's (1.6 and 0.38),
+  so the claws keep their full aggro.
+- These counts are noisy. The two halves of the same 64 seeds can differ twofold for deaths and
+  wipes (the others in the Blademaster's Dark Knight party: 0.75 and 1.41 deaths a run), so a
+  difference of less than about half is not to be trusted, and 16 seeds are far too few to tune by.
+- The cooldown, in 64 of the same dungeons: at 60 seconds his damage would rise by 5 to 7% (about
+  2,000 a second), and at 120 it would fall by about 4% (about 1,800). Deaths and wipes did not
+  follow it: the others in the Guardian's party fell 0.7 times a run at 60 seconds, 0.9 at 90 and
+  0.2 at 120, and in the Dark Knight's 2.0, 1.4 and 1.6. 90 keeps him about a quarter ahead of the
+  other Duelists.
 - Alone against a pack of three with no Tank, he wins every time with the Firebeast ready, and falls
   like any Duelist with it on cooldown.
 
@@ -206,13 +243,21 @@ Reading aggro on screen:
   Tank, a gold **◆** marks the ones on you and an orange **◇** the ones loose on the party.
 - **By the hotbar:** "Pulling aggro: 118% of the tank's (it turns at 130%) — ease off" when you
   are close to pulling a monster off the Tank; "You have aggro! … get to the tank" when
-  something has come for you. The Tank sees "2 loose on the party — grab them!".
+  something has come for you. The Tank sees "2 loose on the party — grab them!", or, for monsters
+  on the Firebeast, how many there are and how long until they must be taken back.
 - A hit your shield or barrier takes in full shows as **Blocked**; otherwise you see what got
   through.
 
 AI companions play by the same rules. Damage dealers ease off a monster when they come close to
 the Tank's aggro, and run to the Tank when something comes for them. An AI Tank charges
-and taunts whatever gets loose.
+and taunts whatever gets loose. A hero with a tank-buster on them never dashes or leaps to where
+it would land on someone else, since it follows them wherever they go. That matters most for the
+Tank, which charges to brace against a buster (both charges give 35% less damage taken): straight
+through the boss would carry the buster onto the Duelists behind it, too late for them to step out,
+so it charges the nearest way that keeps them clear (or not at all). A damage dealer who has pulled
+a boss cannot outrun a buster on them either, and it kills anyone but a braced Tank: they roll
+through it as it lands (or dash through it on a skill that cannot be hurt), the way that keeps it off
+the others.
 
 ![The aggro table on an Orc Ravager: the Guardian holds it, the others well behind](docs/screenshots/aggro.jpg)
 
@@ -562,7 +607,7 @@ e2e/             Browser test with two players.
 ```sh
 npm test            # unit tests, plus complete dungeon runs by AI-only parties
 npm run typecheck
-npm run e2e         # builds, then drives two browsers through a party, queue and first room
+npm run e2e         # builds, then drives browsers through a party, the queue, the first room and the Firebeast
 npm run simulate -- 42 5   # play 5 dungeons (seeds 42-46) with AI parties and print results
 npx tsx scripts/chibi-sheet.ts   # contact sheets of a chibi hero's clips in three views (--hero <sprite id>)
 ```
@@ -572,9 +617,15 @@ checks the generator, the combat rules, every boss and the AI together, and keep
 honest: AI parties clear a dungeon in about 10 to 14 minutes. Without the Staff healer they can
 take twice as long and wipe once or twice. `test/teamwork.test.ts` checks the
 aggro balance: damage dealers with a pack on them fall in seconds, a tank lasts far longer, and a
-tank facing a big pack alone falls but wins with a healer. `test/flameWarden.test.ts` checks the
-Flame Warden's kit and the Firebeast: what it refuses, its claws' potency and rhythm, its immunity
-to every kind of monster damage, its duration and cooldown, and how the AI uses it.
+tank facing a big pack alone falls but wins with a healer. It also checks how AI companions take
+tank-busters: a Tank's charge never carries its buster onto the others, and a Duelist with one on
+him rolls through it and lands it on no one. `test/flameWarden.test.ts` checks the
+Flame Warden's kit and the Firebeast: what it refuses, its claws' potency and rhythm (and Kindle's
+flames on them), its immunity to every kind of monster damage, how it still stands in the way of
+stacks and shots, its duration and cooldown, and how the AI uses it: markers that land after the
+form, busters begun on it, and when an AI Tank takes its monsters back. The browser tests have an AI
+Flame Warden clear the first room, and a player Flame Warden take the form: the greyed hotbar, the
+claw in the attack slot, the form's bar, a roll pressed before the server has answered, and Immune.
 `PARTY=sword_shield,staff,bow,flame_sword npm run simulate -- 1 4` picks the party's weapons and
 prints how often each hero pulled a monster off the tank and what killed them.
 

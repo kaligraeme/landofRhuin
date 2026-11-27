@@ -116,6 +116,8 @@ test('two players form a party, queue with AI fill and clear the first room toge
   expect(cleared).toBeGreaterThanOrEqual(2);
   await expect(alice.locator('.duty-obj .obj.done').first()).toBeVisible();
   expect(errors).toEqual([]);
+  // Close both games, so they do not run on behind the next test.
+  for (const p of [alice, bob]) await p.context().close();
 });
 
 test('a party with an AI Flame Warden clears the first room', async ({ browser }) => {
@@ -171,4 +173,109 @@ test('a party with an AI Flame Warden clears the first room', async ({ browser }
   await expect.poll(async () => (await seen()).drawn, { timeout: 30_000 }).toBe(true);
   test.info().annotations.push({ type: 'firebeast', description: transformed ? 'The AI Flame Warden took the Firebeast form.' : 'The first room fell before the Firebeast was worth it.' });
   expect(errors).toEqual([]);
+  await page.context().close();
+});
+
+test('a Flame Warden player becomes the Firebeast: the hotbar greys, only the claws answer, and Immune shows', async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enter(page, 'Dana');
+  await page.locator('.role-card[data-role="melee"]').click();
+  await page.locator('.hero-card[data-hero="flameWarden"]').click();
+  await expect(page.locator('.hero-card.selected')).toContainText('Flame Warden · Ember Blade');
+  await page.locator('.fill-options button', { hasText: 'Now' }).click();
+  await page.getByRole('button', { name: 'Join Queue' }).click();
+  await page.getByRole('button', { name: 'Commence' }).click();
+  await expect(page.locator('canvas.world')).toBeVisible();
+  await expect.poll(async () => (await world(page))?.phase, { timeout: 10_000 }).toBe('running');
+
+  type Game = {
+    world: { meId: number; formOf(id: number): string | null; meEntity(): { x: number; y: number } | undefined; enemies(): { x: number; y: number; snap: { a?: number } }[] };
+    roll: unknown;
+    fx: { texts: { text: string }[] };
+    hud: { error(text: string): void };
+    onEvent(ev: unknown): void;
+  };
+  // Keep every message the hotbar shows, since a later one soon replaces it.
+  await page.evaluate(() => {
+    const g = (window as unknown as { rhuin: { game: Game }; said: string[] }).rhuin.game;
+    const said: string[] = ((window as unknown as { said: string[] }).said = []);
+    const show = g.hud.error.bind(g.hud);
+    g.hud.error = (text: string) => {
+      said.push(text);
+      show(text);
+    };
+  });
+  const state = () =>
+    page.evaluate(() => {
+      const g = (window as unknown as { rhuin: { game: Game } }).rhuin.game;
+      const me = g.world.meEntity();
+      const near = me ? g.world.enemies().filter((e) => Math.hypot(e.x - me.x, e.y - me.y) < 3.5) : [];
+      return {
+        form: g.world.formOf(g.world.meId),
+        rolling: g.roll !== null,
+        near: near.length,
+        onMe: near.some((e) => e.snap.a === g.world.meId),
+        immune: g.fx.texts.some((t) => t.text === 'Immune'),
+      };
+    });
+
+  // Follow the AI tank in and fight. Take the form once a monster in reach is after Dana (its blows
+  // will show Immune), or beside any monster if none turns on her soon.
+  await page.keyboard.press('t');
+  await page.mouse.move(720, 300);
+  await page.mouse.down();
+  const patience = Date.now() + 25_000;
+  const deadline = Date.now() + 90_000;
+  for (;;) {
+    const s = await state();
+    if (s.onMe || (s.near && Date.now() > patience)) break;
+    expect(Date.now()).toBeLessThan(deadline);
+    await page.waitForTimeout(50);
+  }
+
+  // F, then Space at once: the server has not answered yet, but the roll is refused on the spot
+  // rather than predicted and snapped back.
+  await page.keyboard.press('f');
+  await page.keyboard.press(' ');
+  expect((await state()).rolling).toBe(false);
+  await expect.poll(async () => (await state()).form, { timeout: 3_000 }).toBe('firebeast');
+  expect(await page.evaluate(() => (window as unknown as { said: string[] }).said)).toContain('The Firebeast only has its claws');
+
+  // The hotbar: every slot but the attack is greyed, the attack shows the claw, and a bar counts the
+  // form down.
+  await expect(page.locator('.form-bar.show')).toContainText('Firebeast');
+  await expect(page.locator('.hotbar .slot.form-locked')).toHaveCount(9);
+  await expect(page.locator('.hotbar .slot.form-basic img')).toHaveAttribute('alt', 'Firebeast Claw I');
+
+  // Blows that land on the Firebeast show Immune. If none landed while it lasted, the client is
+  // still asked to draw one, so the path is covered either way.
+  let immune = false;
+  while ((await state()).form) {
+    immune ||= (await state()).immune;
+    await page.waitForTimeout(40);
+  }
+  test.info().annotations.push({ type: 'immune', description: immune ? 'A monster struck the Firebeast: Immune.' : 'No monster struck the Firebeast; an immune event was replayed.' });
+  if (!immune) {
+    immune = await page.evaluate(() => {
+      const g = (window as unknown as { rhuin: { game: Game } }).rhuin.game;
+      g.onEvent({ e: 'fx', k: 'immune', t: g.world.meId });
+      return g.fx.texts.some((t) => t.text === 'Immune');
+    });
+  }
+  expect(immune).toBe(true);
+
+  // The form ends: the bar goes, the hotbar answers again, and the room still falls.
+  await expect(page.locator('.form-bar.show')).toHaveCount(0);
+  await expect(page.locator('.hotbar .slot.form-locked')).toHaveCount(0);
+  let cleared = 0;
+  while (Date.now() < deadline && cleared < 2) {
+    for (const k of ['q', 'e', 'r']) await page.keyboard.press(k);
+    await page.waitForTimeout(300);
+    cleared = (await world(page))?.cleared ?? 0;
+  }
+  expect(cleared).toBeGreaterThanOrEqual(2);
+  expect(errors).toEqual([]);
+  await page.context().close();
 });

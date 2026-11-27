@@ -13,6 +13,15 @@ import { hideTooltip, skillTooltip, withTooltip } from '../ui/common.js';
 import { musicControl } from '../ui/musicControl.js';
 import type { ClientEntity, World } from './world.js';
 
+/** Seconds before a form no monster can hurt ends at which the monsters on it count as loose for a tank. */
+const FORM_TAKE_BACK = 1.5;
+
+/** The form no monster can hurt (the Firebeast) an entity is in, and its seconds left, if any. */
+function immuneForm(snap: EntitySnap): { name: string; left: number } | null {
+  const s = (snap.s ?? []).find(([id]) => STATUSES[id]?.monsterImmune);
+  return s ? { name: FORMS[s[0]]?.name ?? STATUSES[s[0]]?.name ?? s[0], left: s[1] } : null;
+}
+
 export interface HudHandlers {
   useSlot(index: number): void;
   setTarget(id: number | null): void;
@@ -455,7 +464,9 @@ export class Hud {
 
   /**
    * A warning by the hotbar. Not a tank: you are close to pulling a monster off whoever holds it,
-   * or something has come for you. A tank: monsters near you are loose on the party.
+   * or something has come for you. A tank: monsters near you are loose on the party. Those on a hero
+   * no monster can hurt (the Firebeast) can wait, but must be back on the tank by the time the form
+   * ends: they count as loose once it has little time left.
    */
   private updateAggroAlert(me: { x: number; y: number }): void {
     const world = this.world;
@@ -467,6 +478,9 @@ export class Hud {
     const tank = meEnt.spawn.role === 'tank';
     let onMe = 0;
     let loose = 0;
+    let onForm = 0;
+    let formLeft = Infinity;
+    let formName = '';
     let closest = 0;
     const tankLine = Math.round(AGGRO_TANK_STICK * 100);
     for (const e of world.enemies()) {
@@ -474,7 +488,14 @@ export class Hud {
       if (e.snap.a === world.meId) onMe++;
       else {
         const holder = world.ents.get(e.snap.a);
-        if (tank && holder?.spawn.role !== 'tank') loose++;
+        if (tank && holder?.spawn.role !== 'tank') {
+          const form = holder ? immuneForm(holder.snap) : null;
+          if (form && form.left > FORM_TAKE_BACK) {
+            onForm++;
+            formLeft = Math.min(formLeft, form.left);
+            formName = form.name;
+          } else loose++;
+        }
         const mine = e.snap.ag?.find(([id]) => id === world.meId)?.[1] ?? 0;
         if (holder?.spawn.role === 'tank') closest = Math.max(closest, mine);
       }
@@ -485,6 +506,9 @@ export class Hud {
       if (loose) {
         cls = 'loose';
         text = `${loose} loose on the party — grab ${loose === 1 ? 'it' : 'them'}!`;
+      } else if (onForm) {
+        cls = 'pulling';
+        text = `${onForm} on the ${formName}, harmless for ${Math.ceil(formLeft)}s more — take ${onForm === 1 ? 'it' : 'them'} back as the form ends`;
       }
     } else if (onMe && world.formOf(world.meId)) {
       // No monster can hurt a form (the Firebeast), but it will still be after you when the form ends.

@@ -187,5 +187,10 @@ describe('lobby', () => {
       // A role with none of the heroes asked for keeps its own rules: the Mage is still the healer.
       expect(slots.find((s) => s.role === 'mage')).toMatchObject({ hero: 'sage' });
     }
+    // A Mage asked for comes even when it is not the healer.
+    const lobby = new Lobby({ companions: ['spellblade'] });
+    const a = client(lobby, 'Alice');
+    lobby.handle(a.id, { t: 'queue.join', aiFill: 0 }, 0);
+    expect(a.lobby().readyCheck!.slots.find((s) => s.role === 'mage')).toMatchObject({ bot: true, hero: 'spellblade', weapon: 'mystic_sword' });
   });
 });

@@ -6,6 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { taunt } from '../src/server/sim/aggro.js';
 import { Instance, type Seat } from '../src/server/sim/instance.js';
+import { PLAYER_RADIUS } from '../src/shared/constants.js';
+import { startAbility } from '../src/server/sim/mechanics.js';
 import type { MobKind } from '../src/shared/content/monsters.js';
 import type { Player } from '../src/server/sim/types.js';
 
@@ -109,3 +111,126 @@ describe('teamwork', () => {
     expect(guardianHelped.won).toBe(true);
   });
 });
+
+describe('AI companions and tank-busters', () => {
+  /**
+   * An AI tank in front of a monster casting a tank-buster on it, and a Duelist standing still
+   * behind the monster, in line with the tank's charge through it. Returns which skills the tank
+   * used, and how far from the Duelist each one left it.
+   */
+  function busterOnTank(tankWeapon: string, seed: number): { used: string[]; gaps: Map<string, number> } {
+    const seats: Seat[] = [
+      { ownerId: null, name: 'Tank', role: 'tank', weapon: tankWeapon },
+      { ownerId: 'h2', name: 'Mage', role: 'mage', weapon: 'staff' },
+      { ownerId: 'h3', name: 'Ranger', role: 'ranger', weapon: 'bow' },
+      { ownerId: 'h4', name: 'Duelist', role: 'melee', weapon: 'spear' },
+    ];
+    const inst = new Instance('tb', seats, { seed, countdown: 0 });
+    inst.tick();
+    const [tank, mage, ranger, duelist] = inst.players as [Player, Player, Player, Player];
+    mage.x += 400;
+    ranger.x += 400;
+    const hall = inst.plan.rooms[0]!.center;
+    const brute = inst.spawnMob('brute', hall.x, hall.y, 0, 0);
+    brute.hp = brute.maxHp = 1e9;
+    brute.speed = 0;
+    brute.autoInterval = 1e9;
+    brute.mob = { ...brute.mob!, abilities: [] };
+    inst.engage(brute);
+    brute.autoNext = 1e9;
+    taunt(brute, tank);
+    tank.x = hall.x - 2.2;
+    tank.y = hall.y;
+    tank.maxHp = tank.hp = 1e9;
+    duelist.x = hall.x + 3;
+    duelist.y = hall.y;
+    duelist.maxHp = duelist.hp = 1e9;
+    startAbility(inst, brute, { id: 'crush', name: 'Crush', cast: 3, potency: 4800, pattern: { kind: 'tankbuster', radius: 3 } });
+    const used: string[] = [];
+    const gaps = new Map<string, number>();
+    for (let i = 0; i < 2.9 * 20; i++) {
+      brute.enmity.set(tank.id, 1e12);
+      inst.tick();
+      for (const ev of inst.drainEvents()) {
+        if (ev.e !== 'act' || ev.i !== tank.id || ev.k !== 'sk' || !ev.s) continue;
+        used.push(ev.s);
+        gaps.set(ev.s, Math.hypot(tank.x - duelist.x, tank.y - duelist.y));
+      }
+    }
+    return { used, gaps };
+  }
+
+  /**
+   * An AI Duelist (not the tank) with a monster casting a tank-buster on him, and a player Mage
+   * standing beside him. Returns whether he rolled, and who the buster struck.
+   */
+  function busterOnDuelist(weapon: string, seed: number): { rolled: boolean; struck: number[]; dead: boolean } {
+    const seats: Seat[] = [
+      { ownerId: 'h1', name: 'Tank', role: 'tank', weapon: 'tank_greatsword' },
+      { ownerId: 'h2', name: 'Mage', role: 'mage', weapon: 'staff' },
+      { ownerId: 'h3', name: 'Ranger', role: 'ranger', weapon: 'bow' },
+      { ownerId: null, name: 'Duelist', role: 'melee', weapon },
+    ];
+    const inst = new Instance('tb', seats, { seed, countdown: 0 });
+    inst.tick();
+    const [tank, mage, ranger, duelist] = inst.players as [Player, Player, Player, Player];
+    tank.x += 400;
+    ranger.x += 400;
+    // Not his ultimate: the Firebeast would make it harmless anyway.
+    duelist.cooldowns.set(duelist.hotbar[5] as string, 1e9);
+    const hall = inst.plan.rooms[0]!.center;
+    const brute = inst.spawnMob('brute', hall.x, hall.y, 0, 0);
+    brute.hp = brute.maxHp = 1e9;
+    brute.speed = 0;
+    brute.mob = { ...brute.mob!, abilities: [] };
+    inst.engage(brute);
+    brute.autoNext = 1e9;
+    taunt(brute, duelist);
+    duelist.x = hall.x - 2.2;
+    duelist.y = hall.y;
+    mage.x = duelist.x - 1.5;
+    mage.y = duelist.y;
+    mage.maxHp = mage.hp = 1e9;
+    startAbility(inst, brute, { id: 'crush', name: 'Crush', cast: 3, potency: 4800, pattern: { kind: 'tankbuster', radius: 3 } });
+    const struck = new Set<number>();
+    let rolled = false;
+    for (let i = 0; i < 3.5 * 20; i++) {
+      brute.enmity.set(duelist.id, 1e12);
+      inst.tick();
+      for (const ev of inst.drainEvents()) {
+        if (ev.e === 'dmg' && ev.n === 'Crush') struck.add(ev.t);
+        if (ev.e === 'fx' && ev.k === 'roll' && ev.s === duelist.id) rolled = true;
+      }
+    }
+    return { rolled, struck: [...struck], dead: duelist.dead };
+  }
+
+  it('a Duelist with a buster on him cannot outrun it: he rolls through it as it lands, the way that keeps it off the others', () => {
+    for (const weapon of ['spear', 'twin_blades', 'flame_sword']) {
+      for (const seed of [1, 2, 3]) {
+        const label = `${weapon}, seed ${seed}`;
+        const { rolled, struck, dead } = busterOnDuelist(weapon, seed);
+        expect(rolled, label).toBe(true);
+        expect(struck, label).toEqual([]);
+        expect(dead, label).toBe(false);
+      }
+    }
+  });
+
+  it('a tank bracing with its charge never drags its buster onto the heroes behind the boss', () => {
+    // Both tanks' charges grant 35% less damage taken, so they charge to brace against a buster.
+    // Straight through the monster would land the buster on the Duelist, with no time for him to
+    // step out of it: they charge another way, and land with him clear of it.
+    for (const [weapon, charge] of [
+      ['tank_greatsword', 'stalwartCharge'],
+      ['sword_shield', 'flash'],
+    ]) {
+      for (const seed of [1, 2, 3]) {
+        const { used, gaps } = busterOnTank(weapon!, seed);
+        expect(used, `${weapon}, seed ${seed}`).toContain(charge);
+        expect(gaps.get(charge!), `${weapon}, seed ${seed}`).toBeGreaterThan(3 + PLAYER_RADIUS + 0.5);
+      }
+    }
+  });
+});
+

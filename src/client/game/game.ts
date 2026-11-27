@@ -16,6 +16,7 @@ import { music } from '../audio/music.js';
 import { dungeonScene } from '../audio/scene.js';
 import { Effects } from './fx.js';
 import { Hud } from './hud.js';
+import { PendingForm } from './pendingForm.js';
 import { Renderer } from './renderer.js';
 import { World } from './world.js';
 
@@ -40,6 +41,8 @@ export class Game {
   private aim = { x: 0, y: 0 };
   private attacking = false;
   private roll: { dx: number; dy: number; until: number } | null = null;
+  /** A form (the Firebeast) asked for and not yet confirmed: no roll is predicted meanwhile. */
+  private pendingForm = new PendingForm();
   private targetId: number | null = null;
   private hoverId: number | null = null;
   private followId: number | null = null;
@@ -110,6 +113,7 @@ export class Game {
         break;
       }
       case 'skillFail':
+        this.pendingForm.refused(msg.id);
         if (msg.reason !== 'Not ready yet') this.hud.error(msg.reason);
         break;
       case 'chat':
@@ -197,7 +201,9 @@ export class Game {
         break;
       case 'status': {
         // A form (the Firebeast) takes shape or collapses in a burst of fire and embers.
-        if (!STATUSES[ev.id]?.form || !w.formEvent(ev.i, ev.id, ev.gain, now)) break;
+        if (!STATUSES[ev.id]?.form) break;
+        if (ev.i === w.meId) this.pendingForm.settled();
+        if (!w.formEvent(ev.i, ev.id, ev.gain, now)) break;
         const p = pos(ev.i);
         if (p) this.fx.add({ kind: 'flame', x: p.x, y: p.y, x2: 0, y2: 0, follow: ev.i, hue: 18, r: ev.gain ? 2.6 : 1.8, life: ev.gain ? 1.1 : 0.8 });
         if (ev.gain && p && dist(p, this.local) < 12) this.renderer.shake(ev.i === w.meId ? 0.7 : 0.35);
@@ -452,14 +458,16 @@ export class Game {
     this.hud.pressed(index);
     if (def.slot === 'dodge') return this.dodge();
     this.net.send({ t: 'skill', id, ax: round(this.aim.x), ay: round(this.aim.y) });
+    // A form skill off cooldown is as good as taken until the server says otherwise.
+    if ((this.world.me?.cds[id] ?? 0) <= this.world.serverNow()) this.pendingForm.sent(id, performance.now() / 1000);
   }
 
   private dodge(): void {
     const snap = this.world.meEntity()?.snap;
     const me = this.world.me;
     if (!snap || !me || snap.d || this.roll) return;
-    // A form cannot roll (the server refuses it too).
-    const form = this.world.formOf(this.world.meId);
+    // A form cannot roll (the server refuses it too), nor can a hero whose form is on its way.
+    const form = this.world.formOf(this.world.meId) ?? this.pendingForm.form(performance.now() / 1000);
     if (form) return this.hud.error(FORMS[form]?.refusal ?? 'You cannot roll now');
     if (me.stamina < ROLL_STAMINA) return this.hud.error('Not enough stamina');
     if ((snap.s ?? []).some(([id]) => STATUSES[id]?.stun)) return;

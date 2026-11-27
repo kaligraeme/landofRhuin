@@ -276,7 +276,7 @@ const fwSkills: WeaponDef['skills'] = [
   def({ id: 'flashfire', name: 'Flashfire', glyph: '⇝', hue: 16, slot: 'q', cooldown: 8, iframes: 0.25, delivery: { kind: 'dash', distance: 6, width: 2.2 }, description: 'Dash 6 tiles in a streak of fire: potency 240 to every foe in your path, and they burn.', effects: [dmg(240), burning(9)] }),
   def({ id: 'infernoBurst', name: 'Inferno Burst', glyph: '✺', hue: 30, slot: 'e', cooldown: 9, delivery: { kind: 'ground', radius: 3, range: 2.5 }, description: 'Blow the air ahead of you apart: potency 330 to every foe within 3 tiles of the blast, knocking them back.', effects: [dmg(330), { kind: 'knockback', distance: 2 }, { kind: 'stagger', amount: 15 }] }),
   def({ id: 'kindle', name: 'Kindle', glyph: '♨', hue: 35, slot: 'r', cooldown: 20, description: 'Set your blade alight for 8s: you attack 25% faster, and every foe you strike catches fire.', effects: [{ kind: 'status', status: 'kindle', duration: 8, to: 'self' }] }),
-  def({ id: 'firebeast', name: 'Firebeast', glyph: '♞', hue: 12, slot: 'ult', cooldown: 90, description: 'Ultimate. Flames engulf you and you become the Firebeast for 5s: no monster can hurt it, and its claws are all it has, potency 1000 a swipe to every foe within 3 tiles in front of it. Your other skills, the Elixir and rolls wait until it ends. Bloodrush and the Echo of Rhuin still raise the claws’ damage (use Bloodrush first); Kindle does not hurry them.', effects: [{ kind: 'status', status: 'firebeast', duration: 5, to: 'self' }] }),
+  def({ id: 'firebeast', name: 'Firebeast', glyph: '♞', hue: 12, slot: 'ult', cooldown: 90, description: 'Ultimate. Flames engulf you and you become the Firebeast for 5s: no monster can hurt it, and its claws are all it has, potency 1000 a swipe to every foe within 3 tiles in front of it. Your other skills, the Elixir and rolls wait until it ends. Bloodrush and the Echo of Rhuin still raise the claws’ damage (use Bloodrush first); Kindle does not hurry them, but its flames still catch on every foe they strike.', effects: [{ kind: 'status', status: 'firebeast', duration: 5, to: 'self' }] }),
 ];
 
 /** The Firebeast's claw chain: the only attack it has (see FORMS). */
@@ -290,7 +290,7 @@ const fbClaws = chain(
     { delivery: arc(3, 220), potency: 1000 },
     { delivery: arc(3, 240), potency: 1000 },
   ],
-  'Only as the Firebeast: a raking claw through every foe within 3 tiles in front of it, one every 0.45s whatever Kindle says. Bloodrush and the Echo of Rhuin still raise its damage.',
+  'Only as the Firebeast: a raking claw through every foe within 3 tiles in front of it, one every 0.45s whatever Kindle says (though Kindle’s flames still catch on what it strikes). Bloodrush and the Echo of Rhuin still raise its damage.',
 );
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(skills.map((s) => [s.id, s]));
