@@ -9,7 +9,7 @@
  */
 import { hex } from '../../paint.js';
 import { blade } from '../blade.js';
-import type { ChibiDesign, Lock, Tress } from '../design.js';
+import type { ChibiDesign, Tress } from '../design.js';
 import { collar, plates, skirt } from '../pieces.js';
 import { flat, type Hit, type Mat, mat4 } from '../raster.js';
 import type { Build } from '../rig.js';
@@ -61,47 +61,39 @@ const BUILD: Build = {
 
 // ── Hair: a backcomb ─────────────────────────────────────────────────────────────────────────
 // Combed and swept straight back off his face, with volume: no fringe, so his whole forehead and
-// brows show under a hairline that arches high over the middle of his brow and curves down round
-// the temples to the tops of his ears. Over the brow the hair stands up off the hairline in a
-// raised pompadour, a little forward of it, with a shadow under its front edge on his forehead; it
-// sweeps back over a broad, rounded crown to a full back of the head, standing out a little past
-// his skull at the sides. Combed clumps fan out from under the middle of his hairline, run back
-// over the top and along the sides above his ears, and meet again low at the nape, where the hair
-// ends in a few short tapered points flicking out over his high collar. One loose strand curls
-// forward from the pompadour over the right of his forehead, ending above his brow. Side on the
-// pompadour stands forward over his brow and the mass runs back and down to the points at his
-// nape; front on it is a raised, rounded top over a bare forehead; from behind it is a round head
-// of clumps converging on the nape. The mass is combed into place and holds its shape: in a run,
-// a charge or a leap the points at the nape stream, lift and ripple, and the strand flies back.
+// brows show under a hairline that arches high over the middle of his brow, stays clear of his
+// brows at the temples and curves down round them to the tops of his ears. The hair lifts off the
+// hairline in a soft, rounded pompadour set on top of it, and sweeps back over a broad crown, a
+// little wider than his head and close at his temples, to a full back of the head that juts out
+// behind his skull and gathers low at the nape, where it ends in four short tapered points over
+// his high collar. Long combed partings fan out from under the middle of his forehead, rise over
+// the pompadour, run back over the top and along the sides above his ears, and meet again low at
+// the nape. Side on the pompadour rises over his brow and the mass sweeps back and down to the
+// points behind his neck; front on it is a raised, rounded top over a bare forehead; from behind
+// it is a rounded head of combed clumps converging on the points at the nape. The mass is combed
+// into place and holds its shape: in a run, a charge or a leap the points stream, lift and ripple.
 //
-// The mass is the hair's shell with three volumes joined to it (`head.volume`: the pompadour, the
-// crown and the back of the head); the clumps are the whorl's, combed (shaded by the light, with
-// thin partings and lit streaks) and gathering at its sink; the points are nape layers.
-
-const LOCKS: Lock[] = [
-  // The loose strand: it leaves the front of the pompadour and curls down over his forehead on his
-  // right, wide enough to catch the light along one side, its tip a couple of pixels above his brow.
-  { yaw: 24, pitch: 44, dir: [0.9, 0.4, 0.25], len: 5.5, w: 2.8, curl: [0.3, -1.5, 0.2], give: 1, belly: 0.4 },
-];
+// The mass is the hair's shell with four volumes joined to it (`head.volume`); the partings are
+// the whorl's clumps, combed (shaded by the light, with thin partings and lit streaks) and
+// gathering at its sink; the points are nape layers.
 
 /**
- * The points at the nape: five short tapered tresses that leave the back of the head low down,
- * toward the nape, run back and down, and flick out at their ends over the top of his collar, the
- * middle three close together and the outer two fanning out to the sides and flicking out the
- * most, the middle one a little shorter, so the hem is jagged. Side on they end in points behind
- * his neck; from behind they finish the clumps converging on the nape. They are nape layers
- * (`long.nape`), painted with the head, so they lie over the collar without popping in front of
- * or behind his head from frame to frame, and lit all along (`napeDeep` 0) so each point reads on
- * its own. They are combed into place too: in a run or a charge they stream back only a little
- * (`give` 0.6, so they stay points at his nape rather than trailing like a tail), in a fall or a
- * leap they sweep back and lift, and they ripple with the pose.
+ * The points at the nape: four short tapered tresses that leave the back of the head low down and
+ * run back and down over the top of his collar, their tips flicking out a little, the outer two
+ * longer and spreading to the sides, the middle two short, so from behind the hem is a jagged row
+ * of points with his collar showing between them; side on the outer ones end in points behind his
+ * neck. They are nape layers (`long.nape`), painted with the head, so they lie over the collar
+ * without popping in front of or behind his head from frame to frame, and a tone deeper where
+ * they grow out from under the mass (`napeDeep` 1), so they read as its ends. They are combed into
+ * place too: in a run or a charge they stream back only a little (`give` 0.6, so they stay points
+ * at his nape rather than trailing like a tail), in a fall or a leap they sweep back and lift, and
+ * they ripple with the pose.
  */
 const NAPE: Tress[] = [
-  { yaw: 140, pitch: -20, dir: [-1.2, -0.85, 0.3], len: 12.5, w: 3, stiff: 0.75, give: 0.6, taper: 0.55, flip: 1.5 },
-  { yaw: 160, pitch: -25, dir: [-1.2, -0.85, 0.12], len: 13, w: 3.1, stiff: 0.75, give: 0.6, taper: 0.55, flip: 1.3 },
-  { yaw: 180, pitch: -28, dir: [-1.2, -0.85, 0], len: 11.5, w: 3.1, stiff: 0.75, give: 0.6, taper: 0.55, flip: 1.3 },
-  { yaw: 200, pitch: -25, dir: [-1.2, -0.85, -0.12], len: 13, w: 3.1, stiff: 0.75, give: 0.6, taper: 0.55, flip: 1.3 },
-  { yaw: 220, pitch: -20, dir: [-1.2, -0.85, -0.3], len: 12.5, w: 3, stiff: 0.75, give: 0.6, taper: 0.55, flip: 1.5 },
+  { yaw: 160, pitch: -20, dir: [-1, -1.3, 0.45], len: 10, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.6 },
+  { yaw: 171, pitch: -22, dir: [-1.1, -1.1, 0.12], len: 5.5, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.8 },
+  { yaw: 189, pitch: -22, dir: [-1.1, -1.1, -0.12], len: 5.5, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.8 },
+  { yaw: 200, pitch: -20, dir: [-1, -1.3, -0.45], len: 9.5, w: 3, stiff: 0.6, give: 0.6, taper: 0.6, flip: 0.6 },
 ];
 
 // ── The torso: belt, breastplate in the coat's opening, coat over the rest ───────────────────
@@ -137,36 +129,45 @@ const DARK_KNIGHT: ChibiDesign = {
   build: BUILD,
   head: {
     skin: SKIN,
-    hair: HAIR,
+    // His chestnut, lit a little less than the material's own bias: the combed mass is smoother
+    // than a shaggy cut, so more of it faces the light, and this keeps it dark.
+    hair: { ...HAIR, bias: -0.3 },
     skull: { c: [0, 0.5, 0], r: [9.4, 9.7, 10.3] },
     jaw: { c: [1.7, -4.1, 0], r: [7.9, 6.8, 8.2] },
     ear: { c: [-0.6, -3.2, 10], r: [2, 2.8, 1.6] },
-    // A little wider than his skull at the sides, so the hair stands out past his head.
-    shell: { c: [-1.8, 2.8, 0], r: [11.8, 11.4, 11.2] },
+    // A little thicker than his skull, its front flush with his forehead.
+    shell: { c: [-2.6, 2.8, 0], r: [11.4, 11.4, 11] },
     volume: [
-      // The pompadour: the hair standing up off his hairline and a little forward of it, its top
-      // the highest point of his head.
-      { c: [5.4, 12, 0], r: [7, 5.4, 10] },
-      // The crown, broad and lower, so front on and from behind his head is rounded, not peaked.
-      { c: [-3, 8, 0], r: [9.6, 6.6, 12.2] },
-      // The back of the head, where the swept-back hair gathers: broad, so from behind his head
-      // is round rather than tall.
-      { c: [-6.5, 4.5, 0], r: [7.5, 7, 12.6] },
+      // The pompadour: the hair lifting off the middle of his hairline, set on top of it rather
+      // than forward of it, so it stays off his brow when his head tips forward; its top is the
+      // highest point of his head, so front on the top is a dome.
+      { c: [1.6, 13.8, 0], r: [5.8, 6, 10.6] },
+      // The crown, broad and nearly as high: the widest part of his hair, so front on the top is
+      // rounded and from behind it is the top of his head, the pompadour showing over it only as
+      // a low curve.
+      { c: [-4.6, 10.2, 0], r: [8.8, 7.6, 13.8] },
+      // The back of the head, carried back past his skull: side on the mass sweeps back and down,
+      // from behind it rounds out his head, and front on it stays close at his temples.
+      { c: [-9.8, 4.4, 0], r: [7.8, 7.4, 13.6] },
+      // Where the hair gathers low at the back, over the roots of the points.
+      { c: [-11.8, -0.4, 0], r: [5.6, 5.5, 10] },
     ],
-    // High over the middle of his brow, curving down round the temples to the tops of his ears.
-    hairline: { faceYaw: 70, brow: 7.2, temple: 1, nape: -5.5, ear: -0.8 },
-    locks: LOCKS,
-    long: { nape: NAPE, napeDeep: 0, lie: 1 },
-    // Dark chestnut: mostly the base tone, the light tone along the lit streaks.
+    // High over the middle of his brow and clear of his brows at the temples, curving down round
+    // them to the tops of his ears; the hair lifts off his forehead, so it shades only a pixel of
+    // skin under its edge.
+    hairline: { faceYaw: 76, brow: 8, temple: 3.2, nape: -5.5, ear: -0.8, shadow: 1 },
+    locks: [],
+    long: { nape: NAPE, napeDeep: 1, lie: 1 },
+    // Dark chestnut: mostly the base and shadow tones, the light tone along the lit streaks.
     darkHair: true,
     lockLine: hex('#341f12'),
-    // The combing: seven broad clumps fanning back from under the middle of his hairline (the
-    // whorl sits low on his forehead, so only its fan shows, the clumps crossing the hairline side
-    // by side) over the top and along the sides, twisting a little as they go so they sweep rather
-    // than radiate, and meeting again low at the nape (the sink). Combed: each takes the tone the
-    // light gives it, parted from the next by a thin dark line, with a lit streak where it faces
-    // the light.
-    whorl: { yaw: 0, pitch: -4, reach: 178, clumps: 7, twist: 0.15, comb: true, sink: { yaw: 180, pitch: -45 } },
+    // The combing: eleven clumps fanning out from under the middle of his forehead (the whorl sits
+    // low, so only its fan shows and the partings cross the hairline side by side; an odd number,
+    // so none runs up the middle of his forehead and one runs down the middle of the back of his
+    // head), running straight back over the top and along the sides, and meeting again low at the
+    // nape (the sink). Combed: each takes the tone the light gives it,
+    // parted from the next by a thin dark line, with a lit streak where it faces the light.
+    whorl: { yaw: 0, pitch: -20, reach: 178, clumps: 11, twist: 0, comb: true, sink: { yaw: 180, pitch: -36 } },
     face: {
       eye: [8.8, -1.7, 3.9],
       lash: hex('#1e0e10'),
