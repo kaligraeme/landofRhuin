@@ -109,22 +109,26 @@ export const READY: BeastPose = {
   footB: [-9, 0, 7.4],
   handF: [13, 10, 17],
   handB: [10, 13, 16],
-  weapon: 44,
-  roll: 34,
-  yaw: 10,
-  weaponB: 52,
-  rollB: 34,
-  yawB: 10,
+  weapon: 18,
+  roll: 46,
+  yaw: 0,
+  weaponB: 24,
+  rollB: 46,
+  yawB: 0,
   face: 'grit',
   wind: 0.2,
   fire: 1.1,
 };
 
-/** Into the battle stance: k of the way from a pose to it, then `over` on top. */
-export const settle = (p: BeastPose, k: number, over: Partial<BeastPose> = {}): BeastPose => beast(blend(p, READY, k), over);
+/**
+ * Into the battle stance: k of the way from a pose to the battle loop's first frame (where the
+ * loop takes over), then `over` on top. The strikes' recoveries and the skill and state clips that
+ * give way to the stance end with it.
+ */
+export const settle = (p: BeastPose, k: number, over: Partial<BeastPose> = {}): BeastPose => beast(blend(p, battle[0] as BeastPose, k), over);
 
-/** Out of the battle stance: k of the way from it to a pose, then `over` on top. */
-export const fromReady = (p: BeastPose, k: number, over: Partial<BeastPose> = {}): BeastPose => beast(blend(READY, p, k), over);
+/** Out of the battle stance: k of the way from the battle loop's first frame to a pose, then `over` on top. */
+export const fromReady = (p: BeastPose, k: number, over: Partial<BeastPose> = {}): BeastPose => beast(blend(battle[0] as BeastPose, p, k), over);
 
 // ── Fire from its jaws ───────────────────────────────────────────────────────────────────────
 
@@ -143,12 +147,15 @@ export const jaws =
     const fwd = norm3(add3(h.f, h.u, -0.1));
     const ph = (rig.pose.phase ?? 0) * Math.PI * 2;
     const base = proj(mouth);
-    // Seen from behind, the fire pours out beyond the head, behind the beast.
+    // Seen from behind, the fire pours out beyond the head, behind the beast; seen face on, it
+    // keeps off the eyes.
     const under = x.behind(add3(mouth, fwd, 6)) && x.behind(h.o);
+    const eyes = proj(add3(h.o, h.f, 9));
+    const skip = x.cam.facing(h.f) > 0.3 ? (px: number, py: number): boolean => py < base[1] - 2 && Math.hypot(px - eyes[0], (py - eyes[1]) * 1.3) < 11 : undefined;
     for (const [spread, kl, w] of [[-0.3, 0.7, 0.7], [0.3, 0.75, 0.7], [0, 1, 1]] as const) {
       const tip = proj(add3(mouth, norm3(add3(add3(fwd, h.r, spread), h.u, spread * 0.5)), 10));
       const flick = 0.85 + 0.15 * Math.sin(ph * 3 + spread * 9);
-      glowTongue(x, base, [tip[0] - base[0], tip[1] - base[1]], len * k * kl * flick, (3 + len * 0.18) * w * (0.6 + 0.4 * k), Math.sin(ph * 2 + spread * 5) * 0.4, Math.min(1, k * 1.3), undefined, under);
+      glowTongue(x, base, [tip[0] - base[0], tip[1] - base[1]], len * k * kl * flick, (3 + len * 0.18) * w * (0.6 + 0.4 * k), Math.sin(ph * 2 + spread * 5) * 0.4, Math.min(1, k * 1.3), skip, under);
     }
   };
 
@@ -198,7 +205,7 @@ const idle = Array.from({ length: 8 }, (_, i): BeastPose => {
     wind: 0.08 + b * 0.06,
     face: i === 6 || i === 7 ? 'shout' : 'stern',
     fire: 1 + b * 0.15,
-    fx: i === 6 || i === 7 ? { extra: jaws(i === 6 ? 0.8 : 0.45) } : undefined,
+    fx: i === 6 || i === 7 ? { extra: jaws(i === 6 ? 1 : 0.55, 16) } : undefined,
   });
 });
 
@@ -218,8 +225,8 @@ const battle = Array.from({ length: BOUNCE }, (_, i): BeastPose => {
     head: -25 + bounce(i - 1) * 3,
     handF: [13, 9 + b * 2, 17],
     handB: [10, 12 + b * 2, 16],
-    weapon: 42 + b * 8,
-    weaponB: 50 + b * 8,
+    weapon: 16 + b * 8,
+    weaponB: 22 + b * 8,
     wind: 0.2 + Math.max(0, lag) * 0.2,
     lift: lag * 0.8,
     sway: Math.sin((2 * Math.PI * (i - 1)) / BOUNCE) * 0.2,

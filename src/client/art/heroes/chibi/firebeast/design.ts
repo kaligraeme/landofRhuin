@@ -35,7 +35,9 @@ const CLAW = mat4('#b4aabe', '#6e6578', '#463e50', '#262030', '#07050a', 0.1);
 const CLAW_EDGE = flat('#ff9a32');
 const CLAW_HOT = flat('#fff1b8');
 /** The scrap of his crimson shirt knotted round its waist, and of his black coat with its ember lining. */
-const CRIMSON = { ...mat4('#ff7a68', '#e84a3c', '#b0221e', '#64100e', '#2a0606', -0.05), gain: 0.7 };
+const CRIMSON = { ...mat4('#ff8a74', '#e84a3c', '#b0221e', '#64100e', '#2a0606', 0.14), gain: 0.7 };
+/** The fold running round the sash. */
+const SASH_FOLD = { ...CRIMSON, bias: -0.25 };
 const COAT = { ...mat4('#6a6672', '#4a4650', '#2c2a32', '#18161c', '#0c0b0f', -0.05), gain: 0.6 };
 const LINING = mat4('#ffc070', '#ff9a3c', '#d0601e', '#7a2e0c', '#3a1404');
 
@@ -156,7 +158,7 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   if (where === 'hips') return u > 4.2 ? CRIMSON : HIDE;
   if (u < 4) return null;
   // The sash, knotted round the waist, a fold running round it.
-  if (u < 8.6) return Math.abs(u - 6.4 - r * 0.08) < 0.45 ? { ...CRIMSON, gain: 0.3 } : CRIMSON;
+  if (u < 9.4) return Math.abs(u - 6.8 - r * 0.08) < 0.45 ? SASH_FOLD : CRIMSON;
   const ar = Math.abs(r);
   if (yaw < 80) {
     // The chest's two great plates and the belly's, parted by seams.
@@ -297,16 +299,16 @@ const FIREBEAST: ChibiDesign = {
       folds: false,
       // The sash's knotted ends at his left hip.
       panels: [
-        { from: -62, to: -48, len: 15, jag: 2.5, taper: 0.8 },
-        { from: -44, to: -32, len: 11, jag: 2, taper: 0.8 },
+        { from: -68, to: -48, len: 21, jag: 3, taper: 0.8 },
+        { from: -44, to: -28, len: 15, jag: 2.5, taper: 0.8 },
       ],
     }),
     tail({ root: [-6, 4, 0], len: 36, r: [5.6, 2], hide: HIDE, plate: PLATE, seam: SEAM, flame: FLAME }),
     paws({ hide: HIDE, claw: CLAW, hot: CLAW_HOT, r: 3.6 }),
     cracks({ seam: SEAM, arms: [6, 5.6], thigh: 6.2 }),
   ],
-  weapon: claws({ len: 13, w: 2.1, spread: 2.3, hook: 2.6, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 14 }),
-  offhand: claws({ len: 13, w: 2.1, spread: 2.3, hook: 2.6, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 14 }),
+  weapon: claws({ len: 12, w: 2.6, spread: 2.8, hook: 4, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 14 }),
+  offhand: claws({ len: 12, w: 2.6, spread: 2.8, hook: 4, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 14 }),
   aura: { core: hex('#ff9a26'), edge: hex('#d8401a'), hot: hex('#fff4c8') },
 };
 

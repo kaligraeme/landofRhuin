@@ -203,21 +203,25 @@ export function shoulderFlames(spec: { top: number; ring: readonly [number, numb
     const cf = rig.chest;
     // Never over the head (the painter sorts it just over the torso).
     const headZ = ctx.depth(at3(cf, 0, 14, 0)) + ctx.upper + 1;
-    return spec.flames.map((fl, i): DrawItem => {
+    const paths = spec.flames.map((fl, i) => {
       const phi = rad(fl.at);
       const out = dirIn(cf, Math.cos(phi), 0, Math.sin(phi));
       const root = at3(cf, Math.cos(phi) * spec.ring[0], spec.top, Math.sin(phi) * spec.ring[1]);
       const dir = add3(add3(out, cf.u, 0.8), cf.f, -0.7);
-      const pts = flamePath(ctx, root, dir, fl.len, dirIn(cf, 0, 0, Math.sign(Math.sin(phi)) || 1), i * 2.11 + 7);
-      return {
-        z: Math.min(ctx.upperZ(ctx.depth(root)) - 0.2, headZ - 0.2),
+      return flamePath(ctx, root, dir, fl.len, dirIn(cf, 0, 0, Math.sign(Math.sin(phi)) || 1), i * 2.11 + 7);
+    });
+    // Sorted together, at the middle of the back of the shoulders.
+    const back = at3(cf, -spec.ring[0], spec.top, 0);
+    return [
+      {
+        z: Math.min(ctx.upperZ(ctx.depth(back)) - 0.2, headZ - 0.2),
         draw: () => {
           const part = ctx.part();
-          paintFlame(ctx, part, pts, fl.w, spec.mat, 1);
+          paths.forEach((pts, i) => paintFlame(ctx, part, pts, (spec.flames[i] as { w: number }).w, spec.mat, 1 + i));
           part.commit();
         },
-      };
-    });
+      },
+    ];
   };
 }
 
@@ -394,7 +398,7 @@ export interface ClawSpec {
 }
 
 /**
- * Four long claws from a fist, fanning out from the knuckles along the item's axis (the pose's
+ * Three long claws from a fist, fanning out from the knuckles along the item's axis (the pose's
  * `weapon` angles, or the off hand's), hooking toward its edge (v), dark horn with a glowing inside
  * edge and white-hot points, like the Warden's blade. Painted in screen space from the grip's
  * axes, so they fan apart in every view.
@@ -406,12 +410,12 @@ export function claws(spec: ClawSpec): HeldItem & { grip2: number } {
     let u = ctx.cam.vec(g.u);
     let ul = Math.hypot(u[0], u[1]);
     // Seen end on, claws still show some length (as a blade keeps its breadth).
-    if (ul < 0.55) {
+    if (ul < 0.7) {
       const v = ctx.cam.vec(g.v);
       u = ul > 0.05 ? u : [v[0] * 0.3, Math.abs(v[1]) * 0.3 + 0.2];
       ul = Math.hypot(u[0], u[1]) || 1;
-      u = [(u[0] / ul) * 0.55, (u[1] / ul) * 0.55];
-      ul = 0.55;
+      u = [(u[0] / ul) * 0.7, (u[1] / ul) * 0.7];
+      ul = 0.7;
     }
     const perp: Vec = [-u[1] / ul, u[0] / ul];
     const v = ctx.cam.vec(g.v);
@@ -419,9 +423,9 @@ export function claws(spec: ClawSpec): HeldItem & { grip2: number } {
     const z0 = ctx.depth(g.o);
     const zU = ctx.depth(add3(g.o, g.u, 1)) - z0;
     const n = 4;
-    for (let c = 0; c < 4; c++) {
-      const off = (c - 1.5) * spec.spread;
-      const len = spec.len * (c === 1 || c === 2 ? 1 : 0.84);
+    for (let c = 0; c < 3; c++) {
+      const off = (c - 1) * spec.spread;
+      const len = spec.len * (c === 1 ? 1 : 0.86);
       const pts: Vec[] = [];
       for (let i = 0; i <= n; i++) {
         const t = i / n;
@@ -475,6 +479,34 @@ export function claws(spec: ClawSpec): HeldItem & { grip2: number } {
 
 // ── The glow ─────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Heat shimmer over the fire: the rows of the frame above the head (the tips of the mane's
+ * flames) waver a pixel to either side, each row by its own amount, running up with the phase.
+ */
+function shimmer(x: FxContext): void {
+  const { c, rig, proj } = x;
+  const fire = fireOf(rig.pose);
+  if (fire < EMBERS) return;
+  const top = proj(add3(rig.head.o, rig.head.u, 8));
+  const d = c.data;
+  const w = c.w;
+  const ph = (rig.pose.phase ?? 0) * Math.PI * 2;
+  const x0 = Math.max(1, Math.floor(top[0] - 40));
+  const x1 = Math.min(w - 2, Math.ceil(top[0] + 40));
+  const row = new Uint8ClampedArray((x1 - x0 + 1) * 4);
+  for (let y = Math.max(0, Math.floor(top[1] - 34)); y < Math.min(c.h, Math.floor(top[1])); y++) {
+    const s = Math.round(Math.sin(y * 0.9 - ph * 2) * 0.55 * Math.min(1.4, fire));
+    if (!s) continue;
+    row.set(d.subarray((y * w + x0) * 4, (y * w + x1 + 1) * 4));
+    for (let xx = x0; xx <= x1; xx++) {
+      const from = xx - s;
+      const j = (y * w + xx) * 4;
+      if (from < x0 || from > x1) continue;
+      for (let k = 0; k < 4; k++) d[j + k] = row[(from - x0) * 4 + k] as number;
+    }
+  }
+}
+
 const EMBER: RGB = [255, 96, 24];
 const ASH: RGB = [58, 32, 34];
 
@@ -485,8 +517,11 @@ const ASH: RGB = [58, 32, 34];
  * rise off it, looping with the pose's `phase`. Painted from a pose's `fx.extra`.
  */
 export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flame: readonly RGB[], strength = 1): (x: FxContext) => void {
-  const keys = new Set(hot.map((c) => c[0] * 65536 + c[1] * 256 + c[2]));
-  const flames = new Set(flame.map((c) => c[0] * 65536 + c[1] * 256 + c[2]));
+  // Pixels as 32-bit words (alpha, blue, green, red from the top byte down, as the canvas holds
+  // them on a little-endian machine): painted pixels are opaque, so a colour is one word.
+  const word = (c: RGB): number => (0xff000000 | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
+  const keys = new Set(hot.map(word));
+  const flames = new Set(flame.map(word));
   return (x) => {
     let k = strength;
     const { c, rig } = x;
@@ -494,10 +529,12 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
     k *= Math.min(1.4, 0.25 + 0.75 * fire);
     // Sinking to embers, its flame darkens to a dull red glow.
     const ash = clamp((EMBERS + 0.15 - fire) * 2.4, 0, 0.9);
+    shimmer(x);
     const w = c.w;
     const h = c.h;
     const d = c.data;
-    const near = new Uint8Array(w * h);
+    const px = new Uint32Array(d.buffer, d.byteOffset, w * h);
+    const near = buffer(w * h);
     let x0 = w;
     let y0 = h;
     let x1 = -1;
@@ -505,10 +542,10 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
     for (let y = 0; y < h; y++) {
       for (let xx = 0; xx < w; xx++) {
         const i = y * w + xx;
-        if ((d[i * 4 + 3] as number) === 0) continue;
-        const key = (d[i * 4] as number) * 65536 + (d[i * 4 + 1] as number) * 256 + (d[i * 4 + 2] as number);
-        if (ash > 0 && flames.has(key)) c.glow(xx, y, hash(xx, y * 7 + 3) < 0.16 ? EMBER : ASH, hash(xx, y * 7 + 3) < 0.16 ? ash * 0.6 : ash);
-        if (!keys.has(key)) continue;
+        const v = px[i] as number;
+        if (v === 0) continue;
+        if (ash > 0 && flames.has(v)) c.glow(xx, y, hash(xx, y * 7 + 3) < 0.16 ? EMBER : ASH, hash(xx, y * 7 + 3) < 0.16 ? ash * 0.6 : ash);
+        if (!keys.has(v)) continue;
         near[i] = 1;
         if (xx < x0) x0 = xx;
         if (xx > x1) x1 = xx;
@@ -517,19 +554,30 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
       }
     }
     if (x1 >= 0) {
-      // Two passes out from the hot pixels: the first ring brighter.
+      // Two rings out from the hot pixels: the first brighter.
       for (let pass = 2; pass <= 3; pass++) {
-        const ring: number[] = [];
-        for (let y = Math.max(1, y0 - pass); y <= Math.min(h - 2, y1 + pass); y++) {
-          for (let xx = Math.max(1, x0 - pass); xx <= Math.min(w - 2, x1 + pass); xx++) {
+        const ya = Math.max(1, y0 - pass);
+        const yb = Math.min(h - 2, y1 + pass);
+        const xa = Math.max(1, x0 - pass);
+        const xb = Math.min(w - 2, x1 + pass);
+        for (let y = ya; y <= yb; y++) {
+          for (let xx = xa; xx <= xb; xx++) {
             const i = y * w + xx;
             if (near[i]) continue;
-            if (near[i - 1] === pass - 1 || near[i + 1] === pass - 1 || near[i - w] === pass - 1 || near[i + w] === pass - 1) ring.push(i);
+            if (near[i - 1] === pass - 1 || near[i + 1] === pass - 1 || near[i - w] === pass - 1 || near[i + w] === pass - 1) near[i] = 4;
           }
         }
-        for (const i of ring) near[i] = pass;
-        for (const i of ring) c.glow(i % w, Math.floor(i / w), core, k * (pass === 2 ? 0.42 : 0.16), (d[i * 4 + 3] as number) === 0);
+        for (let y = ya; y <= yb; y++) {
+          for (let xx = xa; xx <= xb; xx++) {
+            const i = y * w + xx;
+            if (near[i] !== 4) continue;
+            near[i] = pass;
+            c.glow(xx, y, core, k * (pass === 2 ? 0.42 : 0.16), (d[i * 4 + 3] as number) === 0);
+          }
+        }
       }
+      // Leave the buffer clear for the next frame.
+      for (let y = Math.max(0, y0 - 3); y <= Math.min(h - 1, y1 + 3); y++) near.fill(0, y * w + Math.max(0, x0 - 3), y * w + Math.min(w - 1, x1 + 3) + 1);
     }
     // Embers rising off it: each climbs a whole number of times a turn of the phase, so they loop.
     const phase = rig.pose.phase ?? 0;
@@ -547,6 +595,17 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
       if (i % 3 === 0) c.glow(p[0], p[1] + 1, ember[1] as RGB, a * 0.6, behind);
     }
   };
+}
+
+/** A cleared scratch buffer of a size, kept between frames (`burn` clears what it used). */
+const BUFFERS = new Map<number, Uint8Array>();
+function buffer(n: number): Uint8Array {
+  let b = BUFFERS.get(n);
+  if (!b) {
+    b = new Uint8Array(n);
+    BUFFERS.set(n, b);
+  }
+  return b;
 }
 
 // ── Slashes ──────────────────────────────────────────────────────────────────────────────────
