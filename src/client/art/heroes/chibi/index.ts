@@ -28,6 +28,7 @@ import { BOWMASTER_HERO } from './bowmaster/hero.js';
 import { BLADEMASTER_HERO } from './blademaster/hero.js';
 import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
 import { DRAGOON_HERO } from './dragoon/hero.js';
+import { FIREBEAST_HERO } from './firebeast/hero.js';
 import type { ChibiDesign } from './design.js';
 import { GUARDIAN_HERO } from './guardian/hero.js';
 import { SAGE_HERO } from './sage/hero.js';
@@ -129,4 +130,5 @@ export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
   'hero-bowmaster': BOWMASTER_HERO,
   'hero-blademaster': BLADEMASTER_HERO,
   'hero-flame-warden': FLAME_WARDEN_HERO,
+  'hero-firebeast': FIREBEAST_HERO,
 };
