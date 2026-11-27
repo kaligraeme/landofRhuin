@@ -19,11 +19,13 @@
  */
 import type { RGB } from '../../paint.js';
 import { DUST, DUST_DARK } from '../fx.js';
-import { add3, type ChibiPose, type FxContext, lerp3, pose, wave } from '../rig.js';
-import { KITE } from './design.js';
+import { add3, type ChibiPose, type FxContext, lerp3, type P2, pose, solveRig, wave } from '../rig.js';
+import { GUARDIAN, KITE } from './design.js';
 import { AT_EASE, fromReady, READY, SHIELD_RAISED, settle } from './moves-core.js';
 
 const S = READY;
+const BUILD = GUARDIAN.build;
+const GRIP2 = GUARDIAN.weapon.grip2;
 const WHITE: RGB = [255, 255, 255];
 const PALE_GOLD: RGB = [255, 240, 190];
 const GLINT_GOLD: RGB = [255, 210, 90];
@@ -128,9 +130,11 @@ const hurt: ChibiPose[] = [
 // ── Kneel ────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Down on her right knee, the left knee up, the shield planted before her (its point bitten into
- * the floor, its face to the foe, its rim under her chin), her sword hand resting on the corner of
- * its rim with the sword hanging point down beside it, head bowed.
+ * Down on her right knee, the left knee up, behind the shield planted on its point before her:
+ * tipped back a little against her knee, its face turned out toward her right (so side on its
+ * face and emblem show, and front on it stands to her left with her face clear). Her sword hand
+ * rests against its near edge, low enough that the hilt stays under her chin front on, the sword
+ * hanging point down beside it; head bowed.
  */
 const KNELT: ChibiPose = {
   x: 0,
@@ -143,19 +147,33 @@ const KNELT: ChibiPose = {
   footF: [-12, 0, 6],
   footB: [7, 0, 6],
   kneel: 'F',
-  handF: [12, 4, 7],
-  weapon: 180,
-  roll: 0,
-  yaw: 0,
-  handB: [10, 14, 0],
-  elbowB: [0.4, -0.3, 1],
-  yawB: 0,
-  rollB: -6,
+  handF: [5, 10, 3],
+  weapon: 172,
+  roll: -6,
+  yaw: 24,
+  handB: [12, 10, 12],
+  elbowB: [0.8, 0, 0.5],
+  yawB: -40,
+  rollB: 10,
   weaponB: 0,
   face: 'grit',
   wind: 0.05,
   flare: 0.3,
 };
+
+/**
+ * A pose with both hands kept where they are in `at` (hero space) however the body moves, by
+ * moving them against the base of the neck (hands are placed from it): a shield planted on the
+ * floor stays planted while she pants behind it.
+ */
+function handsFrom(at: ChibiPose, p: ChibiPose): ChibiPose {
+  const n0 = solveRig(BUILD, at, GRIP2).neck;
+  const n1 = solveRig(BUILD, p, GRIP2).neck;
+  const df = n1[0] - n0[0];
+  const du = n1[1] - n0[1];
+  const keep = (h: P2 | undefined): P2 | undefined => (h ? [h[0] - df, h[1] + du, h[2] as number] : h);
+  return { ...p, handF: keep(at.handF) as P2, handB: keep(at.handB) };
+}
 
 const SWEAT: RGB = [190, 230, 252];
 const SWEAT_MID: RGB = [110, 168, 222];
@@ -187,31 +205,36 @@ const DROP: [number, number, RGB][] = [
   [1, 5, SWEAT_INK],
 ];
 
-/** A bead of sweat on her temple, at the edge of the head on screen (its face side), `k` running it down, 0 to 1. */
+/**
+ * A bead of sweat against her temple, on the skin beside her eye on the side of her face toward
+ * the viewer (none from behind, where no skin shows), `k` running it down, 0 to 1.
+ */
 const sweat =
   (k: number) =>
   ({ c, cam, rig, proj }: FxContext): void => {
+    if (cam.view === 'back') return;
     const h = proj(rig.head.o);
-    const dir = cam.view === 'back' ? -1 : 1;
-    const x = Math.round(h[0] + dir * 11);
-    const y = Math.round(h[1] - 6 + k * 4);
+    const side = cam.view === 'side';
+    const x = Math.round(h[0] + (side ? -2 : -7));
+    const y = Math.round(h[1] + (side ? 2 : 1) + k * 3);
     for (const [dx, dy, col] of DROP) c.glow(x + dx, y + dy, col, 1);
   };
 
-/** Panting: the chest rises and slumps over the loop while the hands stay on the shield. */
+/** Panting: the chest rises and slumps over the loop while the hands stay on the planted shield. */
 const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
   const b = wave(i, 4);
-  return pose(KNELT, {
-    y: 13 + b * 0.8,
-    lean: 12 + b * 4,
-    head: 5 + b * 4,
-    handF: [12 - 1.6 * b, 4 - 1.2 * b, 7],
-    handB: [10 - 1.6 * b, 14 - 1.2 * b, 0],
-    phase: i / 4,
-    sway: (b - 0.5) * 0.2,
-    face: i === 2 ? 'hurt' : 'grit',
-    fx: i === 1 || i === 2 ? { extra: sweat(i === 1 ? 0 : 1) } : undefined,
-  });
+  return handsFrom(
+    KNELT,
+    pose(KNELT, {
+      y: 13 + b * 0.8,
+      lean: 12 + b * 4,
+      head: 5 + b * 4,
+      phase: i / 4,
+      sway: (b - 0.5) * 0.2,
+      face: i === 2 ? 'hurt' : 'grit',
+      fx: i === 1 || i === 2 ? { extra: sweat(i === 1 ? 0 : 1) } : undefined,
+    }),
+  );
 });
 
 // ── Knocked out ──────────────────────────────────────────────────────────────────────────────
@@ -305,22 +328,30 @@ const glint =
     for (const [i, j] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.glow(x + i * 2, y + j * 2, WHITE, 0.6);
   };
 
-/** The flourish: her sword arm raised out beside her head, the sword wheeling round in her hand, the shield low on her arm. */
-const TWIRL: ChibiPose = pose(S, { y: 3, lean: -3, twist: 10, tilt: -3, head: -4, look: 6, footF: [7, 0, 6], footB: [-7, 0, 5.4], handF: [-7, -9, 16], handB: [4, 13, 8], elbowB: [0.1, -0.7, 1], yawB: 10, rollB: 0, weaponB: 0, roll: -20, yaw: 0, face: 'smirk', wind: 0.5, flare: 0.2 });
+/** The shield on her arm through the flourish: low, its face out toward the viewer as on guard. */
+const PROUD_SHIELD: Partial<ChibiPose> = { handB: [8, 14, 14], elbowB: [0.5, -0.2, 0.4], yawB: -40, rollB: 10, weaponB: 0 };
 
-/** The last pose, held: the sword raised high out to her right, the shield on her arm, chin up, a smile, the cape streaming on her left. */
-const PROUD: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -3, twist: 6, tilt: -2, head: -6, look: 10, footF: [6, 0, 6.5], footB: [-6, 0, 5.4], handF: [-5, -6, 16], weapon: 14, roll: 28, yaw: 0, handB: [6, 12, 6], elbowB: [0.2, -0.6, 1], yawB: 6, rollB: 0, weaponB: 0, face: 'smirk', wind: 0.6, lift: 0.25, sway: -0.7 });
+/** The flourish: her sword arm raised out beside her head, the sword wheeling round in her hand, the shield low on her arm. */
+const TWIRL: ChibiPose = pose(S, { y: 3, lean: -3, twist: 10, tilt: -3, head: -4, look: 6, footF: [7, 0, 6], footB: [-7, 0, 5.4], handF: [-7, -9, 16], ...PROUD_SHIELD, roll: -20, yaw: 0, face: 'smirk', wind: 0.5, flare: 0.2 });
+
+/**
+ * The last pose, held: the sword raised high out to her right beside her head, upright with no
+ * roll so its whole length stands in the picture plane side on (tipped toward the viewer it
+ * shrank to a dagger); the shield on her arm with its face out; chin up, a smile, the cape
+ * streaming on her left.
+ */
+const PROUD: ChibiPose = pose(AT_EASE, { y: 1.5, lean: -3, twist: 6, tilt: -2, head: -6, look: 10, footF: [6, 0, 6.5], footB: [-6, 0, 5.4], handF: [-6, -8, 17], weapon: -3, roll: -4, yaw: 0, ...PROUD_SHIELD, face: 'smirk', wind: 0.6, lift: 0.25, sway: -0.7 });
 
 const victory: ChibiPose[] = [
   // A breath first: the sword swung down out of her guard, on its way round behind her.
-  fromReady(pose(S, { y: 6, lean: 8, twist: -10, head: 2, look: 4, handF: [2, 14, 11], weapon: 250, roll: 0, yaw: 0, handB: [5, 12, 7], elbowB: [0.1, -0.6, 1], yawB: 10, face: 'smirk', wind: 0.25 }), 0.5),
+  fromReady(pose(S, { y: 6, lean: 8, twist: -10, head: 2, look: 4, handF: [2, 14, 11], weapon: 250, roll: 0, yaw: 0, ...PROUD_SHIELD, face: 'smirk', wind: 0.25 }), 0.5),
   // The sword wheels up behind her, over the top...
   pose(TWIRL, { weapon: 372, phase: 0.1, fx: { smear: { from: 250, roll: 0, width: 0.5 }, rune: 0.6 } }),
   // ...and round again.
   pose(TWIRL, { weapon: 650, yaw: -30, phase: 0.25, wind: 0.6, fx: { smear: { from: 372, width: 0.5 }, rune: 0.8 } }),
   // Raised high and out beside her, a glint at the point, the cape thrown wide.
-  pose(PROUD, { y: 1, lean: -5, head: -8, handF: [-6, -7, 17], weapon: 8, roll: 30, wind: 0.65, lift: 0.3, flare: 0.3, phase: 0.4, fx: { rune: 1, extra: glint(1) } }),
-  pose(PROUD, { y: 1.2, handF: [-5.5, -6.5, 16.5], weapon: 12, wind: 0.65, lift: 0.25, phase: 0.55, fx: { rune: 0.7, extra: glint(0.6) } }),
+  pose(PROUD, { y: 1, lean: -5, head: -8, handF: [-6, -9, 17.5], weapon: -6, wind: 0.65, lift: 0.3, flare: 0.3, phase: 0.4, fx: { rune: 1, extra: glint(1) } }),
+  pose(PROUD, { y: 1.2, handF: [-6, -8.5, 17.2], weapon: -4, wind: 0.65, lift: 0.25, phase: 0.55, fx: { rune: 0.7, extra: glint(0.6) } }),
   // Held: chin up, a smile, the cape still streaming.
   pose(PROUD, { phase: 0.7, wind: 0.62, fx: { rune: 0.45 } }),
   pose(PROUD, { phase: 0.85, wind: 0.6, fx: { rune: 0.3 } }),

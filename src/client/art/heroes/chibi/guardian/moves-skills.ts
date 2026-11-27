@@ -28,8 +28,8 @@
  */
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
-import { DUST, DUST_DARK, glowLine, puff, rays, ward } from '../fx.js';
-import { add3, type ChibiPose, clamp, type FxContext, pose, type V3 } from '../rig.js';
+import { DUST, DUST_DARK, glowLine, puff, rays } from '../fx.js';
+import { add3, type ChibiPose, clamp, type FxContext, norm3, pose, type V3 } from '../rig.js';
 import { fromReady, READY, settle } from './moves-core.js';
 
 const S = READY;
@@ -165,35 +165,56 @@ const pulse =
   };
 
 /**
- * Light gathering on the sword's point (`k` 0, far out, to 1, arrived): motes of gold drawn in
- * from all round it along short curving paths, each trailing a tail, and a growing spark at the point.
+ * Light gathering on the sword's point (`k` 0, far out, to 1, arrived): motes of gold streaming
+ * in toward it from all round along curving paths, each a bright head with a tapering tail; a
+ * star at the point growing from a spark (about 3 pixels across) to a four-pointed star (about 9);
+ * and a faint pillar of light rising over the point as the light builds.
  */
 const gather =
   (k: number): Extra =>
   (x) => {
     const { c, tip, aura, hash } = x;
     const P = x.proj(tip);
-    for (let i = 0; i < 12; i++) {
-      const delay = hash(i, 121) * 0.4;
+    // The pillar: a soft column over the point, brightest at its foot, fading upward.
+    const tall = 10 + 22 * k;
+    for (let dy = 2; dy < tall; dy++) {
+      const f = 1 - dy / tall;
+      const a = 0.3 * k * f;
+      c.glow(P[0], P[1] - dy, aura.hot, a * 1.4, true);
+      c.glow(P[0] - 1, P[1] - dy, aura.core, a, true);
+      c.glow(P[0] + 1, P[1] - dy, aura.core, a, true);
+    }
+    for (let i = 0; i < 18; i++) {
+      const delay = hash(i, 121) * 0.45;
       const at = (kk: number): Vec => {
         const t = clamp((kk - delay) / (1 - delay), 0, 1);
-        const th = (i / 12) * Math.PI * 2 + hash(i, 122) + t * 1.4;
-        const R = 34 * Math.pow(1 - t, 0.9) + 2;
-        return [P[0] + Math.cos(th) * R, P[1] + Math.sin(th) * R * 0.85];
+        const th = (i / 18) * Math.PI * 2 + hash(i, 122) + t * 1.2;
+        const R = 40 * Math.pow(1 - t, 0.8) + 3;
+        return [P[0] + Math.cos(th) * R, P[1] + Math.sin(th) * R * 0.8];
       };
       const t = clamp((k - delay) / (1 - delay), 0, 1);
-      if (t <= 0.02 || t >= 0.97) continue;
-      for (let j = 3; j >= 1; j--) {
-        const q = at(k - j * 0.05);
-        c.glow(q[0], q[1], j > 1 ? aura.edge : aura.core, 0.6 - j * 0.12);
+      if (t >= 0.96) continue;
+      // Before it sets off a mote glimmers where it waits, far out.
+      const head = at(Math.max(k, delay + 0.04));
+      for (let j = 4; j >= 1; j--) {
+        const q = at(k - j * 0.06);
+        c.glow(q[0], q[1], j > 2 ? aura.edge : aura.core, 0.75 - j * 0.14);
       }
-      const p = at(k);
-      c.glow(p[0], p[1], aura.hot, 1);
-      c.glow(p[0] + 1, p[1], aura.core, 0.7);
-      c.glow(p[0], p[1] + 1, aura.core, 0.6);
+      c.glow(head[0], head[1], aura.hot, 1);
+      c.glow(head[0] + 1, head[1], aura.core, 0.85);
+      c.glow(head[0], head[1] + 1, aura.core, 0.8);
+      c.glow(head[0] + 1, head[1] + 1, aura.core, 0.6);
     }
-    const r = 1 + Math.round(k * 3);
-    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.abs(dx) + Math.abs(dy) <= r) c.glow(P[0] + dx, P[1] + dy, Math.abs(dx) + Math.abs(dy) < r ? aura.hot : aura.core, 0.9 * k);
+    // The star at the point: a white heart, four long rays and four short ones, a gold halo.
+    const r = 1.5 + 3 * k;
+    for (let d = -Math.ceil(r); d <= Math.ceil(r); d++) {
+      const a = Math.max(0, 1 - Math.abs(d) / (r + 0.5));
+      c.glow(P[0] + d, P[1], aura.hot, a);
+      c.glow(P[0], P[1] + d, aura.hot, a);
+    }
+    const q = Math.round(r * 0.45);
+    for (let d = 1; d <= q; d++) for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) c.glow(P[0] + sx * d, P[1] + sy * d, aura.core, 0.8 * (1 - d / (q + 1)));
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (Math.abs(dx) + Math.abs(dy) <= 2) c.glow(P[0] + dx, P[1] + dy, Math.abs(dx) + Math.abs(dy) < 2 ? aura.hot : aura.core, 0.6 + 0.4 * k);
   };
 
 /** Rays bursting from the sword's point (on top of the pose's own `fx.rays`), `k` their strength, turned `spin` degrees. */
@@ -236,33 +257,6 @@ const flood =
     }
   };
 
-/**
- * The dome of Shield's Up! bursting (`k` 0, just burst, to 1, flown and fading): hexagonal shards
- * of gold light flung out and up from where the dome stood, spinning as they go, the far ones
- * behind her.
- */
-const shards =
-  (k: number): Extra =>
-  (x) => {
-    const { c, rig, aura, hash } = x;
-    const g: V3 = [rig.pelvis.o[0], 0, rig.pelvis.o[2]];
-    const fade = 1 - k * 0.8;
-    for (let i = 0; i < 16; i++) {
-      const az = (i / 16) * Math.PI * 2 + hash(i, 131) * 0.4;
-      const el = 0.15 + hash(i, 132) * 1.1;
-      const R = 28 + 34 * k * (0.7 + 0.6 * hash(i, 133));
-      const h = Math.sin(el) * 40 + 10 * k - 14 * k * k;
-      const p3: V3 = [g[0] + Math.cos(az) * Math.cos(el) * R, Math.max(2, h), g[2] + Math.sin(az) * Math.cos(el) * R];
-      const p = x.proj(p3);
-      const back = x.behind(p3);
-      const size = 2.6 - k;
-      const spin = hash(i, 134) * 3 + k * 4;
-      const pts: Vec[] = Array.from({ length: 6 }, (_, q) => [p[0] + Math.cos(spin + (q / 6) * Math.PI * 2) * size, p[1] + Math.sin(spin + (q / 6) * Math.PI * 2) * size]);
-      for (let q = 0; q < 6; q++) glowLine(c, pts[q] as Vec, pts[(q + 1) % 6] as Vec, q % 2 ? aura.core : aura.hot, 0.95 * fade, back);
-      c.glow(p[0], p[1], aura.hot, 0.7 * fade, back);
-    }
-  };
-
 // ── Cast ─────────────────────────────────────────────────────────────────────────────────────
 
 /** Feet planted wide for the role skills. */
@@ -284,8 +278,8 @@ const cast: ChibiPose[] = [
   // The rally: the sword swept up high, rays bursting off its point.
   pose(RALLY, { y: 3, lean: -3, head: -5, handF: [-3, -6, 13], weapon: -14, phase: 0.45, fx: { smear: { from: 84, roll: -40, yaw: -50, width: 0.5 }, rune: 1, aura: 0.8, circle: 1, extra: ringOfLight(0.85) } }),
   pose(RALLY, { phase: 0.6, fx: { rune: 1, aura: 1, circle: 1, extra: tipRays(1, 0) } }),
-  pose(RALLY, { y: 2.5, head: -7, phase: 0.75, lift: 0.25, fx: { rune: 0.8, aura: 0.6, circle: 0.7, extra: tipRays(0.6, 14) } }),
-  settle(pose(S, { y: 4, lean: 4, handF: [2, 6, 11], weapon: 30, roll: 24 }), 0.8, { phase: 0.9, wind: 0.3, fx: { rune: 0.3, circle: 0.3 } }),
+  pose(RALLY, { y: 2.5, head: -7, phase: 0.75, lift: 0.25, fx: { rune: 0.8, aura: 0.6, circle: 0.55, extra: tipRays(0.6, 14) } }),
+  settle(pose(S, { y: 4, lean: 4, handF: [2, 6, 11], weapon: 30, roll: 24 }), 0.8, { phase: 0.9, wind: 0.3, fx: { rune: 0.3, circle: 0.15 } }),
 ];
 
 // ── Flash ────────────────────────────────────────────────────────────────────────────────────
@@ -404,37 +398,170 @@ const PLANTED: ChibiPose = pose(S, {
   wind: 0.2,
 });
 
-/** The dome's size: about her height, wide enough to take in the shield's point. */
-const DOME = { dome: true, radius: 27, height: 26 } as const;
+/** The dome's size: over her head, wide enough to take in the shield's point. */
+const DOME_R = 33;
+const DOME_H = 64;
+/** Rows of cells up the dome, and roughly how far apart their middles are (pixels). */
+const DOME_ROWS = 11;
+const CELL = 6.6;
+
+/** A cell of the dome: where it sits (latitude, longitude, radians) and its row. */
+interface Cell {
+  lat: number;
+  lon: number;
+  row: number;
+}
+
+/** The dome's cells, row by row from the floor up, each row offset by half a cell from the one below. */
+const CELLS: Cell[] = [];
+for (let row = 0; row < DOME_ROWS; row++) {
+  const lat = ((row + 0.5) / DOME_ROWS) * (Math.PI / 2);
+  const n = Math.max(1, Math.round((2 * Math.PI * DOME_R * Math.cos(lat)) / CELL));
+  for (let j = 0; j < n; j++) CELLS.push({ lat, lon: ((j + (row % 2) * 0.5) / n) * Math.PI * 2, row });
+}
+
+/** A gold-filled hexagon on the effects layer: its corners on screen, its fill and edge colours. */
+function hexagon(x: FxContext, pts: Vec[], fill: RGB, fa: number, edge: RGB, ea: number, under: boolean): void {
+  const { c } = x;
+  if (fa > 0.01) {
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const p of pts) {
+      x0 = Math.min(x0, p[0]);
+      y0 = Math.min(y0, p[1]);
+      x1 = Math.max(x1, p[0]);
+      y1 = Math.max(y1, p[1]);
+    }
+    for (let py = Math.floor(y0); py <= Math.ceil(y1); py++) {
+      for (let px = Math.floor(x0); px <= Math.ceil(x1); px++) {
+        let hit = false;
+        for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          const a = pts[j] as Vec;
+          const b = pts[i] as Vec;
+          if (a[1] > py + 0.5 !== b[1] > py + 0.5 && px + 0.5 < a[0] + ((py + 0.5 - a[1]) * (b[0] - a[0])) / (b[1] - a[1])) hit = !hit;
+        }
+        if (hit) c.glow(px, py, fill, fa, under);
+      }
+    }
+  }
+  for (let q = 0; q < pts.length; q++) glowLine(c, pts[q] as Vec, pts[(q + 1) % pts.length] as Vec, edge, ea, under);
+}
+
+/** A cell's middle on the dome (hero space, `out` times as far out), its way outward, and the two ways along the dome at it. */
+function onDome(g: V3, cell: Cell, out = 1): { p: V3; n: V3; e: V3; t: V3 } {
+  const cl = Math.cos(cell.lat);
+  const sl = Math.sin(cell.lat);
+  const co = Math.cos(cell.lon);
+  const so = Math.sin(cell.lon);
+  const p: V3 = [g[0] + DOME_R * cl * co * out, DOME_H * sl * out, g[2] + DOME_R * cl * so * out];
+  const n = norm3([(cl * co) / DOME_R, sl / DOME_H, (cl * so) / DOME_R]);
+  const e: V3 = [-so, 0, co];
+  const t = norm3([-sl * co * DOME_R, cl * DOME_H, -sl * so * DOME_R]);
+  return { p, n, e, t };
+}
 
 /**
- * The dome's hexagons gone over again (`k` as the ward's, `spin` its spin), so they stand out as
- * gold over the floor at the size the game shows her, not as a faint grey net.
+ * The dome of Shield's Up!: gold hexagons over her from the floor up (`k` how far it has formed,
+ * 0 to 1, rising from the floor), each with a gold edge and a faint gold fill; the cells along the
+ * dome's outline as she is seen are brighter, so its shape reads; a shimmer of pale gold runs
+ * round it (`spin`, in turns, advancing every frame). Cells on the far side are behind her.
  */
-const domeGold =
+const hexDome =
   (k: number, spin: number): Extra =>
-  (x) =>
-    ward(x, k * 0.5, { ...DOME, spin });
+  (x) => {
+    const { cam, rig, aura } = x;
+    const g: V3 = [rig.pelvis.o[0], 0, rig.pelvis.o[2]];
+    const PALE: RGB = [255, 233, 168];
+    for (const cell of CELLS) {
+      const grow = clamp(k * (DOME_ROWS + 1.5) - cell.row, 0, 1);
+      if (grow <= 0) continue;
+      const { p, n, e, t } = onDome(g, cell);
+      const facing = cam.facing(n);
+      const back = facing < 0;
+      // The outline: cells seen nearly edge on.
+      const rim = 1 - clamp(Math.abs(facing) / 0.4, 0, 1);
+      const shimmer = Math.max(0, Math.cos(cell.lon - spin * Math.PI * 2 + cell.lat * 1.5)) ** 6;
+      const s = (CELL / 2) * 0.86 * (0.5 + 0.5 * grow);
+      const pts = Array.from({ length: 6 }, (_, q): Vec => {
+        const a = (q / 6) * Math.PI * 2 + Math.PI / 6;
+        return x.proj(add3(add3(p, e, Math.cos(a) * s), t, Math.sin(a) * s));
+      });
+      const edge = shimmer > 0.3 ? PALE : aura.core;
+      const ea = grow * (back ? 0.42 : 0.2) + rim * 0.5 * grow + shimmer * 0.45;
+      const fa = grow * ((back ? 0.08 : 0.04) + shimmer * 0.2);
+      hexagon(x, pts, shimmer > 0.3 ? PALE : aura.core, fa, edge, Math.min(1, ea), back);
+    }
+    // A brighter ring where the dome meets the floor.
+    const n = 120;
+    for (let i = 0; i < n; i++) {
+      const th = (i / n) * Math.PI * 2;
+      const q = x.proj([g[0] + Math.cos(th) * DOME_R, 0, g[2] + Math.sin(th) * DOME_R]);
+      x.c.glow(q[0], q[1], aura.core, 0.7 * k, Math.sin(th + cam.yaw) <= 0);
+    }
+  };
 
-/** Braced under the dome: `k` how far it has formed, `spin` turning its cells. */
+/**
+ * The dome bursting (`k` 0, just burst, to 1, flown and gone): its cells break away as gold
+ * hexagonal shards flying outward and up in every direction, spinning as they go and shrinking
+ * as they fade, with a bright ring of light rolling out over the floor from her feet. By `k` 1
+ * almost nothing is left, so the battle stance can take over.
+ */
+const hexBurst =
+  (k: number): Extra =>
+  (x) => {
+    const { cam, rig, aura, hash } = x;
+    const g: V3 = [rig.pelvis.o[0], 0, rig.pelvis.o[2]];
+    const fade = (1 - k) ** 1.3;
+    CELLS.forEach((cell, i) => {
+      if (i % 2 === 1 && k > 0.3) return;
+      const { p, n, e, t } = onDome(g, cell);
+      // Out over the floor more than up, so they scatter round her rather than into the sky.
+      const out = k * (0.8 + 0.6 * hash(i, 141));
+      const lift: V3 = [p[0] + (p[0] - g[0]) * out, p[1] * (1 + k * 0.2) + k * 6 * hash(i, 142) - k * k * 8, p[2] + (p[2] - g[2]) * out];
+      const back = cam.facing(n) < 0;
+      const s = (CELL / 2) * 0.86 * (1 - k * 0.5);
+      const spinA = hash(i, 143) * 6 + k * 5;
+      const pts = Array.from({ length: 6 }, (_, q): Vec => {
+        const a = (q / 6) * Math.PI * 2 + spinA;
+        return x.proj(add3(add3(lift, e, Math.cos(a) * s), t, Math.sin(a) * s * (0.6 + 0.4 * Math.cos(spinA))));
+      });
+      hexagon(x, pts, aura.core, 0.45 * fade, i % 3 === 0 ? aura.hot : aura.core, 0.9 * fade, back);
+    });
+    // The ring rolling out from her feet: white-hot at its front, gold behind it, a pale blue fringe.
+    const R = 12 + 46 * k;
+    const m = Math.ceil(R * 8);
+    for (let i = 0; i < m; i++) {
+      const th = (i / m) * Math.PI * 2;
+      const front = Math.sin(th + cam.yaw) > 0;
+      for (const [rr, col, a] of [[1, aura.hot, 0.95], [0.95, aura.core, 0.8], [0.88, aura.core, 0.4], [1.05, SKY, 0.35]] as [number, RGB, number][]) {
+        const q = x.proj([g[0] + Math.cos(th) * R * rr, 0, g[2] + Math.sin(th) * R * rr]);
+        x.c.glow(q[0], q[1], col, a * fade, !front);
+      }
+    }
+  };
+
+/** Braced under the dome: `k` how far it has formed, `spin` the shimmer's place round it (turns). */
 const braced = (k: number, spin: number, phase: number, over: Partial<ChibiPose> = {}): ChibiPose =>
-  pose(PLANTED, { phase, wind: 0.2 + k * 0.1, lift: 0.1 + k * 0.15, ...over, fx: { runeB: 0.15 + k * 0.2, aura: 0.15 + k * 0.2, ward: { k, ...DOME, spin }, extra: domeGold(k, spin), ...over.fx } });
+  pose(PLANTED, { phase, wind: 0.2 + k * 0.1, lift: 0.1 + k * 0.15, ...over, fx: { runeB: 0.15 + k * 0.2, aura: 0.15 + k * 0.2, extra: hexDome(k, spin), ...over.fx } });
 
 const shieldsUp: ChibiPose[] = [
   // Wind-up: down behind the shield.
   fromReady(pose(PLANTED, { y: 7, fx: { runeB: 0.15 } }), 0.6),
   // Set, the dome rising round her.
   braced(0.3, 0, 0.1, { fx: { dust: 0.8 } }),
-  braced(0.6, 4, 0.2),
-  braced(0.85, 8, 0.3),
-  braced(1, 12, 0.4),
-  braced(1, 16, 0.5, { y: 8.4, lean: 9 }),
-  braced(1, 20, 0.6),
+  braced(0.6, 0.12, 0.2),
+  braced(0.85, 0.24, 0.3),
+  braced(1, 0.36, 0.4),
+  braced(1, 0.48, 0.5, { y: 8.4, lean: 9 }),
+  braced(1, 0.6, 0.6),
   // Straining as it fills with light.
-  braced(1, 24, 0.7, { y: 8.6, lean: 10, face: 'shout', fx: { runeB: 0.4, aura: 0.6 } }),
-  // The burst: the shield thrust out, the dome flung outward in shards.
-  pose(PLANTED, { x: 3, y: 9, lean: 16, twist: 14, head: 2, handB: [13, 10, -2], elbowB: [0.1, -0.2, 1], yawB: -6, handF: [-1, 10, 10], weapon: 40, face: 'shout', wind: 0.6, lift: 0.2, phase: 0.85, fx: { runeB: 0.8, impactB: 1.4, aura: 1, shock: 0.12, shockAt: [0, 0, 0], rays: { k: 1, at: 'off', n: 12, len: 30 }, extra: shards(0.2) } }),
-  settle(pose(PLANTED, { x: 3, y: 7, lean: 10, twist: 6, handB: [11, 10, -1] }), 0.65, { phase: 1, wind: 0.4, lift: 0.2, fx: { runeB: 0.15, aura: 0.3, shock: 0.6, shockAt: [0, 0, 0], extra: shards(0.75) } }),
+  braced(1, 0.72, 0.7, { y: 8.6, lean: 10, face: 'shout', fx: { runeB: 0.4, aura: 0.6, extra: hexDome(1, 0.72) } }),
+  // The burst: the shield thrust out, the dome breaking outward in shards of light all round her.
+  pose(PLANTED, { x: 3, y: 8, lean: 14, twist: 10, head: 2, handB: [6, 12, 8], handF: [-1, 10, 10], weapon: 40, face: 'shout', wind: 0.6, lift: 0.3, phase: 0.85, fx: { runeB: 0.8, impactB: 1.2, aura: 1, rays: { k: 1, n: 14, len: 40 }, extra: hexBurst(0.22) } }),
+  // The shards fly and fade as she settles back into her guard.
+  settle(pose(PLANTED, { x: 3, y: 7, lean: 10, twist: 6 }), 0.7, { phase: 1, wind: 0.4, lift: 0.2, fx: { runeB: 0.15, aura: 0.15, extra: hexBurst(0.85) } }),
 ];
 
 // ── Luminaire ────────────────────────────────────────────────────────────────────────────────
@@ -484,9 +611,9 @@ const shining = (k: number, spin: number, spread: number, phase: number, over: P
 
 const luminaire: ChibiPose[] = [
   // Wind-up (stretched over the server's 0.6 s): she sinks and draws the sword up as light gathers on it...
-  fromReady(pose(RAISED, { y: 6, lean: 6, head: 2, handF: [2, 8, 12], weapon: 20, roll: 14, handB: [6, 10.5, 7], elbowB: [0.2, -0.4, 1], yawB: 6, rollB: 2, face: 'grit', lift: 0.1, fx: { rune: 0.5, aura: 0.3, extra: gather(0.25) } }), 0.6),
-  pose(RAISED, { y: 4, lean: -2, head: -4, handF: [-2, -3, 13], weapon: 0, handB: [5, 10.5, 8.5], elbowB: [0.15, -0.45, 1], yawB: 4, face: 'grit', lift: 0.15, phase: 0.1, fx: { rune: 0.9, aura: 0.5, extra: gather(0.65) } }),
-  pose(RAISED, { phase: 0.2, fx: { rune: 1.2, aura: 0.7, extra: gather(1) } }),
+  fromReady(pose(RAISED, { y: 6, lean: 6, head: 2, handF: [2, 8, 12], weapon: 20, roll: 14, handB: [6, 10.5, 7], elbowB: [0.2, -0.4, 1], yawB: 6, rollB: 2, face: 'grit', lift: 0.1, fx: { rune: 0.45, aura: 0.25, extra: gather(0.3) } }), 0.6),
+  pose(RAISED, { y: 4, lean: -2, head: -4, handF: [-2, -3, 13], weapon: 0, handB: [5, 10.5, 8.5], elbowB: [0.15, -0.45, 1], yawB: 4, face: 'grit', lift: 0.15, phase: 0.1, fx: { rune: 0.9, aura: 0.45, extra: gather(0.65) } }),
+  pose(RAISED, { phase: 0.2, fx: { rune: 1.4, aura: 0.7, extra: gather(1) } }),
   // Thrust up: light bursts out all round her and floods over the floor.
   shining(1.15, 0, 0.1, 0.3, { fx: { impact: 1.3, shock: 0.1, shockAt: [0, 0, 0] } }),
   shining(1, 8, 0.3, 0.4, { fx: { shock: 0.35, shockAt: [0, 0, 0] } }),

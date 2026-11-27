@@ -259,14 +259,17 @@ const sparse = (o: Outline): Outline => {
 };
 
 /** The kite shield's outline: about 48 px tall and 25 wide, a long tapering point below. */
-const KITE: Outline = sparse(heaterOutline({ w: 12.5, top: 15, bottom: -31, waist: 0.22, arch: 1.6, belly: 1.35 }));
+const KITE: Outline = sparse(sparse(heaterOutline({ w: 12.5, top: 15, bottom: -31, waist: 0.22, arch: 1.6, belly: 1.35 })));
 /**
  * A thin gold line inset inside the rim: a ring, the space between two smaller copies of the
  * outline (one point list running round the outer copy and then the inner, so the emblem's
- * even-odd fill leaves the field inside it alone and only the line blazes with the shield).
+ * even-odd fill leaves the field inside it alone and only the line blazes with the shield). The
+ * shield tests nearly every pixel of its face against this ring, so its copies keep only every
+ * fourth point (and the corners and the point): a line a pixel wide looks the same, and the
+ * shield paints a millisecond faster.
  */
-const INSET_OUT: Outline = sparse(heaterOutline({ w: 9.6, top: 12.2, bottom: -26, waist: 0.22, arch: 1.4, belly: 1.35 }));
-const INSET_IN: Outline = sparse(heaterOutline({ w: 8.6, top: 11.2, bottom: -24.2, waist: 0.22, arch: 1.3, belly: 1.35 }));
+const INSET_OUT: Outline = sparse(sparse(heaterOutline({ w: 9.6, top: 12.2, bottom: -26, waist: 0.22, arch: 1.4, belly: 1.35 })));
+const INSET_IN: Outline = sparse(sparse(heaterOutline({ w: 8.6, top: 11.2, bottom: -24.2, waist: 0.22, arch: 1.3, belly: 1.35 })));
 const INSET: Outline = [...INSET_OUT, INSET_OUT[0] as readonly [number, number], ...INSET_IN, INSET_IN[0] as readonly [number, number]];
 
 /** Where the sun rises (u, v in the shield's plane): over the top of the tower. */
@@ -311,8 +314,8 @@ const KITE_SHIELD = shield({
     // A radiant sun rising behind the tower: eight broad gold rays round its gold disc, a
     // white-hot heart (bold shapes, so it reads at the size it is seen in game).
     { pts: turned(starOutline(8, 9.6, 4.8, SUN), SUN, Math.PI / 8), mat: GOLD },
-    { pts: roundOutline(4.4, 16).map(([u, v]): [number, number] => [u + SUN[0], v + SUN[1]]), mat: GOLD, raise: 0.8 },
-    { pts: roundOutline(2, 10).map(([u, v]): [number, number] => [u + SUN[0], v + SUN[1]]), mat: PALE, raise: 0.9 },
+    { pts: roundOutline(4.4, 12).map(([u, v]): [number, number] => [u + SUN[0], v + SUN[1]]), mat: GOLD, raise: 0.8 },
+    { pts: roundOutline(2.2, 8).map(([u, v]): [number, number] => [u + SUN[0], v + SUN[1]]), mat: PALE, raise: 0.9 },
     // The tower over the sun's lower half, in white.
     { pts: TOWER, mat: PALE, raise: 0.4 },
   ],
