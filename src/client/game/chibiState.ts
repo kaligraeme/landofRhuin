@@ -187,11 +187,30 @@ export function formShow(input: FormShowInput): FormShow {
     const half = Math.max(0.05, emerge / 2);
     if (since < half) return { form: false, act: null, steady: true, force: { clip: 'ult', frame: through(hero.ult, since / half) } };
     if (since < half * 2) return { form: true, act: null, steady: true, force: { clip: 'ult', frame: through(form.ult, (since - half) / half) } };
-    return { form: true, act: act && act.at > seen.at ? act : null, steady: true, force: null };
+    // Its own blows only: the server refuses a form every skill, so nothing else is its own.
+    return { form: true, act: act && act.at > seen.at && act.k === 'atk' ? act : null, steady: true, force: null };
   }
   const after = now - seen.endedAt;
   if (form && after >= 0 && after < FORM_COLLAPSE && !(act && act.at > seen.endedAt)) {
     return { form: true, act: null, steady: true, force: { clip: 'cast', frame: through(form.cast, after / FORM_COLLAPSE) } };
   }
   return plain;
+}
+
+/**
+ * The clips a form ever shows (see `formShow`): it stands, runs and strikes with its own combo,
+ * emerges in its `ult`, collapses in its `cast` and cheers a cleared dungeon, but takes no skills
+ * and never flinches, kneels or falls, so the game paints only these (sprites.ts).
+ */
+export const FORM_CLIPS: readonly ChibiClip[] = ['idle', 'battle', 'move', ...COMBO_CLIPS, 'ult', 'cast', 'victory'];
+
+/**
+ * The clip and frame a hero shows, given how their form shows now (`formShow`, or null for a hero
+ * with no form): a moment of the transformation over everything, else `chibiClip` on the act the
+ * form allows, without a flinch or a kneel while the form holds steady.
+ */
+export function shownClip(input: ChibiInput, show: FormShow | null): ChibiPick {
+  if (!show) return chibiClip(input);
+  if (show.force) return show.force;
+  return chibiClip({ ...input, act: show.act, hurtAt: show.steady ? null : input.hurtAt, hp: show.steady ? input.maxHp : input.hp });
 }

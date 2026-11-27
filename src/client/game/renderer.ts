@@ -9,7 +9,7 @@ import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
 import { formSprite, spriteFor, type ChibiAnim, type ChibiFrame, type Facing, type Sprite, type SpriteAnim } from '../art/sprites.js';
 import type { Clip } from '../art/animation.js';
-import { chibiClip, formShow, type ChibiPick, type FormShow } from './chibiState.js';
+import { formShow, shownClip, type ChibiPick, type FormShow } from './chibiState.js';
 import type { Effects, Fx } from './fx.js';
 import type { ClientEntity, World } from './world.js';
 
@@ -1177,7 +1177,6 @@ export class Renderer {
       show = formShow({ now, seen, act, down: dead, hero: own.hero.timing, form: painted?.hero.timing ?? null, emerge: FORMS[seen.id]?.emerge ?? 0.8 });
       if (show.form && painted) chibi = painted;
     }
-    const steady = !!show?.steady;
     const { hero, views } = chibi;
     const moving = m.speed > 0.6 && !dead;
     const rolling = e.id === world.meId && view.rolling;
@@ -1187,9 +1186,9 @@ export class Renderer {
     const facing = this.turnTo(e, m, (f) => !!views[f]);
     const sheet = views[facing] ?? (views.side as NonNullable<typeof views.side>);
     const flip = facing === 'side' && Math.cos(e.f) < -0.05;
-    const pick =
-      show?.force ??
-      chibiClip({
+    // A form's transformation, its own blows only, and never a flinch or a kneel (shownClip).
+    const pick = shownClip(
+      {
         timing: hero.timing,
         now,
         id: e.id,
@@ -1197,16 +1196,17 @@ export class Renderer {
         downAt: world.downAt.get(e.id) ?? null,
         complete: world.completedAt !== null || world.duty.phase === 'complete',
         completeAt: world.completedAt,
-        act: show ? show.act : act,
+        act,
         rolling,
         moving,
         phase: m.phase,
-        // A form never flinches or kneels.
-        hurtAt: steady ? null : (world.hurtAt.get(e.id) ?? null),
-        hp: steady ? e.snap.mh : e.snap.hp,
+        hurtAt: world.hurtAt.get(e.id) ?? null,
+        hp: e.snap.hp,
         maxHp: e.snap.mh,
         fighting: this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16),
-      });
+      },
+      show,
+    );
     this.chibiShown.set(e.id, { ...pick, view: facing, sprite: hero.id });
     const clipFrames = sheet.frames[pick.clip];
     const f = (clipFrames[pick.frame] ?? clipFrames[0] ?? sheet.frames.idle[0]) as ChibiFrame;

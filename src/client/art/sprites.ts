@@ -7,7 +7,8 @@
  * figure and its effects and the crops are shelf-packed, an atlas per view. Frames are built in
  * the background a little at a time (a few milliseconds per tick), so the game never stalls. A
  * hero has nothing to show until their side view is painted (the renderer draws a plain figure
- * meanwhile).
+ * meanwhile). A form is painted only in the clips the game shows of it (FORM_CLIPS), after every
+ * hero of the party.
  */
 import { defaultHero, type HeroId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
@@ -19,6 +20,7 @@ import { FORM_ART, formHero, heroForms } from './heroForms.js';
 import { ACTION_WINDUP, buildFrames, CLIP_LENGTH, CLIPS, rigSprite, SKILL_CHARGE, type Clip, type Raster } from './animation.js';
 import { auraFor, RIG_HINTS } from './rigs.js';
 import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip, type ChibiHero, type ChibiView } from './heroes/chibi/index.js';
+import { FORM_CLIPS } from '../game/chibiState.js';
 
 /** A monster's frames in one atlas: a row per clip. */
 export interface Sheet {
@@ -136,9 +138,9 @@ function loadCreature(key: string, id: CreatureId): Sprite {
 
 /**
  * A chibi (a hero or a form) by its sprite id: its metrics come from its frames, and it is ready
- * to draw once its side view is painted.
+ * to draw once its side view is painted. Only `clips` are painted (every clip for a hero).
  */
-function loadChibi(id: string): Sprite {
+function loadChibi(id: string, clips: readonly ChibiClip[] = CHIBI_CLIPS): Sprite {
   const hit = sprites.get(id);
   if (hit) return hit;
   const hero = CHIBI_HEROES[id];
@@ -147,7 +149,7 @@ function loadChibi(id: string): Sprite {
   const def: CreatureArt = { url: '', w: Math.round(hero.height * 0.7), h: hero.height, ax: box.ax, ay: box.ay, height: hero.height * hero.scale };
   const sprite: Sprite = { id, def, img: new Image(), white: null, ready: false, anim: null, chibi: null };
   sprites.set(id, sprite);
-  queue(chibiSteps(sprite, hero));
+  queue(chibiSteps(sprite, hero, clips));
   return sprite;
 }
 
@@ -232,15 +234,17 @@ function chibiCrop(hero: ChibiHero, clip: ChibiClip, frame: number, view: ChibiV
 }
 
 /**
- * Chibi heroes: paint every frame of every clip, one frame per step, view by view. Side on comes
- * first (the hero animates as soon as that is done); the views toward and away from the viewer are
- * queued again behind every other sprite, so the rest of the party and the monsters animate
- * sooner. Each view's crops are shelf-packed into one atlas.
+ * Chibi heroes: paint every frame of every clip in `clips`, one frame per step, view by view. Side
+ * on comes first (the hero animates as soon as that is done); the views toward and away from the
+ * viewer are queued again behind every other sprite, so the rest of the party and the monsters
+ * animate sooner. Each view's crops are shelf-packed into one atlas. A clip left out (one a form
+ * never shows) gets the idle frames, so every clip still has frames to draw.
  */
-function* chibiSteps(sprite: Sprite, hero: ChibiHero, views: readonly ChibiView[] = CHIBI_VIEWS, anim: ChibiAnim = { hero, views: {} }): Generator<void> {
+function* chibiSteps(sprite: Sprite, hero: ChibiHero, clips: readonly ChibiClip[], views: readonly ChibiView[] = CHIBI_VIEWS, anim: ChibiAnim = { hero, views: {} }): Generator<void> {
   for (const view of views) {
     const crops: { clip: ChibiClip; raster: Raster; ox: number; oy: number }[] = [];
     for (const clip of CHIBI_CLIPS) {
+      if (!clips.includes(clip)) continue;
       for (let i = 0; i < hero.timing[clip].frames; i++) {
         yield;
         crops.push({ clip, ...chibiCrop(hero, clip, i, view) });
@@ -255,11 +259,12 @@ function* chibiSteps(sprite: Sprite, hero: ChibiHero, views: readonly ChibiView[
       g.putImageData(new ImageData(new Uint8ClampedArray(c.raster.data), c.raster.w, c.raster.h), at.x, at.y);
       frames[c.clip].push({ sx: at.x, sy: at.y, w: c.raster.w, h: c.raster.h, ox: c.ox, oy: c.oy });
     });
+    for (const clip of CHIBI_CLIPS) if (!clips.includes(clip)) frames[clip] = frames.idle;
     anim.views[view] = { atlas, frames };
     sprite.chibi = anim;
     sprite.ready = true;
     if (view === 'side' && views.length > 1) {
-      queue(chibiSteps(sprite, hero, views.slice(1), anim));
+      queue(chibiSteps(sprite, hero, clips, views.slice(1), anim));
       return;
     }
   }
@@ -275,7 +280,7 @@ export function heroSprite(hero: HeroId): Sprite {
 /** A form's sprite (the Firebeast), or null if it has no chibi: the hero then keeps their own look. */
 export function formSprite(form: string): Sprite | null {
   const id = FORM_ART[form];
-  return id && formHero(form) ? loadChibi(id) : null;
+  return id && formHero(form) ? loadChibi(id, FORM_CLIPS) : null;
 }
 
 export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
@@ -288,12 +293,14 @@ export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
   return loadCreature(`mob:${clan}:${kind}`, `${clan}-${kind}`);
 }
 
-/** Starts loading every sprite a dungeon can show: the party's heroes (and their forms) first, then the clan. */
+/**
+ * Starts loading every sprite a dungeon can show: the party's heroes first, in the order given,
+ * then the forms they take (so every hero of the party shows before any form is painted), then the
+ * clan.
+ */
 export function preloadClan(clan: ThemeId, heroes: HeroId[] = []): void {
-  for (const hero of heroes) {
-    heroSprite(hero);
-    for (const form of heroForms(hero)) formSprite(form);
-  }
+  for (const hero of heroes) heroSprite(hero);
+  for (const hero of heroes) for (const form of heroForms(hero)) formSprite(form);
   for (const mob of ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as MobKind[]) spriteFor({ id: 0, kind: 'mob', team: 'enemy', name: '', radius: 1, mob }, clan);
   for (const boss of ['juggernaut', 'hexer', 'beast', 'warden', 'sovereign'] as BossKind[]) spriteFor({ id: 0, kind: 'boss', team: 'enemy', name: '', radius: 1, boss }, clan);
 }

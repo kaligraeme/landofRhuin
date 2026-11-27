@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SKILLS, WEAPONS } from '../src/shared/content/classes.js';
 import type { ChibiClip, ClipTiming } from '../src/client/art/heroes/chibi/index.js';
 import { CHIBI_CLIPS, CHIBI_HEROES, SLOT_CLIPS } from '../src/client/art/heroes/chibi/index.js';
-import { actClip, actFrame, chibiClip, FORM_COLLAPSE, formShow, type ChibiInput, type FormShowInput } from '../src/client/game/chibiState.js';
+import { actClip, actFrame, chibiClip, FORM_CLIPS, FORM_COLLAPSE, formShow, shownClip, type ChibiInput, type FormShowInput } from '../src/client/game/chibiState.js';
 
 /**
  * A fixed timing table, so the tests do not move when the painter retimes its clips. The flinch
@@ -323,6 +323,39 @@ describe('a hero who takes a form (the Flame Warden’s Firebeast)', () => {
     // An attack the moment it ends brings the hero straight back.
     const slash = { at: NOW + 0.05, k: 'atk' as const, d: 0, c: 0 };
     expect(shows({ now: NOW + 0.1, seen: ended, act: slash })).toEqual({ form: false, act: slash, steady: false, force: null });
+  });
+
+  it('shows only the clips the game paints of a form, whatever the hero is doing', () => {
+    // Every act the hero could have (the claws, a skill or the Elixir the server would refuse, the
+    // skill that began the form), moving or rolling, hurt, at low health, in a fight, the dungeon
+    // cleared or not, through the form's emergence, its time and its collapse.
+    const acts = [null, ...[0, 1, 2, 3].map((c) => ({ k: 'atk' as const, d: 0, c })), ...['firebeast', 'flame_sword.q', 'flame_sword.r', 'elixir', 'dodge'].map((s) => ({ k: 'sk' as const, d: 0.3, s }))];
+    const begun = NOW - 3;
+    const ended = NOW + 1.5;
+    const shown = new Set<ChibiClip>();
+    for (let t = begun - 0.2; t < ended + 1; t += 0.03) {
+      const seen = { id: 'firebeast', at: begun, endedAt: t >= ended ? ended : null };
+      for (const a of acts) {
+        const act = a && { ...a, at: t - 0.1 };
+        for (const [moving, rolling, complete, fighting] of [[false, false, false, false], [true, false, false, true], [false, true, false, true], [false, false, true, false], [false, false, false, true]]) {
+          const show = shows({ now: t, seen, act });
+          if (!show.form) continue;
+          const pick = shownClip(input({ timing: F, now: t, act, moving, rolling, complete, completeAt: complete ? t - 1 : null, fighting, hurtAt: t - 0.1, hp: 50 }), show);
+          shown.add(pick.clip);
+          expect(FORM_CLIPS, `${pick.clip} at ${(t - begun).toFixed(2)}s`).toContain(pick.clip);
+        }
+      }
+    }
+    // And each of them does show.
+    expect([...shown].sort()).toEqual([...FORM_CLIPS].sort());
+    expect(FORM_CLIPS.every((c) => CHIBI_CLIPS.includes(c))).toBe(true);
+  });
+
+  it('leaves a hero with no form, or whose form has gone, to chibiClip', () => {
+    const over = { act: { at: NOW - 0.1, k: 'sk' as const, d: 0, s: 'flame_sword.q' }, hurtAt: NOW - 0.1, hp: 10 };
+    expect(shownClip(input(over), null)).toEqual(chibiClip(input(over)));
+    const gone = shows({ seen: { id: 'firebeast', at: START - 9, endedAt: NOW - 3 }, act: over.act });
+    expect(shownClip(input(over), gone)).toEqual(chibiClip(input(over)));
   });
 
   it('keeps the hero’s own look until the form’s chibi is painted, and drops it when knocked out', () => {
