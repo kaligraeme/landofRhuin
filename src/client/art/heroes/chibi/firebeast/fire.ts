@@ -1039,9 +1039,9 @@ export function lick(c: Canvas, x: number, y: number, h: number, w: number, sway
  * his is), so the game can swap one sprite for the other without a jump.
  */
 const COLUMN: Record<'side' | 'front' | 'back', { h: number; half: number; dx: number }> = {
-  side: { h: 138, half: 29, dx: -3.5 },
-  front: { h: 141, half: 27.5, dx: -0.5 },
-  back: { h: 122, half: 27.5, dx: -0.5 },
+  side: { h: 138, half: 27.5, dx: -3.5 },
+  front: { h: 141, half: 26, dx: -0.5 },
+  back: { h: 122, half: 26, dx: -0.5 },
 };
 
 /**
@@ -1182,7 +1182,7 @@ export function column(x: FxContext, k: number, o: { open?: number; seed?: numbe
   // Embers flying up round it.
   for (let i = 0; i < 14; i++) {
     const t = hash(i, 191 + Math.floor(seed));
-    const px = cx + (hash(i, 192 + Math.floor(seed)) - 0.5) * (half * 2 + 24);
+    const px = cx + (hash(i, 192 + Math.floor(seed)) - 0.5) * (half * 2 + 4);
     const py = bottom - 10 - t * spec.h * Math.min(1, k) * 1.05;
     c.glow(px, py, i % 3 ? W_GOLD : W_HOT, 0.9);
     c.glow(px, py + 1, W_ORANGE, 0.6);
