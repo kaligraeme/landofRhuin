@@ -421,7 +421,7 @@ const BLADEMASTER: ChibiDesign = {
   weapon: SABRE,
   offhand: SABRE,
   // Her cuts burn crimson: a white-hot edge, a crimson body and a pale pink fringe.
-  aura: { core: hex('#ff4a62'), edge: hex('#ffb8c8'), hot: hex('#fff4f6') },
+  aura: { core: hex('#ff5a6e'), edge: hex('#ffb8c8'), hot: hex('#fff4f6') },
 };
 
 export { BLADEMASTER };

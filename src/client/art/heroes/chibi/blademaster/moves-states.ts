@@ -3,15 +3,16 @@
  *
  *   hurt     3  a flinch: knocked back and sideways, head snapped back, eyes squeezed shut, both
  *               blades flung out loose, the coat-tails flicked forward
- *   kneel    4  (loop) low health: down on her right knee, the right sabre planted point down
- *               beside it with her hand on the hilt, the left held back low behind her, ready;
- *               her head hangs and she pants, a bead of sweat running down
+ *   kneel    4  (loop) low health: down on her left knee, the right foot planted ahead with its
+ *               knee up, the right sabre planted ahead of it with her hand on the hilt at her chest,
+ *               the left held back low behind her hip, point raised, ready; her head hangs and she
+ *               pants, a bead of sweat running down
  *   ko       6  (hold) a stagger, her knees give, and she falls back onto the floor, twisting
  *               so that she lies across the screen in every view; both sabres clatter down beside
  *               her
  *   victory  8  (hold) both blades twirled round in her raised hands, a glint at each tip, then
- *               crossed behind her back, the tips fanned out past her shoulders: chin up, a
- *               smirk and a wink
+ *               crossed behind her back, the tips fanned out past her shoulders: a hip cocked, her
+ *               head turned back to the viewer with a smirk and a wink
  *
  * The effects these clips paint for themselves (the sweat, the glint, the dust of her fall) are
  * `fx.extra` painters defined beside them. The flinch ends most of the way back into the battle
@@ -254,7 +255,7 @@ const TWIRL: ChibiPose = pose(S, { y: 3, lean: -3, twist: 0, head: -4, look: 6, 
  * (so side on the blades show behind her back), a hip cocked, chin up, her head turned back over
  * her shoulder to the viewer with a smirk and a wink.
  */
-const PROUD: ChibiPose = pose(AT_EASE, { x: 0, y: 1.5, lean: -2, twist: 6, tilt: 6, turn: -20, head: -6, look: 24, footF: [6, 0, 5.4], footB: [-5, 0, 4.6], handF: [-7, 13, -1], weapon: -8, roll: 50, yaw: -6, handB: [-7, 13, -1], weaponB: -8, rollB: 50, yawB: -6, face: 'smirk', wind: 0.5, lift: 0.4, sway: -0.6 });
+const PROUD: ChibiPose = pose(AT_EASE, { x: 0, y: 1.5, lean: -2, twist: 6, tilt: 6, turn: -20, head: -6, look: 24, footF: [6, 0, 5.4], footB: [-5, 0, 4.6], handF: [-7, 13, -1], weapon: -6, roll: 50, yaw: -6, handB: [-7, 13, -1], weaponB: -26, rollB: 52, yawB: -6, face: 'smirk', wind: 0.5, lift: 0.4, sway: -0.6 });
 
 const victory: ChibiPose[] = [
   // A breath first: the blades swung down out of her guard.

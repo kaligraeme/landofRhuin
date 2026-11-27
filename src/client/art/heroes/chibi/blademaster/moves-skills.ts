@@ -1,32 +1,38 @@
 /**
  * The Blademaster's skills, in the chibi pose format (rig.ts, ChibiPose), with effects of her own
- * painted through `fx.extra` (moves-core.ts has the shared ones: the crimson splash and X, the
- * violet-blue whirlwind). Wind-up frames come first: Executioner's and Cataclysm Blades' stretch
- * over the server's wind-up (0.4 and 0.6 s), the others take 0.06 s each, and the rest share the
- * clip's seconds. A weapon skill's clip is named after its hotbar slot.
+ * painted through `fx.extra` (moves-core.ts has the shared ones: her cut arcs, the crimson splash,
+ * X and floor shock, the violet-blue whirlwind). Wind-up frames come first: Executioner's and
+ * Cataclysm Blades' stretch over the server's wind-up (0.4 and 0.6 s), the others take 0.06 s
+ * each, and the rest share the clip's seconds. A weapon skill's clip is named after its hotbar slot.
  *
  *   special   7  (1 wind-up) Rising Slash: dropped into a deep crouch with both sabres low
- *                behind her, then both ripped up through the foe in a rising crimson arc as she
- *                springs off the floor, a splash of sparks at the top, and a light landing
+ *                behind her, then both ripped up through the foe in rising crimson arcs as she
+ *                springs off the floor (face on, two tall crescents either side of her like wings),
+ *                speed lines under her feet, a splash of sparks at the top, and a light landing
  *   q        10  (1 wind-up) Whirlwind: coiled to her left, then two full turns with both arms
- *                flung out and the blades level, inside a violet-blue vortex with crimson streaks
- *                whipping round in it and crimson trails behind both blade tips, then she slows into
- *                her stance as the wind dies
- *   e         8  (1 wind-up) Blademaster's Lunge: a coil, then a long, low lunge, both blades
- *                trailing back like wings, crimson afterimages and speed lines behind her; at the
- *                end both blades whip forward in a scissor as she skids to a stop, boots ploughing
- *                the floor. The server moves her, so it plays in place.
- *   r        10  (3 wind-up) Executioner: both blades raised high and crossed over her head,
- *                drawn up on her toes, a crimson glow gathering where they cross (the wind-up), then
- *                both brought down at once: a great crimson X cut into the air, a splash of sparks
- *                and a shock on the floor
+ *                flung out and the blades level, inside three broad bands of violet-blue wind with
+ *                crimson streaks whipping round in it and crimson trails behind both blade tips,
+ *                then she slows into her stance as the wind dies
+ *   e         8  (1 wind-up) Blademaster's Lunge: a coil, then a long lunge so low her body is
+ *                nearly level, the lead knee far forward, the back leg straight, both blades
+ *                trailing low like wings; afterimages of her washed crimson and long speed lines
+ *                behind her; at the end both blades whip forward in a scissor as she skids to a
+ *                stop, boots ploughing the floor. The server moves her, so it plays in place.
+ *   r        10  (3 wind-up) Executioner: both blades raised high and crossed over her head on her
+ *                toes, then a hop up off the floor, a crimson glow gathering where they cross (the
+ *                wind-up); then she drops and brings both down at once: a giant crimson X from over
+ *                her head to under the floor, white-hot where its strokes cross, a spray of crimson
+ *                and a shock rolling out along the floor; she holds the slam, then rises
  *   ult      14  (4 wind-up) Cataclysm Blades: arms spread low with the blades pointing out, she
- *                gathers a huge violet-blue whirlwind that lifts her coat and hair (the wind-up),
- *                then a ruinous spin inside it, crimson slash marks cut everywhere round her, and a
- *                final pose with both blades swept out low as a shock rolls out and the wind dies
+ *                gathers a huge violet-blue funnel of wind that lifts her coat and hair (the
+ *                wind-up), then a ruinous spin inside it, a ring of wind whirling on the floor and
+ *                long crimson slash marks cut all round her; she ends crouched wide with both blades
+ *                swept out low to either side, the coat-tails flaring, as a shock rolls out and the
+ *                wind dies
  *   cast      8  (2 wind-up) role skills (Bloodrush, Second Wind) and the Elixir: the blades
- *                crossed before her, tips up past her face, a crimson flare pouring up her body
- *                and motes rising, then the blades lowered back into her stance
+ *                crossed before her chest under her chin, a crimson flare climbing her body from a
+ *                sigil on the floor past her head, motes rising, then the blades swept apart and
+ *                lowered back into her stance
  *
  * The poses build on the battle stance (moves-core.ts READY); each clip starts from it
  * (`fromReady`) and its last frames ease back into it (`settle`), so the loop takes over smoothly.

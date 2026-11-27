@@ -7,20 +7,25 @@
  * hair's `wind`/`lift`/`phase`.
  *
  *   idle    8  at ease, her weight on her back foot and a hip cocked, the right sabre resting back
- *              on her shoulder and the left hanging point down beside her: a slow breath, a blink,
- *              the upright lock on her crown bobbing, the coat-tails swaying
- *   battle  8  low and coiled like a cat about to spring: knees deep, the right sabre held low and
- *              forward, the left raised ahead of her chest, the two crossing in a scissor; she
- *              rocks on the balls of her feet, hair and coat a frame behind
+ *              on her shoulder and the left held reversed along her forearm by her hip, its point
+ *              up behind her: a slow breath, a blink, the upright lock on her crown bobbing, the
+ *              coat-tails swaying
+ *   battle  8  low and coiled like a cat about to spring: hips dropped, knees deep, her body
+ *              pitched forward and her head low, the right sabre held forward at eye height, the
+ *              left reversed and low along her forearm, its point back; she rocks on the balls of
+ *              her feet, hair and coat a frame behind
  *   move    8  a fast, low sprint, both sabres trailing back from her hips like wings, the coat-tails
  *              streaming flat and the upright lock springing
  *   atk1    7  (1 wind-up) Twin Slash I: the right sabre wound up high behind her right shoulder and
  *              ripped down across her body, a crimson arc, a splash of crimson sparks
- *   atk2    7  (1 wind-up) Twin Slash II: the left sabre the same way from high over her left
- *              shoulder, down across to her right, her body turning through
+ *   atk2    7  (1 wind-up) Twin Slash II: the off-hand's answer, the other way: the left sabre drawn
+ *              down and back past her hip, then ripped up in a rising reverse diagonal to high in
+ *              front as she rises onto her toes, her body twisting through and the coat swinging
+ *              the opposite way from atk1
  *   atk3    9  (2 wind-up) Twin Slash III: coiled, a full turn with both sabres held out level
- *              (a ring of crimson round her), both raised high and spread, then cut down crossing in
- *              an X in front of her: a crimson X, a burst of sparks, dust
+ *              (a ring of crimson round her), both flung wide, then swept flat across in front of
+ *              her at her waist, the arms crossing: two crimson sweeps crossing ahead of her, a
+ *              burst of sparks, dust (the crimson X is Executioner's alone)
  *
  * Each blow has an anticipation, a smear frame, a hit frame and a recovery into the battle stance,
  * the coat and hair streaming hardest a frame after the blow and floating up as she stops. A cut
@@ -29,9 +34,12 @@
  * then fades. Raised sword hands go beside her head and out to that side (`handF` about
  * `[-7, -8, 13]`), clear of her face side on and from the front.
  *
- * Her effects: her cuts burn crimson (the design's aura: a white-hot edge, a crimson body and a
- * pale pink fringe), with crimson splashes of sparks where they land (`splash`) and a crimson X
- * where both blades cross (`crossMark`); her spins raise a violet-blue whirlwind (`vortex`).
+ * Her effects: her cuts leave arcs of her own (`cut`, through `smear` and `smearB`: wider than
+ * her reach, hot crimson with a pale pink rim and a white-hot line, opaque at the blade), level
+ * sweeps for flat cuts (`sweepArc`), crimson splashes of sparks where they land (`splash`), a
+ * crimson X where both blades cross (`crossMark`) and a shock rolling along the floor (`quake`);
+ * her spins raise a violet-blue whirlwind of broad bands (`vortex`) with her blade tips' trails
+ * (`tipTrails`) inside it.
  */
 import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
