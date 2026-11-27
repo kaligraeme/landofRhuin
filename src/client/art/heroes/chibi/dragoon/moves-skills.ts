@@ -537,8 +537,9 @@ const cone =
  * Crisp afterimages of his whole silhouette as painted (strength k): `n` copies trailing a stride
  * apart behind him on screen (however the charge runs in this view: foreshortened toward or away
  * from the viewer), each flat violet with a pale lilac rim round its outline, at about 55%, 35%
- * and 15%, so his fins, cape and couched lance read in every echo. Each shows only where it sticks
- * out past him and the nearer echoes, so they step back in clean layers; they lie under the figure.
+ * and 15%, so his helm's wings, cape and couched lance read in every echo. Each shows only where it
+ * sticks out past him and the nearer echoes, so they step back in clean layers; they lie under the
+ * figure.
  */
 const echoes =
   (k: number, n = 3, gap = 26) =>
