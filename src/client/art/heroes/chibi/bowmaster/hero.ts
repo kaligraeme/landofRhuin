@@ -1,0 +1,80 @@
+/**
+ * The Bowmaster as a chibi hero: her design (design.ts) and moves (moves-core.ts, moves-skills.ts,
+ * moves-states.ts) put together with her clip timing, frame boxes and scale. Registered in
+ * ../index.ts.
+ */
+import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
+import type { ChibiDesign } from '../design.js';
+import { chibiHero, paintChibi } from '../painter.js';
+import type { ChibiPose } from '../rig.js';
+import { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SLIDING, BOWMASTER_SNARE, BOWMASTER_TWIRL, BOWMASTER_TWIRL_SLIDING, BOWMASTER_VOLLEY } from './design.js';
+import { CORE_MOVES } from './moves-core.js';
+import { SKILL_MOVES } from './moves-skills.js';
+import { STATE_MOVES } from './moves-states.js';
+
+/**
+ * Her clip timing (frame counts match her moves files). Her weapon skills: `special` Charged Shot
+ * (its three wind-up frames stretch over the server's 0.6 s draw), `q` Volley, `e` Snare Trap,
+ * `r` Fan of Arrows, `ult` Rain of Ruin; `cast` her role skills (Vault, Field Dressing) and the
+ * Elixir. The basic attack has no server wind-up, so each Quick Arrow is loosed after a single
+ * wind-up frame (0.06 s), close behind the game's own arrow.
+ */
+const TIMING: Record<ChibiClip, ClipTiming> = {
+  idle: { frames: 8, seconds: 1.8, windup: 0 },
+  battle: { frames: 8, seconds: 0.9, windup: 0 },
+  move: { frames: 8, seconds: 0.55, windup: 0 },
+  atk1: { frames: 7, seconds: 0.38, windup: 1 },
+  atk2: { frames: 7, seconds: 0.38, windup: 1 },
+  atk3: { frames: 9, seconds: 0.44, windup: 1 },
+  special: { frames: 8, seconds: 0.55, windup: 3 },
+  q: { frames: 9, seconds: 0.6, windup: 2 },
+  e: { frames: 7, seconds: 0.5, windup: 2 },
+  r: { frames: 8, seconds: 0.5, windup: 1 },
+  ult: { frames: 12, seconds: 0.95, windup: 3 },
+  cast: { frames: 8, seconds: 0.6, windup: 1 },
+  hurt: { frames: 3, seconds: 0.3, windup: 0 },
+  kneel: { frames: 4, seconds: 1.6, windup: 0 },
+  ko: { frames: 6, seconds: 0.9, windup: 0 },
+  victory: { frames: 8, seconds: 1.6, windup: 0 },
+};
+
+const MOVES = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
+
+/**
+ * Clips painted with a variant of her design: the bow raised over her head for Volley, the snare
+ * in her hand for Snare Trap, five arrows on the string for Fan of Arrows, the dark arrow and her
+ * effects turned violet-black for Rain of Ruin, and the arrow held at its middle to twirl for the
+ * victory.
+ */
+const VARIANTS: Partial<Record<ChibiClip, ChibiDesign>> = { q: BOWMASTER_VOLLEY, e: BOWMASTER_SNARE, r: BOWMASTER_FAN, ult: BOWMASTER_RUIN, victory: BOWMASTER_TWIRL };
+
+/** Single frames painted with a variant of their own: the frame her hood slides back off her hair, between worn up and worn down. */
+const FRAME_VARIANTS: Partial<Record<ChibiClip, Record<number, ChibiDesign>>> = { ko: { 2: BOWMASTER_SLIDING }, victory: { 5: BOWMASTER_TWIRL_SLIDING } };
+
+/**
+ * Frames: side on there is room ahead of her for the streaks of her shots (the Charged Shot's runs
+ * about 120 px past her) and behind for her fall when knocked out; toward and away from the viewer
+ * she stands centred, with room below for streaks flying toward the viewer and above for Volley's
+ * and Rain of Ruin's, loosed at the sky (away from the viewer these climb highest). The game crops
+ * every frame to what is painted. She stands about 80 px tall: at the Dark Knight's 2.1 tiles per
+ * 84 px, 2 tiles in game.
+ */
+const FRAMES = {
+  side: { w: 224, h: 208, ax: 72, ay: 188 },
+  front: { w: 136, h: 212, ax: 68, ay: 172 },
+  back: { w: 136, h: 232, ax: 68, ay: 208 },
+};
+
+const BASE = chibiHero(BOWMASTER, MOVES, TIMING, FRAMES, 2.1 / 84, 80);
+
+/**
+ * The Bowmaster: `chibiHero`'s hero (its checks, timing, frames and poses, and her base design for
+ * tools and tests), painting the clips listed in VARIANTS with their own variant of her design.
+ */
+export const BOWMASTER_HERO: ChibiHero = {
+  ...BASE,
+  paint: (clip, i, view) => {
+    const k = Math.max(0, Math.min(i, MOVES[clip].length - 1));
+    return paintChibi(FRAME_VARIANTS[clip]?.[k] ?? VARIANTS[clip] ?? BOWMASTER, MOVES[clip][k] as ChibiPose, view, FRAMES[view]);
+  },
+};
