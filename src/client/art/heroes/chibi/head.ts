@@ -18,7 +18,8 @@
  * Facial hair and hair worn up are painted with the head too: a beard's growth over the jaw and
  * up the cheeks (its hanging tresses sort with the body, as long hair does), a moustache under the
  * nose, and buns, twists and updos standing on the hair. Gear over the head (a hood worn up, a
- * helm: see headgear.ts) can cover hair (`HeadPiece.covers`), which is then not painted.
+ * helm: see headgear.ts) can cover hair (`HeadPiece.covers`), which is then not painted, but for
+ * long hair, which comes out from under the gear's edge (`hairItems`).
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
@@ -983,9 +984,21 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
     };
   };
   const items: DrawItem[] = [];
-  const shown = (t: { yaw: number; pitch: number; dir: V3 }): boolean => !covered(onShell(d, t.yaw, t.pitch, 0.9), t.dir);
-  long?.back?.forEach((t, i) => shown(t) && items.push(item([solve(t, i * 1.9)])));
-  long?.front?.forEach((t, i) => shown(t) && items.push(item([solve(t, 3.1 + i * 2.3)])));
+  // Long hair rooted under gear worn over the head comes out from under its edge: its root slides
+  // down the hair's shell until it is clear of the gear (below a helm's edge), or, if it never is
+  // (under a hood worn up), it is not painted.
+  const rooted = <T extends { yaw: number; pitch: number; dir: V3 }>(t: T): T | null => {
+    for (let pitch = t.pitch; pitch >= -60; pitch -= 3) if (!covered(onShell(d, t.yaw, pitch, 0.9), t.dir)) return pitch === t.pitch ? t : { ...t, pitch };
+    return null;
+  };
+  long?.back?.forEach((t, i) => {
+    const r = rooted(t);
+    if (r) items.push(item([solve(r, i * 1.9)]));
+  });
+  long?.front?.forEach((t, i) => {
+    const r = rooted(t);
+    if (r) items.push(item([solve(r, 3.1 + i * 2.3)]));
+  });
   const bd = d.beard;
   if (bd?.hang?.length) {
     // A beard's tresses hang from the jaw's shell and lie over the chest, each sorted on its own.
@@ -996,11 +1009,12 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
       const root = hero(onBeard(d, bd, t.yaw, t.pitch, 0.9));
       const side = dirIn(fr, Math.cos(rad(t.yaw)) * 0.4, 0, Math.sin(rad(t.yaw)));
       const pts = strand(pose, { root, dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 0.35, seed: 0.5 + i * 2.7, avoid: over, pad: bd.lie ?? 1.2, axis: rig.pelvis.o, view, side, flip: t.flip });
-      items.push(item([{ pts, w: t.w, taper: t.taper ?? 0.5, flip: t.flip }], undefined, look));
+      // Sorted against a held item where it crosses one (see DrawItem.cross).
+      items.push({ ...item([{ pts, w: t.w, taper: t.taper ?? 0.5, flip: t.flip }], undefined, look), cross: { pts, w: t.w } });
     });
   }
-  const tail = long?.tail;
-  if (tail && shown(tail)) {
+  const tail = long?.tail ? rooted(long.tail) : null;
+  if (tail) {
     // The tail: a thick tress from the tie with a thinner one either side of it, and the tie
     // round its root with the cord's loose ends.
     const across = norm3(cross3(dirIn(fr, tail.dir[0], tail.dir[1], tail.dir[2]), fr.u));

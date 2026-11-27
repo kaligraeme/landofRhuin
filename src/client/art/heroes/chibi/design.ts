@@ -241,7 +241,9 @@ export interface HeadDesign {
  * about -40 is under the chin), and hang, lie over the chest, sway and stream as long hair does
  * (see LongHair: they answer to `wind`, `lift`, `flare`, `sway` and `phase`, by their own `give`),
  * each sorted with the body on its own: in front of the chest from the front and the side, hidden
- * by the body from behind except where it shows beside the neck.
+ * by the body from behind except where it shows beside the neck. Where a tress crosses a held item
+ * on screen it sorts by which of the two is nearer there (`DrawItem.cross`): a staff held across
+ * the chest passes behind a beard lying on it, one held out in front passes over it.
  */
 export interface Beard {
   /** Its material (default the hair's). */
@@ -363,6 +365,13 @@ export const HAIR_TAG = 4;
 export interface DrawItem {
   z: number;
   draw: () => void;
+  /**
+   * A strand hanging over the body (a beard's tress: its points, hero space, and its half-width)
+   * that sorts against what the hands hold where they cross on screen, rather than by its own
+   * depth alone: the painter puts it just in front of or behind each held item it crosses, by
+   * which of the two is nearer the viewer where they cross.
+   */
+  cross?: { pts: readonly V3[]; w: number };
 }
 
 /**
@@ -390,8 +399,10 @@ export interface HeadPiece {
    * tress, a bun or a tail grows (a point on the hair's shell, head space) and which way it grows
    * from there (head space), true if that hair is under the gear and would only poke through it,
    * so it is not painted. Hair that comes out from under its edge (a fringe hanging from under a
-   * hood or a brow band) is still painted and shows where it comes out. Null this frame if it
-   * covers nothing (a hood worn down).
+   * hood or a brow band) is still painted and shows where it comes out. Long hair (`LongHair`'s
+   * tresses and tail) rooted under it comes out from under its edge: its root slides down the
+   * hair's shell until this says it is uncovered (it is left out only if it never is). Null this
+   * frame if it covers nothing (a hood worn down).
    */
   covers?: (ctx: PieceContext, head: Frame3) => ((p: V3, dir: V3) => boolean) | null;
 }

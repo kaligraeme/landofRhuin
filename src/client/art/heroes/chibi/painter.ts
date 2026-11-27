@@ -148,12 +148,73 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
 
   for (const piece of d.outfit) for (const it of piece(ctx)) items.push(it);
 
+  // A beard's tresses sort against what the hands hold where they cross it on screen (a staff held
+  // across the chest passes behind a beard lying on it; one held out in front passes over it).
+  const held: Crossing[] = [];
+  if (!pose.drop) held.push({ z: wZ, a: add3(w.o, w.u, Math.min(0, d.weapon.reach[0], d.weapon.haft?.[0] ?? 0)), b: add3(w.o, w.u, d.weapon.reach[1]) });
+  if (off && inHand) held.push({ z: bZ, a: add3(wB.o, wB.u, Math.min(0, off.reach[0])), b: add3(wB.o, wB.u, off.reach[1]) });
+  if (held.length) for (const it of items) if (it.cross) it.z = crossZ(ctx, it.cross, it.z, held);
+
   items.sort((a, b) => a.z - b.z);
   for (const it of items) it.draw();
   c.outline(INK);
   closePinholes(c);
   paintFx(ctx, d, pose.fx ?? {}, torsoTrue + up - 3);
   return c.flatten();
+}
+
+/** A held item as a line from `a` to `b` (hero space), and the depth it is sorted at. */
+interface Crossing {
+  z: number;
+  a: V3;
+  b: V3;
+}
+
+/** The closest points of two screen segments: how far along each (0 to 1) and how far apart. */
+function closest2(a: Vec, b: Vec, p: Vec, q: Vec): { s: number; t: number; d: number } {
+  const ab: Vec = [b[0] - a[0], b[1] - a[1]];
+  const pq: Vec = [q[0] - p[0], q[1] - p[1]];
+  const den = ab[0] * pq[1] - ab[1] * pq[0];
+  if (Math.abs(den) > 1e-9) {
+    // Where the lines cross, if that is on both segments.
+    const s = ((p[0] - a[0]) * pq[1] - (p[1] - a[1]) * pq[0]) / den;
+    const t = ((p[0] - a[0]) * ab[1] - (p[1] - a[1]) * ab[0]) / den;
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) return { s, t, d: 0 };
+  }
+  // Otherwise the nearest of an end of one to the other.
+  const onSeg = (o: Vec, d: Vec, x: Vec): number => Math.max(0, Math.min(1, ((x[0] - o[0]) * d[0] + (x[1] - o[1]) * d[1]) / (d[0] * d[0] + d[1] * d[1] || 1)));
+  const dist = (o: Vec, d: Vec, k: number, x: Vec): number => Math.hypot(o[0] + d[0] * k - x[0], o[1] + d[1] * k - x[1]);
+  const options = [
+    { s: 0, t: onSeg(p, pq, a) },
+    { s: 1, t: onSeg(p, pq, b) },
+    { s: onSeg(a, ab, p), t: 0 },
+    { s: onSeg(a, ab, q), t: 1 },
+  ].map((o) => ({ ...o, d: dist(a, ab, o.s, [p[0] + pq[0] * o.t, p[1] + pq[1] * o.t]) }));
+  return options.reduce((m, o) => (o.d < m.d ? o : m));
+}
+
+/**
+ * The depth to sort a hanging strand at against held items (see DrawItem.cross): where it
+ * crosses one on screen (within its half-width and a pixel), just in front of the item if the
+ * strand is nearer the viewer there, just behind it if not; its own depth where it crosses none.
+ */
+function crossZ(ctx: PieceContext, strand: { pts: readonly V3[]; w: number }, z: number, held: readonly Crossing[]): number {
+  const { proj, depth } = ctx;
+  let out = z;
+  for (const h of held) {
+    const A = proj(h.a);
+    const B = proj(h.b);
+    let best: { d: number; nearer: boolean } | null = null;
+    for (let i = 0; i + 1 < strand.pts.length; i++) {
+      const p = strand.pts[i] as V3;
+      const q = strand.pts[i + 1] as V3;
+      const c = closest2(A, B, proj(p), proj(q));
+      if (c.d > strand.w + 1 || (best && c.d >= best.d)) continue;
+      best = { d: c.d, nearer: depth(lerp3(p, q, c.t)) > depth(lerp3(h.a, h.b, c.s)) };
+    }
+    if (best) out = best.nearer ? Math.max(out, h.z + 0.02) : Math.min(out, h.z - 0.02);
+  }
+  return out;
 }
 
 /** Fills one-pixel pinholes and notches left between outlined parts with ink, so the silhouette stays clean. */

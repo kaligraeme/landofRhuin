@@ -7,7 +7,9 @@
  * arms, a cowl or a beard pass over it); what hangs on the back is sorted with the upper body by
  * its depth (`PieceContext.upperZ`), so it hides behind the body seen from the front, but for what
  * shows over the shoulders and past the sides, and lies over the back, a cape or a cowl seen from
- * behind. Positions and directions are given in the chest frame ([forward, up, right] from the
+ * behind (a quiver by a point out toward its outer side, so it lies over a cowl from every side
+ * its back is seen from, and under a hood worn down; a slung item by its middle: push its `at`
+ * back past a thick cape). Positions and directions are given in the chest frame ([forward, up, right] from the
  * pelvis, up the spine), so they ride the torso as it leans and twists.
  */
 import { type DrawItem, type HeldItem, type Piece, type PieceContext } from './design.js';
@@ -166,7 +168,16 @@ export function quiver(spec: QuiverSpec): Piece {
     const mouth = at3(cf, ...spec.mouth);
     const foot = at3(cf, ...spec.foot);
     const items: DrawItem[] = strapPiece ? strapPiece(ctx) : [];
-    items.push({ z: ctx.upperZ(ctx.depth(lerp3(mouth, foot, 0.4))), draw: () => paintQuiver(ctx, spec, mouth, foot) });
+    // Sorted halfway out to its outer side (away from the back) where that is nearest the viewer,
+    // at its middle or its foot, so it lies over a cowl or a cape hanging down the back from every
+    // side it can be seen from behind, as it does seen straight from behind, but under a hood worn
+    // down, which lies over the top of the back and its mouth.
+    const outer = (p: V3, r: number): number => {
+      const off = sub3(p, cf.o);
+      return ctx.depth(add3(p, norm3(sub3(off, mul3(cf.u, dot3(off, cf.u)))), r));
+    };
+    const z = Math.max(outer(lerp3(mouth, foot, 0.4), (spec.r[0] + spec.r[1]) / 4), outer(foot, spec.r[1] / 2));
+    items.push({ z: ctx.upperZ(z), draw: () => paintQuiver(ctx, spec, mouth, foot) });
     return items;
   };
 }

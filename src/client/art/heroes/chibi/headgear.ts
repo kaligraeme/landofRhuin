@@ -7,6 +7,9 @@
  * the hood worn down is the exception, an outfit piece sorted with the body. Gear over the hair
  * says which hair it covers (`HeadPiece.covers`), and that hair is not painted: only hair at the
  * front that hangs down (a fringe, locks framing the face) comes out from under a hood or a helm.
+ * Long hair (a curtain, locks over the shoulders, a tail) rooted under the gear comes out from
+ * under its lower edge instead (head.ts `hairItems` slides its root down the hair's shell until
+ * the gear no longer covers it): down the back below a helm, out of a hood's opening.
  *
  * Every shape here is given in head space ([forward, up, right] from the head's centre, as the
  * design's skull, jaw and hair's shell are), so a piece sits on any head made to the same plan.
@@ -84,7 +87,8 @@ const HOOD_IN = GEAR_ID + 2;
  * neck, its opening turned up. The pose's `hood` says which ('up' or 'down', default the spec's
  * `worn`): give a design both. Worn up it covers the hair but for what grows at the front (a
  * fringe, locks at the temples), so locks at the crown and the back, long hair down the back, a
- * ponytail and buns are not painted. Its peak streams back in the wind. A cowl (pieces.ts `cowl`)
+ * ponytail and buns are not painted; long locks over the shoulders come out of its opening below
+ * the cheeks, framing the face. Its peak streams back in the wind. A cowl (pieces.ts `cowl`)
  * makes a hooded cape of it.
  */
 export function hood(spec: HoodSpec): { up: HeadPiece; down: Piece } {
