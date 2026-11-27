@@ -354,6 +354,13 @@ export type Face = 'stern' | 'shout' | 'grit' | 'hurt' | 'closed' | 'smirk';
  *    turn toward his right sways them to his left) and give them some wind and flare.
  *  - `phase`: where the ripple running down them is, in turns (advance it ~1/n per frame of an
  *    n-frame loop so the cloth flows; 0 if you do not care).
+ *  - A beard's hanging tresses answer to these too (by their own `give`: give them little, so a
+ *    beard sways rather than streams), and so does a cowl.
+ *
+ * Gear on the head
+ *  - `hood`: a hood (headgear.ts `hood`) worn 'up' over the head or 'down', fallen back onto the
+ *    shoulders behind the neck (default the design's: up unless it says otherwise). Hair under a
+ *    hood worn up is hidden; put it down where the face and hair should show (a fall, a victory).
  *
  * Effects
  *  - `fx`: see ChibiFx.
@@ -441,6 +448,7 @@ export interface ChibiPose {
   flare?: number;
   sway?: number;
   phase?: number;
+  hood?: 'up' | 'down';
   fx?: ChibiFx;
 }
 

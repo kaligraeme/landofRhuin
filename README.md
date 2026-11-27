@@ -343,7 +343,20 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
     layered cut); a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
     resting expression; and anything worn on the head (a hairpin, a circlet) as a head piece,
     which is given the head's frame as painted so it stays on the hair;
+  - facial hair and hair worn up (`head.ts`): a `beard` (laid out full, short or pointed by
+    `beard`) and a `moustache`, which hang from the jaw, sway with the wind and leave every
+    expression readable; `buns` (one or two buns, a twist, a high updo); and a springy upright
+    lock (a lock with `bob`);
+  - gear on the head (`headgear.ts`): a `hood` worn up over the hair or down on the shoulders (the
+    pose's `hood` says which), an open-faced `helm` (a brow band, cheek guards, a ridge, scales
+    and swept-back `fins`) and a `circlet` with a gem; gear over the hair hides the hair under
+    it, but for a fringe that hangs out from under its edge;
   - the limbs and boots (`BodyDesign`; a boot's `foot` can taper a soft boot to a point);
+  - armour and things on the back (`pieces.ts`, `armour.ts`, `back.ts`): a `cowl` (a short
+    hooded cape over the shoulders and upper arms), a gorget (a closed `collar` with `lames`),
+    scaled pauldrons (`plates` with `scales`) and a scaled breastplate (`scaleAt` in the
+    design's `torso`), a `quiver` of arrows, a `strap` or bandolier across the chest, and any
+    held item `slung` on the back (a sheathed sword, a shield);
   - the body and outfit pieces (`pieces.ts`): pauldrons, a collar, a skirt of panels (a coat, a
     robe, a split skirt; `legs` keeps a long one clear of striding legs), a cape, a scarf (its
     wrap with the head pieces, its tails with the outfit; they can taper, wave and climb behind
@@ -377,8 +390,8 @@ and the same every time, stands on the ground, fits its frame and changes from f
 that it stands as tall as its height says and paints fast enough. It also pins a few of the Dark
 Knight's frames pixel for pixel, so engine work for one hero cannot change another by accident.
 The test mannequins in `test/` (`chibi-mannequins.ts`, `chibi-gear-mannequin.ts`,
-`chibi-combined-mannequins.ts`, `chibi-kit-mannequins.ts`) show every engine option at work, for
-checking new ones.
+`chibi-combined-mannequins.ts`, `chibi-kit-mannequins.ts`, `chibi-body-mannequins.ts`) show every
+engine option at work, for checking new ones.
 
 ## Music
 

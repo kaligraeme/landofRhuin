@@ -265,6 +265,60 @@ export class Part {
     return this;
   }
 
+  /**
+   * A flat polygon in hero space (a helm's fin, a buckle, a plate's face), filled with its true
+   * depth at every pixel, so it passes in front of and behind the part's other shapes where it
+   * should. It is lit from its normal on whichever side faces the viewer, plus `bias` (or by
+   * `light` outright), and lifted `lift` toward the viewer in the depth test (as `blobs` lifts a
+   * hit). Returns the side's normal (hero space), for edges and the like.
+   */
+  facet(pts: readonly V3[], m: Mat, bias = 0, id = 0, light?: number, lift = 0): V3 {
+    const cam = this.cam;
+    // The normal by Newell's method, which is steady for any simple polygon.
+    let nx = 0;
+    let ny = 0;
+    let nz = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i] as V3;
+      const b = pts[(i + 1) % pts.length] as V3;
+      nx += (a[1] - b[1]) * (a[2] + b[2]);
+      ny += (a[2] - b[2]) * (a[0] + b[0]);
+      nz += (a[0] - b[0]) * (a[1] + b[1]);
+    }
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    let n: V3 = [nx / nl, ny / nl, nz / nl];
+    if (cam.facing(n) < 0) n = [-n[0], -n[1], -n[2]];
+    const lit = light ?? cam.light(n) + bias;
+    // The plane's depth at a pixel: solve for the depth of the point on it that lands there.
+    const w = cam.world(n);
+    const W: V3[] = pts.map((p) => cam.world(p));
+    const w0 = W[0] as V3;
+    let zMin = Infinity;
+    let zMax = -Infinity;
+    let zSum = 0;
+    for (const q of W) {
+      zMin = Math.min(zMin, q[2]);
+      zMax = Math.max(zMax, q[2]);
+      zSum += q[2];
+    }
+    const den = w[1] * DEPTH + w[2];
+    const zMid = zSum / Math.max(1, W.length);
+    const z = (x: number, y: number): number => {
+      if (Math.abs(den) < 0.08) return zMid + lift;
+      const X = x + 0.5 - cam.ax;
+      const Z = (w[2] * w0[2] - w[0] * (X - w0[0]) - w[1] * (cam.ay - (y + 0.5) - w0[1])) / den;
+      return Math.max(zMin - 0.5, Math.min(zMax + 0.5, Z)) + lift;
+    };
+    this.poly(
+      pts.map((p) => cam.proj(p)),
+      m,
+      lit,
+      z,
+      id,
+    );
+    return n;
+  }
+
   /** A one-pixel line (edges, seams, straps). */
   line(a: Vec, b: Vec, m: Mat, light: number, z = 0, id = 0, force = false): this {
     const n = Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]))));
@@ -275,9 +329,11 @@ export class Part {
   /**
    * Ray-casts ellipsoids given in a frame (each `c` and radii `r` in the frame's own axes) through
    * the camera. `shade` picks the material for a hit, or null to cut the surface away there (the
-   * ray then tries the inside of the far wall: an open collar shows its lining).
+   * ray then tries the inside of the far wall: an open collar shows its lining). A hit's `lift`
+   * moves it that far toward the viewer in the part's depth test (gear worn over hair lifts its
+   * outside over the hair's locks, which stand a little proud of their true depth).
    */
-  blobs(fr: Frame3, list: readonly Blob[], shade: (h: Hit) => { m: Mat; light?: number; id?: number } | null): this {
+  blobs(fr: Frame3, list: readonly Blob[], shade: (h: Hit) => { m: Mat; light?: number; id?: number; lift?: number } | null): this {
     const cam = this.cam;
     const s = this.s;
     // A pixel's ray in frame coordinates: origin o0 + x * ex + y * ey, direction d.
@@ -329,7 +385,7 @@ export class Part {
             if (!hit) continue;
             const light = hit.light ?? cam.light(dirIn(fr, n[0], n[1], n[2]));
             // World depth of the hit: the ray's parameter is its depth toward the viewer.
-            this.plot(x, y, hit.m, light, t, hit.id ?? b.id);
+            this.plot(x, y, hit.m, light, t + (hit.lift ?? 0), hit.id ?? b.id);
             break;
           }
         }

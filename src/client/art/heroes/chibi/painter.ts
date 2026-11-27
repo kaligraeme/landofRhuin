@@ -98,8 +98,9 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
         part.capsule(proj(a), proj(b), B.neck.r, B.neck.r, B.neck.mat, -0.25, depth(a), depth(b), 5);
       }),
   });
-  // Long hair hangs from the head but sorts with the body: behind the back, or over it.
-  for (const it of hairItems(ctx, d.head, B, headFr)) items.push(it);
+  // Long hair (and a beard's tresses) hang from the head but sort with the body: behind the back,
+  // or over it. Hair under gear worn over the head (the head pieces' `covers`) is left out.
+  for (const it of hairItems(ctx, d.head, B, headFr, d.headPieces)) items.push(it);
 
   // Arms and hands. A hand on the weapon (or on the off-hand item) goes over its grip.
   const w = rig.weapon;

@@ -23,6 +23,11 @@ export interface Lock {
   give?: number;
   /** Where along it (0 root to 1 tip) the clump is widest (default 0.3). */
   belly?: number;
+  /**
+   * A springy lock (a single upright lock on the crown, an ahoge) sways to and fro by this much
+   * as the pose's `phase` runs (scaled by `give`, as the wind is): about 0.6 bobs it in a run.
+   */
+  bob?: number;
 }
 
 /** Eyes, brows and the rest of a face, in head space (the right eye; the left mirrors it). */
@@ -216,6 +221,74 @@ export interface HeadDesign {
   face: FaceDesign;
   /** Hair longer than the locks: a curtain down the back, locks over the shoulders, a ponytail. */
   long?: LongHair;
+  /** A beard (head.ts `beard` lays one out: full, short or pointed). */
+  beard?: Beard;
+  /** A moustache under the nose. */
+  moustache?: Moustache;
+  /** Hair worn up: buns, a twist, a high updo (painted with the head, on its hair). */
+  buns?: readonly Bun[];
+}
+
+/**
+ * A beard: hair grown over the jaw and, for a longer one, tresses hanging from it. The part on the
+ * jaw is a shell `thick` pixels clear of the jaw (painted with the head, in its depth test, so it
+ * turns with it and hides behind it seen from behind), growing below a line from the sideburns
+ * (`side`, head-space height at the ear) to beside the mouth (`cheek`, the height at the front of
+ * the cheek), and leaving the lips bare in a patch `mouth` wide and high (half-sizes; [0, 0] grows
+ * over them). The face's mouth is drawn over the beard wherever it reaches, so every expression
+ * reads through it. The hanging tresses (`hang`) are rooted on that shell as locks are on the
+ * hair's (`yaw` round the jaw from the chin, 90 his right; `pitch` up from the jaw's middle, so
+ * about -40 is under the chin), and hang, lie over the chest, sway and stream as long hair does
+ * (see LongHair: they answer to `wind`, `lift`, `flare`, `sway` and `phase`, by their own `give`),
+ * each sorted with the body on its own: in front of the chest from the front and the side, hidden
+ * by the body from behind except where it shows beside the neck.
+ */
+export interface Beard {
+  /** Its material (default the hair's). */
+  mat?: Mat;
+  thick: number;
+  side: number;
+  cheek: number;
+  mouth: readonly [number, number];
+  /** How far round the jaw it grows from the chin (degrees, default 100: to the back of the jaw, under the ears). */
+  round?: number;
+  hang?: readonly Tress[];
+  /** How far clear of the chest the hanging tresses lie (default 1.2). */
+  lie?: number;
+}
+
+/**
+ * A moustache: two clumps of hair from under the nose (at `at`, head space [forward, up]; default
+ * a pixel under `face.noseAt`) out to either side over the corners of the mouth, `len` long and
+ * `w` thick, their tips drooping `droop` pixels (negative curls them up), painted with the head
+ * in front of the face. The mouth is drawn over it, so it never hides an expression.
+ */
+export interface Moustache {
+  mat?: Mat;
+  len: number;
+  w: number;
+  droop: number;
+  at?: readonly [number, number];
+}
+
+/**
+ * Hair worn up: a bun, a twist or a high updo, a ball of hair standing on the hair's shell at a
+ * yaw and pitch (as a lock's root: 0 the face, 90 his right, 180 the back; pitch up from the
+ * ears' level), `r` its radii [across, out from the head, across] (so [3, 3, 3] is a round bun
+ * and [3, 6, 3] a tall twist standing out), clumps of hair wound round it (`clumps` of them,
+ * twisting `twist` turns from its root to its top: about 0.3 for a bun, 1 or more for a twist),
+ * leaning `lean` (head space, the way its top tips, need not be unit length) and tied at its root
+ * with a band (`tie`) if given. Two buns are two of these. Painted with the head, in its depth
+ * test, so they turn with it.
+ */
+export interface Bun {
+  yaw: number;
+  pitch: number;
+  r: V3;
+  clumps?: number;
+  twist?: number;
+  lean?: V3;
+  tie?: { mat: Mat; r: number };
 }
 
 /** A limb's look: material and radii at its root and end. */
@@ -306,8 +379,28 @@ export type Piece = (ctx: PieceContext) => DrawItem[];
  * SIDE_LOOK in rig.ts), so they stay on the hair.
  */
 export interface HeadPiece {
-  blobs: (ctx: PieceContext, head: Frame3) => { frame: Frame3; blobs: readonly Blob[]; shade: (h: Hit) => { m: Mat; light?: number; id?: number } | null }[];
+  blobs?: (ctx: PieceContext, head: Frame3) => { frame: Frame3; blobs: readonly Blob[]; shade: (h: Hit) => { m: Mat; light?: number; id?: number; lift?: number } | null }[];
+  /**
+   * Paints anything else into the head's part, in its depth test, once its blobs, the neck and
+   * the hair are down (flat shapes such as a helm's fins: raster.ts `Part.facet`).
+   */
+  paint?: (ctx: PieceContext, part: Part, head: Frame3) => void;
+  /**
+   * Gear over the hair (a hood worn up, a helm) says which hair it covers: given where a lock, a
+   * tress, a bun or a tail grows (a point on the hair's shell, head space) and which way it grows
+   * from there (head space), true if that hair is under the gear and would only poke through it,
+   * so it is not painted. Hair that comes out from under its edge (a fringe hanging from under a
+   * hood or a brow band) is still painted and shows where it comes out. Null this frame if it
+   * covers nothing (a hood worn down).
+   */
+  covers?: (ctx: PieceContext, head: Frame3) => ((p: V3, dir: V3) => boolean) | null;
 }
+
+/**
+ * Shape ids in the head's part at or above this are gear over the head (a hood, a helm, a
+ * circlet): the eyebrows, which show through hair as drawn brows do, do not show through it.
+ */
+export const GEAR_ID = 500;
 
 /**
  * How an item is held in this frame, for its painter: the grip (where the hand holds it and its
