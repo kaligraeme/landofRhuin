@@ -11,27 +11,33 @@
  *              orb ahead of him at his brow, pulsing; a slow, steady sway rather than a bounce
  *   move    8  an old man's hurried run: short strides under the robe, a forward lean, the staff
  *              carried slanted ahead in his right hand, the beard, hair and robe streaming
- *   atk1    7  (1 wind-up) Arcane Bolt I: the staff drawn back upright, then flicked forward at
- *              the aim and a spark of teal light leaves the orb
+ *   atk1    7  (1 wind-up) Arcane Bolt I: the staff drawn back upright on his right, then flicked
+ *              forward at the aim and a spark of teal light leaves the orb
  *   atk2    7  (1 wind-up) Arcane Bolt II: a backhand, the staff in his right hand cocked low
- *              across to his left, then swept up and out to the aim in a short teal arc, the left
+ *              across to his left, then swept up and out to the aim in a broad teal arc, the left
  *              hand thrown open after the spark as it leaves the orb
- *   atk3    9  (2 wind-up) Arcane Bolt III: the staff raised in both hands while a ball of light
- *              swells in the orb, then a two-handed thrust that hurls it at the aim
+ *   atk3    8  (1 wind-up) Arcane Bolt III: the staff raised high on his right while a ball of
+ *              light swells in the orb, then a two-handed thrust that hurls it at the aim
  *
- * The bolt leaves the orb on the first frame after the wind-up (the frame the game fires the
- * projectile on), with a flash at the orb and a trail along the aim (`release`), which fades over
- * the next frames; the last frames ease back into the battle stance (`settle`). The skill and
+ * The server fires his bolts at once (no wind-up), so each has a single wind-up frame and the
+ * bolt leaves the orb on the frame after it (the frame the game draws the projectile from), with a
+ * flash at the orb and a short trail along the aim (`release`), which fades on the next frame; the
+ * game draws the bolt itself as it flies, so the clip never paints one away from the orb; the last frames ease back into the battle stance (`settle`). The skill and
  * state clips (moves-skills.ts, moves-states.ts) start from the stance (`fromReady`) and those
  * that hand back to it end in it.
  *
- * Side on the staff is held well ahead of him (the right hand about 15 forward of the neck) so
- * it stands clear of his face; front on its head is carried out to one side of his head (a roll
- * out to his right, or a yaw across to his left) so it never covers his face.
+ * Side on he faces right and turned toward the viewer, so whatever he holds on his right is drawn
+ * back over his head: a staff held upright there stands behind his face side on (over his hair)
+ * and beside his head toward the viewer, while one held up ahead of his face is held across to his
+ * left, as the battle stance holds it. Forward-aimed poses yaw the staff well across to his left,
+ * so toward and away from the viewer it angles out past his shoulder rather than pointing along
+ * the camera with its head on his beard or over his crown.
  */
 import type { RGB } from '../../paint.js';
 import { hex } from '../../paint.js';
-import { add3, type ChibiPose, clamp, type FxContext, mix, pose, solveRig, type V3, wave } from '../rig.js';
+import type { Vec } from '../../skeleton.js';
+import { scanPoly } from '../raster.js';
+import { add3, type ChibiPose, clamp, type FxContext, lerp, mix, pose, solveRig, type V3, wave, weaponAxes } from '../rig.js';
 import { SAGE } from './design.js';
 
 const BUILD = SAGE.build;
@@ -143,6 +149,49 @@ export const release = (p: ChibiPose, flash: number, trail: number, len = 44): C
   fx: { ...p.fx, flash: flash > 0 ? { k: flash, from: 'main', dir: AIM } : undefined, trail: trail > 0 ? { k: trail, from: 'main', dir: AIM, len } : undefined },
 });
 
+/**
+ * The arc the orb leaves as the staff spins (a twirl), painted along the orb's own path on screen
+ * rather than opened out to face the viewer as the engine's smear is: from the staff at `from`
+ * degrees to where the pose holds it (its roll and yaw as the pose's), a band `width` of the way in
+ * from the orb toward his hand (about 12 px at 1), white-hot along its outer edge, through the
+ * aura's core to a faint fringe, brightest at the orb and fading toward its tail; `k` its
+ * strength. Toward or away from the viewer, where a spin in the side plane is seen edge on, it is
+ * a streak along the staff beside his head rather than a ring round him.
+ */
+export const swoosh =
+  (from: number, width = 1, k = 1): Extra =>
+  (x) => {
+    if (k <= 0) return;
+    const p = x.rig.pose;
+    const to = p.weapon;
+    const o = x.rig.weapon.o;
+    const R = (W.tip ?? W.reach[1]) + 1;
+    const G = x.proj(o);
+    const n = Math.max(4, Math.ceil(Math.abs(to - from) / 4));
+    const pts = Array.from({ length: n + 1 }, (_, i) => {
+      const t = i / n;
+      const tip = add3(o, weaponAxes(lerp(from, to, t), p.roll ?? 0, p.yaw ?? 0).u, R);
+      const O = x.proj(tip);
+      const L = Math.hypot(O[0] - G[0], O[1] - G[1]);
+      const th = Math.min(L - 2, 12 * width * (0.35 + 0.65 * Math.sin((Math.min(1, t * 1.1) * Math.PI) / 2)));
+      return { O, L, r: [(O[0] - G[0]) / (L || 1), (O[1] - G[1]) / (L || 1)] as const, th, fade: k * (0.25 + 0.75 * Math.pow(t, 1.3)), back: x.behind(tip) };
+    });
+    const bands: [number, number, RGB, number][] = [
+      [0, 0.18, x.aura.hot, 1],
+      [0.18, 0.8, x.aura.core, 0.8],
+      [0.8, 1, x.aura.edge, 0.35],
+    ];
+    const at = (q: (typeof pts)[number], f: number): Vec => [q.O[0] - q.r[0] * q.th * f, q.O[1] - q.r[1] * q.th * f];
+    for (let i = 0; i < n; i++) {
+      const a = pts[i] as (typeof pts)[number];
+      const b = pts[i + 1] as (typeof pts)[number];
+      if (a.L < 4 || b.L < 4) continue;
+      for (const [f0, f1, col, al] of bands) {
+        scanPoly([at(a, f0), at(b, f0), at(b, f1), at(a, f1)], x.c.w, x.c.h, (px, py) => x.c.glow(px, py, col, al * b.fade, b.back));
+      }
+    }
+  };
+
 /** A point `along` the staff from his right hand in a pose, in hero space (its `turn` taken into account, as the camera does). */
 function onStaff(p: ChibiPose, along: number): V3 {
   const rig = solveRig(BUILD, p, GRIP2, W.haft);
@@ -206,10 +255,10 @@ export const AT_EASE: ChibiPose = plant({
   look: 3,
   footF: [3, 0, 4.6],
   footB: [-4, 0, 4.2],
-  handF: [18, 6, 6],
+  handF: [22, 6, 7],
   handB: [-7, 15, 3],
-  weapon: 8,
-  roll: 8,
+  weapon: 15,
+  roll: 9,
   yaw: 0,
   wind: 0.05,
   face: 'stern',
@@ -312,7 +361,7 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     handF: [4 - swing * 1.5, 15 - Math.abs(swing), 8],
     grip: -14,
     weapon: 34 + swing * 3,
-    roll: 14,
+    roll: 22,
     yaw: -6,
     handB: [1 + swing * 6, 13 - Math.abs(swing) * 2, 7.5],
     wind: 0.85,
@@ -333,11 +382,12 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
 export const settle = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => pose(mix(p, battle[0] as ChibiPose, k), over);
 
 /**
- * A pose with the staff tipped forward and down on his right, his hand at his chest. The way back
- * to the battle stance from a staff held upright on his right goes through it, so that toward the
- * viewer the orb passes under his chin on its way across to his left, never over his face.
+ * A pose with the staff tipped forward and down on his right, the orb low ahead of his belly. The
+ * way back to the battle stance from a staff held up on his right goes through it, so that toward
+ * the viewer the orb passes across below his beard, never over his face, and from behind it is
+ * hidden by his body rather than showing over his head.
  */
-export const dipped = (p: ChibiPose): ChibiPose => pose(p, { handF: [12, 10, 8], grip: -4, weapon: 74, roll: 8, yaw: -6 });
+export const dipped = (p: ChibiPose): ChibiPose => pose(p, { handF: [12, 10, 8], grip: -4, weapon: 112, roll: 6, yaw: -4 });
 
 /**
  * Out of the battle stance: k of the way from the first battle frame to a pose, then `over` on
@@ -347,53 +397,53 @@ export const dipped = (p: ChibiPose): ChibiPose => pose(p, { handF: [12, 10, 8],
  */
 export const fromReady = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => pose(mix(battle[0] as ChibiPose, p, k), over);
 
-// atk1: the staff drawn back upright, then flicked forward at the aim, its head stopping at his
-// brow well ahead of him (a staff, not a spear: it never comes down level).
-const A1_DRAW = pose(READY, { x: -1, y: 3, lean: 0, twist: 24, head: -2, handF: [2, 11, 9], grip: -4, grip2: 9, weapon: 4, roll: 10, yaw: -4, wind: 0.2, face: 'grit', fx: { rune: 0.8, extra: gather(0.8, 0) } });
-const A1_FLICK = pose(READY, { x: 2, y: 4, lean: 13, twist: 12, head: 3, handF: [9, 13, 6], grip: -4, grip2: 9, weapon: 60, roll: -8, yaw: -30, wind: 0.45, phase: 0.2, face: 'shout', fx: { rune: 1 } });
+// atk1: the staff drawn back upright on his right, behind his head side on and beside it toward
+// the viewer, then flicked forward at the aim, its head stopping at his brow well ahead of him (a
+// staff, not a spear: it never comes down level).
+const A1_DRAW = pose(READY, { x: -1, y: 3, lean: 0, twist: 18, head: -2, handF: [0, 9, 11], grip: -4, grip2: 9, weapon: -10, roll: 12, yaw: 0, wind: 0.2, face: 'grit', fx: { rune: 0.9, extra: both(ball(fromOrb(0.5), 3, 0.9), gather(0.8, 0)) } });
+const A1_FLICK = pose(READY, { x: 2, y: 4, lean: 13, twist: 12, head: 3, handF: [9, 13, 6], grip: -4, grip2: 9, weapon: 60, roll: -8, yaw: -36, wind: 0.45, phase: 0.2, face: 'shout', fx: { rune: 1 } });
 const A1_HOLD = pose(A1_FLICK, { y: 4.5, lean: 14, handF: [9, 13.5, 6], weapon: 62, wind: 0.55, phase: 0.35, face: 'grit', fx: { rune: 0.7 } });
 
 const atk1: ChibiPose[] = [
   A1_DRAW,
-  release(A1_FLICK, 1, 1, 30),
-  release(A1_HOLD, 0, 0.7, 56),
-  release(pose(A1_HOLD, { lean: 12, weapon: 58, wind: 0.4, lift: 0.2, phase: 0.5, face: 'stern', fx: { rune: 0.5 } }), 0, 0.3, 70),
+  release(A1_FLICK, 1, 1, 18),
+  release(A1_HOLD, 0, 0.45, 14),
+  pose(A1_HOLD, { lean: 12, weapon: 58, wind: 0.4, lift: 0.2, phase: 0.5, face: 'stern', fx: { rune: 0.5 } }),
   settle(A1_HOLD, 0.45, { wind: 0.3, lift: 0.2, phase: 0.65, face: 'stern', fx: { rune: 0.4 } }),
   settle(A1_HOLD, 0.75, { wind: 0.22, lift: 0.1, phase: 0.8, fx: { rune: 0.35 } }),
   settle(A1_HOLD, 0.92, { wind: 0.16, phase: 0.95, fx: { rune: 0.35 } }),
 ];
 
 // atk2: a backhand: the staff, in his right hand alone, cocked low across to his left, then
-// swept up and out to his right in a short teal arc, the left hand thrown open toward the aim.
+// swept up and out to his right in a broad teal arc, the left hand thrown open toward the aim.
+// On the way back it dips under his beard to cross to his left.
 const A2_COCK = pose(READY, { x: 0, y: 4, lean: 8, twist: 28, head: 1, look: -8, handF: [4, 15, 2], handB: [3, 13, 8], grip: -2, weapon: 112, roll: 0, yaw: -58, wind: 0.2, sway: -0.3, face: 'grit', fx: { rune: 0.8, extra: gather(0.8, 0.5) } });
-const A2_SWEEP = pose(READY, { x: 2, y: 4, lean: 12, twist: -2, head: 2, look: 0, handF: [10, 12, 9], handB: [12, 9, 5], grip: -2, weapon: 56, roll: 10, yaw: 4, wind: 0.5, sway: 0.3, phase: 0.2, face: 'shout', fx: { rune: 1, smear: { from: 112, roll: 0, yaw: -58, width: 0.45, alpha: 0.9 } } });
-const A2_HOLD = pose(A2_SWEEP, { y: 4.5, lean: 13, weapon: 54, yaw: 6, wind: 0.55, phase: 0.35, face: 'grit', fx: { rune: 0.7, smear: { from: 112, roll: 0, yaw: -58, width: 0.4, alpha: 0.35 } } });
+const A2_SWEEP = pose(READY, { x: 2, y: 4, lean: 12, twist: -2, head: 2, look: 0, handF: [10, 12, 9], handB: [12, 9, 5], grip: -2, weapon: 56, roll: 10, yaw: 10, wind: 0.5, sway: 0.3, phase: 0.2, face: 'shout', fx: { rune: 1, smear: { from: 90, roll: 4, yaw: -22, width: 0.95, alpha: 1 } } });
+const A2_HOLD = pose(A2_SWEEP, { y: 4.5, lean: 13, weapon: 54, yaw: 12, wind: 0.55, phase: 0.35, face: 'grit', fx: { rune: 0.7, smear: { from: 64, roll: 8, yaw: 2, width: 0.7, alpha: 0.55 } } });
 
 const atk2: ChibiPose[] = [
   A2_COCK,
-  release(A2_SWEEP, 1, 1, 30),
-  release(A2_HOLD, 0, 0.7, 56),
-  release(pose(A2_HOLD, { lean: 11, weapon: 52, wind: 0.4, lift: 0.2, phase: 0.5, face: 'stern', fx: { rune: 0.5 } }), 0, 0.3, 70),
-  // Back across to the stance, the staff's head dipped so that toward the viewer it passes under
-  // his chin rather than across his face.
-  settle(A2_HOLD, 0.45, { weapon: 70, wind: 0.3, lift: 0.2, phase: 0.65, face: 'stern', fx: { rune: 0.4 } }),
-  settle(A2_HOLD, 0.75, { weapon: 58, wind: 0.22, lift: 0.1, phase: 0.8, fx: { rune: 0.35 } }),
+  release(A2_SWEEP, 1, 1, 18),
+  release(A2_HOLD, 0, 0.45, 14),
+  pose(A2_HOLD, { lean: 11, weapon: 52, wind: 0.4, lift: 0.2, phase: 0.5, face: 'stern', fx: { rune: 0.5 } }),
+  // Back across to the stance, the staff's head dipped below his beard as it crosses.
+  settle(dipped(A2_HOLD), 0.15, { wind: 0.3, lift: 0.2, phase: 0.65, face: 'stern', fx: { rune: 0.4 } }),
+  settle(dipped(A2_HOLD), 0.7, { yaw: -40, wind: 0.22, lift: 0.1, phase: 0.8, fx: { rune: 0.35 } }),
   settle(A2_HOLD, 0.92, { wind: 0.16, phase: 0.95, fx: { rune: 0.35 } }),
 ];
 
-// atk3: the staff raised in both hands while a ball of light swells in the orb, then a lunging
+// atk3: the staff raised high on his right while a ball of light swells in the orb, the left hand
+// reaching open toward the aim (one wind-up frame: the server fires at once), then a lunging
 // two-handed thrust that hurls it at the aim.
-const A3_RAISE = pose(READY, { x: -2, y: 4, lean: -4, twist: 18, head: -4, look: -2, footF: [9, 0, 5.2], footB: [-9, 0, 4.6], handF: [1, 6, 9], grip: -4, grip2: 9, weapon: 14, roll: 2, yaw: -26, wind: 0.25, lift: 0.3, face: 'grit', fx: { rune: 0.9, extra: both(ball(fromOrb(1, [0, 1, 0]), 3, 0.9), gather(0.7, 0)) } });
-const A3_HIGH = pose(A3_RAISE, { y: 4.5, lean: -6, head: -6, handF: [0, 4, 9], weapon: 10, wind: 0.3, lift: 0.45, phase: 0.1, fx: { rune: 1, aura: 0.3, extra: both(ball(fromOrb(1, [0, 1, 0]), 5, 1), gather(1, 0.4, 11)) } });
-const A3_THRUST = pose(READY, { x: 4, y: 6, lean: 17, twist: 10, head: 3, look: -2, footF: [12, 0, 5.4], footB: [-9, 0, 4.6], handF: [11, 11, 6], grip: -4, grip2: 9, weapon: 64, roll: -6, yaw: -26, wind: 0.6, lift: 0, phase: 0.25, face: 'shout', fx: { rune: 1 } });
+const A3_RAISE = pose(READY, { x: -2, y: 4, lean: -5, twist: 14, head: -4, look: -2, footF: [9, 0, 5.2], footB: [-9, 0, 4.6], handF: [-1, 2, 12], handB: [11, 9, 6], grip: -4, weapon: -12, roll: 12, yaw: 0, wind: 0.3, lift: 0.4, phase: 0.1, face: 'grit', fx: { rune: 1, aura: 0.3, extra: both(ball(fromOrb(1, [0, 1, 0]), 5, 1), gather(1, 0.4, 11)) } });
+const A3_THRUST = pose(READY, { x: 4, y: 6, lean: 17, twist: 10, head: 3, look: -2, footF: [12, 0, 5.4], footB: [-9, 0, 4.6], handF: [11, 11, 6], grip: -4, grip2: 9, weapon: 64, roll: -6, yaw: -34, wind: 0.6, lift: 0, phase: 0.25, face: 'shout', fx: { rune: 1 } });
 const A3_HOLD = pose(A3_THRUST, { y: 6.5, lean: 18, handF: [11, 11.5, 6], weapon: 66, wind: 0.7, phase: 0.4, face: 'grit', fx: { rune: 0.7 } });
 
 const atk3: ChibiPose[] = [
   A3_RAISE,
-  A3_HIGH,
-  withExtra(release(A3_THRUST, 1.4, 1, 20), ball(fromOrb(12), 6, 1)),
-  withExtra(release(A3_HOLD, 0, 0.8, 40), ball(fromOrb(36), 5.5, 1)),
-  withExtra(release(pose(A3_HOLD, { lean: 15, weapon: 62, wind: 0.5, lift: 0.25, phase: 0.55, face: 'stern', fx: { rune: 0.5 } }), 0, 0.4, 60), ball(fromOrb(60), 5, 0.7)),
+  release(A3_THRUST, 1.4, 1, 20),
+  release(A3_HOLD, 0, 0.5, 16),
+  pose(A3_HOLD, { lean: 15, weapon: 62, wind: 0.5, lift: 0.25, phase: 0.55, face: 'stern', fx: { rune: 0.5 } }),
   settle(A3_HOLD, 0.35, { wind: 0.4, lift: 0.25, phase: 0.7, face: 'stern', fx: { rune: 0.45 } }),
   settle(A3_HOLD, 0.6, { wind: 0.3, lift: 0.15, phase: 0.85, fx: { rune: 0.4 } }),
   settle(A3_HOLD, 0.82, { wind: 0.22, lift: 0.05, phase: 1, fx: { rune: 0.35 } }),

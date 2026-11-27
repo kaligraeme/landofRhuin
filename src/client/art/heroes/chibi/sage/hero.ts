@@ -12,12 +12,15 @@ import { STATE_MOVES } from './moves-states.js';
 
 /**
  * His clip timing (frame counts match his moves files). His bolts fly every 0.55 s, so each plays
- * out in about that, its wind-up included. His weapon skills: `special` Mending Light (a 0.4 s
- * wind-up on the server, which its two wind-up frames stretch over), `q` Arcane Orb, `e`
- * Sanctuary, `r` Meteor (the game draws it landing at the aim 1.1 s after the cast; the clip
- * sends its fire off toward the aim), `ult` Resurrection (a 1.5 s chant on the server, which its
- * eight wind-up frames stretch over); `cast` his role skills and the Elixir. The others have no
- * server wind-up, so their wind-up frames take 0.06 s each. He is old: his stances loop slowly.
+ * out in about that, its wind-up included. The server fires his bolts and the Arcane Orb at once,
+ * with no wind-up, so those clips have a single wind-up frame (0.06 s) and the bolt or orb leaves
+ * the staff on the frame after it, as the game draws it flying. His weapon skills: `special`
+ * Mending Light (a 0.4 s wind-up on the server, which its two wind-up frames stretch over), `q`
+ * Arcane Orb, `e` Sanctuary, `r` Meteor (the game draws it landing at the aim 1.1 s after the
+ * cast; the clip sends its fire off toward the aim), `ult` Resurrection (a 1.5 s chant on the
+ * server, which its eight wind-up frames stretch over); `cast` his role skills and the Elixir.
+ * The others have no server wind-up, so their wind-up frames take 0.06 s each. He is old: his
+ * stances loop slowly.
  */
 const TIMING: Record<ChibiClip, ClipTiming> = {
   idle: { frames: 8, seconds: 2.2, windup: 0 },
@@ -25,9 +28,9 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
   move: { frames: 8, seconds: 0.64, windup: 0 },
   atk1: { frames: 7, seconds: 0.42, windup: 1 },
   atk2: { frames: 7, seconds: 0.42, windup: 1 },
-  atk3: { frames: 9, seconds: 0.44, windup: 2 },
+  atk3: { frames: 8, seconds: 0.44, windup: 1 },
   special: { frames: 7, seconds: 0.55, windup: 2 },
-  q: { frames: 8, seconds: 0.5, windup: 2 },
+  q: { frames: 7, seconds: 0.5, windup: 1 },
   e: { frames: 10, seconds: 0.8, windup: 2 },
   r: { frames: 10, seconds: 0.9, windup: 2 },
   ult: { frames: 16, seconds: 1, windup: 8 },

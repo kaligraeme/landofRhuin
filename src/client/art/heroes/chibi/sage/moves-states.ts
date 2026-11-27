@@ -8,8 +8,9 @@
  *   ko       6  (hold) a stagger, his knees giving way, and a crumple onto his back, turned so he
  *               lies across the screen in every view, the staff falling beside him and the beard
  *               spilling over his chest
- *   victory  8  (hold) the staff twirled once and raised high on his right, the orb blazing with
- *               teal rays and motes, his left hand on his hip and a warm smile
+ *   victory  8  (hold) the staff twirled once and raised high on his right, his hand up at his
+ *               brow and the staff off the floor, the orb blazing with teal rays and motes, chin up,
+ *               his left hand on his hip and a warm smile
  *
  * The effects these clips paint for themselves (the sweat, the dust of his fall) are `fx.extra`
  * painters defined beside them. The flinch ends most of the way back into the battle stance
@@ -19,7 +20,7 @@ import type { RGB } from '../../paint.js';
 import { DUST, DUST_DARK } from '../fx.js';
 import { type ChibiPose, type FxContext, lerp3, pose, wave } from '../rig.js';
 import { fromReady, plant, READY, settle } from './moves-core.js';
-import { TWIRL } from './moves-skills.js';
+import { TWIRL, twirled } from './moves-skills.js';
 
 const S = READY;
 const WHITE: RGB = [255, 255, 255];
@@ -52,13 +53,13 @@ const KNELT: ChibiPose = plant({
   footF: [-12, 0, 6.5],
   footB: [6, 0, 7],
   kneel: 'F',
-  handF: [18, 8, 9],
+  handF: [21, 8, 11],
   handB: [6, 11, 4],
   // His hand low on the haft, so the staff's head stands well above him and side on the haft
   // stands ahead of his bowed face.
   grip: -14,
-  weapon: 13,
-  roll: 6,
+  weapon: 16,
+  roll: 8,
   yaw: 0,
   face: 'grit',
   wind: 0.05,
@@ -109,7 +110,7 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
       y: 12.5 + b * 0.8,
       lean: 12 + b * 4,
       head: 12 + b * 4,
-      handF: [18 - 0.8 * b, 8, 9],
+      handF: [21 - 0.8 * b, 8, 11],
       handB: [6 - 1.2 * b, 11 + b * 0.8, 4],
       phase: i / 4,
       sway: (b - 0.5) * 0.2,
@@ -131,10 +132,12 @@ const DOWN: ChibiPose = pose(S, {
   y: 21.5,
   lean: -86,
   twist: 0,
-  tilt: 0,
+  // Rolled a little onto his left side and his head turned toward the viewer, so side on his
+  // closed eye, his moustache and his beard show rather than the top of his head.
+  tilt: -45,
   turn: -60,
-  head: -14,
-  look: 22,
+  head: -6,
+  look: 35,
   footF: [14, 0, 6.5],
   footB: [12, -1, 2],
   handF: [12, 5.5, 17],
@@ -174,7 +177,7 @@ const ko: ChibiPose[] = [
   // Stagger back, the staff tipping away.
   pose(S, { x: -4, y: 4, lean: -14, twist: 0, tilt: -6, head: -14, handF: [2, 13, 8], handB: [-3, 10, 12], weapon: 40, roll: -16, yaw: -52, face: 'hurt', sway: -0.4, lift: 0.3 }),
   // His knees give: down on both, leaning on the staff a last moment.
-  plant(pose(S, { x: -2, y: 13.5, lean: 10, twist: 0, head: 16, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [16, 8, 9], handB: [4, 16, 8], grip: -14, weapon: 12, roll: 6, yaw: 0, face: 'hurt', wind: 0, flare: 0.2 })),
+  plant(pose(S, { x: -2, y: 13.5, lean: 10, twist: 0, head: 16, footF: [-8, -1, 5], footB: [-9, -1, 4.6], kneel: 'F', handF: [20, 8, 11], handB: [4, 16, 8], grip: -14, weapon: 16, roll: 8, yaw: 0, face: 'hurt', wind: 0, flare: 0.2 })),
   // He sways back, turning, the staff slipping from his grip.
   pose(S, { x: -2, y: 15, lean: -12, twist: 0, tilt: -8, turn: -20, head: 2, footF: [-6, -1, 5], footB: [-8, -1, 4.6], kneel: 'F', handF: [8, 16, 14], handB: [2, 18, 11], grip: 0, weapon: 40, roll: 30, yaw: 0, face: 'closed', wind: 0, lift: 0.2 }),
   // Toppling back, the robe and beard flying up; the staff has hit the floor.
@@ -187,15 +190,15 @@ const ko: ChibiPose[] = [
 // ── Victory ──────────────────────────────────────────────────────────────────────────────────
 
 /** The staff raised high on his right, out beside his head, his left fist on his hip, chin up and smiling. */
-const HIGH: ChibiPose = pose(S, { x: 0, y: 1.5, lean: -4, twist: 8, tilt: -2, head: -5, look: 8, footF: [6, 0, 6], footB: [-6, 0, 5.4], handF: [-8, -9, 14], handB: [0, 15, 10], grip: -4, weapon: -2, roll: 10, yaw: 0, face: 'smirk', wind: 0.3, lift: 0.25 });
+const HIGH: ChibiPose = pose(S, { x: 0, y: 1.5, lean: -4, twist: 8, tilt: -4, head: -8, look: 8, footF: [6, 0, 6], footB: [-6, 0, 5.4], handF: [-1, -13, 12], handB: [0, 15, 10], grip: -4, weapon: -3, roll: 8, yaw: 0, face: 'smirk', wind: 0.3, lift: 0.25 });
 
 const glow = (k: number, spin: number) => ({ rune: 1, rays: { k, at: 'main' as const, n: 10, len: 22, spin }, motes: { k: k * 0.8, rise: spin / 60 } });
 
 const victory: ChibiPose[] = [
-  fromReady(pose(TWIRL, { face: 'smirk' }), 0.55, { fx: { rune: 0.6 } }),
-  pose(TWIRL, { weapon: 160, phase: 0.1, wind: 0.4, face: 'smirk', fx: { rune: 0.8, smear: { from: -10, width: 0.45 } } }),
-  pose(TWIRL, { weapon: 350, phase: 0.2, wind: 0.45, face: 'smirk', fx: { rune: 1, smear: { from: 160, width: 0.45 } } }),
-  pose(HIGH, { y: 2, lean: -6, head: -7, phase: 0.3, wind: 0.45, lift: 0.4, fx: glow(1.1, 0) }),
+  fromReady(pose(TWIRL, { face: 'smirk' }), 0.85, { fx: { rune: 0.6 } }),
+  twirled(pose(TWIRL, { face: 'smirk' }), 1),
+  twirled(pose(TWIRL, { face: 'smirk' }), 2),
+  pose(HIGH, { y: 2, lean: -6, head: -10, phase: 0.3, wind: 0.45, lift: 0.4, fx: glow(1.1, 0) }),
   pose(HIGH, { phase: 0.45, fx: glow(1, 8) }),
   pose(HIGH, { phase: 0.6, wind: 0.25, fx: glow(0.85, 16) }),
   pose(HIGH, { phase: 0.75, wind: 0.22, fx: glow(0.75, 24) }),
