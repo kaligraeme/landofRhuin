@@ -4,9 +4,9 @@
  * ../index.ts.
  */
 import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
-import { chibiHero } from '../painter.js';
-import { paintChibi } from '../painter.js';
 import type { ChibiDesign } from '../design.js';
+import { chibiHero, paintChibi } from '../painter.js';
+import type { ChibiPose } from '../rig.js';
 import { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE } from './design.js';
 import { CORE_MOVES } from './moves-core.js';
 import { SKILL_MOVES } from './moves-skills.js';
@@ -47,6 +47,14 @@ const MOVES = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
  */
 const VARIANTS: Partial<Record<ChibiClip, ChibiDesign>> = { e: BOWMASTER_SNARE, r: BOWMASTER_FAN, ult: BOWMASTER_RUIN };
 
+/**
+ * Frames: side on there is room ahead of her for the streaks of her shots (the Charged Shot's runs
+ * about 120 px past her) and behind for her fall when knocked out; toward and away from the viewer
+ * she stands centred, with room below for streaks flying toward the viewer and above for Volley's
+ * and Rain of Ruin's, loosed at the sky (away from the viewer these climb highest). The game crops
+ * every frame to what is painted. She stands about 80 px tall: at the Dark Knight's 2.1 tiles per
+ * 84 px, 2 tiles in game.
+ */
 const FRAMES = {
   side: { w: 224, h: 208, ax: 72, ay: 188 },
   front: { w: 136, h: 212, ax: 68, ay: 172 },
@@ -56,14 +64,10 @@ const FRAMES = {
 const BASE = chibiHero(BOWMASTER, MOVES, TIMING, FRAMES, 2.1 / 84, 80);
 
 /**
- * Frames: side on there is room ahead of her for the streaks of her shots (the Charged Shot's
- * runs about 90 px past the bow), the snare's flight and the fan of arrows, and behind for her
- * cape; toward and away from the viewer she stands centred, with room below for streaks flying
- * toward the viewer. All are tall enough for Volley and Rain of Ruin, loosed at the sky. The game
- * crops every frame to what is painted, so the spare room costs nothing there. She stands about
- * 80 px tall: at the Dark Knight's 2.1 tiles per 84 px, 2 tiles in game.
+ * The Bowmaster: `chibiHero`'s hero (its checks, timing, frames and poses, and her base design for
+ * tools and tests), painting the clips listed in VARIANTS with their own variant of her design.
  */
 export const BOWMASTER_HERO: ChibiHero = {
   ...BASE,
-  paint: (clip, i, view) => paintChibi(VARIANTS[clip] ?? BOWMASTER, MOVES[clip][Math.max(0, Math.min(i, MOVES[clip].length - 1))]!, view, FRAMES[view]),
+  paint: (clip, i, view) => paintChibi(VARIANTS[clip] ?? BOWMASTER, MOVES[clip][Math.max(0, Math.min(i, MOVES[clip].length - 1))] as ChibiPose, view, FRAMES[view]),
 };

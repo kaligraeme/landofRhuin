@@ -2,14 +2,15 @@
  * The Bowmaster, as a chibi: a slim, light-footed woodland archer, calm and keen-eyed. A forest-green
  * hood worn up over dark brown hair (a side fringe and two strands framing her face inside it, a
  * low tail tied at the nape that shows when the hood falls back), a short hooded cape of the same
- * green to the waist at the front and down to the backs of her knees behind, a fitted dark brown
- * leather jerkin laced up the front, leather bracers over moss-green sleeves and a shooting glove,
- * a belt with a brass buckle and a pouch, tan trousers and tall brown boots with turned cuffs. She
- * carries a wooden recurve longbow of dark reddish wood with a leather grip and horn tips in her
- * left hand and draws it with her right, and a quiver of pale-fletched arrows on her back. Her
- * effects are a verdant green-gold. Everything here is data for the chibi engine (and a few small
- * pieces of her own: the boots' cuffs, the pouch, the five-arrow fan, the snare and the dark arrow
- * of her ultimate); her moves are in the moves-*.ts files beside it, and hero.ts puts her together.
+ * green over her shoulders, to her elbows at the sides and down to the backs of her knees behind,
+ * a fitted dark brown leather jerkin laced up the front, leather bracers over cream linen sleeves
+ * and a shooting glove, a belt with a brass buckle and a pouch, tan trousers and tall brown boots
+ * with turned cuffs. She carries a wooden recurve longbow of dark reddish wood with a leather grip
+ * and horn tips in her left hand and draws it with her right, and a quiver of pale-fletched arrows
+ * on her back. Her effects are a verdant green-gold. Everything here is data for the chibi engine
+ * (and a few small pieces of her own: the boots' cuffs, the pouch, the five-arrow fan, the snare
+ * and the dark arrow of her ultimate); her moves are in the moves-*.ts files beside it, and hero.ts
+ * puts her together.
  */
 import { hex } from '../../paint.js';
 import { quiver } from '../back.js';
@@ -252,7 +253,7 @@ const LONGBOW = bow(BOW_SPEC);
 /**
  * The arrow in her drawing hand (bow.ts `arrow`, which hides itself while one is on the string):
  * dropped (`drop`) with nowhere to lie (no `dropAt`), it is not painted at all, so a pose can
- * leave the hand empty (at ease, running, reaching for the quiver).
+ * leave the hand empty (at ease, running, nocked).
  */
 function heldArrow(spec: ArrowSpec): WeaponDesign {
   const a = arrow(spec);
@@ -356,8 +357,8 @@ const QUIVER_PIECE = quiver({
 });
 
 /**
- * The hooded cape: to the waist at the front, over the shoulders and upper arms, and down to the
- * backs of her knees behind, its hem cut in points.
+ * The hooded cape: a short capelet at the front (so the laced jerkin shows), over the shoulders
+ * and upper arms at the sides, and down to the backs of her knees behind, its hem cut in points.
  */
 const CAPE = cowl({
   outer: GREEN,
@@ -366,12 +367,12 @@ const CAPE = cowl({
   ring: [3.6, 4.2],
   folds: true,
   panels: [
-    { from: -32, to: 32, len: 7, jag: 2 },
-    { from: 32, to: 100, len: 12.5, jag: 2 },
+    { from: -48, to: 48, len: 6, jag: 1.5 },
+    { from: 48, to: 100, len: 12.5, jag: 2 },
     { from: 100, to: 145, len: 25, jag: 3, taper: 1.1 },
     { from: 145, to: 215, len: 31, jag: 3.5, taper: 1.1 },
     { from: 215, to: 260, len: 25, jag: 3, taper: 1.1 },
-    { from: 260, to: 328, len: 12.5, jag: 2 },
+    { from: 260, to: 312, len: 12.5, jag: 2 },
   ],
   over: { chest: BODY.chest, hips: BODY.hips },
 });
@@ -427,11 +428,25 @@ const BOWMASTER_FAN: ChibiDesign = { ...BOWMASTER, offhand: fanBow(BOW_SPEC) };
 /** Snare Trap: the coiled snare in her right hand in place of an arrow. */
 const BOWMASTER_SNARE: ChibiDesign = { ...BOWMASTER, weapon: SNARE };
 
+/**
+ * The bow for Rain of Ruin: the dark arrow on its string while it is drawn (half way or more), an
+ * ordinary one at rest, so the arrow she nocks again afterward is her own.
+ */
+function darkBow(spec: BowSpec): HeldItem {
+  const plain = bow(spec);
+  const dark = bow({ ...spec, arrow: DARK_ARROW });
+  const pick = (ctx: PieceContext): HeldItem => ((ctx.pose.draw ?? 0) >= 0.5 ? dark : plain);
+  return {
+    ...plain,
+    aim: (ctx, held) => (pick(ctx).aim as NonNullable<HeldItem['aim']>)(ctx, held),
+    items: (ctx, held) => (pick(ctx).items as NonNullable<HeldItem['items']>)(ctx, held),
+  };
+}
+
 /** Rain of Ruin: a single dark arrow, and her effects turned violet-black with green sparks. */
 const BOWMASTER_RUIN: ChibiDesign = {
   ...BOWMASTER,
-  weapon: heldArrow(DARK_ARROW),
-  offhand: bow({ ...BOW_SPEC, arrow: DARK_ARROW }),
+  offhand: darkBow(BOW_SPEC),
   aura: { core: hex('#9a46f0'), edge: hex('#3c0e6a'), hot: hex('#d4ffb4') },
 };
 

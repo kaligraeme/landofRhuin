@@ -5,11 +5,12 @@
  * arrow is on its string (`nock`); the main weapon is the arrow in her drawing hand, which shows
  * only while she holds one off the string (design.ts `heldArrow`: `drop` hides it).
  *
- *   idle    8  at ease, the bow held upright at her left side, its lower tip by her boot, the
- *              right hand resting on her belt: a slow breath, a blink, a glance, the cape swaying
+ *   idle    8  at ease, the bow held upright in her left hand a little ahead of her, its lower
+ *              tip by her boot, the right hand resting on her belt: a slow breath, a blink, a
+ *              glance toward the viewer, the cape swaying
  *   battle  8  a light, bladed stance, the left shoulder leading, the bow canted forward and low
- *              with an arrow nocked and the string just taken up; a springy bounce, the cape
- *              and the hood's point a frame behind
+ *              with an arrow nocked and the string just taken up; a springy bounce, the head
+ *              and the cape a frame behind
  *   move    8  a light, quick run, the bow carried low ahead of her in the left hand, the right
  *              arm pumping, the cape streaming
  *   atk1    7  (1 wind-up) Quick Arrow I: a snap to full draw, the string to her chin; loosed
@@ -19,14 +20,17 @@
  *   atk2    7  (1 wind-up) Quick Arrow II: the same from a lower crouch with the bow canted
  *              well over, a quick instinctive shot
  *   atk3    9  (1 wind-up) Quick Arrow III: a skip back and a full draw, loosed hard as she lands
- *              (a bigger flash, a longer streak, the cape thrown forward), then a recovery
+ *              (a bigger flash, a longer streak, dust, the cape flung out behind her), then the
+ *              same reload
  *
  * Every shot is loosed on the first frame after the wind-up (`draw: 0, nock: false` with
  * `fx.flash` and `fx.trail` from the bow), where the game launches its own arrow. A drawn shot
  * aims from the drawing hand through the bow's grip, so both sit on her centre line at about the
- * same height; loosed, the slack bow faces where its angles point it, so it stands upright
- * (`weaponB` near 0) for a level shot. Seen from behind, a bow held out ahead is hidden by her
- * body, so it is canted (`rollB` 15 to 25) to show its upper limb beside her hood.
+ * same height; loosed, the slack bow faces where its angles point it, so it stands nearly upright
+ * for a level shot, tipped back a little (`weaponB` -8 to -10) with the drawing hand a little
+ * below the grip: side on the view looks down on her, so a shot aimed a touch upward runs level
+ * across the screen, as the game's own arrow does. Seen from behind, a bow held out ahead is
+ * hidden by her body, so it is canted (`rollB` 18 to 35) to show its upper limb beside her hood.
  */
 import { type ChibiPose, mix, pose, wave } from '../rig.js';
 
@@ -234,11 +238,11 @@ function quick(draw: ChibiPose, loosed: ChibiPose): ChibiPose[] {
 const atk1 = quick(pose(FULL_DRAW, { wind: 0.2, phase: 0.1, fx: { runeB: 0.3 } }), pose(LOOSED, { phase: 0.15 }));
 
 // atk2: lower, the bow canted well over, a snap shot.
-const A2_DRAW = pose(FULL_DRAW, { y: 6, lean: 10, twist: 26, head: 2, footF: [10, 0, 5.4], footB: [-10, 0, 4.8], handF: [1, 3, 0], handB: [17, 4, 1], weaponB: 6, rollB: 48, wind: 0.25, phase: 0.1, fx: { runeB: 0.3 } });
+const A2_DRAW = pose(FULL_DRAW, { y: 6, lean: 10, twist: 26, head: 2, footF: [10, 0, 5.4], footB: [-10, 0, 4.8], handF: [1, 3, 0], handB: [17, 1, 1], weaponB: -10, rollB: 48, wind: 0.25, phase: 0.1, fx: { runeB: 0.3 } });
 const atk2 = quick(A2_DRAW, pose(A2_DRAW, { handF: [-2, 2, 3], elbowF: [-1, 0.6, 0.8], draw: 0, nock: false, wind: 0.4, phase: 0.15, face: 'shout', fx: undefined }));
 
 // atk3: a skip back with a full draw, loosed hard as she lands.
-const A3_SKIP = pose(FULL_DRAW, { x: -4, y: -6, lean: -2, footF: [5, -6, 5], footB: [-8, -5, 4.4], wind: -0.3, lift: 0.5, flare: 0.15, phase: 0.1, face: 'grit', fx: { runeB: 0.9, aura: 0.25 } });
+const A3_SKIP = pose(FULL_DRAW, { x: -4, y: -6, lean: -2, footF: [5, -6, 5], footB: [-8, -5, 4.4], wind: -0.2, lift: 0.3, flare: 0.1, phase: 0.1, face: 'grit', fx: { runeB: 0.9, aura: 0.25 } });
 const A3_LOOSE = pose(LOOSED, { x: -6, y: 6, lean: -4, head: -2, footF: [9, 0, 5.4], footB: [-12, 0, 4.8], handF: [-4, -1, 4], wind: 0.75, lift: 0.2, flare: 0.1, phase: 0.2, fx: { flash: { k: 1.4 }, trail: { k: 1.25, len: 74 }, dust: 0.8 } });
 const atk3: ChibiPose[] = [
   A3_SKIP,

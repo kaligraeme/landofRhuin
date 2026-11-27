@@ -16,8 +16,9 @@
  *   r        8  (1 wind-up) Fan of Arrows: five arrows on the string, the bow canted flat; loosed
  *               together in a level fan of five streaks
  *   ult     12  (3 wind-up) Rain of Ruin: a crouch gathering violet-black power, a leap, the dark
- *               arrow drawn straight up at the top of it and loosed at the sky with a burst of
- *               dark light; she lands in a crouch watching the sky as green sparks fall
+ *               arrow drawn steeply skyward at the top of it and loosed with a burst of dark
+ *               light and a violet streak; she lands in a crouch watching the sky as green
+ *               sparks fall, then nocks an arrow of her own again
  *   cast     8  (1 wind-up) role skills (Vault, Field Dressing) and the Elixir: a light backflip,
  *               the bow kept out to her side, landing in a crouch and rising
  *
@@ -108,7 +109,7 @@ const q: ChibiPose[] = [
   withFx(skyLoose(-72, 0.6), { flash: { k: 1.1 }, trail: { k: 1.1, len: 66 }, extra: streaks([{ deg: 8, k: 0.25, len: 100 }]) }),
   // The bow still raised as the last streak climbs away, the drawing hand dropping.
   withFx(pose(skyLoose(-72, 0.75), { handF: [3, 8, 6], elbowF: undefined, lean: -6, head: -8, phase: 0.75, face: 'stern' }), { trail: { k: 0.45, len: 92 } }),
-  settle(skyLoose(-72, 0.9), 0.8, { phase: 1, face: 'stern' }),
+  settle(skyLoose(-72, 0.9), 0.92, { phase: 1, face: 'stern' }),
 ];
 
 // ── Snare Trap ───────────────────────────────────────────────────────────────────────────────
@@ -217,7 +218,7 @@ const upAhead =
 
 const ult: ChibiPose[] = [
   // Crouched, gathering violet-black power, the dark arrow on the string.
-  fromReady(pose(READY, { y: 9, lean: 14, twist: 14, head: 6, handF: [6, 10, 0], handB: [12, 12, 2], weaponB: 30, draw: 0.2, nock: true, wind: 0.2, lift: 0.3, phase: 0.05, face: 'grit', fx: { aura: 0.45, runeB: 0.5, motes: { k: 0.6, rise: 0 } } }), 0.7),
+  fromReady(pose(READY, { y: 9, lean: 14, twist: 14, head: 6, handF: [6, 10, 0], handB: [12, 12, 2], weaponB: 30, draw: 0.7, nock: true, wind: 0.2, lift: 0.3, phase: 0.05, face: 'grit', fx: { aura: 0.45, runeB: 0.5, motes: { k: 0.6, rise: 0 } } }), 0.7),
   // The leap, the bow coming up over her head as she draws.
   pose(UP_DRAW, { x: -1, y: -10, footF: [5, -6, 5], footB: [-6, -3, 4.6], draw: 0.6, handF: [7, 1, 1], wind: 0.1, lift: 0.4, phase: 0.15, fx: { aura: 0.7, runeB: 0.8, motes: { k: 0.8, rise: 0.12 }, extra: gather(0.45, 18, 0) } }),
   // At the top of the leap: full draw straight up, the arrowhead blazing.

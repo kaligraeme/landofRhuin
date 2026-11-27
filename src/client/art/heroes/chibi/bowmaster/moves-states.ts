@@ -10,8 +10,8 @@
  *               across the screen in every view; the hood falls back from her hair and the bow
  *               lies beside her
  *   victory  8  (hold) the arrow eased off the string and spun in her fingers, slid back into the
- *               quiver over her shoulder, then the hood pushed back from her hair: a smile, a
- *               hand on her hip, the cape lifting in the breeze
+ *               quiver over her shoulder, then the hood pushed back from her hair: a smile and a
+ *               wink, a hand on her hip, the cape stirring in the breeze
  *
  * The sweat and the glint are `fx.extra` painters defined beside them. The flinch ends most of the
  * way back into the battle stance (`settle`), and the victory starts from it (`fromReady`).
