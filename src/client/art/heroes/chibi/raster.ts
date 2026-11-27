@@ -14,8 +14,7 @@
  * Parts are painted far to near (the painter sorts them); inside a part a depth test keeps the
  * nearest shape, so a head's hair, face and features can be built in any order.
  */
-import { type Canvas, hex, type RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import { type Canvas, hex, type RGB, type Vec } from '../paint.js';
 import { at3, type Camera, DEPTH, dirIn, dot3, type Frame3, LIGHT, sub3, type V3 } from './rig.js';
 
 export type Ramp4 = readonly [RGB, RGB, RGB, RGB];

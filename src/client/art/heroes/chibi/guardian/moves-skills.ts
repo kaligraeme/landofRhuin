@@ -27,8 +27,7 @@
  * Her light is gold and white with a pale blue edge (the design's aura). Every clip that gives way
  * to the battle stance eases into it at the end (moves-core's `settle`).
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { DUST, DUST_DARK, glowLine, puff, rays } from '../fx.js';
 import { add3, type ChibiPose, clamp, type FxContext, norm3, pose, type V3 } from '../rig.js';
 import { fromReady, READY, settle } from './moves-core.js';

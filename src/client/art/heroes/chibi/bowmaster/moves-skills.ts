@@ -27,8 +27,7 @@
  * hero.ts paints these clips with. Each clip's last frames ease into the battle stance with
  * moves-core's `settle`.
  */
-import { type Canvas, hex, type RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import { type Canvas, hex, type RGB, type Vec } from '../../paint.js';
 import { flash, motes, rays, rim, trail } from '../fx.js';
 import { add3, type ChibiPose, cross3, type FxContext, mix, norm3, pose, rad, sub3, type V3 } from '../rig.js';
 import { BATTLE0, DRAW_ARROW, FULL_DRAW, fromReady, LOOSED, REACH_QUIVER, READY, settle, withFx } from './moves-core.js';

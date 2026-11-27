@@ -41,8 +41,7 @@
  * her spins raise a violet-blue whirlwind of broad bands (`vortex`) with her blade tips' trails
  * (`tipTrails`) inside it.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { glowLine } from '../fx.js';
 import { add3, type ChibiPose, clamp, type FxContext, lerp, mix, norm3, pose, rad, solveRig, sub3, type V3, wave, weaponAxes } from '../rig.js';
 import { BLADEMASTER } from './design.js';

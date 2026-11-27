@@ -11,7 +11,7 @@ import { scaleAt } from './armour.js';
 import type { HeadPiece, Piece, PieceContext } from './design.js';
 import { type Blob, dim, type Hit, type Mat, toneLight } from './raster.js';
 import { add3, at3, type ChibiPose, clamp, cross3, dirIn, dot3, type Frame3, len3, lerp, lerp3, mul3, norm3, rad, type Rig, rotate, sub3, TO_CAMERA, type V3 } from './rig.js';
-import type { Vec } from '../skeleton.js';
+import type { Vec } from '../paint.js';
 
 // ── Shoulder plates ──────────────────────────────────────────────────────────────────────────
 

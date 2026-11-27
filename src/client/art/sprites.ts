@@ -1,36 +1,26 @@
 /**
- * Loads the cast and builds their animation frames. Monsters animate their artwork (see
- * animation.ts); heroes are painted frame by frame from a skeleton, wielding their weapons, with
- * faces cut from their artwork (see heroes/), side on and also turned toward and away from the
- * viewer. Frames are built in the background a little at a time (a few milliseconds per tick), so
- * the game never stalls, and packed into an atlas per sprite and facing: a row per clip. Chibi
- * heroes (see heroes/chibi/) are painted frame by frame, side on first; their views toward and
- * away from the viewer wait until every other queued sprite has its frames. Each chibi frame is
- * cropped to the figure and its effects and the crops are shelf-packed, an atlas per view.
- *
- * A chibi with no artwork in creatures/ (a chibi-only hero, or a form such as the Firebeast) has
- * nothing to show until its side view is painted. A chibi-only hero whose chibi is not registered
- * yet is drawn as a stand-in (heroLook.ts).
+ * Loads the cast and builds their animation frames. Monsters and bosses animate their artwork in
+ * creatures/: each is rigged and bent through five clips (see animation.ts and rigs.ts), packed
+ * into one atlas a row per clip. Heroes, and the forms they take (the Firebeast), are chibis (see
+ * heroes/chibi/), painted frame by frame in three views: side on first, then toward and away from
+ * the viewer once every other queued sprite has its frames. Each chibi frame is cropped to the
+ * figure and its effects and the crops are shelf-packed, an atlas per view. Frames are built in
+ * the background a little at a time (a few milliseconds per tick), so the game never stalls. A
+ * hero has nothing to show until their side view is painted (the renderer draws a plain figure
+ * meanwhile).
  */
 import { defaultHero, type HeroId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import type { EntitySpawn } from '../../shared/protocol.js';
 import { cropRaster, opaqueBounds, shelfPack } from './atlas.js';
-import { creatureArt, hasCreatureArt, type CreatureArt } from './creature-art.js';
-import { FORM_ART, formHero, heroForms, heroLook } from './heroLook.js';
+import { creatureArt, type CreatureArt, type CreatureId } from './creature-art.js';
+import { heroArtId } from './heroArt.js';
+import { FORM_ART, formHero, heroForms } from './heroForms.js';
 import { ACTION_WINDUP, buildFrames, CLIP_LENGTH, CLIPS, rigSprite, SKILL_CHARGE, type Clip, type Raster } from './animation.js';
 import { auraFor, RIG_HINTS } from './rigs.js';
 import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip, type ChibiHero, type ChibiView } from './heroes/chibi/index.js';
-import { HERO_DESIGNS } from './heroes/designs.js';
-import { HERO_CHARGE, HERO_CLIP_LENGTH, HERO_WINDUP, heroClips } from './heroes/moves.js';
-import { cropHead, renderHero } from './heroes/render.js';
-import { ANCHOR_X, GROUND_Y } from './heroes/skeleton.js';
-import { renderTurned, TURNED_X, TURNED_Y } from './heroes/turned.js';
 
-/** Tiles per pixel of hero art: heroes stand about 2 tiles tall. */
-export const HERO_TILE = 2.17 / 96;
-
-/** Every clip's frames for one facing, in one atlas: a row per clip. */
+/** A monster's frames in one atlas: a row per clip. */
 export interface Sheet {
   atlas: HTMLCanvasElement;
   fw: number;
@@ -41,15 +31,13 @@ export interface Sheet {
   rows: Record<Clip, number>;
 }
 
-/** Which way a sprite is drawn: side on (mirrored to face left), toward the viewer or away. */
+/** Which way a chibi is drawn: side on (mirrored to face left), toward the viewer or away. */
 export type Facing = 'side' | 'front' | 'back';
 
-/** A sprite's animation: every clip's frames in one atlas, a row per clip. */
+/** A monster's animation: every clip's frames in one atlas, a row per clip. */
 export interface SpriteAnim extends Sheet {
   /** Tiles per frame pixel. */
   scale: number;
-  /** Heroes also face toward the viewer and away; these arrive once painted. */
-  turned?: Partial<Record<'front' | 'back', Sheet>>;
   lengths: Record<Clip, number>;
   /** Frames of the attack that wind up, and of the skill that gather power. */
   windup: number;
@@ -57,8 +45,6 @@ export interface SpriteAnim extends Sheet {
   /** Seconds the blow and the skill's release take to play out. */
   strike: number;
   release: number;
-  /** A grey still for a knocked-out hero. */
-  grey: HTMLCanvasElement | null;
 }
 
 /**
@@ -93,14 +79,17 @@ export interface ChibiAnim {
 
 export interface Sprite {
   id: string;
+  /** A monster's artwork metrics; a chibi's are made up from its frames. */
   def: CreatureArt;
+  /** A monster's artwork, drawn still until its frames are built (a chibi has none). */
   img: HTMLImageElement;
+  /** The artwork as a white silhouette, for a monster's hit flash before its frames are built. */
   white: HTMLCanvasElement | null;
-  grey: HTMLCanvasElement | null;
+  /** Whether there is anything to draw: a monster's artwork has loaded, a chibi's side view is painted. */
   ready: boolean;
-  /** Null until the frames are built; the renderer draws the still image meanwhile. */
+  /** A monster's frames, null until built (the renderer draws the still artwork meanwhile). */
   anim: SpriteAnim | null;
-  /** Chibi heroes animate from these instead of `anim`. */
+  /** A chibi's frames. */
   chibi: ChibiAnim | null;
 }
 
@@ -119,34 +108,16 @@ function rasterOf(img: HTMLImageElement): Raster {
   return { w: img.naturalWidth, h: img.naturalHeight, data: g.getImageData(0, 0, img.naturalWidth, img.naturalHeight).data };
 }
 
-/** A grey, darkened copy, for knocked-out heroes. */
-function greyOf(src: CanvasImageSource, w: number, h: number, sx = 0, sy = 0): HTMLCanvasElement {
-  const [c, g] = canvas(w, h);
-  g.drawImage(src, sx, sy, w, h, 0, 0, w, h);
-  const data = g.getImageData(0, 0, w, h);
-  for (let i = 0; i < data.data.length; i += 4) {
-    const v = (data.data[i] as number) * 0.3 + (data.data[i + 1] as number) * 0.59 + (data.data[i + 2] as number) * 0.11;
-    data.data[i] = data.data[i + 1] = data.data[i + 2] = v * 0.8;
-  }
-  g.putImageData(data, 0, 0);
-  return c;
-}
-
-function load(key: string, id: string): Sprite {
+/** A monster or boss: its artwork, then its frames once that has loaded. */
+function loadCreature(key: string, id: CreatureId): Sprite {
   const hit = sprites.get(key);
   if (hit) return hit;
-  const bare = CHIBI_HEROES[id];
-  if (!hasCreatureArt(id)) {
-    if (!bare) throw new Error(`Missing creature sprite: ${id}`);
-    return loadChibi(key, id, bare);
-  }
   const def = creatureArt(id);
   const img = new Image();
-  const sprite: Sprite = { id, def, img, white: null, grey: null, ready: false, anim: null, chibi: null };
+  const sprite: Sprite = { id, def, img, white: null, ready: false, anim: null, chibi: null };
   img.onload = () => {
     sprite.ready = true;
-    const chibi = CHIBI_HEROES[id];
-    queue(chibi ? chibiSteps(sprite, chibi) : id in HERO_DESIGNS ? heroSteps(sprite) : monsterSteps(sprite));
+    queue(monsterSteps(sprite));
     try {
       const [white, wg] = canvas(img.naturalWidth, img.naturalHeight);
       wg.drawImage(img, 0, 0);
@@ -154,9 +125,8 @@ function load(key: string, id: string): Sprite {
       wg.fillStyle = '#fff';
       wg.fillRect(0, 0, img.naturalWidth, img.naturalHeight);
       sprite.white = white;
-      sprite.grey = greyOf(img, img.naturalWidth, img.naturalHeight);
     } catch {
-      // Silhouettes are a nicety; the sprite still draws without them.
+      // The silhouette is a nicety; the sprite still draws without it.
     }
   };
   img.src = def.url;
@@ -165,14 +135,18 @@ function load(key: string, id: string): Sprite {
 }
 
 /**
- * A chibi with no artwork in creatures/: its metrics come from its frames, and it is ready to draw
- * once its side view is painted.
+ * A chibi (a hero or a form) by its sprite id: its metrics come from its frames, and it is ready
+ * to draw once its side view is painted.
  */
-function loadChibi(key: string, id: string, hero: ChibiHero): Sprite {
+function loadChibi(id: string): Sprite {
+  const hit = sprites.get(id);
+  if (hit) return hit;
+  const hero = CHIBI_HEROES[id];
+  if (!hero) throw new Error(`No chibi hero ${id}`);
   const box = hero.frame.side;
   const def: CreatureArt = { url: '', w: Math.round(hero.height * 0.7), h: hero.height, ax: box.ax, ay: box.ay, height: hero.height * hero.scale };
-  const sprite: Sprite = { id, def, img: new Image(), white: null, grey: null, ready: false, anim: null, chibi: null };
-  sprites.set(key, sprite);
+  const sprite: Sprite = { id, def, img: new Image(), white: null, ready: false, anim: null, chibi: null };
+  sprites.set(id, sprite);
   queue(chibiSteps(sprite, hero));
   return sprite;
 }
@@ -182,8 +156,10 @@ function loadChibi(key: string, id: string, hero: ChibiHero): Sprite {
 const jobs: Iterator<void>[] = [];
 let pumping = false;
 
-function queue(steps: Iterator<void>): void {
-  jobs.push(steps);
+/** Queues a job: behind the others, or ahead of them when `first` (a lobby portrait, wanted now). */
+function queue(steps: Iterator<void>, first = false): void {
+  if (first) jobs.unshift(steps);
+  else jobs.push(steps);
   if (!pumping) {
     pumping = true;
     setTimeout(pump, 0);
@@ -202,7 +178,7 @@ function pump(): void {
     try {
       if (job.next().done) jobs.shift();
     } catch (err) {
-      // Animation is a nicety: a sprite whose frames fail to build is drawn still.
+      // Animation is a nicety: a monster whose frames fail to build is drawn still.
       console.warn('Could not build animation frames:', err);
       jobs.shift();
     }
@@ -244,56 +220,7 @@ function* monsterSteps(sprite: Sprite): Generator<void> {
     charge: SKILL_CHARGE,
     strike: 0.32,
     release: 0.5,
-    grey: null,
   };
-}
-
-/**
- * Heroes: paint every pose of every clip, one clip per step: side on first (the hero animates as
- * soon as that is done), then turned toward the viewer and away.
- */
-function* heroSteps(sprite: Sprite): Generator<void> {
-  const design = HERO_DESIGNS[sprite.id as keyof typeof HERO_DESIGNS];
-  const head = cropHead(rasterOf(sprite.img), design);
-  const clips = heroClips(design.moveset);
-  const frames = {} as Record<Clip, Raster[]>;
-  for (const clip of CLIPS) {
-    yield;
-    frames[clip] = clips[clip].map((pose) => renderHero(design, pose, head));
-  }
-  yield;
-  const first = frames.idle[0] as Raster;
-  const { atlas, rows } = pack(frames, first.w, first.h);
-  const anim: SpriteAnim = {
-    atlas,
-    fw: first.w,
-    fh: first.h,
-    ax: ANCHOR_X,
-    ay: GROUND_Y,
-    scale: HERO_TILE,
-    rows,
-    lengths: HERO_CLIP_LENGTH,
-    windup: HERO_WINDUP,
-    charge: HERO_CHARGE,
-    strike: 0.4,
-    release: 0.7,
-    grey: greyOf(atlas, first.w, first.h, 0, rows.idle * first.h),
-    turned: {},
-  };
-  sprite.anim = anim;
-  for (const facing of ['front', 'back'] as const) {
-    const turned = {} as Record<Clip, Raster[]>;
-    for (const clip of CLIPS) {
-      yield;
-      // Attacks and skills swing on a slant across the body.
-      const swing = clip === 'action' || clip === 'skill';
-      turned[clip] = clips[clip].map((pose) => renderTurned(design, pose, facing, swing));
-    }
-    yield;
-    const f = turned.idle[0] as Raster;
-    const packed = pack(turned, f.w, f.h);
-    (anim.turned ??= {})[facing] = { atlas: packed.atlas, rows: packed.rows, fw: f.w, fh: f.h, ax: TURNED_X, ay: TURNED_Y };
-  }
 }
 
 /** Paints one chibi frame and crops it to the figure and its effects, a pixel of margin around. */
@@ -340,29 +267,28 @@ function* chibiSteps(sprite: Sprite, hero: ChibiHero, views: readonly ChibiView[
 
 // ── The cast ─────────────────────────────────────────────────────────────────────────────────
 
-/** A hero's sprite: their own artwork, or a stand-in's until theirs is painted (heroLook.ts). */
+/** A hero's sprite: their chibi. */
 export function heroSprite(hero: HeroId): Sprite {
-  const id = heroLook(hero);
-  return load(id, id);
+  return loadChibi(heroArtId(hero));
 }
 
-/** A form's sprite (the Firebeast), or null until its chibi is painted: the hero keeps their own look meanwhile. */
+/** A form's sprite (the Firebeast), or null if it has no chibi: the hero then keeps their own look. */
 export function formSprite(form: string): Sprite | null {
   const id = FORM_ART[form];
-  return id && formHero(form) ? load(id, id) : null;
+  return id && formHero(form) ? loadChibi(id) : null;
 }
 
 export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
   if (spawn.kind === 'player') return heroSprite(spawn.hero ?? defaultHero(spawn.role ?? 'tank'));
   if (spawn.kind === 'boss') {
     const kind = spawn.boss ?? 'juggernaut';
-    return load(`boss:${clan}:${kind}`, `${clan}-boss-${kind}`);
+    return loadCreature(`boss:${clan}:${kind}`, `${clan}-boss-${kind}`);
   }
   const kind = spawn.mob ?? 'brute';
-  return load(`mob:${clan}:${kind}`, `${clan}-${kind}`);
+  return loadCreature(`mob:${clan}:${kind}`, `${clan}-${kind}`);
 }
 
-/** Starts loading every sprite a dungeon can show: the party's heroes first, then the clan. */
+/** Starts loading every sprite a dungeon can show: the party's heroes (and their forms) first, then the clan. */
 export function preloadClan(clan: ThemeId, heroes: HeroId[] = []): void {
   for (const hero of heroes) {
     heroSprite(hero);
@@ -402,49 +328,34 @@ function portraitOf(f: Raster, groundY: number): string {
   return c.toDataURL('image/png');
 }
 
+/** Paints a portrait as one step of the build queue, so a screen of portraits never stalls the page. */
+function* portraitSteps(hero: ChibiHero, resolve: (url: string) => void, reject: (err: unknown) => void): Generator<void> {
+  yield;
+  try {
+    resolve(portraitOf(hero.paint('battle', 0, 'side'), hero.frame.side.ay));
+  } catch (err) {
+    reject(err);
+  }
+}
+
 /**
  * A hero in their battle stance, weapon in hand, as an image URL for the lobby and title screen.
- * Resolves once painted; `heroImageUrl` gives the plain artwork meanwhile.
+ * Each is painted once, ahead of any frames being built.
  */
 export function heroPortrait(hero: HeroId): Promise<string> {
-  const id = heroLook(hero);
+  const id = heroArtId(hero);
   let hit = portraits.get(id);
   if (!hit) {
     const chibi = CHIBI_HEROES[id];
-    hit = chibi
-      ? Promise.resolve().then(() => portraitOf(chibi.paint('battle', 0, 'side'), chibi.frame.side.ay))
-      : new Promise<string>((resolve, reject) => {
-          if (!hasCreatureArt(id) || !(id in HERO_DESIGNS)) return reject(new Error(`No artwork for ${id}`));
-          const design = HERO_DESIGNS[id as keyof typeof HERO_DESIGNS];
-          const img = new Image();
-          img.onload = () => {
-            try {
-              resolve(portraitOf(renderHero(design, heroClips(design.moveset).battle[0]!, cropHead(rasterOf(img), design)), GROUND_Y));
-            } catch (err) {
-              reject(err);
-            }
-          };
-          img.onerror = reject;
-          img.src = creatureArt(id).url;
-        });
+    hit = chibi ? new Promise<string>((resolve, reject) => queue(portraitSteps(chibi, resolve, reject), true)) : Promise.reject(new Error(`No chibi hero ${id}`));
     portraits.set(id, hit);
   }
   return hit;
 }
 
-/** The hero's plain artwork, shown until their portrait is painted (none for a chibi with no artwork: ''). */
-export function heroImageUrl(hero: HeroId): string {
-  const id = heroLook(hero);
-  return hasCreatureArt(id) ? creatureArt(id).url : '';
-}
-
-/** Sets an image to a hero's portrait, starting with the plain artwork. */
+/** Sets an image to a hero's portrait once it is painted. */
 export function showHero(img: HTMLImageElement, hero: HeroId): void {
   img.dataset.hero = hero;
-  if (!img.src) {
-    const plain = heroImageUrl(hero);
-    if (plain) img.src = plain;
-  }
   heroPortrait(hero).then(
     (url) => {
       if (img.dataset.hero === hero) img.src = url;

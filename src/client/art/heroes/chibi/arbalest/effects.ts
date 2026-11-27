@@ -6,8 +6,7 @@
  * design's amber-orange aura, a pale gold, a white core), from the crossbow's tip (`FxContext.tip`,
  * the bolt's point) along its aim (`FxContext.dir`), so they follow the crossbow in every view.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { DUST, DUST_DARK, glowLine, motes, puff, rays, starburst, trail } from '../fx.js';
 import { mixc } from '../raster.js';
 import { add3, cross3, type FxContext, lerp3, norm3, rad, type V3 } from '../rig.js';

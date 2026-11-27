@@ -17,8 +17,7 @@
  * (a block, a holy light). Effects leave from the middle of its face, out of it (`aim`: `tipB` and
  * `dirB`), so `fx.impactB` lands a bash there and `fx.clangB` rings a blow caught on it.
  */
-import type { RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { RGB, Vec } from '../paint.js';
 import { type Held, type HeldItem, type PieceContext, WEAPON_TAG } from './design.js';
 import { heldAxes, mainHeld } from './held.js';
 import { dim, type Mat, mixc, type Part, type Ramp4, scanPoly } from './raster.js';

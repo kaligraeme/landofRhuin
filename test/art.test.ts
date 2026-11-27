@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { creatureArt } from '../src/client/art/creature-art.js';
-import { heroArtId, isPainted } from '../src/client/art/heroArt.js';
-import { HERO_ORDER } from '../src/shared/content/classes.js';
 
 const clans = ['orc', 'dragon', 'undead'] as const;
 const mobs = ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as const;
 const bosses = ['juggernaut', 'hexer', 'beast', 'warden', 'sovereign'] as const;
 
 const roster = [
-  ...HERO_ORDER.filter(isPainted).map(heroArtId),
   ...clans.flatMap((clan) => [
     ...mobs.map((kind) => `${clan}-${kind}` as const),
     ...bosses.map((kind) => `${clan}-boss-${kind}` as const),

@@ -12,9 +12,8 @@
  * long hair and an off-hand item on the far side (`PieceContext.upperZ`), so a far arm nearer the
  * viewer than they are stays in front of them.
  */
-import { Canvas, INK, type Raster } from '../paint.js';
+import { Canvas, INK, type Raster, type Vec } from '../paint.js';
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
-import type { Vec } from '../skeleton.js';
 import { type ChibiDesign, type DrawItem, type Held, OFFHAND_TAG, type PieceContext, WEAPON_TAG } from './design.js';
 import { paintFx } from './fx.js';
 import { hairItems, paintHead } from './head.js';

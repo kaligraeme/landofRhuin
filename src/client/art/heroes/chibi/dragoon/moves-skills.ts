@@ -33,8 +33,7 @@
  * The poses build on the battle stance (moves-core.ts READY); each clip starts from it
  * (`fromReady`) and its last frames ease back into it (`settle`), so the loop takes over smoothly.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { DUST, DUST_DARK, glowLine, puff } from '../fx.js';
 import { scanPoly } from '../raster.js';
 import { add3, type ChibiPose, clamp, cross3, type FxContext, norm3, pose, solveRig, type V3 } from '../rig.js';

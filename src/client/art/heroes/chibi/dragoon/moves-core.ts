@@ -30,8 +30,7 @@
  * moves-states.ts) start from the stance (`fromReady`) and those that hand back to it end in it
  * (`settle`).
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { glowLine, puff, starburst } from '../fx.js';
 import { mixc } from '../raster.js';
 import { add3, type ChibiPose, clamp, cross3, type FxContext, mix, norm3, pose, solveRig, type V3, wave } from '../rig.js';

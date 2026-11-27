@@ -33,9 +33,7 @@
  * so toward and away from the viewer it angles out past his shoulder rather than pointing along
  * the camera with its head on his beard or over his crown.
  */
-import type { RGB } from '../../paint.js';
-import { hex } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import { hex, type RGB, type Vec } from '../../paint.js';
 import { scanPoly } from '../raster.js';
 import { add3, type ChibiPose, clamp, type FxContext, lerp, mix, pose, solveRig, type V3, wave, weaponAxes } from '../rig.js';
 import { SAGE } from './design.js';

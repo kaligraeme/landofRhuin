@@ -20,9 +20,8 @@
  * The sweat and the glint are `fx.extra` painters defined beside them. The flinch ends most of the
  * way back into the battle stance (`settle`), and the victory starts from it (`fromReady`).
  */
-import type { RGB } from '../../paint.js';
+import type { RGB, Vec } from '../../paint.js';
 import { DUST, DUST_DARK } from '../fx.js';
-import type { Vec } from '../../skeleton.js';
 import { scanPoly } from '../raster.js';
 import { GREEN } from './design.js';
 import { add3, type ChibiPose, type FxContext, lerp3, pose, wave, weaponAxes } from '../rig.js';

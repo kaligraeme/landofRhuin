@@ -29,8 +29,7 @@
  * fold up edge on, with the blade gleaming over it. Raised sword hands go beside her head, out to
  * her right (`handF` about `[-7, -7, 12]`), clear of her face side on and from the front.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { glowLine } from '../fx.js';
 import { mixc } from '../raster.js';
 import { add3, type ChibiPose, clamp, type FxContext, lerp, mix, norm3, pose, rad, solveRig, sub3, type V3, wave } from '../rig.js';

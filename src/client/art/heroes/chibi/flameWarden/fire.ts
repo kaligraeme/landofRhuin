@@ -19,8 +19,7 @@
  *   pillar     Firebeast: fire rising from the floor up his body into a pillar that swallows him
  *   flare      the cast: a flare in his hand, warm fire ringed with green light of healing
  */
-import type { Canvas, RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { Canvas, RGB, Vec } from '../../paint.js';
 import { motes, puff, starburst } from '../fx.js';
 import { add3, at3, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, norm3, rad, TO_CAMERA, type V3, weaponAxes } from '../rig.js';
 

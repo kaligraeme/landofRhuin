@@ -26,8 +26,7 @@
  * the start of the swing to where they are, so the whole stroke shows as one great arc of fire
  * that then fades. The fire burns higher as it strikes (`fire`).
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { puff as puffC } from '../fx.js';
 import { add3, type ChibiPose, type FxContext, mix, norm3, rad, solveRig, sub3, type V3, wave } from '../rig.js';
 import { FIREBEAST } from './design.js';

@@ -14,8 +14,7 @@
  * curve, as a sabre's or a scimitar's does. Seen edge on it keeps its breadth (and so its curve),
  * so twin sabres read in every view.
  */
-import type { RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { RGB, Vec } from '../paint.js';
 import type { Held, PieceContext, WeaponDesign } from './design.js';
 import { channelGlow, clipToGround, heldAxes, mainHeld, runeColour } from './held.js';
 import type { Mat, Part } from './raster.js';

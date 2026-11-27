@@ -9,8 +9,7 @@
  * Drawn in the item's own axes as a blade is (u along it from the hand, the butt at negative u),
  * keeping some breadth across when it points at the viewer.
  */
-import type { RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { RGB, Vec } from '../paint.js';
 import type { Held, HeldItem, PieceContext } from './design.js';
 import { heldAxes, mainHeld } from './held.js';
 import { type Mat, mixc, type Part, type Ramp4 } from './raster.js';

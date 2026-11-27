@@ -29,8 +29,7 @@
  * holds it when it takes over. Raised sword hands go out beside his head and the blade is cocked
  * tip up behind him, never hanging down his back with the pommel at his face.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { afterimages, DUST, DUST_DARK, glowLine, puff } from '../fx.js';
 import { fromReady, GUARD_STANCE, settle } from './moves-core.js';
 import { add3, at3, type ChibiPose, clamp, type FxContext, lerp, type P2, pose, rad, rotate, SIDE_LOOK, type V3 } from '../rig.js';

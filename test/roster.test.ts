@@ -1,16 +1,13 @@
 /**
  * The roster: each role offers its heroes (any number, the default first: the Duelist has three),
- * each hero carries one weapon of their own and is drawn with artwork (their own, or a stand-in's
- * until it is painted), and nothing offered to players frames the choice as a man or a woman.
+ * each hero carries one weapon of their own and is drawn as a chibi of their own, and nothing
+ * offered to players frames the choice as a man or a woman.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CHIBI_ONLY, heroArtId, heroOfArt, isPainted } from '../src/client/art/heroArt.js';
-import { hasCreatureArt } from '../src/client/art/creature-art.js';
+import { heroArtId } from '../src/client/art/heroArt.js';
 import { CHIBI_HEROES } from '../src/client/art/heroes/chibi/index.js';
-import { HERO_DESIGNS } from '../src/client/art/heroes/designs.js';
-import { FORM_ART, formHero, heroForms, heroLook, standingIn } from '../src/client/art/heroLook.js';
-import { auraFor } from '../src/client/art/rigs.js';
+import { FORM_ART, formHero, heroForms } from '../src/client/art/heroForms.js';
 import { Instance, seatHero, type Seat } from '../src/server/sim/instance.js';
 import { defaultHero, HERO_ORDER, HEROES, heroFor, isHero, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type HeroId } from '../src/shared/content/classes.js';
 import { BOSSES, MOBS, THEMES } from '../src/shared/content/monsters.js';
@@ -62,34 +59,27 @@ describe('the roster', () => {
     expect(spawns.map((e) => e.hero)).toEqual(['guardian', 'sage', 'arbalest', 'blademaster']);
   });
 
-  it('draws every hero: with their own artwork once painted, else with a stand-in’s', () => {
+  it('draws every hero, and every form a hero takes, as a chibi of their own', () => {
     for (const hero of HERO_ORDER) {
-      const look = heroLook(hero);
-      // Whatever a hero is drawn with exists: a registered chibi, or artwork and a design for the older painter.
-      expect(!!CHIBI_HEROES[look] || (hasCreatureArt(look) && look in HERO_DESIGNS), hero).toBe(true);
-      if (isPainted(hero)) expect(look, hero).toBe(heroArtId(hero));
+      const chibi = CHIBI_HEROES[heroArtId(hero)];
+      expect(chibi, hero).toBeDefined();
+      expect(chibi?.id, hero).toBe(heroArtId(hero));
     }
-    // The Flame Warden is painted only as a chibi: his own once registered, the Spellblade until then.
-    expect(CHIBI_ONLY).toEqual(['flameWarden']);
     expect(heroArtId('flameWarden')).toBe('hero-flame-warden');
-    expect(heroLook('flameWarden')).toBe(CHIBI_HEROES['hero-flame-warden'] ? 'hero-flame-warden' : 'hero-spellblade');
-    expect(standingIn('flameWarden')).toBe(!CHIBI_HEROES['hero-flame-warden']);
-    // He can become the Firebeast, drawn with its own chibi once that is registered.
+    // The Flame Warden can become the Firebeast, drawn with its own chibi.
     expect(heroForms('flameWarden')).toEqual(['firebeast']);
     expect(heroForms('dragoon')).toEqual([]);
     expect(FORM_ART.firebeast).toBe('hero-firebeast');
-    expect(formHero('firebeast')).toBe(CHIBI_HEROES['hero-firebeast'] ?? null);
+    expect(formHero('firebeast')).toBe(CHIBI_HEROES['hero-firebeast']);
+    // Nothing else is registered: every chibi is a hero or a form.
+    expect(Object.keys(CHIBI_HEROES).sort()).toEqual([...HERO_ORDER.map(heroArtId), ...Object.values(FORM_ART)].sort());
   });
 
-  it('names each hero’s artwork after them, and keeps each role’s skill glow', () => {
+  it('names each hero’s sprite after them', () => {
     for (const hero of HERO_ORDER) {
       const kebab = HEROES[hero].name.toLowerCase().replace(/[^a-z]+/g, '-');
       expect(heroArtId(hero)).toBe(`hero-${kebab}`);
-      expect(heroOfArt(heroArtId(hero))).toBe(hero);
     }
-    expect(heroOfArt('orc-brute')).toBeUndefined();
-    const glow: Record<string, number[]> = { tank: [255, 213, 107], mage: [185, 140, 255], ranger: [143, 227, 111], melee: [255, 111, 94] };
-    for (const hero of HERO_ORDER) expect(auraFor(heroArtId(hero)), hero).toEqual(glow[HEROES[hero].role]);
   });
 
   it('offers players nothing that says male or female', () => {

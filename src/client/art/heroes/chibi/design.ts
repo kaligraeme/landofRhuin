@@ -3,8 +3,7 @@
  * hair and face, the body's materials, outfit pieces, the weapon and an off-hand item) and the
  * shapes the engine paints it with. A new hero is a new design file plus its moves files; nothing here is any one hero's.
  */
-import type { Canvas, RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { Canvas, RGB, Vec } from '../paint.js';
 import type { Blob, Hit, Mat, Part } from './raster.js';
 import type { Build, Camera, ChibiPose, Face, Frame3, Grip, Rig, Strap, V3 } from './rig.js';
 

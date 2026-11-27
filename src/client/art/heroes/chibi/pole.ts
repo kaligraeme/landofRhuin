@@ -18,8 +18,7 @@
  * Both hands hold the haft where the pose says (`grip` for the right hand, `grip2` for the left;
  * see rig.ts), and smears and impacts use the head's reach.
  */
-import type { RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { RGB, Vec } from '../paint.js';
 import type { Held, PieceContext, WeaponDesign } from './design.js';
 import { channelGlow, clipToGround, heldAxes, mainHeld, runeColour } from './held.js';
 import { dim, type Mat, mixc, type Part, type Ramp4 } from './raster.js';

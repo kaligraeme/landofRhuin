@@ -10,8 +10,7 @@
  * `lightning`, `ward`, `swirl`, `afterimages`, `clang`, `flash`, `trail`, `rays`, `column`,
  * `motes` and the dust colours are exported for a hero's own `fx.extra` painters.
  */
-import type { Canvas, RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { Canvas, RGB, Vec } from '../paint.js';
 import { type ChibiDesign, HEAD_TAG, type Held, OFFHAND_TAG, type PieceContext } from './design.js';
 import { aimOf, blaze, mainHeld } from './held.js';
 import { hash } from './pieces.js';

@@ -22,8 +22,7 @@
  * helm: see headgear.ts) can cover hair (`HeadPiece.covers`), which is then not painted, but for
  * long hair, which comes out from under the gear's edge (`hairItems`).
  */
-import type { RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { RGB, Vec } from '../paint.js';
 import { type Beard, type BodyDesign, type Bun, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, GEAR_ID, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
 import { FLIP_FROM, hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
 import { type Blob, flat, type Hit, type Mat, type Part, shade, toneLight, toneOf } from './raster.js';

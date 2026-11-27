@@ -1,7 +1,7 @@
 /**
- * Frame animation for the cast. Every hero, monster and boss is drawn as one static sprite; this
- * module rigs that sprite (an upper body over two legs, a robe, four legs, a hovering form or a
- * rigid object) and poses the rig to build frames for five clips:
+ * Frame animation for the monsters and bosses (heroes are chibis: see heroes/chibi/). Each is drawn
+ * as one static sprite; this module rigs that sprite (an upper body over two legs, a robe, four
+ * legs, a hovering form or a rigid object) and poses the rig to build frames for five clips:
  *
  *   idle    breathing, out of combat
  *   battle  a ready stance while a fight is on

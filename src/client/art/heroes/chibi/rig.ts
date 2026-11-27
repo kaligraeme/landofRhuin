@@ -16,8 +16,7 @@
  * `yawB`). A shield is strapped to the forearm instead (`strapGrip`), and any of them can be slung
  * on the back (`slungGrip`).
  */
-import type { Vec } from '../skeleton.js';
-import type { Canvas, RGB } from '../paint.js';
+import type { Canvas, RGB, Vec } from '../paint.js';
 
 export type V3 = readonly [number, number, number];
 

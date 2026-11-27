@@ -1,11 +1,9 @@
 /**
- * Per-monster rig settings for the frame animator, and each creature's skill glow. (Heroes are
- * painted from a skeleton instead: see heroes/.) Sprites not listed here are rigged automatically:
+ * Per-monster rig settings for the frame animator, and each clan's skill glow. (Heroes are chibis,
+ * painted frame by frame: see heroes/chibi/.) Sprites not listed here are rigged automatically:
  * a figure with a gap between its legs walks on two legs, anything else sways like a robe.
  */
-import { HEROES } from '../../shared/content/classes.js';
 import { rgbOf, type RigHint } from './animation.js';
-import { heroOfArt } from './heroArt.js';
 
 export const RIG_HINTS: Record<string, RigHint> = {
   // Orcs.
@@ -47,18 +45,12 @@ export const RIG_HINTS: Record<string, RigHint> = {
 };
 
 const AURA: Record<string, string> = {
-  tank: '#ffd56b',
-  mage: '#b98cff',
-  ranger: '#8fe36f',
-  melee: '#ff6f5e',
   orc: '#ff7a3d',
   dragon: '#ffb347',
   undead: '#5dffb0',
 };
 
-/** The colour a creature glows when it uses a skill: by a hero's role, or by a monster's clan. */
+/** The colour a monster or boss glows when it uses a skill: its clan's (the first part of its id). */
 export function auraFor(id: string): [number, number, number] {
-  const hero = heroOfArt(id);
-  const key = hero ? HEROES[hero].role : (id.split('-')[0] as string);
-  return rgbOf(AURA[key] ?? '#ffffff');
+  return rgbOf(AURA[id.split('-')[0] as string] ?? '#ffffff');
 }

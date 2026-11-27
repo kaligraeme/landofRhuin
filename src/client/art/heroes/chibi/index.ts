@@ -18,23 +18,25 @@
  * bladed weapons, straight or curved, pole.ts pole arms and staves, wand.ts wands, shield.ts
  * shields strapped to the forearm, bow.ts bows and arrows, crossbow.ts crossbows, held.ts what
  * they share; a design may also give one for the off hand), fx.ts (effects) and painter.ts (puts
- * a frame together). A hero has a folder of its own: a design file, its moves files and a hero
- * file that puts them together with its timing (see darkKnight/, spellblade/ and dragoon/),
- * registered below.
+ * a frame together). Every hero is a chibi, and so is the form the Flame Warden takes (the
+ * Firebeast). Each has a folder of its own: a design file, its moves files and a hero file that
+ * puts them together with its timing (see darkKnight/ for the first of them), registered below;
+ * a few keep pieces and effects of their own beside them (arbalest/gear.ts and effects.ts,
+ * flameWarden/fire.ts, firebeast/fire.ts).
  */
 import type { Raster } from '../paint.js';
 import { ARBALEST_HERO } from './arbalest/hero.js';
-import { BOWMASTER_HERO } from './bowmaster/hero.js';
 import { BLADEMASTER_HERO } from './blademaster/hero.js';
+import { BOWMASTER_HERO } from './bowmaster/hero.js';
 import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
+import type { ChibiDesign } from './design.js';
 import { DRAGOON_HERO } from './dragoon/hero.js';
 import { FIREBEAST_HERO } from './firebeast/hero.js';
-import type { ChibiDesign } from './design.js';
-import { GUARDIAN_HERO } from './guardian/hero.js';
-import { SAGE_HERO } from './sage/hero.js';
 import { FLAME_WARDEN_HERO } from './flameWarden/hero.js';
-import { SPELLBLADE_HERO } from './spellblade/hero.js';
+import { GUARDIAN_HERO } from './guardian/hero.js';
 import type { ChibiPose, ChibiView } from './rig.js';
+import { SAGE_HERO } from './sage/hero.js';
+import { SPELLBLADE_HERO } from './spellblade/hero.js';
 
 export type { ChibiView } from './rig.js';
 
@@ -119,15 +121,19 @@ export const SLOT_CLIPS: readonly ChibiClip[] = ['special', 'q', 'e', 'r', 'ult'
 /** The basic attack's hits in order (the act event's chain index picks one). */
 export const COMBO_CLIPS: readonly ChibiClip[] = ['atk1', 'atk2', 'atk3'];
 
-/** The heroes drawn by the chibi painter, by sprite id. Others use the older painter. */
+/**
+ * Every hero, and every form a hero takes, by sprite id (`hero-` and the name in kebab case: see
+ * heroArt.ts), in the roster's order: the Tanks, the Mages, the Rangers, the Duelists, then the
+ * forms (the Flame Warden's Firebeast).
+ */
 export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
   'hero-dark-knight': DARK_KNIGHT_HERO,
-  'hero-spellblade': SPELLBLADE_HERO,
-  'hero-dragoon': DRAGOON_HERO,
   'hero-guardian': GUARDIAN_HERO,
   'hero-sage': SAGE_HERO,
+  'hero-spellblade': SPELLBLADE_HERO,
   'hero-arbalest': ARBALEST_HERO,
   'hero-bowmaster': BOWMASTER_HERO,
+  'hero-dragoon': DRAGOON_HERO,
   'hero-blademaster': BLADEMASTER_HERO,
   'hero-flame-warden': FLAME_WARDEN_HERO,
   'hero-firebeast': FIREBEAST_HERO,

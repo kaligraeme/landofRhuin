@@ -18,7 +18,7 @@
  * `draw` 0 and then `draw` 1 and `nock: false`, the left hand at the stirrup or the string. The
  * left hand holds the fore-stock (`grip2`, ahead of the trigger) when the pose leaves `handB` out.
  */
-import type { Vec } from '../skeleton.js';
+import type { Vec } from '../paint.js';
 import { type ArrowSpec, arrowHeads, flatShaft, paintArrow } from './bow.js';
 import type { Held, PieceContext, WeaponDesign } from './design.js';
 import { clipToGround, heldAxes, mainHeld } from './held.js';

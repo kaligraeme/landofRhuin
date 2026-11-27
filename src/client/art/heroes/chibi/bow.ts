@@ -25,8 +25,7 @@
  * not drawn (taking one from the quiver, say); it hides itself while one is on the string, which
  * the bow paints. `NO_WEAPON` (held.ts) leaves the drawing hand empty instead.
  */
-import type { RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { RGB, Vec } from '../paint.js';
 import { type DrawItem, HEAD_TAG, type Held, type HeldItem, OFFHAND_TAG, type PieceContext, WEAPON_TAG, type WeaponDesign } from './design.js';
 import { heldAxes, mainHeld } from './held.js';
 import { type Mat, mixc, type Part, type Ramp4 } from './raster.js';

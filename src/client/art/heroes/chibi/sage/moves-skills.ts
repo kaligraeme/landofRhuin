@@ -41,8 +41,7 @@
  * gold-green (LIFE), his Meteor burns orange (FIRE) and Resurrection shines gold (GOLD_LIGHT); the
  * rest is his own teal.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { RGB, Vec } from '../../paint.js';
 import { column, flash, glowLine, motes, rays } from '../fx.js';
 import { scanPoly } from '../raster.js';
 import { add3, type ChibiPose, type FxContext, lerp3, pose, rad, type V3 } from '../rig.js';

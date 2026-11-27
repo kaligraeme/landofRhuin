@@ -5,8 +5,7 @@
  * sinking whatever of it is below the floor into the ground. An item is painted at whichever
  * grip it is given (`Held`), so the same item serves as the main weapon or the off-hand item.
  */
-import type { Canvas, RGB } from '../paint.js';
-import type { Vec } from '../skeleton.js';
+import type { Canvas, RGB, Vec } from '../paint.js';
 import { type Held, type HeldItem, type PieceContext, WEAPON_TAG, type WeaponDesign } from './design.js';
 import { mixc, type Part } from './raster.js';
 import { add3, type Grip, type V3 } from './rig.js';

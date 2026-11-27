@@ -7,7 +7,7 @@ import type { MobKind } from '../../shared/content/monsters.js';
 import { clamp, type Shape } from '../../shared/geometry.js';
 import { T_FLOOR, T_GATE, tileAt } from '../../shared/map.js';
 import type { TelegraphSnap } from '../../shared/protocol.js';
-import { formSprite, spriteFor, type ChibiAnim, type ChibiFrame, type Facing, type Sheet, type Sprite, type SpriteAnim } from '../art/sprites.js';
+import { formSprite, spriteFor, type ChibiAnim, type ChibiFrame, type Facing, type Sprite, type SpriteAnim } from '../art/sprites.js';
 import type { Clip } from '../art/animation.js';
 import { chibiClip, formShow, type ChibiPick, type FormShow } from './chibiState.js';
 import type { Effects, Fx } from './fx.js';
@@ -95,8 +95,12 @@ export class Renderer {
   private tops = new Map<number, number>();
   /** Clickable sprite bounds (world units), for picking. */
   readonly hitBoxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>();
-  /** The clip and frame each chibi hero showed last frame, and from which view (for debugging from the console). */
-  readonly chibiShown = new Map<number, ChibiPick & { view: Facing }>();
+  /**
+   * The clip and frame each chibi hero showed last frame, from which view, and whose frames they
+   * were (the hero's sprite id, or a form's such as `hero-firebeast`), for debugging from the
+   * console and for the browser tests.
+   */
+  readonly chibiShown = new Map<number, ChibiPick & { view: Facing; sprite: string }>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -1072,18 +1076,15 @@ export class Renderer {
   }
 
   /**
-   * Draws an entity standing at its position, facing its heading: an animation frame once its
-   * frames are built (heroes carry their weapons in them, and turn toward or away from the viewer
-   * as well as left and right), otherwise the still artwork with a little bob. Flashes white when
-   * struck; knocked-out heroes lie greyed; dead monsters sink.
+   * Draws an entity standing at its position, facing its heading. Heroes are chibis (drawChibi). A
+   * monster or boss shows an animation frame once its frames are built, otherwise its still
+   * artwork with a little bob; it flashes white when struck and sinks when it dies.
    */
   private drawSprite(view: View, e: ClientEntity, sp: Sprite, now: number): void {
     const g = this.g;
     const def = sp.def;
     const H = def.height;
     const W = (H * def.w) / def.h;
-    const isPlayer = e.spawn.kind === 'player';
-    const dead = isPlayer && !!e.snap.d;
     let m = this.motion.get(e.id);
     if (!m) {
       m = { x: e.x, y: e.y, speed: 0, phase: 0, facing: 'side' };
@@ -1094,55 +1095,34 @@ export class Renderer {
     m.x = e.x;
     m.y = e.y;
     if (sp.chibi?.views.side) return this.drawChibi(view, e, sp, sp.chibi, m, now);
-    const moving = m.speed > 0.6 && !dead;
-    const rolling = e.id === view.world.meId && view.rolling;
+    const moving = m.speed > 0.6;
     const anim = sp.anim;
-    const facing = this.facingOf(e, m, anim, dead);
-    const sheet: Sheet | undefined = anim && facing !== 'side' ? anim.turned?.[facing] : anim ?? undefined;
-    const flip = facing === 'side' && Math.cos(e.f) < -0.05;
-    const sink = e.diedAt && !isPlayer ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
+    const flip = Math.cos(e.f) < -0.05;
+    const sink = e.diedAt ? clamp((now - e.diedAt) / 0.7, 0, 1) : 0;
     const hitAt = view.world.lastHit.get(e.id);
-    const flash = hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt && !dead ? (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1) : 0;
+    const flash = hitAt !== undefined && now - hitAt < 0.1 && !e.diedAt ? (e.spawn.kind === 'boss' ? 0.35 : 0.6) * (1 - (now - hitAt) / 0.1) : 0;
     const dy = (-H * def.ay) / def.h;
     let feetY: number;
 
     g.save();
-    if (anim && sheet) {
+    if (anim) {
       // Strides advance with distance travelled: a full stride every ~1.2 body heights.
-      if (rolling) m.phase += this.frameDt * 26;
-      else if (moving) m.phase += (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, H * 1.2);
-      const { clip, frame } = rolling ? { clip: 'move' as Clip, frame: Math.floor((m.phase / (Math.PI * 2)) * anim.lengths.move) % anim.lengths.move } : this.animState(view, e, anim, m.phase, now, moving);
+      if (moving) m.phase += (this.frameDt * m.speed * Math.PI * 2) / Math.max(1.6, H * 1.2);
+      const { clip, frame } = this.animState(view, e, anim, m.phase, now, moving);
       feetY = e.y + 0.15 - (def.floats ? 0.25 : 0);
       const k = anim.scale;
       g.translate(e.x, feetY);
-      if (dead) {
-        g.rotate(flip ? -1.45 : 1.45);
-        g.globalAlpha *= 0.85;
-      }
       if (flip) g.scale(-1, 1);
       g.scale(1, 1 - sink * 0.45);
       g.imageSmoothingEnabled = false;
-      const ox = -sheet.ax * k;
-      const oy = -sheet.ay * k;
-      const fx = frame * sheet.fw;
-      const fy = sheet.rows[clip] * sheet.fh;
-      if (dead && anim.grey) {
-        g.drawImage(anim.grey, -anim.ax * k, -anim.ay * k, anim.fw * k, anim.fh * k);
-      } else {
-        if (rolling) {
-          // A dash: two fading after-images trail behind (above when running toward the viewer).
-          const trail = facing === 'side' ? [-1, 0] : facing === 'front' ? [0, -1] : [0, 1];
-          for (const [back, a] of [[1.1, 0.18], [0.55, 0.32]] as const) {
-            g.globalAlpha = a;
-            g.drawImage(sheet.atlas, fx, fy, sheet.fw, sheet.fh, ox + trail[0]! * back, oy + trail[1]! * back * 0.7, sheet.fw * k, sheet.fh * k);
-          }
-          g.globalAlpha = 1;
-        }
-        g.drawImage(sheet.atlas, fx, fy, sheet.fw, sheet.fh, ox, oy, sheet.fw * k, sheet.fh * k);
-        if (flash > 0) {
-          g.globalAlpha *= flash;
-          g.drawImage(this.whiteFrame(sheet.atlas, fx, fy, sheet.fw, sheet.fh), 0, 0, sheet.fw, sheet.fh, ox, oy, sheet.fw * k, sheet.fh * k);
-        }
+      const ox = -anim.ax * k;
+      const oy = -anim.ay * k;
+      const fx = frame * anim.fw;
+      const fy = anim.rows[clip] * anim.fh;
+      g.drawImage(anim.atlas, fx, fy, anim.fw, anim.fh, ox, oy, anim.fw * k, anim.fh * k);
+      if (flash > 0) {
+        g.globalAlpha *= flash;
+        g.drawImage(this.whiteFrame(anim.atlas, fx, fy, anim.fw, anim.fh), 0, 0, anim.fw, anim.fh, ox, oy, anim.fw * k, anim.fh * k);
       }
     } else {
       if (moving) m.phase += this.frameDt * (6 + m.speed * 1.2);
@@ -1150,17 +1130,12 @@ export class Renderer {
       const breathe = moving ? 0 : Math.sin(now * 2.2 + e.id) * 0.012;
       feetY = e.y + 0.15 - bob - (def.floats ? 0.25 + Math.sin(now * 2 + e.id) * 0.15 : 0);
       g.translate(e.x, feetY);
-      if (dead) {
-        g.rotate(flip ? -1.45 : 1.45);
-        g.globalAlpha *= 0.85;
-      } else {
-        g.rotate(moving ? Math.sin(m.phase) * 0.05 : 0);
-      }
+      g.rotate(moving ? Math.sin(m.phase) * 0.05 : 0);
       if (flip) g.scale(-1, 1);
       g.scale(1, (1 + breathe) * (1 - sink * 0.45));
       g.imageSmoothingEnabled = false;
       const dx = (-W * def.ax) / def.w;
-      g.drawImage(dead && sp.grey ? sp.grey : sp.img, dx, dy, W, H);
+      g.drawImage(sp.img, dx, dy, W, H);
       if (sp.white && flash > 0) {
         g.globalAlpha *= flash;
         g.drawImage(sp.white, dx, dy, W, H);
@@ -1170,17 +1145,6 @@ export class Renderer {
 
     this.tops.set(e.id, feetY + dy * (1 - sink * 0.45));
     this.hitBoxes.set(e.id, { x0: e.x - W * 0.28, x1: e.x + W * 0.28, y0: feetY + dy * 0.9, y1: e.y + 0.3 });
-  }
-
-  /**
-   * Which way a hero faces on screen: toward the viewer while heading down the screen, away while
-   * heading up, otherwise side on. A little hysteresis keeps a diagonal heading from flickering
-   * between the two. Monsters, and heroes whose turned frames are still being painted, stay side on.
-   */
-  private facingOf(e: ClientEntity, m: { facing: Facing }, anim: SpriteAnim | null, dead: boolean): Facing {
-    if (!anim?.turned || dead) return (m.facing = 'side');
-    const turned = anim.turned;
-    return this.turnTo(e, m, (f) => !!turned[f]);
   }
 
   /** Toward the viewer, away or side on by heading (with hysteresis), if that view is painted yet. */
@@ -1243,7 +1207,7 @@ export class Renderer {
         maxHp: e.snap.mh,
         fighting: this.engaged.some((o) => Math.abs(o.x - e.x) < 16 && Math.abs(o.y - e.y) < 16),
       });
-    this.chibiShown.set(e.id, { ...pick, view: facing });
+    this.chibiShown.set(e.id, { ...pick, view: facing, sprite: hero.id });
     const clipFrames = sheet.frames[pick.clip];
     const f = (clipFrames[pick.frame] ?? clipFrames[0] ?? sheet.frames.idle[0]) as ChibiFrame;
     const hitAt = world.lastHit.get(e.id);

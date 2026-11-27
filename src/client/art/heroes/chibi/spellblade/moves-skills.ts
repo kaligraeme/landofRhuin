@@ -35,10 +35,8 @@
  * (`handB` about `[11, -9, 8]`): side on, the main view, it then stands clear of her hair above
  * and ahead of her head, where held out to her left it would hide behind her hair.
  */
-import type { RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import { hex, type RGB, type Vec } from '../../paint.js';
 import { afterimages, DUST, DUST_DARK, glowLine, lightning, puff, ward } from '../fx.js';
-import { hex } from '../../paint.js';
 import { mixc } from '../raster.js';
 import { add3, type ChibiPose, clamp, type FxContext, len3, lerp, type P2, pose, rad, sub3, type V3, weaponAxes } from '../rig.js';
 import { fromReady, READY, settle } from './moves-core.js';

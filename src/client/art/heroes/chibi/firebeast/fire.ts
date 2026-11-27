@@ -14,8 +14,7 @@
  * whole number of flickers a turn), so a loop that runs `phase` from 0 to 1 loops cleanly, and a
  * clip that advances it every frame never shows the same fire twice.
  */
-import type { Canvas, RGB } from '../../paint.js';
-import type { Vec } from '../../skeleton.js';
+import type { Canvas, RGB, Vec } from '../../paint.js';
 import { type DrawItem, GEAR_ID, type Held, type HeadPiece, type HeldItem, type Piece, type PieceContext } from '../design.js';
 import { mainHeld } from '../held.js';
 import { hash } from '../pieces.js';

@@ -3,7 +3,6 @@ import { HERO_ORDER, HEROES } from '../../shared/content/classes.js';
 import { h } from '../dom.js';
 import { musicControl } from './musicControl.js';
 import { showHero } from '../art/sprites.js';
-import { standingIn } from '../art/heroLook.js';
 import { savedName } from '../net.js';
 
 export function titleScreen(onEnter: (name: string) => void): HTMLElement {
@@ -34,8 +33,7 @@ export function titleScreen(onEnter: (name: string) => void): HTMLElement {
       h(
         'div',
         { class: 'hero-line' },
-        // Every hero with artwork of their own (one drawn as a stand-in for now would show twice).
-        HERO_ORDER.filter((hero) => !standingIn(hero)).map((hero) => {
+        HERO_ORDER.map((hero) => {
           const img = h('img', { alt: HEROES[hero].name });
           showHero(img, hero);
           return img;
