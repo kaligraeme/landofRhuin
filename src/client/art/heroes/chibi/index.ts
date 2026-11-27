@@ -11,9 +11,10 @@
  * painter: four-tone shading and coloured inner lines over paint.ts's Canvas), design.ts (what a
  * design file fills in), head.ts (heads, face styles, locks and long hair: curtains, locks over
  * the shoulders, ponytails), pieces.ts (pauldrons, collars, skirts and coats, capes, scarves, and
- * the strands cloth and hair hang as), the held items (blade.ts bladed weapons, pole.ts pole arms,
- * wand.ts wands, held.ts what they share; a design may also give one for the off hand), fx.ts
- * (effects) and painter.ts (puts a frame together). A hero has a folder of its own: a design file,
+ * the strands cloth and hair hang as), the held items (blade.ts bladed weapons, straight or curved,
+ * pole.ts pole arms and staves, wand.ts wands, shield.ts shields strapped to the forearm, bow.ts
+ * bows and arrows, crossbow.ts crossbows, held.ts what they share; a design may also give one
+ * for the off hand), fx.ts (effects) and painter.ts (puts a frame together). A hero has a folder of its own: a design file,
  * its moves files and a hero file that puts them together with its timing (see darkKnight/,
  * spellblade/ and halberdier/), registered below.
  */

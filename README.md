@@ -349,16 +349,24 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
     robe, a split skirt; `legs` keeps a long one clear of striding legs), a cape, a scarf (its
     wrap with the head pieces, its tails with the outfit; they can taper, wave and climb behind
     the shoulders seen front on), or its own pieces built on `strand`;
-  - a weapon for the right hand: a blade (`blade.ts`) or a pole arm (`pole.ts`: haft, point, axe,
-    spike, lugs, ribbon and a glowing channel; a pose slides both hands along its haft), and
-    optionally an item for the left hand (`offhand`: a wand from `wand.ts`, a second blade, later
-    a bow), each a `HeldItem` (`held.ts` has what they share);
+  - a weapon for the right hand: a blade (`blade.ts`, straight or curved into a sabre), a pole
+    arm (`pole.ts`: haft, point, axe, spike, lugs, ribbon and a glowing channel; a pose slides
+    both hands along its haft), a staff (a pole arm crowned with an orb or crystal held in a ring,
+    claws or a crook, burning with `fx.rune`), a crossbow (`crossbow.ts`: stock, prod, string,
+    trigger, stirrup and a bolt; the pose spans and loads it) or an empty hand (`NO_WEAPON`), and
+    optionally an item for the left hand (`offhand`: a wand from `wand.ts`, a second blade, a
+    shield from `shield.ts`, strapped to the forearm, with a round, kite or tower outline, a rim,
+    a boss and an emblem, or a bow from `bow.ts`, its string drawn through the right hand and an
+    arrow nocked on it), each a `HeldItem` (`held.ts` has what they share); a pose can sling the
+    off-hand item on the back;
 - moves files with a pose for every frame of every clip, in the pose format described on
   `ChibiPose` in `rig.ts` (the pelvis, lean, twist and turn, side-on hands and feet that the rig
-  lifts into 3D, the weapon's angle, roll and yaw and its grips, the off-hand item's own angles,
-  the expression and a wink, the wind, lift, flare and sway that move cloth and hair, and the
-  frame's effects: smears, rings, impacts, lightning, wards (with the hero's own runes if it
-  has them), swirls of wind, afterimages and more, from `fx.ts`);
+  lifts into 3D, which way the elbows point, the weapon's angle, roll and yaw and its grips, a
+  bow's draw and nocked arrow, the off-hand item's own angles (or a shield's aim, or the item
+  slung on the back), the expression and a wink, the wind, lift, flare and sway that move cloth
+  and hair, and the frame's effects: smears, rings, impacts, lightning, wards (with the hero's
+  own runes if it has them), swirls of wind, afterimages, a shot's release flash and trail,
+  light rays, a column of light, rising motes and more, from `fx.ts`);
 - a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes, scale
   and height.
 
@@ -369,7 +377,8 @@ and the same every time, stands on the ground, fits its frame and changes from f
 that it stands as tall as its height says and paints fast enough. It also pins a few of the Dark
 Knight's frames pixel for pixel, so engine work for one hero cannot change another by accident.
 The test mannequins in `test/` (`chibi-mannequins.ts`, `chibi-gear-mannequin.ts`,
-`chibi-combined-mannequins.ts`) show every engine option at work, for checking new ones.
+`chibi-combined-mannequins.ts`, `chibi-kit-mannequins.ts`) show every engine option at work, for
+checking new ones.
 
 ## Music
 

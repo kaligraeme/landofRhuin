@@ -8,6 +8,11 @@
  *
  * A blade is a held item (design.ts `HeldItem`): the main weapon, or a second blade or dagger in
  * the off hand (then it lies along `rig.offhand` and blazes with `fx.runeB`).
+ *
+ * A blade can curve (`curve`): its outline, edge, spine and rune are bent back from the guard to
+ * the tip, the tip carried toward the back, so the cutting edge runs along the outside of the
+ * curve, as a sabre's or a scimitar's does. Seen edge on it keeps its breadth (and so its curve),
+ * so twin sabres read in every view.
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
@@ -35,9 +40,39 @@ export interface BladeSpec {
   pommel: { u: number; r: number; mat: Mat; gem?: Mat; gemR?: number };
   grip2: number;
   reach: readonly [number, number];
+  /**
+   * How far the blade curves back: its tip this far toward its back (-v) from where a straight
+   * blade's would be, bending more toward the tip (default 0, straight). About a fifth of its
+   * length makes a sabre; the outline is given straight and bent as a whole.
+   */
+  curve?: number;
+}
+
+/** Points along a polygon's edges about every 1.5 px, so a bend follows a curve rather than cutting corners. */
+function resample(pts: readonly (readonly [number, number])[], closed: boolean): [number, number][] {
+  const out: [number, number][] = [];
+  const n = closed ? pts.length : pts.length - 1;
+  for (let i = 0; i < n; i++) {
+    const a = pts[i] as readonly [number, number];
+    const b = pts[(i + 1) % pts.length] as readonly [number, number];
+    const k = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 1.5));
+    for (let j = 0; j < k; j++) out.push([a[0] + ((b[0] - a[0]) * j) / k, a[1] + ((b[1] - a[1]) * j) / k]);
+  }
+  if (!closed) out.push([...(pts[pts.length - 1] as readonly [number, number])]);
+  return out;
 }
 
 export function blade(spec: BladeSpec): WeaponDesign {
+  const curve = spec.curve ?? 0;
+  const rootU = Math.min(...spec.blade.map((p) => p[0]));
+  const topU = Math.max(...spec.blade.map((p) => p[0]));
+  /** How far the curve carries a point of the blade back (toward -v), by how far up the blade it is. */
+  const sag = (u: number): number => {
+    const t = Math.max(0, Math.min(1, (u - rootU) / (topU - rootU || 1)));
+    return curve * t * t;
+  };
+  /** A polygon of the blade's plane bent along the curve (left as it is on a straight blade). */
+  const bent = (pts: readonly (readonly [number, number])[], closed = true): readonly (readonly [number, number])[] => (curve ? resample(pts, closed).map(([u, v]): [number, number] => [u, v - sag(u)]) : pts);
   return {
     grip2: spec.grip2,
     reach: spec.reach,
@@ -67,11 +102,13 @@ export function blade(spec: BladeSpec): WeaponDesign {
       part.poly([at(spec.pommel.u + 2.2, 0), at(spec.pommel.u + 0.6, spec.pommel.r), at(spec.pommel.u - 2.6, spec.pommel.r * 0.6), at(spec.pommel.u - 2.6, -spec.pommel.r * 0.6), at(spec.pommel.u + 0.6, -spec.pommel.r)], spec.pommel.mat, flatLight, z(spec.pommel.u) + 0.5, 2);
       if (spec.pommel.gem) part.ellipse(pm[0], pm[1], spec.pommel.gemR ?? 1, spec.pommel.gemR ?? 1, spec.pommel.gem, 0.1, z(spec.pommel.u) + 2.5, 6);
       // The blade, its pale cutting edge, the bright spine and the rune channel.
-      const bladePts = spec.blade.map(([u, v]) => at(u, v));
+      const bladePts = bent(spec.blade).map(([u, v]) => at(u, v));
       part.poly(bladePts, spec.steel, (x, y) => {
         // A bevel: the half toward the cutting edge catches a little more light.
         const rel = ((x + 0.5 - ax.o[0]) * ax.v[0] + (y + 0.5 - ax.o[1]) * ax.v[1]) / (ax.v[0] * ax.v[0] + ax.v[1] * ax.v[1]);
-        return flatLight * 0.6 + (rel > 0.5 ? 0.18 : -0.12);
+        // On a curved blade, measured from the bent middle line.
+        const back = curve ? sag(((x + 0.5 - ax.o[0]) * ax.u[0] + (y + 0.5 - ax.o[1]) * ax.u[1]) / ul2) : 0;
+        return flatLight * 0.6 + (rel + back > 0.5 ? 0.18 : -0.12);
       }, zAt, 3);
       const edge = spec.edge;
       const tipU = Math.max(...spec.blade.map((p) => p[0]));
@@ -81,12 +118,23 @@ export function blade(spec: BladeSpec): WeaponDesign {
       edgePts.sort((a, b) => a[0] - b[0]);
       for (const [u, v] of edgePts) inner.push([u + (u >= tipU - 4 ? -edge.width * 1.2 : 0), v - edge.width]);
       if (edgePts.length > 1) {
-        part.poly([...edgePts.map(([u, v]) => at(u, v)), ...inner.reverse().map(([u, v]) => at(u, v))], edge.mat, (x, y) => {
+        part.poly(bent([...edgePts, ...inner.reverse()]).map(([u, v]) => at(u, v)), edge.mat, (x, y) => {
           const rel = ((x + 0.5 - ax.o[0]) * ax.u[0] + (y + 0.5 - ax.o[1]) * ax.u[1]) / ul2;
           return flatLight * 0.4 + 0.25 + (rel > tipU * 0.7 ? 0.25 : 0);
         }, (x, y) => zAt(x, y) + 0.01, 3);
       }
-      if (spec.spine) part.line(at(spec.spine.from, spec.spine.v), at(spec.spine.to, spec.spine.v), spec.spine.mat, 0.7, z(spec.spine.from) + 0.6, 3, true);
+      if (spec.spine) {
+        const sp = spec.spine;
+        if (!curve) part.line(at(sp.from, sp.v), at(sp.to, sp.v), sp.mat, 0.7, z(sp.from) + 0.6, 3, true);
+        else {
+          const pts = bent([[sp.from, sp.v], [sp.to, sp.v]], false);
+          for (let i = 0; i + 1 < pts.length; i++) {
+            const a = pts[i] as readonly [number, number];
+            const b = pts[i + 1] as readonly [number, number];
+            part.line(at(a[0], a[1]), at(b[0], b[1]), sp.mat, 0.7, z(sp.from) + 0.6, 3, true);
+          }
+        }
+      }
       if (spec.rune) {
         // A thin channel smouldering at rest; ablaze it brightens toward the glow's colour and its marks show.
         const r = spec.rune;
@@ -96,13 +144,13 @@ export function blade(spec: BladeSpec): WeaponDesign {
         const n2 = Math.ceil(Math.abs(r.to - r.from) * Math.hypot(ax.u[0], ax.u[1]));
         for (let i = 0; i <= n2; i++) {
           const u = r.from + ((r.to - r.from) * i) / Math.max(1, n2);
-          const p = at(u, r.v);
+          const p = at(u, r.v - (curve ? sag(u) : 0));
           if (part.idAt(Math.floor(p[0]), Math.floor(p[1])) === 3) part.plot(p[0], p[1], runeMat, 0, z(u) + 0.7, 3, true);
         }
         if (k > 0.3) {
           for (const u of r.marks ?? []) {
             for (const dv of [-1, 1]) {
-              const p = at(u, r.v + dv);
+              const p = at(u, r.v + dv - (curve ? sag(u) : 0));
               if (part.idAt(Math.floor(p[0]), Math.floor(p[1])) === 3) part.plot(p[0], p[1], runeMat, 0, z(u) + 0.7, 3, true);
             }
           }
@@ -121,7 +169,7 @@ export function blade(spec: BladeSpec): WeaponDesign {
       part.clip = null;
     },
     glow: (ctx: PieceContext, strength: number, held: Held = mainHeld(ctx)) => {
-      if (spec.rune) channelGlow(ctx, held, spec.rune, strength);
+      if (spec.rune) channelGlow(ctx, held, spec.rune, strength, curve ? sag : undefined);
     },
   };
 }

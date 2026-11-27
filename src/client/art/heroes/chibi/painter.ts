@@ -15,10 +15,10 @@
 import { Canvas, INK, type Raster } from '../paint.js';
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from './index.js';
 import type { Vec } from '../skeleton.js';
-import { type ChibiDesign, type DrawItem, OFFHAND_TAG, type PieceContext, WEAPON_TAG } from './design.js';
+import { type ChibiDesign, type DrawItem, type Held, OFFHAND_TAG, type PieceContext, WEAPON_TAG } from './design.js';
 import { paintFx } from './fx.js';
 import { hairItems, paintHead } from './head.js';
-import { blaze } from './held.js';
+import { blaze, mainHeld } from './held.js';
 import { dim, Part } from './raster.js';
 import { add3, at3, camera, type ChibiPose, type ChibiView, type Limb, lerp3, norm3, rotate, SIDE_LOOK, solveRig, sub3, type V3 } from './rig.js';
 
@@ -27,7 +27,7 @@ const FAR = -0.16;
 /** Paints one frame of a chibi hero in a pose, seen from a view. */
 export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box: FrameBox): Raster {
   const c = new Canvas(box.w, box.h);
-  const rig = solveRig(d.build, pose, d.weapon.grip2, d.weapon.haft);
+  const rig = solveRig(d.build, pose, d.weapon.grip2, d.weapon.haft, d.offhand?.strap);
   const cam = camera(view, pose.turn ?? 0, box.ax, box.ay);
   const owner = new Int16Array(box.w * box.h);
   const ctx: PieceContext = {
@@ -106,7 +106,10 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
   const wZ = depth(add3(w.o, w.u, d.weapon.reach[1] * 0.3)) + up;
   const off = d.offhand;
   const wB = rig.offhand;
-  const bZ = off ? ctx.upperZ(depth(add3(wB.o, wB.u, off.reach[1] * 0.3))) : 0;
+  let bZ = off ? ctx.upperZ(depth(add3(wB.o, wB.u, off.reach[1] * 0.3))) : 0;
+  // An off-hand item slung on the back is not in the hand; one strapped to the forearm sorts with the arm (below).
+  const strapped = !!off?.strap && !pose.dropB && !pose.slingB;
+  const inHand = !!off && !pose.dropB && !pose.slingB && !off.strap;
   for (const [arm, side] of [[rig.armR, 1], [rig.armL, -1]] as const) {
     const far = farSide(arm.mid) && farSide(arm.end);
     // An arm on the far side sorts by its true depth, so a coat flap hanging nearer the viewer stays in front of it.
@@ -114,18 +117,23 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
     items.push({ z: zArm, draw: () => paintArm(ctx, d, arm, far) });
     const holds = side === 1 ? !pose.drop : rig.twoHanded;
     let zHand = holds && farSide(arm.end) === farSide(add3(w.o, w.u, 12)) ? Math.max(zArm, wZ) + 0.05 : zArm + 0.05;
-    if (side === -1 && off && !pose.dropB && farSide(arm.end) === farSide(add3(wB.o, wB.u, 6))) zHand = Math.max(zHand, bZ + 0.05);
+    if (side === -1 && inHand && farSide(arm.end) === farSide(add3(wB.o, wB.u, 6))) zHand = Math.max(zHand, bZ + 0.05);
+    // A shield on the forearm hides the arm and hand behind it while its face is toward the viewer; seen from behind, they lie over it.
+    if (side === -1 && strapped) bZ = cam.facing(wB.n) > 0 ? Math.max(zArm, zHand) + 0.1 : Math.min(zArm, zHand) - 0.1;
     items.push({ z: zHand, draw: () => paintHand(ctx, d, arm, far) });
   }
+  const heldB: Held = { grip: wB, blaze: blaze(ctx, true), tag: OFFHAND_TAG };
   if (off) {
     items.push({
       z: bZ,
       draw: () => {
         const part = ctx.part(OFFHAND_TAG);
-        off.paint(ctx, part, { grip: wB, blaze: blaze(ctx, true), tag: OFFHAND_TAG });
+        off.paint(ctx, part, heldB);
         part.commit();
       },
     });
+    // Parts of it sorted on their own (a bow's string and arrow).
+    if (off.items) for (const it of off.items(ctx, heldB)) items.push(it);
   }
   items.push({
     z: wZ,
@@ -135,6 +143,7 @@ export function paintChibi(d: ChibiDesign, pose: ChibiPose, view: ChibiView, box
       part.commit();
     },
   });
+  if (d.weapon.items) for (const it of d.weapon.items(ctx, mainHeld(ctx))) items.push(it);
 
   for (const piece of d.outfit) for (const it of piece(ctx)) items.push(it);
 
