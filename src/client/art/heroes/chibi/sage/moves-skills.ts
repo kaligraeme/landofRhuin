@@ -418,7 +418,7 @@ const e: ChibiPose[] = [
   pose(PLANTED, { y: 4.5, phase: 0.7, face: 'stern', head: 4, fx: { rune: 0.6, extra: both(runeRing(spot, 29, 0.5, 40, LIFE), runeRing(spot, 22, 0.5, -40, LIFE), rising(spot, 24, 0.8, 0.5, LIFE)) } }),
   // Lifted back out into the stance, its head dipped so that toward the viewer it passes under his chin.
   settle(dipped(PLANTED), 0.3, { wind: 0.2, phase: 0.8, face: 'stern', fx: { rune: 0.45, extra: runeRing(spot, 30, 0.25, 48, LIFE) } }),
-  settle(dipped(PLANTED), 0.85, { wind: 0.16, phase: 0.9, fx: { rune: 0.35 } }),
+  settle(dipped(PLANTED), 0.92, { wind: 0.16, phase: 0.9, fx: { rune: 0.35 } }),
 ];
 
 // ── Meteor ───────────────────────────────────────────────────────────────────────────────────
@@ -525,7 +525,7 @@ const cast: ChibiPose[] = [
   pose(FLARE, { y: 3, phase: 0.45, fx: { rune: 1, circle: 0.8, extra: both(orbRays(0.5, ARCANE, 15), sparkles(0.15, 1)) } }),
   pose(FLARE, { y: 3, phase: 0.6, face: 'smirk', fx: { rune: 0.8, circle: 1, extra: sparkles(0.3, 0.8) } }),
   settle(dipped(FLARE), 0.3, { phase: 0.75, wind: 0.25, face: 'stern', fx: { rune: 0.5, circle: 0.6, extra: sparkles(0.45, 0.5) } }),
-  settle(dipped(FLARE), 0.85, { phase: 0.9, wind: 0.18, fx: { rune: 0.35, circle: 0.2, extra: sparkles(0.6, 0.2) } }),
+  settle(dipped(FLARE), 0.92, { phase: 0.9, wind: 0.18, fx: { rune: 0.35, circle: 0.2, extra: sparkles(0.6, 0.2) } }),
 ];
 
 /** The skill clips' poses, by clip. */
