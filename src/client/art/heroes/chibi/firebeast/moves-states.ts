@@ -12,7 +12,7 @@
  *               in a burst of flame and a gold starburst, then stands blazing, fists clenched
  */
 import type { FxContext } from '../rig.js';
-import { type BeastPose, pillar, smoke } from './fire.js';
+import { type BeastPose, ringOfFire, smoke } from './fire.js';
 import { AT_EASE, beast, both, fromReady, jaws, READY, settle } from './moves-core.js';
 
 // ── Hurt ─────────────────────────────────────────────────────────────────────────────────────
@@ -131,19 +131,19 @@ const ROAR = beast(AT_EASE, { x: 0, y: 2, lean: -2, twist: 0, head: -34, look: 0
 /** Standing tall and blazing after it, fists clenched by its sides, chin up. */
 const PROUD = beast(AT_EASE, { x: 0, y: 2, lean: 14, twist: 6, head: -24, look: 8, footF: [8, 0, 8.4], footB: [-7, 0, 7.4], handF: [4, 18, 17], handB: [2, 18, 16], elbowF: [-0.3, -1, 1], elbowB: [-0.3, -1, 1], weapon: 150, weaponB: 150, roll: 20, rollB: 20, face: 'grit', wind: 0.4, lift: 0.4, fire: 1.5 });
 
-/** Flames bursting up round its feet as it roars, `k` their height (fire.ts `pillar`, burst wide open). */
+/** A ring of fire bursting up round its feet as it roars, `k` its strength (fire.ts `ringOfFire`). */
 const ring =
-  (k: number) =>
+  (k: number, seed = 0) =>
   (x: FxContext): void =>
-    pillar(x, k, { open: 1, height: 90, feet: true });
+    ringOfFire(x, k, { radius: 22, height: 30, seed });
 
 const victory: BeastPose[] = [
   fromReady(beast(READY, { y: 10, lean: 40, head: -30, handF: [8, 20, 14], handB: [6, 20, 13], weapon: 170, weaponB: 170 }), 0.6, { phase: 0.05, face: 'grit' }),
-  beast(ROAR, { y: 4, lean: 6, head: -26, phase: 0.18, fire: 1.5, fx: { aura: 0.5, extra: ring(0.4) } }),
-  beast(ROAR, { phase: 0.3, fx: { rays: { k: 1, spin: 0 }, aura: 0.8, extra: both(ring(0.8), jaws(1, 24)) } }),
-  beast(ROAR, { phase: 0.42, y: 1.5, fx: { rays: { k: 1, spin: 10 }, aura: 0.8, extra: both(ring(0.65), jaws(1, 28)) } }),
-  beast(ROAR, { phase: 0.55, fx: { rays: { k: 0.7, spin: 20 }, aura: 0.6, extra: both(ring(0.4), jaws(0.6, 22)) } }),
-  beast(PROUD, { y: 2.5, lean: 10, phase: 0.68, fx: { rays: { k: 0.3, spin: 28 }, aura: 0.3, extra: ring(0.18) } }),
+  beast(ROAR, { y: 4, lean: 6, head: -26, phase: 0.18, fire: 1.5, fx: { aura: 0.5, extra: ring(0.4, 1) } }),
+  beast(ROAR, { phase: 0.3, fx: { rays: { k: 1, spin: 0 }, aura: 0.8, extra: both(ring(0.85, 2), jaws(1, 24)) } }),
+  beast(ROAR, { phase: 0.42, y: 1.5, fx: { rays: { k: 1, spin: 10 }, aura: 0.8, extra: both(ring(0.75, 3), jaws(1, 28)) } }),
+  beast(ROAR, { phase: 0.55, fx: { rays: { k: 0.7, spin: 20 }, aura: 0.6, extra: both(ring(0.5, 4), jaws(0.6, 22)) } }),
+  beast(PROUD, { y: 2.5, lean: 10, phase: 0.68, fx: { rays: { k: 0.3, spin: 28 }, aura: 0.3, extra: ring(0.2, 5) } }),
   beast(PROUD, { phase: 0.82 }),
   beast(PROUD, { phase: 0.95 }),
 ];

@@ -21,7 +21,7 @@
  * `jaws`); the fire's level (`fire`) rises with every roar.
  */
 import type { FxContext } from '../rig.js';
-import { type BeastPose, flare, pillar } from './fire.js';
+import { type BeastPose, column, flare } from './fire.js';
 import { beast, blend, both, fromReady, jaws, READY, settle, swipe } from './moves-core.js';
 
 /** A burst of flame from its chest, `k` 0 to 1 (fire.ts `flare`). */
@@ -36,11 +36,11 @@ const headSkip = (x: FxContext): ((px: number, py: number) => boolean) => {
   return (px, py) => Math.hypot(px - h[0], py - h[1]) < 12;
 };
 
-/** The pillar of fire (fire.ts `pillar`), `k` its height and `open` how far it has burst. */
+/** The column of fire (fire.ts `column`), `k` its height, `open` how far it has burst and `seed` its flicker. */
 const blaze =
-  (k: number, open = 0) =>
+  (k: number, open = 0, seed = 0) =>
   (x: FxContext): void =>
-    pillar(x, k, { open });
+    column(x, k, { open, seed });
 
 // ── Special: a roar of fire ──────────────────────────────────────────────────────────────────
 
@@ -119,37 +119,45 @@ const r: BeastPose[] = [
 
 // ── Ult: it emerges ──────────────────────────────────────────────────────────────────────────
 
-/** Curled low inside the pillar, as the Warden was when the flames took him. */
+/** Curled low inside the column, as the Warden was when the flames took him. */
 const CURLED = beast(READY, { x: 0, y: 16, lean: 50, twist: 0, head: -10, footF: [8, 0, 8], footB: [-9, 0, 7.4], handF: [6, 26, 10], handB: [5, 26, 9], weapon: 180, weaponB: 180, face: 'closed', wind: 0, lift: 0.6, fire: 1.5 });
 /** Risen out of it, arms flung wide and head thrown back in a roar. */
 const EMERGE = beast(READY, { x: 0, y: 3, lean: 2, twist: 0, head: -26, look: 0, footF: [10, 0, 8.6], footB: [-9, 0, 7.8], handF: [2, 4, 26], handB: [2, 4, 26], elbowF: [-0.2, -1, 1], elbowB: [-0.2, -1, 1], weapon: 60, weaponB: 60, roll: 70, rollB: 70, face: 'shout', wind: 0.5, lift: 0.9, fire: 1.7 });
 
+/** The roar's shockwave rolls out round its feet, not from under a claw. */
+const UNDER: [number, number, number] = [0, 0, 0];
+
+/**
+ * Played in the 0.4 s the game gives the form to emerge (half of FormDef.emerge), about 57 ms a
+ * frame: two frames of the Warden's column, one of it bursting open round the beast, the roar held
+ * for three and one to settle toward the battle stance.
+ */
 const ult: BeastPose[] = [
-  beast(CURLED, { phase: 0, fx: { extra: blaze(1) } }),
-  beast(CURLED, { y: 13, lean: 42, head: -14, phase: 0.1, fx: { extra: blaze(1, 0.15) } }),
-  beast(blend(CURLED, EMERGE, 0.45), { phase: 0.2, face: 'grit', fx: { extra: blaze(0.95, 0.45) } }),
-  beast(EMERGE, { y: 4, phase: 0.3, fx: { extra: both(blaze(0.75, 0.8), burst(0.1, 56)), aura: 0.6 } }),
-  beast(EMERGE, { phase: 0.4, fx: { shock: 0.1, rays: { k: 1, spin: 0 }, aura: 0.8, extra: both(burst(0.3, 56), jaws(0.8, 18)) } }),
-  beast(EMERGE, { phase: 0.5, y: 2.5, fx: { shock: 0.35, rays: { k: 0.9, spin: 8 }, aura: 0.7, extra: both(burst(0.55, 56), jaws(0.7, 18)) } }),
-  beast(EMERGE, { phase: 0.6, fx: { shock: 0.6, rays: { k: 0.6, spin: 16 }, aura: 0.5, extra: burst(0.78, 56) } }),
-  beast(EMERGE, { phase: 0.7, y: 3.5, lift: 0.6, fx: { shock: 0.85, rays: { k: 0.3, spin: 24 }, aura: 0.3, extra: burst(0.94, 56) } }),
-  settle(EMERGE, 0.3, { phase: 0.8, face: 'grit' }),
-  settle(EMERGE, 0.6, { phase: 0.9 }),
-  settle(EMERGE, 0.85, { phase: 1 }),
-  settle(EMERGE, 1, { phase: 1.1 }),
+  beast(CURLED, { phase: 0, fx: { extra: blaze(1, 0, 0) } }),
+  beast(CURLED, { y: 13, lean: 42, head: -14, phase: 0.14, fx: { extra: blaze(1, 0, 1) } }),
+  beast(blend(CURLED, EMERGE, 0.65), { phase: 0.28, face: 'shout', fx: { aura: 0.9, extra: blaze(1, 0.7, 2) } }),
+  beast(EMERGE, { y: 4, phase: 0.42, fx: { shock: 0.12, shockAt: UNDER, rays: { k: 1, spin: 0 }, aura: 0.8, extra: both(blaze(0.9, 1, 3), burst(0.18, 56), jaws(0.8, 18)) } }),
+  beast(EMERGE, { phase: 0.57, y: 2.5, fx: { shock: 0.45, shockAt: UNDER, rays: { k: 1, spin: 10 }, aura: 0.7, extra: both(burst(0.5, 56), jaws(0.8, 18)) } }),
+  beast(EMERGE, { phase: 0.71, y: 3.5, lift: 0.7, fx: { shock: 0.8, shockAt: UNDER, rays: { k: 0.6, spin: 20 }, aura: 0.5, extra: burst(0.82, 56) } }),
+  settle(EMERGE, 0.85, { phase: 0.86 }),
 ];
 
 // ── Cast: it collapses into flame ────────────────────────────────────────────────────────────
 
+/**
+ * Played in the 0.45 s the game gives the form to collapse (FORM_COLLAPSE): flames already rising
+ * off a ring round its feet in the first frame, climbing it as it curls down, and from the sixth
+ * frame the Warden's column, which hides all of it.
+ */
 const cast: BeastPose[] = [
-  fromReady(beast(CURLED, { face: 'grit', y: 10, lean: 40, lift: 0.2, fire: 1.4 }), 0.4, { phase: 0.05, fx: { extra: blaze(0.2) } }),
-  fromReady(beast(CURLED, { face: 'grit', lift: 0.3 }), 0.75, { phase: 0.15, fx: { extra: blaze(0.38) } }),
-  beast(CURLED, { y: 14, phase: 0.25, face: 'hurt', fx: { extra: blaze(0.56) } }),
-  beast(CURLED, { phase: 0.35, fx: { extra: blaze(0.72) } }),
-  beast(CURLED, { phase: 0.45, fx: { extra: blaze(0.86) } }),
-  beast(CURLED, { phase: 0.55, fx: { extra: blaze(0.96) } }),
-  beast(CURLED, { phase: 0.65, y: 17, fx: { extra: blaze(1) } }),
-  beast(CURLED, { phase: 0.75, y: 18, fx: { extra: blaze(1.02) } }),
+  fromReady(beast(CURLED, { face: 'grit', y: 10, lean: 40, lift: 0.2, fire: 1.4 }), 0.45, { phase: 0.05, fx: { extra: blaze(0.3, 0, 10) } }),
+  fromReady(beast(CURLED, { face: 'grit', lift: 0.3 }), 0.8, { phase: 0.15, fx: { extra: blaze(0.46, 0, 11) } }),
+  beast(CURLED, { y: 14, phase: 0.25, face: 'hurt', fx: { extra: blaze(0.6, 0, 12) } }),
+  beast(CURLED, { phase: 0.35, fx: { extra: blaze(0.72, 0, 13) } }),
+  beast(CURLED, { phase: 0.45, fx: { extra: blaze(0.84, 0, 14) } }),
+  beast(CURLED, { phase: 0.55, fx: { extra: blaze(0.94, 0, 15) } }),
+  beast(CURLED, { phase: 0.65, fx: { extra: blaze(1, 0, 16) } }),
+  beast(CURLED, { phase: 0.75, fx: { extra: blaze(1, 0, 17) } }),
 ];
 
 /** The skill clips' poses, by clip. */

@@ -284,35 +284,38 @@ const A1_FOLLOW = beast(A1_HIT, { y: 11, lean: 42, twist: -26, handF: [19, 23, -
 
 const atk1: BeastPose[] = [
   A1_COCK,
-  strike([A1_COCK], A1_SWING, 0.9, false, 14),
-  strike([A1_COCK, A1_SWING], A1_HIT, 1, false, 21),
-  strike([A1_COCK, A1_SWING, A1_HIT], A1_FOLLOW, 0.55, false, 18),
+  strike([A1_COCK], A1_SWING, 0.9, false, 16),
+  strike([A1_COCK, A1_SWING], A1_HIT, 1, false, 24),
+  strike([A1_COCK, A1_SWING, A1_HIT], A1_FOLLOW, 0.55, false, 20),
   beast(A1_FOLLOW, { y: 10, lean: 38, twist: -18, handF: [18, 19, 0], weapon: 140, wind: 0.6, lift: 0.4, phase: 0.7, face: 'grit', fire: 1.2, fx: undefined }),
   settle(A1_FOLLOW, 0.55, { wind: 0.35, lift: 0.25, phase: 0.85, fx: undefined }),
   settle(A1_FOLLOW, 0.88, { wind: 0.24, lift: 0.05, phase: 1, fx: undefined }),
 ];
 
-// atk2: the left claw swept up and out from low across its right side, a backhand rake.
-const A2_COCK = beast(READY, { x: 1, y: 9, lean: 34, twist: -26, head: -24, look: -4, handF: [14, 12, 13], handB: [12, 22, -6], weaponB: 160, rollB: -30, yawB: 0, weapon: 70, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fire: 1.2 });
-const A2_SWING = beast(READY, { x: 4, y: 7, lean: 30, twist: 0, head: -24, handF: [12, 14, 12], handB: [17, 8, 8], weaponB: 80, rollB: -30, yawB: 0, weapon: 76, wind: 0.5, phase: 0.25, face: 'shout', fire: 1.35 });
-const A2_HIT = beast(READY, { x: 7, y: 6, lean: 24, twist: 24, head: -26, look: 4, footF: [15, 0, 8.4], footB: [-11, -1, 7.4], handF: [10, 16, 12], handB: [8, -6, 16], weaponB: 10, rollB: -30, yawB: 0, weapon: 90, wind: 0.8, lift: 0.1, phase: 0.4, face: 'shout', fire: 1.45, fx: { impactB: 1 } });
-const A2_FOLLOW = beast(A2_HIT, { y: 6, lean: 22, twist: 28, handB: [4, -8, 16], weaponB: -10, wind: 0.9, lift: 0.4, phase: 0.55, face: 'grit', fire: 1.3 });
+// atk2: a rising backhand with the left claw: from low behind its hip, scooped forward along the
+// floor and flung up ahead of it, so its slash is a bowl under and ahead of it rising to its head
+// (atk1's is a dome over it, falling).
+const A2_COCK = beast(READY, { x: -1, y: 10, lean: 36, twist: -24, head: -26, look: -4, handF: [14, 10, 14], handB: [-8, 26, 8], weaponB: 210, rollB: -20, yawB: 0, weapon: 40, wind: 0.25, lift: 0.1, sway: -0.3, phase: 0.1, face: 'grit', fire: 1.2 });
+const A2_SWING = beast(READY, { x: 4, y: 11, lean: 40, twist: -4, head: -26, handF: [12, 12, 13], handB: [12, 30, 8], weaponB: 120, rollB: -20, yawB: 0, weapon: 50, wind: 0.5, phase: 0.25, face: 'shout', fire: 1.35 });
+const A2_HIT = beast(READY, { x: 7, y: 6, lean: 22, twist: 22, head: -22, look: 4, footF: [15, 0, 8.4], footB: [-11, -1, 7.4], handF: [10, 14, 13], handB: [20, 2, 12], weaponB: 40, rollB: -20, yawB: 0, weapon: 60, wind: 0.8, lift: 0.3, phase: 0.4, face: 'shout', fire: 1.45, fx: { impactB: 1 } });
+const A2_FOLLOW = beast(A2_HIT, { y: 5, lean: 16, twist: 26, handB: [14, -8, 14], weaponB: 10, wind: 0.9, lift: 0.5, phase: 0.55, face: 'grit', fire: 1.3 });
 
 const atk2: BeastPose[] = [
   A2_COCK,
-  strike([A2_COCK], A2_SWING, 0.9, true, 14),
-  strike([A2_COCK, A2_SWING], A2_HIT, 1, true, 21),
-  strike([A2_COCK, A2_SWING, A2_HIT], A2_FOLLOW, 0.55, true, 18),
-  beast(A2_FOLLOW, { y: 7, lean: 26, twist: 20, handB: [8, 2, 14], weaponB: 30, wind: 0.55, lift: 0.5, phase: 0.7, face: 'grit', fire: 1.2, fx: undefined }),
+  strike([A2_COCK], A2_SWING, 0.9, true, 16),
+  strike([A2_COCK, A2_SWING], A2_HIT, 1, true, 24),
+  strike([A2_COCK, A2_SWING, A2_HIT], A2_FOLLOW, 0.55, true, 20),
+  beast(A2_FOLLOW, { y: 7, lean: 24, twist: 20, handB: [12, 0, 14], weaponB: 30, wind: 0.55, lift: 0.5, phase: 0.7, face: 'grit', fire: 1.2, fx: undefined }),
   settle(A2_FOLLOW, 0.55, { wind: 0.35, lift: 0.25, phase: 0.85, fx: undefined }),
   settle(A2_FOLLOW, 0.88, { wind: 0.24, lift: 0.05, phase: 1, fx: undefined }),
 ];
 
-// atk3: rearing up on its haunches with both claws raised high, then a lunging maul: both claws
-// driven down together in front of it, a burst of fire and a shockwave.
-const A3_REAR = beast(READY, { x: -3, y: 4, lean: 8, twist: 0, head: -12, look: 0, footF: [6, 0, 8], footB: [-10, 0, 7.4], handF: [-3, -6, 15], handB: [-3, -6, 15], weapon: -20, roll: 20, yaw: 0, weaponB: -20, rollB: 20, yawB: 0, wind: 0.3, lift: 0.3, phase: 0.05, face: 'shout', fire: 1.3 });
-const A3_TOP = beast(A3_REAR, { x: -2, y: 2, lean: 2, head: -8, handF: [-5, -9, 15], handB: [-5, -9, 15], weapon: -34, weaponB: -34, lift: 0.5, phase: 0.15, fire: 1.5, fx: { aura: 0.3 } });
-const A3_DIVE = beast(READY, { x: 6, y: 5, lean: 34, twist: 0, head: -24, footF: [14, 0, 8.4], footB: [-12, -2, 7.4], handF: [16, 2, 11], handB: [16, 2, 11], weapon: 76, roll: 16, yaw: 0, weaponB: 76, rollB: 16, yawB: 0, wind: 0.7, lift: 0.1, phase: 0.3, face: 'shout', fire: 1.5 });
+// atk3: rearing up and back on its haunches, both arms raised high over its head, elbows out and
+// claws spread, then a lunging maul: both claws raked down together from above its shoulders into
+// the floor ahead of it, fire bursting up there with the Warden's pale violet shock ring.
+const A3_REAR = beast(READY, { x: -4, y: 4, lean: 2, twist: 0, head: -16, look: 0, footF: [7, 0, 8], footB: [-10, 0, 7.4], handF: [-8, -25, 16], handB: [-8, -25, 16], elbowF: [-0.3, 0.2, 1], elbowB: [-0.3, 0.2, 1], weapon: -8, roll: 34, yaw: 0, weaponB: -12, rollB: 24, yawB: 0, wind: 0.3, lift: 0.3, phase: 0.05, face: 'shout', fire: 1.3 });
+const A3_TOP = beast(A3_REAR, { x: -5, y: 2, lean: -6, head: -10, handF: [-10, -28, 16], handB: [-10, -28, 16], weapon: -20, weaponB: -20, roll: 40, rollB: 40, lift: 0.5, phase: 0.15, fire: 1.5, fx: { aura: 0.3 } });
+const A3_DIVE = beast(READY, { x: 5, y: 5, lean: 30, twist: 0, head: -24, footF: [14, 0, 8.4], footB: [-12, -2, 7.4], handF: [12, -6, 14], handB: [12, -6, 14], elbowF: [-0.3, -0.4, 1], elbowB: [-0.3, -0.4, 1], weapon: 50, roll: 20, yaw: 0, weaponB: 50, rollB: 20, yawB: 0, wind: 0.7, lift: 0.1, phase: 0.3, face: 'shout', fire: 1.5 });
 const A3_SLAM = beast(READY, { x: 10, y: 12, lean: 48, twist: 0, head: -34, footF: [18, 0, 8.6], footB: [-12, 0, 7.4], handF: [22, 24, 9], handB: [22, 24, 9], weapon: 150, roll: 10, yaw: 0, weaponB: 150, rollB: 10, yawB: 0, wind: 0.9, lift: 0.4, phase: 0.45, face: 'shout', fire: 1.6, fx: { impact: 1.5, shock: 0.05, dust: 1 } });
 const A3_HOLD = beast(A3_SLAM, { y: 13, lean: 50, handF: [22, 26, 9], handB: [22, 26, 9], weapon: 156, weaponB: 156, wind: 0.6, lift: 0.2, phase: 0.6, face: 'grit', fire: 1.4, fx: { shock: 0.45, dust: 0.7 } });
 
@@ -329,15 +332,15 @@ const struck =
     if (k <= 0) return;
     const { armR, armL } = x.rig;
     const head = x.proj(x.rig.head.o);
-    flare(x, [(armR.end[0] + armL.end[0]) / 2 + 4, 3, (armR.end[2] + armL.end[2]) / 2], k, { n: 12, len: 44, skip: (px, py) => Math.hypot(px - head[0], py - head[1]) < 12 });
+    flare(x, [(armR.end[0] + armL.end[0]) / 2 + 4, 3, (armR.end[2] + armL.end[2]) / 2], k, { n: 12, len: 44, ring: 1, skip: (px, py) => Math.hypot(px - head[0], py - head[1]) < 12 });
   };
 
 const atk3: BeastPose[] = [
   A3_REAR,
   A3_TOP,
-  maul([A3_TOP], A3_DIVE, 0.9, 12),
-  maul([A3_TOP, A3_DIVE], A3_SLAM, 1, 18, 0.12),
-  maul([A3_TOP, A3_DIVE, A3_SLAM], A3_HOLD, 0.45, 15, 0.42),
+  maul([A3_TOP], A3_DIVE, 0.9, 16),
+  maul([A3_TOP, A3_DIVE], A3_SLAM, 1, 24, 0.12),
+  maul([A3_TOP, A3_DIVE, A3_SLAM], A3_HOLD, 0.5, 20, 0.42),
   beast(A3_HOLD, { y: 12, lean: 46, phase: 0.75, face: 'grit', fire: 1.3, fx: { shock: 0.85, dust: 0.3, extra: struck(0.75) } }),
   settle(A3_HOLD, 0.45, { phase: 0.85, wind: 0.35, lift: 0.2, fx: undefined }),
   settle(A3_HOLD, 0.75, { phase: 0.95, wind: 0.28, lift: 0.1, fx: undefined }),

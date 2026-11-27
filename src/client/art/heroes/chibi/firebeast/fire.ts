@@ -13,7 +13,7 @@
  * whole number of flickers a turn), so a loop that runs `phase` from 0 to 1 loops cleanly, and a
  * clip that advances it every frame never shows the same fire twice.
  */
-import type { RGB } from '../../paint.js';
+import type { Canvas, RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
 import { type DrawItem, type Held, type HeadPiece, type HeldItem, type Piece, type PieceContext } from '../design.js';
 import { mainHeld } from '../held.js';
@@ -614,65 +614,121 @@ function buffer(n: number): Uint8Array {
 
 // ── Slashes ──────────────────────────────────────────────────────────────────────────────────
 
+/** The Warden's own fire ramp (his fire.ts), hottest first: the column the beast becomes and leaves is painted in it, so the two sprites match where the game swaps them. */
+const W_HOT: RGB = [255, 251, 232];
+const W_GOLD: RGB = [255, 224, 138];
+const W_FLAME: RGB = [255, 180, 60];
+const W_ORANGE: RGB = [255, 126, 38];
+const W_RED: RGB = [214, 66, 22];
+
+/** The Warden's fire ramp at `t` (0 its white-hot root, 1 its deep-red tip). */
+const rampAt = (t: number): RGB => (t < 0.18 ? W_HOT : t < 0.4 ? W_GOLD : t < 0.66 ? W_FLAME : t < 0.86 ? W_ORANGE : W_RED);
+
 const WHITE: RGB = [255, 255, 255];
 const GOLD: RGB = [255, 228, 120];
-const AMBER: RGB = [255, 172, 44];
 const ORANGE: RGB = [255, 140, 34];
 const RED: RGB = [216, 64, 26];
-const SMOKE: RGB = [140, 118, 112];
+/** The shock of a blow on the floor rings pale violet, as the Warden's explosions do. */
+const VIOLET_PALE: RGB = [222, 214, 255];
+const VIOLET: RGB = [164, 146, 238];
+
+/** A slash's ramp, from its white-hot leading edge back to the dark embers of its trailing edge. */
+const SLASH_RAMP: readonly RGB[] = [W_HOT, W_GOLD, W_FLAME, W_ORANGE, W_RED, [150, 38, 14], [92, 22, 10]];
+/** How deep each band of the ramp is, as a share of the slash's depth (the last two dithered out). */
+const SLASH_BANDS = [0.09, 0.14, 0.2, 0.2, 0.15, 0.12, 0.1];
+
+/** A 4x4 ordered dither threshold in [0, 1): a pixel shows where its strength is over it. */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+const dither = (px: number, py: number): number => BAYER[(py & 3) * 4 + (px & 3)] as number;
 
 /**
  * A slash of fire: a great crescent swept round a centre (the striking shoulder, hero space)
  * through the points the claws passed (`tips`, from where the swing began to where the claws are
- * now), standing a little beyond them. In crisp bands as the Warden's own arcs of fire are:
- * white-hot along its leading edge, through gold, amber and orange to an ember-red inner edge
- * licking into flame, solid at its head and fading toward its tail, which cools to smoke, with
- * sparks thrown off it; `k` its strength, `thick` its depth at its head. Seen edge on it is opened
- * up on screen into a round crescent, as sprite artists draw a swing toward the viewer, and it
- * never covers the head (`skip`).
+ * now), its leading edge `over` beyond them. It tapers to a point at both ends, its head at the
+ * claws and its body thickest just behind them (`thick` deep there): a white-hot leading edge, then
+ * gold, flame and orange, and a ragged trailing edge licking back into flame that cools through red
+ * and dark embers to nothing, dithered out rather than blended. Toward its tail it cools and thins
+ * the same way. `k` its strength. Seen edge on, it is opened up on screen round the centre at full
+ * reach, the way the swing turns, as the engine's swooshes are; the parts of it behind the figure go
+ * under it (only what sticks out shows), and it never covers the head (`skip`). Sparks fly off its head.
  */
 export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: number; thick: number; over?: number; seed?: number; skip?: (px: number, py: number) => boolean }): void {
-  const { c, proj, aura } = x;
+  const { c, proj, cam } = x;
   if (o.k <= 0 || tips.length < 2) return;
-  // Round the centre from tip to tip, `over` beyond the claws.
-  const n = 18;
-  const dirs = tips.map((t) => sub3(t, centre));
-  const pts: V3[] = [];
+  const over = o.over ?? 1.3;
+  const n = 24;
+  // Round the centre from tip to tip, in hero space.
+  const offs = tips.map((t) => sub3(t, centre));
+  const way: V3[] = [];
   for (let i = 0; i <= n; i++) {
-    const f = (i / n) * (dirs.length - 1);
-    const j = Math.min(dirs.length - 2, Math.floor(f));
+    const f = (i / n) * (offs.length - 1);
+    const j = Math.min(offs.length - 2, Math.floor(f));
     const t = f - j;
-    const a = dirs[j] as V3;
-    const b = dirs[j + 1] as V3;
-    const la = Math.hypot(...a);
-    const lb = Math.hypot(...b);
+    const a = offs[j] as V3;
+    const b = offs[j + 1] as V3;
     const na = norm3(a);
     const nb = norm3(b);
     const om = Math.acos(clamp(dot3(na, nb), -1, 1));
     const d = om < 1e-3 ? na : norm3(add3(mul3(na, Math.sin((1 - t) * om) / Math.sin(om)), nb, Math.sin(t * om) / Math.sin(om)));
-    pts.push(add3(centre, d, lerp(la, lb, t) * (o.over ?? 1.18)));
+    way.push(mul3(d, lerp(Math.hypot(...a), Math.hypot(...b), t)));
   }
-  let P = pts.map((p) => proj([p[0], Math.max(0.5, p[1]), p[2]]));
   const C = proj(centre);
-  // Open it up on screen where it is seen edge on: at least a fifth as deep as it is long.
+  const first = way[0] as V3;
+  const last = way[n] as V3;
+  const at3d = way.map((d) => add3(centre, d, over));
+  let P = at3d.map((p) => proj([p[0], Math.max(0.5, p[1]), p[2]]));
+  // Seen edge on (on screen it is hardly a curve at all): open it up round the centre, as the
+  // engine does a blade's swing, round the outside of the body where it would cross it.
+  const A0 = P[0] as Vec;
+  const B0 = P[n] as Vec;
+  const chord = Math.hypot(B0[0] - A0[0], B0[1] - A0[1]);
+  let bulge = 0;
+  let path = 0;
+  P.forEach((p, i) => {
+    bulge = Math.max(bulge, Math.abs((p[0] - A0[0]) * (B0[1] - A0[1]) - (p[1] - A0[1]) * (B0[0] - A0[0])) / (chord || 1));
+    if (i) path += Math.hypot(p[0] - (P[i - 1] as Vec)[0], p[1] - (P[i - 1] as Vec)[1]);
+  });
+  // Nearly straight on screen, or folding back on itself (swung toward or away from the viewer).
+  if (bulge < Math.max(6, chord * 0.3) || path > chord * 1.8 + 6) {
+    const seen = way.map((d) => cam.vec(d));
+    const rs = seen.map((v) => Math.hypot(v[0], v[1]));
+    const rMax = Math.max(...rs);
+    const S = seen[0] as Vec;
+    const E = seen[n] as Vec;
+    const aS = Math.atan2(S[1], S[0]);
+    let sweep = Math.atan2(Math.sin(Math.atan2(E[1], E[0]) - aS), Math.cos(Math.atan2(E[1], E[0]) - aS));
+    const other = sweep - Math.sign(sweep || 1) * Math.PI * 2;
+    const body = proj(x.rig.chest.o);
+    const R = rMax * over;
+    // Round the outside of the body: the way whose middle lies farther from the chest on screen.
+    const out = (sw: number): number => Math.abs(C[0] + Math.cos(aS + sw / 2) * R - body[0]);
+    let turned = 0;
+    for (let i = 1; i <= n; i++) {
+      const a = seen[i - 1] as Vec;
+      const b = seen[i] as Vec;
+      turned += Math.atan2(a[0] * b[1] - a[1] * b[0], a[0] * b[0] + a[1] * b[1]);
+    }
+    if (Math.min(...rs) > rMax * 0.35 && Math.abs(turned) > 0.6) {
+      // It turns round the centre on screen: follow it.
+      if (Math.sign(turned) !== Math.sign(sweep)) sweep = other;
+    } else if (out(other) > out(sweep) && Math.abs(other) < Math.PI * 1.3) sweep = other;
+    // Never less than a third of a turn, so it reads as a sweep (round the outside when it barely turns).
+    if (Math.abs(sweep) < 2.1) sweep = Math.abs(sweep) > 0.6 ? Math.sign(sweep) * 2.1 : out(2.1) >= out(-2.1) ? 2.1 : -2.1;
+    const rS = rs[0] as number;
+    const rE = rs[n] as number;
+    P = way.map((_, i) => {
+      const t = i / n;
+      const a = aS + sweep * t;
+      const r = Math.max(lerp(rS, rE, t), rMax * (0.8 + 0.2 * Math.sin(Math.PI * t))) * over;
+      return [C[0] + Math.cos(a) * r, C[1] + Math.sin(a) * r];
+    });
+  }
+  // Which parts lie behind the figure: those go under it.
+  const deep = at3d.map((p, i) => x.behind(lerp3(add3(centre, first, over), add3(centre, last, over), i / n)) && x.behind(p));
+  // Its inner edge: toward the centre (or across the chord where it is opened up).
   const A = P[0] as Vec;
   const B = P[n] as Vec;
-  const chord = Math.hypot(B[0] - A[0], B[1] - A[1]);
-  if (chord > 4) {
-    const nx = -(B[1] - A[1]) / chord;
-    const ny = (B[0] - A[0]) / chord;
-    const mid = P[n >> 1] as Vec;
-    let sag = (mid[0] - (A[0] + B[0]) / 2) * nx + (mid[1] - (A[1] + B[1]) / 2) * ny;
-    const want = chord * 0.34;
-    if (Math.abs(sag) < want) {
-      // Away from the centre it swings round.
-      const side = Math.abs(sag) > 0.5 ? Math.sign(sag) : Math.sign(((A[0] + B[0]) / 2 - C[0]) * nx + ((A[1] + B[1]) / 2 - C[1]) * ny) || 1;
-      const add = side * want - sag;
-      P = P.map((p, i) => [p[0] + nx * add * Math.sin((Math.PI * i) / n), p[1] + ny * add * Math.sin((Math.PI * i) / n)]);
-      sag = side * want;
-    }
-  }
-  // Its inner edge: toward the centre (or, opened up, back across the chord), deepest at its head.
+  const mid = P[n >> 1] as Vec;
   const inward = (i: number): Vec => {
     const p = P[i] as Vec;
     const a = P[Math.max(0, i - 1)] as Vec;
@@ -680,76 +736,71 @@ export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: num
     const tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     let nx = -(b[1] - a[1]) / tl;
     let ny = (b[0] - a[0]) / tl;
-    const mid = P[n >> 1] as Vec;
-    const toward = (A[0] + B[0]) / 2 - mid[0] || C[0] - p[0];
-    const towardY = (A[1] + B[1]) / 2 - mid[1] || C[1] - p[1];
-    if (nx * toward + ny * towardY < 0) {
+    const tx = (A[0] + B[0]) / 2 - mid[0] || C[0] - p[0];
+    const ty = (A[1] + B[1]) / 2 - mid[1] || C[1] - p[1];
+    if (nx * tx + ny * ty < 0) {
       nx = -nx;
       ny = -ny;
     }
     return [nx, ny];
   };
-  const seed = o.seed ?? 0;
-  const depthAt = (i: number): number => o.thick * Math.pow(Math.sin((Math.min(1, (i / n) * 1.1) * Math.PI) / 2), 0.8) * (1 + 0.1 * Math.sin(i * 2.1 + seed));
-  // White-hot, gold, amber, orange and an ember red at the inner edge, the outer ones solid.
-  const bands: [number, number, RGB, number][] = [
-    [0, 0.08, WHITE, 1],
-    [0.08, 0.22, GOLD, 1],
-    [0.22, 0.45, AMBER, 1],
-    [0.45, 0.72, ORANGE, 0.95],
-    [0.72, 1, aura.edge, 0.75],
-  ];
   const inn = P.map((_, i) => inward(i));
+  const seed = o.seed ?? 0;
+  // Thickest just behind its head, tapering to a point at both ends; its trailing edge ragged with
+  // tongues of flame leaning back toward its tail.
+  const depthAt = (i: number): number => {
+    const t = i / n;
+    const body = Math.pow(Math.sin(Math.PI * Math.pow(t, 2.1)), 0.7);
+    const lick = 0.82 + 0.38 * ((i + seed) % 3) / 2 + 0.12 * hash(i, 91 + seed);
+    return o.thick * body * (i > 0 && i < n ? lick : 1);
+  };
   for (let i = 0; i < n; i++) {
-    const t0 = i / n;
     const t1 = (i + 1) / n;
-    const fade = Math.min(1, o.k * (0.3 + 0.85 * t1));
-    const cool = clamp((0.22 - t1) / 0.22, 0, 1);
+    // Toward its tail it cools (its hot bands give way to the cooler ones) and dithers out.
+    const cool = Math.pow(clamp((0.6 - t1) / 0.6, 0, 1), 1.2) * 3;
+    const presence = clamp(o.k * (0.25 + 1.6 * t1), 0, 1);
     const pa = P[i] as Vec;
     const pb = P[i + 1] as Vec;
     const na = inn[i] as Vec;
     const nb = inn[i + 1] as Vec;
     const da = depthAt(i);
     const db = depthAt(i + 1);
-    for (const [f0, f1, col, alpha] of bands) {
+    const under = deep[i] as boolean;
+    let f0 = 0;
+    SLASH_BANDS.forEach((bw, band) => {
+      const f1 = f0 + bw;
       const quad: Vec[] = [
         [pa[0] + na[0] * da * f0, pa[1] + na[1] * da * f0],
         [pb[0] + nb[0] * db * f0, pb[1] + nb[1] * db * f0],
         [pb[0] + nb[0] * db * f1, pb[1] + nb[1] * db * f1],
         [pa[0] + na[0] * da * f1, pa[1] + na[1] * da * f1],
       ];
-      const colour = mixc(col, SMOKE, cool * (0.4 + f1 * 0.6));
-      const a = fade * alpha * (1 - cool * 0.7) * (t0 < 0.05 ? 0.5 : 1);
+      f0 = f1;
+      const step = band + cool;
+      if (step >= SLASH_RAMP.length) return;
+      const col = SLASH_RAMP[Math.min(SLASH_RAMP.length - 1, Math.round(step))] as RGB;
+      // The trailing embers and the cooling tail dither out; the rest is solid.
+      const solid = band < 5 ? presence : presence * (band === 5 ? 0.6 : 0.3);
       scanPoly(quad, c.w, c.h, (px, py) => {
-        if (!o.skip?.(px, py)) c.glow(px, py, colour, a);
+        if (solid < 1 && dither(px, py) > solid) return;
+        if (!o.skip?.(px, py)) c.glow(px, py, col, 1, under);
       });
-    }
-    // Licks of flame off its inner edge, trailing back along it.
-    if (i % 3 === 1 && t1 > 0.3) {
-      const base: Vec = [pa[0] + na[0] * da * 0.9, pa[1] + na[1] * da * 0.9];
-      const back: Vec = [pa[0] - pb[0], pa[1] - pb[1]];
-      const bl = Math.hypot(back[0], back[1]) || 1;
-      const L = 3 + 4 * hash(i, 91 + seed);
-      const tipP: Vec = [base[0] + na[0] * L * 0.7 + (back[0] / bl) * L, base[1] + na[1] * L * 0.7 + (back[1] / bl) * L];
-      for (let s = 0; s <= 6; s++) {
-        const q: Vec = [lerp(base[0], tipP[0], s / 6), lerp(base[1], tipP[1], s / 6)];
-        if (!o.skip?.(Math.floor(q[0]), Math.floor(q[1]))) c.glow(q[0], q[1], s < 3 ? aura.core : aura.edge, fade * (1 - s / 8));
-      }
-    }
+    });
   }
-  // Sparks thrown off its head.
+  // Sparks thrown off its head, ahead of the claws.
   const head = P[n] as Vec;
   const hn = inn[n] as Vec;
-  for (let i = 0; i < 7; i++) {
-    const d = 3 + hash(i, 97 + seed) * 12;
-    const th = (hash(i, 98 + seed) - 0.5) * 2.4;
+  const under = deep[n] as boolean;
+  for (let i = 0; i < 9; i++) {
+    const d = 3 + hash(i, 97 + seed) * 14;
+    const th = (hash(i, 98 + seed) - 0.5) * 2.6;
     const dx = -hn[0] * Math.cos(th) - hn[1] * Math.sin(th);
     const dy = -hn[1] * Math.cos(th) + hn[0] * Math.sin(th);
     const px = head[0] + dx * d;
     const py = head[1] + dy * d + d * d * 0.02;
     if (o.skip?.(Math.floor(px), Math.floor(py))) continue;
-    c.glow(px, py, WHITE, o.k * 0.9);
-    c.glow(px - dx, py - dy, aura.core, o.k * 0.7);
+    c.glow(px, py, i % 3 ? W_GOLD : W_HOT, o.k * 0.95, under);
+    c.glow(px - dx, py - dy, W_ORANGE, o.k * 0.8, under);
   }
 }
 
@@ -877,60 +928,239 @@ export function glowTongue(x: FxContext, base: Vec, dir: Vec, len: number, w: nu
 }
 
 /**
- * A pillar of fire engulfing the beast where it stands: tongues of flame rising from the floor
- * round it, `k` from 0 (licking round its feet) to 1 (towering over it, hiding nearly all of it),
- * flickering with the pose's phase. It stands under the middle of the beast, from its head back
- * to the end of its tail, and is as wide as that on screen, so a hunched beast is all inside it
- * (`feet` stands it round its feet instead). `open` (0 to 1) bursts it outward: its tongues lean
- * out and part down the middle, so the figure shows through as it breaks.
+ * A thin flickering tongue of flame standing up from (x, y) on the screen, `h` tall and `w` wide at
+ * its root, its tip swaying `sway` (as the Warden's own tongues do): white-hot at its root, through
+ * gold and orange to red at its tip.
  */
-export function pillar(x: FxContext, k: number, o: { open?: number; height?: number; feet?: boolean } = {}): void {
-  if (k <= 0) return;
-  const { rig, proj, hash } = x;
-  const p = rig.pelvis;
-  const back = norm3([-p.f[0], 0, -p.f[2]]);
-  const head = rig.head.o;
-  const tail = add3(p.o, back, 30);
-  const a = proj([head[0], 0, head[2]]);
-  const b = proj([tail[0], 0, tail[2]]);
-  const g = o.feet ? proj([p.o[0], 0, p.o[2]]) : proj([(head[0] + tail[0]) / 2, 0, (head[2] + tail[2]) / 2]);
-  const half = o.feet ? 20 : Math.max(20, Math.abs(a[0] - b[0]) / 2 + 9);
-  const wide = Math.sqrt(half / 20);
-  const H = (o.height ?? 132) * k;
-  const open = o.open ?? 0;
-  const ph = (rig.pose.phase ?? 0) * Math.PI * 2;
-  const n = 15;
-  for (let pass = 0; pass < 2; pass++) {
-    for (let i = 0; i < n; i++) {
-      // The outer tongues first (and fainter), the middle ones over them.
-      const j = pass === 0 ? i : n - 1 - i;
-      const s = (j / (n - 1)) * 2 - 1;
-      if ((pass === 0) !== (Math.abs(s) > 0.5)) continue;
-      const fl = Math.sin(ph * 3 + j * 1.9) * 0.5 + Math.sin(ph * 5 + j) * 0.25;
-      const len = H * (1 - Math.abs(s) * 0.45) * (0.82 + 0.14 * fl + 0.1 * hash(j, 401)) * (1 - open * 0.45);
-      const base: Vec = [g[0] + s * (half + open * 16), g[1] + 7 - Math.abs(s) * 3];
-      const lean = s * (0.18 + open * 0.9);
-      glowTongue(x, base, [lean, -1], len, (9 + 5 * (1 - Math.abs(s)) * (1 - open * 0.3)) * wide, fl * 0.6, Math.min(1, k * 1.2) * (1 - open * 0.35));
+export function lick(c: Canvas, x: number, y: number, h: number, w: number, sway: number, a: number, under = false): void {
+  const n = Math.max(1, Math.round(h));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const half = w * (1 - t) * (0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, t * 2 + 0.3)));
+    const cx = x + sway * t * t * h * 0.35;
+    for (let dx = -Math.ceil(half); dx <= Math.ceil(half); dx++) {
+      const edge = Math.abs(dx) / Math.max(0.5, half);
+      if (edge > 1) continue;
+      c.glow(cx + dx, y - i, rampAt(Math.min(1, t * 0.85 + edge * 0.35)), a * (1 - t * 0.3), under);
     }
+  }
+}
+
+/**
+ * The column of fire in each view, in the beast's frame pixels: its height above the floor, its
+ * half-width and how far its middle stands from the anchor. As tall and as wide in tiles as the
+ * column the Warden's `ult` ends on (about 3.6 tiles by 1.5; a little lower seen from behind, as
+ * his is), so the game can swap one sprite for the other without a jump.
+ */
+const COLUMN: Record<'side' | 'front' | 'back', { h: number; half: number; dx: number }> = {
+  side: { h: 138, half: 29, dx: -3.5 },
+  front: { h: 141, half: 27.5, dx: -0.5 },
+  back: { h: 122, half: 27.5, dx: -0.5 },
+};
+
+/**
+ * The column of fire it emerges from and collapses back into, standing on the anchor: `k` from 0
+ * (flames rising off a ring on the floor round its feet) through the fire climbing its body (its
+ * dark shape showing between separate tongues, a column rising behind it) to 1, a tall rounded
+ * column with a domed top, a narrow white-hot heart, gold streaked with flame, a red-orange crown
+ * and flickering tongues licking off its top and sides, that hides all of it (the Warden's last
+ * `ult` frame, in his colours, so the swap does not show). Between 0.75 and 1 the parts of the
+ * beast outside the column burn away. `open` (0 to 1) bursts it: it no longer covers the beast,
+ * its tongues are flung outward round its silhouette and the column breaks into streaks.
+ * `seed` reshapes its flicker: advance it every frame.
+ */
+export function column(x: FxContext, k: number, o: { open?: number; seed?: number } = {}): void {
+  if (k <= 0) return;
+  const { c, hash, cam } = x;
+  const spec = COLUMN[cam.view];
+  const seed = o.seed ?? 0;
+  const open = clamp(o.open ?? 0, 0, 1);
+  const cx = cam.ax + spec.dx;
+  const bottom = cam.ay + 1;
+  // How far the beast is lost in it: from 0.75 its outlying parts burn away, at 1 it is gone.
+  const engulf = open > 0 ? 0 : clamp((k - 0.75) / 0.25, 0, 1);
+  const w = c.w;
+  if (engulf >= 1) {
+    c.data.fill(0);
+    c.fx.fill(0);
+    c.under.fill(0);
+  }
+  const half = spec.half * (1 + open * 0.35);
+  const line = bottom - spec.h * Math.min(1, k) - open * 6;
+  const dome = Math.max(8, Math.min(30, spec.h * k * 0.6));
+  const width = (y: number): number => {
+    const top = clamp((y - line) / dome, 0, 1);
+    const flick = 0.9 + 0.08 * Math.sin(y * 0.21 + seed * 2.1) + 0.06 * Math.sin(y * 0.53 - seed * 1.3);
+    return half * flick * (0.12 + 0.88 * Math.sqrt(top));
+  };
+  // Each column of two pixels is a tongue of its own streaming up, its tip a flickering way under
+  // the top: red at the tip, orange, then flame and gold, white only in the narrow heart.
+  const grown = clamp((k - 0.45) / 0.5, 0, 1);
+  const tipOf = (lane: number): number => line + hash(lane + 300, Math.floor(seed) * 7 + 3) * (8 + 14 * (1.3 - Math.min(1, k))) + (k < 0.6 ? 6 : 0);
+  const figure = (px: number, y: number): boolean => (c.data[(y * w + px) * 4 + 3] as number) > 0;
+  const ink = (px: number, y: number): boolean => {
+    const i = (y * w + px) * 4;
+    return (c.data[i] as number) < 40 && (c.data[i + 1] as number) < 32 && (c.data[i + 2] as number) < 40;
+  };
+  // The parts of the beast outside the column burn away as it closes.
+  if (engulf > 0 && engulf < 1) {
+    for (let y = 0; y < c.h; y++) {
+      const hw = y >= line ? width(y) : 0;
+      for (let px = 0; px < w; px++) {
+        if (!figure(px, y) || Math.abs(px + 0.5 - cx) < hw - 1) continue;
+        c.glow(px, y, hash(px, y * 5 + Math.floor(seed)) < 0.5 ? W_ORANGE : W_RED, 0.35 + engulf * 0.6);
+      }
+    }
+  }
+  for (let y = Math.max(0, Math.floor(line)); y <= Math.min(c.h - 1, Math.ceil(bottom) - 1); y++) {
+    const hw = width(y) * (0.75 + 0.25 * grown);
+    for (let dx = -Math.ceil(hw); dx <= Math.ceil(hw); dx++) {
+      const px = Math.round(cx + dx);
+      if (px < 0 || px >= w) continue;
+      const lane = Math.floor((px + 400) / 2);
+      const tip = tipOf(lane);
+      if (y < tip) continue;
+      const r = Math.abs(dx + 0.5) / hw;
+      if (r > 1) continue;
+      const into = clamp((y - tip) / (10 + 26 * grown), 0, 1);
+      const core = r < 0.13 + 0.05 * Math.sin(y * 0.3 + seed) && into > 0.7 && k > 0.85;
+      let col: RGB = core ? W_HOT : into < 0.15 ? W_RED : into < 0.4 ? W_ORANGE : into < 0.72 || r > 0.7 ? W_FLAME : W_GOLD;
+      // Some tongues burn lower than others, so it is streaked as it streams.
+      const streak = hash(lane, Math.floor(seed) * 3 + 11);
+      if (!core && streak < 0.4 && col === W_GOLD) col = W_FLAME;
+      if (open > 0) {
+        // Bursting: the beast stands clear, the column round it breaks into streaks.
+        if (figure(px, y) || streak < open * 0.55) continue;
+        c.glow(px, y, col, 0.95 - open * 0.2, true);
+      } else if (engulf >= 1) {
+        c.glow(px, y, col, 1);
+      } else if (figure(px, y)) {
+        // Over it: separate tongues at first (its dark shape between them), thickening to solid
+        // flame as the fire takes it.
+        const burnt = Math.max(engulf, clamp((k - 0.5) * 1.6, 0, 1) * clamp((y - line) / 30, 0, 1));
+        if (streak < 0.55 - burnt * 0.6) continue;
+        if (ink(px, y) && burnt < 0.7) continue;
+        if (burnt < 0.8 && (col === W_GOLD || col === W_HOT)) col = W_FLAME;
+        c.glow(px, y, col, clamp(0.6 + burnt * 0.4, 0, 1));
+      } else {
+        // Behind it, the column rises once the fire has climbed past its waist.
+        if (grown <= 0 || streak < 0.35 - grown * 0.35) continue;
+        c.glow(px, y, col, clamp(0.75 + into * 0.25, 0, 1) * Math.min(1, grown * 2), true);
+      }
+    }
+  }
+  const under = open > 0;
+  // Tongues licking up off its rounded top and its sides (flung outward as it bursts).
+  for (let i = 0; i < 11; i++) {
+    const t = (i + 0.5) / 11;
+    const dx = (t - 0.5) * 2 * half * 0.85;
+    let by = line;
+    while (by < bottom && width(by) < Math.abs(dx) + 1) by++;
+    const h = (8 + hash(i, 183 + seed) * 14) * (1.1 - Math.abs(t - 0.5)) * Math.min(1, k * 1.5) * (1 + open * 0.6);
+    lick(c, cx + dx, by + 3, h, 2 + hash(i, 184) * 1.8, (t - 0.5) * (1.2 + open * 3) + (hash(i, 185 + seed) - 0.5), 0.95, under);
+  }
+  for (let i = 0; i < 10 + Math.round(open * 8); i++) {
+    const side = i % 2 ? 1 : -1;
+    const yy = lerp(line + 26, bottom - 4, hash(i, 188 + seed));
+    if (yy > bottom - 4) continue;
+    lick(c, cx + side * (width(yy) - 1), yy, (5 + hash(i, 189 + seed) * 8) * (1 + open * 1.4), 1.6 + open, side * (0.8 + open * 2.5), 0.9, under);
+  }
+  // The ring of fire on the floor round it, and flames standing up off it (those behind it under the figure).
+  const R = spec.half + 3;
+  const g: V3 = [0, 0, 0];
+  for (let i = 0; i < 72; i++) {
+    const th = (i / 72) * Math.PI * 2;
+    const p3: V3 = [g[0] + Math.cos(th) * R, 0, g[2] + Math.sin(th) * R];
+    const p = x.proj(p3);
+    const behind = engulf < 1 && x.behind(p3);
+    c.glow(p[0] + spec.dx, p[1], i % 2 ? W_ORANGE : W_GOLD, 0.9, behind);
+    c.glow(p[0] + spec.dx, p[1] - 1, W_RED, 0.5, behind);
+  }
+  for (let i = 0; i < 16; i++) {
+    const th = (i / 16) * Math.PI * 2 + hash(i, 190 + seed) * 0.3;
+    const p3: V3 = [Math.cos(th) * R, 0, Math.sin(th) * R];
+    const p = x.proj(p3);
+    lick(c, p[0] + spec.dx, p[1], (4 + hash(i, 186 + seed) * 8) * Math.min(1, k * 2.5), 1.5, hash(i, 187 + seed) - 0.5, 0.9, engulf < 1 && x.behind(p3));
+  }
+  // Embers flying up round it.
+  for (let i = 0; i < 14; i++) {
+    const t = hash(i, 191 + Math.floor(seed));
+    const px = cx + (hash(i, 192 + Math.floor(seed)) - 0.5) * (half * 2 + 24);
+    const py = bottom - 10 - t * spec.h * Math.min(1, k) * 1.05;
+    c.glow(px, py, i % 3 ? W_GOLD : W_HOT, 0.9);
+    c.glow(px, py + 1, W_ORANGE, 0.6);
+  }
+}
+
+/**
+ * A ring of fire round its feet on the floor, seen in perspective: tongues standing up round an
+ * ellipse, taller at its back than its front and shorter toward its ends, their roots on the floor;
+ * the far half behind the figure. `k` 0 to 1 its strength: low, a few small tongues and embers.
+ */
+export function ringOfFire(x: FxContext, k: number, o: { radius?: number; height?: number; seed?: number } = {}): void {
+  if (k <= 0) return;
+  const { c, hash, rig, cam } = x;
+  const R = o.radius ?? 20;
+  const H = (o.height ?? 26) * Math.min(1.2, k);
+  const seed = o.seed ?? 0;
+  const g: V3 = [rig.pelvis.o[0], 0, rig.pelvis.o[2]];
+  const n = Math.round(10 + 14 * Math.min(1, k));
+  // The far ones first, so the near ones stand over them.
+  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => Math.sin((a / n) * Math.PI * 2 + cam.yaw) - Math.sin((b / n) * Math.PI * 2 + cam.yaw));
+  for (const i of order) {
+    const th = (i / n) * Math.PI * 2 + hash(i, 441 + seed) * 0.25;
+    const p3: V3 = [g[0] + Math.cos(th) * R, 0, g[2] + Math.sin(th) * R];
+    const p = x.proj(p3);
+    // How near the viewer it stands: -1 at the back of the ring, 1 at the front.
+    const near = Math.sin(th + cam.yaw);
+    // Shorter toward the ends of the ellipse (seen from the side), taller at the back.
+    const ends = Math.abs(Math.cos(th + cam.yaw));
+    const h = H * (0.55 + 0.45 * hash(i, 442 + seed)) * (1 - near * 0.3) * (1 - ends * 0.35);
+    if (h < 2.5) continue;
+    lick(c, p[0], p[1], h, 1.6 + 1.6 * Math.min(1, k), (hash(i, 443 + seed) - 0.5) * 1.4, 0.95, x.behind(p3));
+  }
+  // Embers flying up off it.
+  for (let i = 0; i < 8; i++) {
+    const th = hash(i, 444 + seed) * Math.PI * 2;
+    const p = x.proj([g[0] + Math.cos(th) * R, 4 + hash(i, 445 + seed) * H * 1.4, g[2] + Math.sin(th) * R]);
+    c.glow(p[0], p[1], i % 2 ? W_GOLD : W_FLAME, 0.9 * Math.min(1, k * 1.5));
   }
 }
 
 /**
  * A burst of flame from a point (hero space): `n` tongues flung out round it on screen, `k`
  * from 0 (just bursting) to 1 (flung out to `len` and fading), the hot heart of it fading first.
+ * A burst behind the figure (seen from behind, ahead of it) goes under it, so only the tongues
+ * flung out past its silhouette show. `ring` adds the Warden's pale violet shock ring round it on
+ * the floor, rolling out with `k`.
  */
-export function flare(x: FxContext, at: V3, k: number, o: { n?: number; len?: number; spin?: number; skip?: (px: number, py: number) => boolean } = {}): void {
+export function flare(x: FxContext, at: V3, k: number, o: { n?: number; len?: number; spin?: number; ring?: number; skip?: (px: number, py: number) => boolean } = {}): void {
   if (k <= 0 || k >= 1) return;
   const { c, proj, hash } = x;
   const P = proj(at);
+  const under = x.behind(at);
   const n = o.n ?? 12;
   const L = (o.len ?? 40) * (0.35 + 0.65 * Math.sqrt(k));
   const a = 1 - Math.pow(k, 2.2);
+  if (o.ring) {
+    // The shock ring: pale violet, its front over the figure and its back under it.
+    const R = (10 + 40 * Math.sqrt(k)) * o.ring;
+    const m = Math.ceil(R * 7);
+    for (let i = 0; i < m; i++) {
+      const th = (i / m) * Math.PI * 2;
+      const p3: V3 = [at[0] + Math.cos(th) * R, 0, at[2] + Math.sin(th) * R];
+      const p = proj(p3);
+      const back = x.behind(p3);
+      c.glow(p[0], p[1], VIOLET_PALE, 0.95 * a, back);
+      c.glow(p[0], p[1] + 1, VIOLET, 0.7 * a, back);
+      c.glow(p[0], p[1] - 1, VIOLET, 0.4 * a, back);
+    }
+  }
   for (let i = 0; i < n; i++) {
     const th = rad(o.spin ?? 0) + (i / n) * Math.PI * 2 + (hash(i, 411) - 0.5) * 0.4;
     const d: Vec = [Math.cos(th), Math.sin(th) * 0.8 - 0.25];
     const r0 = 6 + 10 * k;
-    glowTongue(x, [P[0] + d[0] * r0, P[1] + d[1] * r0], d, L * (0.6 + 0.4 * hash(i, 412)) * (i % 2 ? 0.7 : 1), 4 + 3 * (1 - k), Math.sin(i * 2.3) * 0.5, a, o.skip);
+    glowTongue(x, [P[0] + d[0] * r0, P[1] + d[1] * r0], d, L * (0.6 + 0.4 * hash(i, 412)) * (i % 2 ? 0.7 : 1), 4 + 3 * (1 - k), Math.sin(i * 2.3) * 0.5, a, o.skip, under);
   }
   // The white-hot heart.
   const R = 10 * (1 - k);
@@ -938,7 +1168,7 @@ export function flare(x: FxContext, at: V3, k: number, o: { n?: number; len?: nu
     for (let dx = -Math.ceil(R); dx <= Math.ceil(R); dx++) {
       const r = Math.hypot(dx, dy);
       if (r > R || o.skip?.(Math.floor(P[0] + dx), Math.floor(P[1] + dy))) continue;
-      c.glow(P[0] + dx, P[1] + dy, r < R * 0.5 ? WHITE : GOLD, a * (r < R * 0.5 ? 0.9 : 0.6));
+      c.glow(P[0] + dx, P[1] + dy, r < R * 0.5 ? WHITE : GOLD, a * (r < R * 0.5 ? 0.9 : 0.6), under);
     }
   }
 }
