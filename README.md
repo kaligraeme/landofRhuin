@@ -337,30 +337,32 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 
 - a design file (`ChibiDesign` in `design.ts`): proportions, four-tone materials, aura colours,
   and:
-  - the head (`head.ts`): its locks of hair; long hair if it has any (a curtain down the back laid
-    out with `curtain`, locks over the shoulders, a tied ponytail with a `sheen` for glossy dark
-    hair; short layers at the nape, painted with the head, whose ends can `flip` out, as in a
-    layered cut); a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a
-    resting expression; and anything worn on the head (a hairpin, a circlet) as a head piece,
-    which is given the head's frame as painted so it stays on the hair;
-  - facial hair and hair worn up (`head.ts`): a `beard` (laid out full, short or pointed by
-    `beard`) and a `moustache`, which hang from the jaw, sway with the wind and leave every
-    expression readable; `buns` (one or two buns, a twist, a high updo); and a springy upright
-    lock (a lock with `bob`);
-  - gear on the head (`headgear.ts`): a `hood` worn up over the hair or down on the shoulders (the
-    pose's `hood` says which), an open-faced `helm` (a brow band, cheek guards, a ridge, scales
-    and swept-back `fins`) and a `circlet` with a gem; gear over the hair hides the hair under
-    it, but for a fringe that hangs out from under its edge;
-  - the limbs and boots (`BodyDesign`; a boot's `foot` can taper a soft boot to a point);
-  - armour and things on the back (`pieces.ts`, `armour.ts`, `back.ts`): a `cowl` (a short
-    hooded cape over the shoulders and upper arms), a gorget (a closed `collar` with `lames`),
-    scaled pauldrons (`plates` with `scales`) and a scaled breastplate (`scaleAt` in the
-    design's `torso`), a `quiver` of arrows, a `strap` or bandolier across the chest, and any
-    held item `slung` on the back (a sheathed sword, a shield);
-  - the body and outfit pieces (`pieces.ts`): pauldrons, a collar, a skirt of panels (a coat, a
-    robe, a split skirt; `legs` keeps a long one clear of striding legs), a cape, a scarf (its
-    wrap with the head pieces, its tails with the outfit; they can taper, wave and climb behind
-    the shoulders seen front on), or its own pieces built on `strand`;
+  - the head (`head.ts`): its locks of hair (a lock with `bob` stands up from the crown and
+    springs as he moves, an ahoge); long hair if it has any (a curtain down the back laid out
+    with `curtain`, locks over the shoulders, a tied ponytail with a `sheen` for glossy dark hair;
+    short layers at the nape, painted with the head, whose ends can `flip` out, as in a layered
+    cut); hair worn up (`buns`: one or two buns, a twist, a high updo); facial hair (a `beard`,
+    laid out full, short or pointed by `beard`, and a `moustache`, which hang from the jaw, sway
+    with the wind, show beside the jaw from behind and leave every expression readable; a beard's
+    tresses pass over or under a held item by which is nearer where they cross); and a face style
+    (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a resting expression;
+  - head pieces, given the head's frame as painted so they stay on the hair: a hairpin or its
+    own, a high collar or a gorget (`collar`, closed and with `lames`), a scarf's wrap, and gear
+    from `headgear.ts`: a `hood` worn up over the hair or down on the shoulders (the pose's `hood`
+    says which), an open-faced `helm` (a brow band, cheek guards, a ridge, `scales` and swept-back
+    `fins`, painted as flat plates with `Part.facet`) and a `circlet` or headband with a gem. Gear
+    over the hair hides the hair under it but for a fringe hanging out from under its edge; long
+    hair grown under it comes out from under its edge (below a helm, out of a hood's opening);
+  - the limbs and boots (`BodyDesign`; a boot's `foot` can taper a soft boot to a point) and the
+    torso's materials point by point (`armour.ts` `scaleAt` patterns a scaled breastplate);
+  - outfit pieces (`pieces.ts`): pauldrons (`plates`, scaled with `scales`), a skirt of panels (a
+    coat, a robe, a split skirt; `legs` keeps a long one clear of striding legs, so a full-length
+    robe reads as one garment in every clip), a cape, a `cowl` (a short hooded cape over the
+    shoulders and upper arms), a scarf's tails (they can taper, wave and climb behind the
+    shoulders seen front on), or its own pieces built on `strand`; and things on the back
+    (`back.ts`): a `strap` or bandolier across the chest with studs or bolts along it, a `quiver`
+    of arrows with their fletchings over the shoulder, and any held item `slung` there for good
+    (a sheathed sword, a shield);
   - a weapon for the right hand: a blade (`blade.ts`, straight or curved into a sabre), a pole
     arm (`pole.ts`: haft, point, axe, spike, lugs, ribbon and a glowing channel; a pose slides
     both hands along its haft), a staff (a pole arm crowned with an orb or crystal held in a ring,
@@ -369,16 +371,16 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
     optionally an item for the left hand (`offhand`: a wand from `wand.ts`, a second blade, a
     shield from `shield.ts`, strapped to the forearm, with a round, kite or tower outline, a rim,
     a boss and an emblem, or a bow from `bow.ts`, its string drawn through the right hand and an
-    arrow nocked on it), each a `HeldItem` (`held.ts` has what they share); a pose can sling the
-    off-hand item on the back;
+    arrow nocked on it), each a `HeldItem` (`held.ts` has what they share);
 - moves files with a pose for every frame of every clip, in the pose format described on
   `ChibiPose` in `rig.ts` (the pelvis, lean, twist and turn, side-on hands and feet that the rig
   lifts into 3D, which way the elbows point, the weapon's angle, roll and yaw and its grips, a
-  bow's draw and nocked arrow, the off-hand item's own angles (or a shield's aim, or the item
-  slung on the back), the expression and a wink, the wind, lift, flare and sway that move cloth
-  and hair, and the frame's effects: smears, rings, impacts, lightning, wards (with the hero's
-  own runes if it has them), swirls of wind, afterimages, a shot's release flash and trail,
-  light rays, a column of light, rising motes and more, from `fx.ts`);
+  bow's draw and nocked arrow (or a crossbow spanned and loaded), the off-hand item's own angles
+  (or a shield's aim, or the item slung on his back for the frame), a hood up or down, the
+  expression and a wink, the wind, lift, flare and sway that move cloth, hair and a beard, and the
+  frame's effects: smears, rings, impacts, lightning, wards (with the hero's own runes if it has
+  them), swirls of wind, afterimages, a blow ringing on a shield, a shot's release flash and
+  trail, light rays, a column of light, rising motes and more, from `fx.ts`);
 - a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes, scale
   and height.
 
@@ -391,7 +393,11 @@ that it stands as tall as its height says and paints fast enough. It also pins a
 Knight's frames pixel for pixel, so engine work for one hero cannot change another by accident.
 The test mannequins in `test/` (`chibi-mannequins.ts`, `chibi-gear-mannequin.ts`,
 `chibi-combined-mannequins.ts`, `chibi-kit-mannequins.ts`, `chibi-body-mannequins.ts`) show every
-engine option at work, for checking new ones.
+engine option at work, for checking new ones, and `chibi-roster-mannequins.ts` puts the body,
+head and gear options together on one figure (a hooded archer, a bearded sage with a staff, a
+knight with a circlet, cape and shield, a crossbowman, a sabre fighter, a crested lancer) to check
+how they sort against each other. The paint-time checks time a hero against work painted in the
+same breath (`test/paint-timing.ts`), so they hold on a busy machine.
 
 ## Music
 
@@ -527,7 +533,7 @@ checks the generator, the combat rules, every boss and the AI together, and keep
 honest: AI parties clear a dungeon in about 10 to 14 minutes. Without the Staff healer they can
 take twice as long and wipe once or twice. `test/teamwork.test.ts` checks the
 aggro balance: damage dealers with a pack on them fall in seconds, a tank lasts far longer, and a
-tank facing a big pack alone falls but wins with a healer. `PARTY=tank_greatsword,staff,crossbow,greatsword
+tank facing a big pack alone falls but wins with a healer. `PARTY=tank_greatsword,staff,crossbow,twin_blades
 npm run simulate -- 1 4` picks the party's weapons and prints how often each hero pulled a
 monster off the tank and what killed them.
 
