@@ -9,8 +9,8 @@
  * A staff is a pole arm too: leave the point out and crown the haft with an orb or a crystal
  * (`orb`), held in a ring, in claws curling up round it, or in the haft's own top curled over
  * into a crook. It burns with `fx.rune` (its tones running white-hot, a halo round it and
- * sparkles when it blazes), spells leave from it (its middle is the weapon's `tip`), and a
- * channel (`rune`) then runs up the haft instead, as carved runes.
+ * sparkles when it blazes), spells leave from it (the weapon's `tip` is the top of the orb, or
+ * of the crystal), and a channel (`rune`) then runs up the haft instead, as carved runes.
  *
  * The flat parts are drawn in the weapon's own plane, as a blade's are: u runs along the haft from
  * where the right hand holds it at rest (the butt below at negative u, the head above), v across
