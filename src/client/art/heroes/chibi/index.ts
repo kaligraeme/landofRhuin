@@ -25,6 +25,7 @@
 import type { Raster } from '../paint.js';
 import { ARBALEST_HERO } from './arbalest/hero.js';
 import { BOWMASTER_HERO } from './bowmaster/hero.js';
+import { BLADEMASTER_HERO } from './blademaster/hero.js';
 import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
 import { DRAGOON_HERO } from './dragoon/hero.js';
 import type { ChibiDesign } from './design.js';
@@ -125,4 +126,5 @@ export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
   'hero-sage': SAGE_HERO,
   'hero-arbalest': ARBALEST_HERO,
   'hero-bowmaster': BOWMASTER_HERO,
+  'hero-blademaster': BLADEMASTER_HERO,
 };
