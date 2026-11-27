@@ -23,6 +23,7 @@
  * registered below.
  */
 import type { Raster } from '../paint.js';
+import { BLADEMASTER_HERO } from './blademaster/hero.js';
 import { DARK_KNIGHT_HERO } from './darkKnight/hero.js';
 import { DRAGOON_HERO } from './dragoon/hero.js';
 import type { ChibiDesign } from './design.js';
@@ -117,4 +118,5 @@ export const CHIBI_HEROES: Partial<Record<string, ChibiHero>> = {
   'hero-dark-knight': DARK_KNIGHT_HERO,
   'hero-spellblade': SPELLBLADE_HERO,
   'hero-dragoon': DRAGOON_HERO,
+  'hero-blademaster': BLADEMASTER_HERO,
 };
