@@ -98,12 +98,14 @@ export function goggles(spec: GogglesSpec): HeadPiece {
             if (h.back) return null;
             const across = Math.hypot(h.p[1], h.p[2]) / spec.r;
             const light = cam.light(dirIn(fr, h.n[0], h.n[1], h.n[2]));
-            if (across < 0.6) {
-              // The glass: lit from above, a white glint in its upper corner toward the light.
-              const glint = h.p[1] > spec.r * 0.18 && h.p[2] * side < 0 && across > 0.15 && across < 0.45;
-              return { m: spec.glass, light: glint ? 1.3 : h.p[1] > 0 ? light + 0.25 : light - 0.15, id: GLASS, lift: LIFT };
+            if (across < 0.7) {
+              // The glass: deep amber, its upper half a shade brighter, a single white glint in its
+              // upper corner toward the light (the glass's highlight tone).
+              const glint = h.p[1] > spec.r * 0.2 && h.p[2] * side < 0 && across > 0.2 && across < 0.45;
+              return { m: spec.glass, light: glint ? 1.3 : h.p[1] > 0 ? Math.min(0.7, light + 0.1) : Math.min(0.35, light - 0.2), id: GLASS, lift: LIFT };
             }
-            return { m: spec.brass, light: light + (h.p[1] > 0 ? 0.2 : -0.1), id: CUP, lift: LIFT };
+            // A thin, dull rim round it, never at its brightest.
+            return { m: spec.brass, light: Math.min(0.7, light + (h.p[1] > 0 ? 0.1 : -0.15)), id: CUP, lift: LIFT };
           },
         });
       }
@@ -179,6 +181,16 @@ export interface LeverSpec {
 }
 
 /**
+ * The metal bands round a stock whose top and underside are not where the engine's crossbow puts
+ * its bands (crossbow.ts runs them from the groove to a fixed depth): each at `u` along the stock
+ * from its top (`v0`) to its underside (`v1`), in `mat`.
+ */
+export interface BandSpec {
+  at: readonly (readonly [number, number, number])[];
+  mat: Mat;
+}
+
+/**
  * How far the lever is thrown, in degrees (0 folded back along the stock), from the pose's `draw`:
  * spanned (1) or just loosed (0) it lies folded; between, a rack throws it forward and up (just
  * above 0, the string still forward) and pulls it back (toward 1, the string coming back to the
@@ -200,20 +212,36 @@ export function leverEnds(grip: Grip, spec: LeverSpec, draw: number | undefined)
   return { hinge, end, side };
 }
 
-/** A crossbow with a cocking lever on its right side, painted over it. */
-export function withLever(bow: WeaponDesign, spec: LeverSpec): WeaponDesign {
+/**
+ * A crossbow with a cocking lever on its right side and metal bands round its stock, painted over
+ * it. Its effects leave from the point of the bolt as it lies in the groove (`boltV` across the
+ * stock from the grip, toward its top), so a flash and a trail start at the bolt and not under it.
+ */
+export function withLever(bow: WeaponDesign, spec: LeverSpec, bands: BandSpec, boltV: number): WeaponDesign {
+  const tipU = bow.tip ?? bow.reach[1];
   return {
     ...bow,
+    aim: (_ctx, held) => ({ tip: add3(add3(held.grip.o, held.grip.u, tipU), held.grip.v, boltV), dir: held.grip.u }),
     paint: (ctx, part: Part, held = mainHeld(ctx)) => {
       bow.paint(ctx, part, held);
       const { proj, depth } = ctx;
       const w = held.grip;
+      const ax = { o: proj(w.o), u: ctx.cam.vec(w.u), v: ctx.cam.vec(w.v) };
+      clipToGround(part, ax, w);
+      const p3 = (u: number, v: number): V3 => add3(add3(w.o, w.u, u), w.v, v);
+      // The bands: a line across the stock's side from its top to its underside, a little proud.
+      // Seen end on (the stock pointing at the viewer or away) they would stack into one bright
+      // line up its middle, so they are left out then.
+      const along = Math.hypot(ax.u[0], ax.u[1]);
+      for (const [u, v0, v1] of along > 0.55 ? bands.at : []) {
+        const a = p3(u, v0);
+        const b = p3(u, v1);
+        part.line(proj(a), proj(b), bands.mat, 0.5, Math.max(depth(a), depth(b)) + 0.6, 2, true);
+      }
       const { hinge, end, side } = leverEnds(w, spec, ctx.pose.draw);
       // Over the stock where it lies on the near side, behind it on the far side.
       const near = ctx.cam.facing(norm3([w.n[0] * side, w.n[1] * side, w.n[2] * side])) > 0;
       const lift = near ? 0.9 : -0.6;
-      const ax = { o: proj(w.o), u: ctx.cam.vec(w.u), v: ctx.cam.vec(w.v) };
-      clipToGround(part, ax, w);
       part.capsule(proj(hinge), proj(end), 0.75, 0.6, spec.mat, 0.1, depth(hinge) + lift, depth(end) + lift, 7);
       // The grip across its end.
       const g0 = add3(end, w.n, side * 0.2);

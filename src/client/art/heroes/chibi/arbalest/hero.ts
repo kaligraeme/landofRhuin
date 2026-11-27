@@ -24,7 +24,7 @@ const TIMING: Record<ChibiClip, ClipTiming> = {
   atk2: { frames: 6, seconds: 0.3, windup: 1 },
   atk3: { frames: 7, seconds: 0.36, windup: 1 },
   special: { frames: 8, seconds: 0.6, windup: 1 },
-  q: { frames: 9, seconds: 0.65, windup: 2 },
+  q: { frames: 9, seconds: 0.65, windup: 1 },
   e: { frames: 9, seconds: 0.6, windup: 1 },
   r: { frames: 8, seconds: 0.6, windup: 1 },
   ult: { frames: 16, seconds: 1.45, windup: 1 },

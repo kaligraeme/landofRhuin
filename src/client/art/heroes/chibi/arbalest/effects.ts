@@ -7,7 +7,9 @@
  * the bolt's point) along its aim (`FxContext.dir`), so they follow the crossbow in every view.
  */
 import type { RGB } from '../../paint.js';
-import { DUST, DUST_DARK, glowLine, puff, trail } from '../fx.js';
+import type { Vec } from '../../skeleton.js';
+import { DUST, DUST_DARK, glowLine, motes, puff, rays, starburst, trail } from '../fx.js';
+import { mixc } from '../raster.js';
 import { add3, cross3, type FxContext, lerp3, norm3, rad, type V3 } from '../rig.js';
 
 const WHITE: RGB = [255, 255, 255];
@@ -24,90 +26,157 @@ export const all =
     for (const f of fs) f(x);
   };
 
-/** Where a shot left the crossbow and which way it flew (hero space): see moves-core.ts `shotOf`. */
+/**
+ * Where a shot left the crossbow and which way it flew (hero space): see moves-core.ts `shotOf`.
+ * Without a `tip` it leaves from the bolt's point on the crossbow as it is drawn in this frame
+ * (the release frame: the flash sits on the nose, wherever the kick has thrown it), along `dir`.
+ */
 export interface Shot {
-  tip: V3;
+  tip?: V3;
   dir: V3;
+}
+
+/** A shot's line in this frame: its own, or the crossbow's bolt and aim. */
+const lineOf = (x: FxContext, shot?: Shot): { tip: V3; dir: V3 } => ({ tip: shot?.tip ?? x.tip, dir: shot?.dir ?? x.dir });
+
+/**
+ * Is a shot flying at the viewer (seen from in front, where a line along it would run down the
+ * screen over his legs)? Such effects are kept short: a burst and a quick streak toward the viewer.
+ */
+function atViewer(x: FxContext, at: V3, dir: V3): boolean {
+  const v = x.cam.vec(dir);
+  return Math.hypot(v[0], v[1]) < 0.6 && x.depth(add3(at, dir)) > x.depth(at);
+}
+
+/** A shot's direction on screen, opened out to a short drop toward the viewer or a rise away when it flies end on. */
+function screenDir(x: FxContext, at: V3, dir: V3): Vec {
+  const v = x.cam.vec(dir);
+  const l = Math.hypot(v[0], v[1]);
+  if (l > 0.45) return [v[0] / l, v[1] / l];
+  const toward = x.depth(add3(at, dir)) > x.depth(at) ? 1 : -1;
+  const d: Vec = [v[0], v[1] + toward * (0.45 - l)];
+  const dl = Math.hypot(d[0], d[1]) || 1;
+  return [d[0] / dl, d[1] / dl];
 }
 
 /**
  * A bolt's trail in pale gold: the engine's shot trail (fx.ts `trail`) with a white-hot line in a
  * sheath of pale gold and a fringe of amber, `len` long from where the shot left along its line
- * (`shot`, or the crossbow's tip and aim in this frame); `k` its strength (fade it over two or
- * three frames, keeping the shot's own line while the crossbow kicks up).
+ * (`shot`, or the crossbow's bolt and aim in this frame); `k` its strength (fade it over two or
+ * three frames, keeping the shot's own line while the crossbow kicks up). Flying at the viewer it
+ * is a short streak that fades fast, not a line down over his legs.
  */
 export const goldTrail =
   (k: number, len = 52, shot?: Shot) =>
-  (x: FxContext): void =>
-    trail({ ...x, aura: { hot: WHITE, core: GOLD, edge: AMBER } }, shot?.tip ?? x.tip, shot?.dir ?? x.dir, k, { len });
+  (x: FxContext): void => {
+    const { tip, dir } = lineOf(x, shot);
+    trail({ ...x, aura: { hot: WHITE, core: GOLD, edge: AMBER } }, tip, dir, k, { len: atViewer(x, tip, dir) ? Math.min(len, 22) : len });
+  };
 
 /**
  * A piercing bolt's white-hot streak: a long, hard white line along the shot's line (`shot`, or
- * the crossbow's aim) with a thin gold sheath, much longer than a common trail, `k` its strength.
+ * the crossbow's aim), `core` pixels thick, in a thin gold sheath, much longer than a common
+ * trail; `k` its strength. Flying at the viewer it is cut short, as the trail is.
  */
 export const streak =
-  (k: number, len = 100, shot?: Shot) =>
+  (k: number, len = 100, shot?: Shot, core = 1) =>
   (x: FxContext): void => {
-    const tip = shot?.tip ?? x.tip;
-    const dir = shot?.dir ?? x.dir;
+    const { tip, dir } = lineOf(x, shot);
+    const L = atViewer(x, tip, dir) ? Math.min(len, 40) : len;
     const a = x.proj(tip);
-    const b = x.proj(add3(tip, dir, len));
+    const b = x.proj(add3(tip, dir, L));
     const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
-    const under = x.behind(add3(tip, dir, len)) && x.behind(tip);
+    const under = x.behind(add3(tip, dir, L)) && x.behind(tip);
+    // Thickened across the line: up and down the screen when it runs along it, else sideways.
+    const flat = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]);
+    const off = (px: number, py: number, o: number): Vec => (flat ? [px, py + o] : [px + o, py]);
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       const px = a[0] + (b[0] - a[0]) * t;
       const py = a[1] + (b[1] - a[1]) * t;
       const fade = k * (0.35 + 0.65 * t);
-      x.c.glow(px, py, WHITE, fade, under);
-      x.c.glow(px, py - 1, GOLD, fade * 0.55, under);
-      x.c.glow(px, py + 1, GOLD, fade * 0.55, under);
+      for (let o = 0; o < core; o++) x.c.glow(...off(px, py, o), WHITE, fade, under);
+      x.c.glow(...off(px, py, -1), GOLD, fade * 0.6, under);
+      x.c.glow(...off(px, py, core), GOLD, fade * 0.6, under);
     }
   };
 
 /**
- * A charged bolt's head in the groove: a pulsing glow round the bolt's point with a hot heart and a
- * few sparks spitting off it, `k` its strength, `col` its colour (amber for an explosive bolt, a
- * pale gold for a piercing one).
+ * A charged bolt's head in the groove: a pulsing glow round the bolt's point with a hot white
+ * heart and sparks spitting off it, `k` its strength (1 about 5 px across), `col` its colour
+ * (amber for an explosive bolt, a pale gold for a piercing one), `seed` varying the sparks, with a
+ * `ring` of charge round it if asked. Hidden behind him when the bolt is.
  */
 export const charged =
-  (k: number, col: RGB = AMBER) =>
+  (k: number, col: RGB = AMBER, seed = 0, ring = false) =>
   (x: FxContext): void => {
     const { c, hash } = x;
-    const p = x.proj(add3(x.tip, x.dir, -1.5));
-    puff(c, p[0], p[1], 4.5 * k, col, 0.45 * k);
-    puff(c, p[0], p[1], 2.2 * k, GOLD, 0.8 * k);
-    c.glow(p[0], p[1], WHITE, k);
-    for (let i = 0; i < 4; i++) {
-      const ang = hash(i, 21) * Math.PI * 2;
-      const r = 4 + hash(i, 22) * 4 * k;
-      c.glow(p[0] + Math.cos(ang) * r, p[1] + Math.sin(ang) * r - 1, i % 2 ? WHITE : col, 0.9 * k);
+    const p3 = add3(x.tip, x.dir, -1.5);
+    const under = x.behind(p3);
+    const p = x.proj(p3);
+    if (ring) {
+      // A ring of charge round the bolt's head, broken in places.
+      for (let i = 0; i < 24; i++) {
+        if (hash(i, 24 + seed) < 0.2) continue;
+        const th = (i / 24) * Math.PI * 2;
+        c.glow(p[0] + Math.cos(th) * 6.5 * k, p[1] + Math.sin(th) * 5.5 * k, i % 3 ? col : WHITE, 0.9 * k, under);
+      }
+    }
+    puff(c, p[0], p[1], 5.5 * k, col, 0.5 * k, under);
+    puff(c, p[0], p[1], 3 * k, GOLD, 0.85 * k, under);
+    puff(c, p[0], p[1], 1.4 * k, WHITE, 1, under);
+    for (let i = 0; i < 6; i++) {
+      const ang = hash(i, 21 + seed) * Math.PI * 2;
+      const r0 = 3 + hash(i, 23 + seed) * 2;
+      const r1 = r0 + (2 + hash(i, 22 + seed) * 4) * k;
+      glowLine(c, [p[0] + Math.cos(ang) * r0, p[1] + Math.sin(ang) * r0], [p[0] + Math.cos(ang) * r1, p[1] + Math.sin(ang) * r1 - 1], i % 2 ? col : EMBER, 0.8 * k, under);
+      c.glow(p[0] + Math.cos(ang) * r1, p[1] + Math.sin(ang) * r1 - 1, WHITE, 0.95 * k, under);
     }
   };
 
 /**
- * A fiery muzzle burst where a shot leaves (`shot`, or the crossbow's tip and aim): a white heart,
+ * A fiery muzzle burst where a shot leaves (`shot`, or the crossbow's bolt and aim): a white heart,
  * amber and ember-orange tongues of flame licking forward along the aim and out to the sides, `k`
- * its size (1 about 9 px across).
+ * its size (1 about 9 px across). Behind him (seen from behind) it goes under him, so only its glow
+ * round his outline shows.
  */
 export const fireburst =
   (k: number, shot?: Shot) =>
   (x: FxContext): void => {
     const { c, hash } = x;
-    const p = x.proj(add3(shot?.tip ?? x.tip, shot?.dir ?? x.dir, 2));
-    const d = x.cam.vec(shot?.dir ?? x.dir);
-    const dl = Math.hypot(d[0], d[1]) || 1;
-    const fwd: [number, number] = dl > 0.3 ? [d[0] / dl, d[1] / dl] : [0, 1];
-    puff(c, p[0], p[1], 6 * k, EMBER, 0.55);
-    puff(c, p[0] + fwd[0] * 3 * k, p[1] + fwd[1] * 3 * k, 4.5 * k, AMBER, 0.8);
-    puff(c, p[0], p[1], 2.4 * k, WHITE, 1);
+    const { tip, dir } = lineOf(x, shot);
+    const p3 = add3(tip, dir, 2);
+    const under = x.behind(p3);
+    const p = x.proj(p3);
+    const fwd = screenDir(x, tip, dir);
+    puff(c, p[0], p[1], 6 * k, EMBER, 0.55, under);
+    puff(c, p[0] + fwd[0] * 3 * k, p[1] + fwd[1] * 3 * k, 4.5 * k, AMBER, 0.8, under);
+    puff(c, p[0], p[1], 2.4 * k, WHITE, 1, under);
     for (let i = 0; i < 9; i++) {
       const ang = Math.atan2(fwd[1], fwd[0]) + (hash(i, 31) - 0.5) * 2.6;
       const r0 = 3 * k;
       const r1 = r0 + (5 + hash(i, 32) * 7) * k;
-      glowLine(c, [p[0] + Math.cos(ang) * r0, p[1] + Math.sin(ang) * r0], [p[0] + Math.cos(ang) * r1, p[1] + Math.sin(ang) * r1 - hash(i, 33) * 2], i % 3 ? AMBER : EMBER, 0.85);
+      glowLine(c, [p[0] + Math.cos(ang) * r0, p[1] + Math.sin(ang) * r0], [p[0] + Math.cos(ang) * r1, p[1] + Math.sin(ang) * r1 - hash(i, 33) * 2], i % 3 ? AMBER : EMBER, 0.85, under);
     }
   };
+
+/**
+ * A burst of light rays round the crossbow's nose (fx.ts `rays`, `n` beams about `len` long, `k`
+ * their strength), hidden behind him when the nose is, so seen from behind they shine out round his
+ * outline rather than over his head.
+ */
+export const muzzleRays =
+  (k: number, n = 10, len = 20) =>
+  (x: FxContext): void => {
+    const at = add3(x.tip, x.dir, 2);
+    rays(x, at, k, { n, len, behind: x.behind(at) });
+  };
+
+/** Healing motes rising round him in his warm colours: the engine's motes (fx.ts `motes`) in pale gold and amber. */
+export const warmMotes =
+  (k: number, rise: number) =>
+  (x: FxContext): void =>
+    motes({ ...x, aura: { hot: GOLD, core: AMBER, edge: EMBER } }, k, { rise });
 
 /**
  * Powder smoke round the crossbow's nose, rising and spreading as `k` runs from 0 (just fired: a
@@ -148,40 +217,62 @@ export const spentSparks =
   };
 
 /**
- * A cone of shrapnel blasted out of the prod: hot sparks fanning out 35 degrees either side of the
- * shot's line (`shot`, or the crossbow's aim), each a white head with an orange streak behind it, `k` from 0 (bursting from the prod) to
- * 1 (flown far out and thinning), with a little rise and fall among them.
+ * A cone of shrapnel blasted out of the prod, opening on screen from the crossbow's nose along the
+ * shot (`shot`, or the crossbow's bolt and aim): `k` 0 is the blast itself, a solid fan about 36 px
+ * long rooted at the prod, white-hot at its apex, then amber, then ember; as `k` runs on to 1 the
+ * fan fades and its sparks fly out from the prod (no gap at the apex), each a white or gold head
+ * two pixels wide with an amber streak behind it, falling a little and thinning out. The 70-degree
+ * spread is level, so side on it would fold into the depth: it is opened on screen instead, the
+ * same cone in every view, and flying at the viewer it is a star burst round the nose.
  */
 export const shrapnel =
   (k: number, shot?: Shot) =>
   (x: FxContext): void => {
     const { c, hash } = x;
-    const tip = shot?.tip ?? x.tip;
-    // The aim and two axes square to it: one level (the cone's spread), one up.
-    const d = norm3([(shot?.dir ?? x.dir)[0], 0, (shot?.dir ?? x.dir)[2]]);
-    const side = norm3(cross3([0, 1, 0], d));
-    const reach = 18 + k * 56;
-    for (let i = 0; i < 44; i++) {
-      const ang = rad((hash(i, 61) - 0.5) * 70);
-      const el = rad((hash(i, 62) - 0.5) * 18);
-      const dir = norm3(add3(add3([d[0] * Math.cos(ang), 0, d[2] * Math.cos(ang)], side, Math.sin(ang)), [0, 1, 0], Math.sin(el)));
-      const r = reach * (0.45 + 0.55 * hash(i, 63));
-      const head = add3(add3(tip, dir, r), [0, -1, 0], k * k * 6 * hash(i, 64));
-      const tail = add3(tip, dir, Math.max(0, r - 8 - k * 6));
-      const a = x.proj(tail);
-      const b = x.proj(head);
-      const under = x.behind(head) && x.behind(tail);
-      const fade = 1 - k * 0.55;
-      glowLine(c, a, b, i % 3 ? EMBER : AMBER, 0.8 * fade, under);
-      c.glow(b[0], b[1], WHITE, fade, under);
-      if (i % 2) c.glow(b[0] + 1, b[1], GOLD, 0.8 * fade, under);
+    const { tip, dir } = lineOf(x, shot);
+    const under = x.behind(tip);
+    const A = x.proj(tip);
+    const star = atViewer(x, tip, dir);
+    const d = screenDir(x, tip, dir);
+    const base = Math.atan2(d[1], d[0]);
+    // Half the cone's opening on screen; a full round seen end on.
+    const half = star ? Math.PI : rad(33);
+    if (k < 0.3) {
+      // The blast: a fan (or a disc seen end on) of light, hottest at its apex.
+      const R = (star ? 16 : 40) * (0.9 + k);
+      const fade = 1 - k / 0.3;
+      const ri = Math.ceil(R);
+      for (let dy = -ri; dy <= ri; dy++) {
+        for (let dx = -ri; dx <= ri; dx++) {
+          const r = Math.hypot(dx, dy);
+          if (r > R) continue;
+          let off = Math.atan2(dy, dx) - base;
+          off = Math.atan2(Math.sin(off), Math.cos(off));
+          if (Math.abs(off) > half) continue;
+          const t = r / R;
+          // Ragged at its rim: tongues of flame along the cone.
+          if (t > 0.7 && hash(Math.round(off * 9) + 40, 65) < (t - 0.7) * 2.5) continue;
+          const col = t < 0.18 ? WHITE : t < 0.45 ? mixc(GOLD, AMBER, (t - 0.18) / 0.27) : mixc(AMBER, EMBER, (t - 0.45) / 0.55);
+          c.glow(A[0] + dx, A[1] + dy, col, fade * (t < 0.18 ? 1 : 1 - t * 0.45) * (1 - (Math.abs(off) / half) * 0.3), under);
+        }
+      }
+      if (star) starburst(c, A, 1.6, WHITE, AMBER, fade, under);
     }
-    if (k < 0.5) {
-      // The blast at the prod, opening out along the aim.
-      const p = x.proj(add3(tip, d, 4));
-      puff(c, p[0], p[1], 9 * (1 - k), EMBER, 0.45 * (1 - k * 1.6));
-      puff(c, p[0], p[1], 6 * (1 - k), AMBER, 0.6 * (1 - k * 1.6));
-      puff(c, p[0], p[1], 3, WHITE, 0.9 * (1 - k * 1.6));
+    // The sparks: flying out from the prod along the cone, some still close to it.
+    const reach = (star ? 10 : 16) + k * (star ? 26 : 62);
+    const n = k > 0.8 ? 18 : 40;
+    for (let i = 0; i < n; i++) {
+      const ang = base + (hash(i, 61) * 2 - 1) * half * (star ? 1 : 0.95);
+      const speed = 0.15 + 0.85 * hash(i, 63);
+      const r = reach * speed;
+      const drop = k * k * 9 * hash(i, 64);
+      const head: Vec = [A[0] + Math.cos(ang) * r, A[1] + Math.sin(ang) * r + drop];
+      const back = k < 0.15 ? 0 : Math.min(r, 5 + 10 * k);
+      const tail: Vec = [A[0] + Math.cos(ang) * (r - back), A[1] + Math.sin(ang) * (r - back) + drop * 0.6];
+      const fade = Math.max(0, 1 - k * 0.6);
+      glowLine(c, tail, head, i % 3 ? AMBER : EMBER, 0.85 * fade, under);
+      c.glow(head[0], head[1], i % 2 ? WHITE : GOLD, fade, under);
+      c.glow(head[0] + (Math.cos(ang) > 0 ? 1 : -1), head[1], i % 2 ? GOLD : WHITE, fade * 0.9, under);
     }
   };
 

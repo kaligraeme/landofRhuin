@@ -22,7 +22,7 @@
  */
 import { all, fireburst, goldTrail, type Shot } from './effects.js';
 import { leverEnds } from './gear.js';
-import { ARBALEST, LEVER } from './design.js';
+import { ARBALEST, BOLT_V, LEVER } from './design.js';
 import { add3, type ChibiPose, mix, pose, solveRig, wave } from '../rig.js';
 
 const BUILD = ARBALEST.build;
@@ -44,20 +44,31 @@ export function onLever(p: ChibiPose): ChibiPose {
 }
 
 /**
- * Where a shot leaves the crossbow held as in pose `p` (the bolt's point) and the line it flies
- * along (the stock's), in hero space: the release frame's flash and the trail in the frames after
- * keep to the line of the aim it was loosed from, while the crossbow kicks up.
+ * Where a shot leaves the crossbow held as in pose `p` (the point of the bolt as it lies in the
+ * groove) and the line it flies along (the stock's), in hero space: the release frame's flash and
+ * the trail in the frames after keep to the line of the aim it was loosed from, while the crossbow
+ * kicks up.
  */
-export function shotOf(p: ChibiPose): Shot {
+export function shotOf(p: ChibiPose): Required<Shot> {
   const w = solveRig(BUILD, p, GRIP2).weapon;
-  return { tip: add3(w.o, w.u, TIP), dir: w.u };
+  return { tip: add3(add3(w.o, w.u, TIP), w.v, BOLT_V), dir: w.u };
 }
 
-/** A release frame's effects for a shot loosed from pose `aim`: a flash at the bolt's point and a gold trail along the aim. */
-export const loosed = (aim: ChibiPose, flash = 1, len = 52, burst = 0.5): ChibiPose['fx'] => {
-  const shot = shotOf(aim);
-  return { flash: { k: flash, from: shot.tip, dir: shot.dir }, extra: all(fireburst(burst, shot), goldTrail(1.2, len, shot)) };
-};
+/**
+ * A shot loosed from pose `aim` on the release frame `fire`: it leaves from the bolt's point on the
+ * crossbow as it is drawn in that frame (the kick has already thrown the nose up a little, and the
+ * flash belongs on the nose) and flies along the line of the aim, where the game's bolt goes. The
+ * trail keeps to that line in the frames after, while the crossbow rides the kick.
+ */
+export function releaseOf(aim: ChibiPose, fire: ChibiPose): Required<Shot> {
+  return { tip: shotOf(fire).tip, dir: shotOf(aim).dir };
+}
+
+/** A release frame's effects for a shot: a flash at the bolt's point, a fiery burst and a gold trail along the aim. */
+export const loosed = (shot: Required<Shot>, flash = 1, len = 52, burst = 0.5): ChibiPose['fx'] => ({
+  flash: { k: flash, from: shot.tip, dir: shot.dir },
+  extra: all(fireburst(burst, shot), goldTrail(1.2, len, shot)),
+});
 
 // ── Stances ──────────────────────────────────────────────────────────────────────────────────
 
@@ -86,7 +97,7 @@ export const AIM: ChibiPose = {
 };
 
 /** The battle stance: shouldered, the nose a little down, his head up to watch over the prod. */
-export const READY: ChibiPose = pose(AIM, { y: 4.5, head: 1, look: -4, handF: [9, 2.5, 4.2], weapon: 97, face: 'stern', wink: undefined });
+export const READY: ChibiPose = pose(AIM, { y: 4.5, head: 1, look: -4, handF: [9, 5, 4.4], weapon: 96, face: 'stern', wink: undefined });
 
 /** At ease: the crossbow at his right hip, pointing ahead and down, the left thumb in his belt. */
 export const AT_EASE: ChibiPose = {
@@ -134,8 +145,8 @@ const battle = Array.from({ length: 8 }, (_, i): ChibiPose => {
     y: 4 + b * 1.5,
     lean: 6 + b,
     head: 1 + wave(i - 1, 8) * 1.5,
-    handF: [9, 2.5 + b * 0.8, 4.2],
-    weapon: 96 + b * 2,
+    handF: [9, 5 + b * 0.8, 4.4],
+    weapon: 95 + b * 2,
     wind: 0.15 + Math.max(0, lag) * 0.15,
     lift: lag * 0.5,
     sway: Math.sin((2 * Math.PI * (i - 1)) / 8) * 0.15,
@@ -201,9 +212,10 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
  * battle stance. `heavy` adds to the kick and the frames that follow it.
  */
 function shot(aim: ChibiPose, kick: Partial<ChibiPose>, flash: number, heavy = 0): ChibiPose[] {
-  const line = shotOf(aim);
-  const fire = pose(aim, { ...kick, draw: 0, nock: false, face: 'grit', wind: 0.3 + heavy * 0.2, phase: 0.2, fx: { ...loosed(aim, flash, 52, 0.55 + heavy * 0.4), dust: heavy ? 0.7 : 0 } });
-  const ride = pose(fire, { x: fire.x - 0.5 - heavy, lean: fire.lean - heavy * 5, weapon: fire.weapon - 3 - heavy * 6, handF: [(fire.handF[0] as number) - 0.5 - heavy, (fire.handF[1] as number) - 0.3 - heavy, 4], wink: undefined, face: 'stern', wind: 0.35, lift: 0.2, phase: 0.35, fx: { extra: goldTrail(0.5, 70, line), dust: heavy * 0.4 } });
+  const kicked = pose(aim, kick);
+  const line = releaseOf(aim, kicked);
+  const fire = pose(kicked, { draw: 0, nock: false, face: kick.face ?? 'grit', wind: 0.3 + heavy * 0.2, phase: 0.2, fx: { ...loosed(line, flash, 52, 0.55 + heavy * 0.5), dust: heavy ? 0.9 : 0 } });
+  const ride = pose(fire, { x: fire.x - 0.5 - heavy, lean: fire.lean - heavy * 5, weapon: fire.weapon - 3 - heavy * 2, handF: [(fire.handF[0] as number) - 0.5 - heavy, (fire.handF[1] as number) - 0.3 - heavy, 4], wink: undefined, face: 'stern', wind: 0.35, lift: 0.2, phase: 0.35, fx: { extra: goldTrail(0.5, 70, line), dust: heavy * 0.4 } });
   const out: ChibiPose[] = [aim, fire, ride];
   if (heavy) out.push(pose(ride, { x: ride.x - 0.5, lean: ride.lean + 2, weapon: ride.weapon + 4, wind: 0.25, lift: 0.3, phase: 0.45, fx: undefined }));
   out.push(
@@ -215,12 +227,14 @@ function shot(aim: ChibiPose, kick: Partial<ChibiPose>, flash: number, heavy = 0
 }
 
 const atk1 = shot(AIM, { x: -1, lean: 4, handF: [7.5, 0.5, 4], weapon: 87 }, 1.25);
-// The second from a lower, steadier crouch, the stock canted a little to his left.
-const AIM2 = pose(AIM, { y: 5.5, lean: 8, twist: 24, head: 7, footF: [11, 0, 6], footB: [-11, 0, 5.4], handF: [9.5, 2, 4], yaw: -4 });
-const atk2 = shot(AIM2, { x: -1, lean: 6, handF: [8, 1.5, 4], weapon: 87 }, 1.25);
-// The third kicks harder: the nose jumps, he rocks back onto his rear foot, dust at his boots.
+// The second after a half step in with the lead foot, from a lower crouch, his shoulders turned a
+// little more to the target and the stock canted to his left: the chain has a rhythm.
+const AIM2 = pose(AIM, { x: 1, y: 6, lean: 9, twist: 30, head: 7, footF: [13, 0, 6.2], footB: [-10, 0, 5.4], handF: [9.5, 2.5, 4], yaw: -6, phase: 0.1 });
+const atk2 = shot(AIM2, { x: 0, lean: 6, twist: 27, handF: [8, 1.5, 4], weapon: 86 }, 1.3);
+// The third kicks hardest: the nose jumps ten degrees more, he rocks back a half step onto his
+// rear foot, a bigger flash and dust at his boots.
 const AIM3 = pose(AIM, { y: 5, lean: 9, head: 7, footF: [11, 0, 6], footB: [-12, 0, 5.4] });
-const atk3 = shot(AIM3, { x: -2.5, y: 4.5, lean: 3, head: 4, footF: [10, -1, 6], handF: [6.5, 0, 4], weapon: 85, face: 'shout' }, 1.5, 1);
+const atk3 = shot(AIM3, { x: -3.5, y: 4.5, lean: 0, head: 3, footF: [10, -1.5, 6], footB: [-13, 0, 5.4], handF: [6, -0.5, 4], weapon: 79, face: 'shout' }, 1.6, 1);
 
 /** The core clips' poses, by clip. */
 export const CORE_MOVES = { idle, battle, move, atk1, atk2, atk3 };

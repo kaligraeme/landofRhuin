@@ -75,7 +75,8 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
 
 /**
  * On his back with his feet toward the way he faced, twisted (`turn` -60) so he lies across the
- * screen in every view; the crossbow lies dropped ahead of him on his right, where it skidded.
+ * screen in every view; the crossbow lies dropped well clear of his boots on his right, where it
+ * skidded, turned across his line so its stock and prod show as a T, never as more of his legs.
  */
 const DOWN: ChibiPose = pose(S, {
   x: -8,
@@ -91,10 +92,10 @@ const DOWN: ChibiPose = pose(S, {
   handF: [12, 5.5, 18],
   handB: [-4, 2, 12],
   drop: true,
-  dropAt: [24, 4, 16],
+  dropAt: [54, 2.5, 18],
   weapon: 90,
   roll: 0,
-  yaw: 50,
+  yaw: 40,
   draw: 0,
   nock: false,
   face: 'closed',
@@ -109,9 +110,9 @@ const ko: ChibiPose[] = [
   // His legs go: falling back, the crossbow flying out of his hands.
   pose(S, { x: -6, y: 12, lean: -30, twist: 0, turn: -20, head: -12, footF: [12, -2, 6], footB: [2, -1, 5], handF: [8, 2, 10], handB: [2, 4, 12], drop: true, dropAt: [12, 22, 12], weapon: 40, roll: 50, yaw: 10, draw: 0, nock: false, face: 'hurt', wink: undefined, wind: 0, lift: 0.5, flare: 0.2 }),
   // Hitting the floor; the crossbow lands ahead of him.
-  pose(DOWN, { x: -6, y: 18, lean: -55, turn: -45, head: -8, look: 10, footF: [10, -5, 6], footB: [6, -3, 4], handF: [8, 3, 16], handB: [0, 5, 13], dropAt: [14, 5, 12], weapon: 95, roll: 20, yaw: 25, lift: 0.6, fx: { dust: 0.6 } }),
+  pose(DOWN, { x: -6, y: 18, lean: -55, turn: -45, head: -8, look: 10, footF: [10, -5, 6], footB: [6, -3, 4], handF: [8, 3, 16], handB: [0, 5, 13], dropAt: [26, 7, 12], weapon: 95, roll: 20, yaw: 25, lift: 0.6, fx: { dust: 0.6 } }),
   // Flat on his back: the thud raises dust and bounces his boots; the crossbow skids on.
-  pose(DOWN, { lean: -82, head: -12, footF: [15, -4, 7], footB: [13, -5, 2], dropAt: [20, 4, 14], yaw: 40, lift: 0.2, fx: { dust: 0.9, extra: (x) => (thud(x), skid(0.9)(x)) } }),
+  pose(DOWN, { lean: -82, head: -12, footF: [15, -4, 7], footB: [13, -5, 2], dropAt: [42, 3, 16], yaw: 34, lift: 0.2, fx: { dust: 0.9, extra: (x) => (thud(x), skid(0.9)(x)) } }),
   pose(DOWN, { fx: { extra: skid(0.4) } }),
   pose(DOWN, {}),
 ];
@@ -119,22 +120,23 @@ const ko: ChibiPose[] = [
 // ── Victory ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * The last pose, held: the crossbow propped on his right shoulder, goggles down (the pose's `hood`
- * moves them: see gear.ts `goggles`), a grin, weight on one hip.
+ * The last pose, held: the crossbow propped on his right shoulder, rolled so its prod stands up
+ * behind his head as a T rather than wrapping round it side on; goggles down (the pose's `hood`
+ * moves them: see gear.ts `goggles`), a toothy grin, weight on one hip.
  */
 const PROUD: ChibiPose = pose(AT_EASE, {
   y: 1.5,
   lean: -3,
   twist: 12,
   tilt: 4,
-  head: -6,
+  head: -2,
   look: 12,
   footF: [6, 0, 6.5],
   footB: [-6, 0, 6],
   handF: [3, 4, 8.5],
   handB: [2, 14, 11],
   weapon: -28,
-  roll: 18,
+  roll: 60,
   yaw: -24,
   face: 'smirk',
   hood: 'down',
@@ -148,7 +150,7 @@ const victory: ChibiPose[] = [
   // ...back past his hip and up behind him in one swing onto his shoulder (behind his head side
   // on, never across his face), his left hand coming up to his brow.
   pose(PROUD, { y: 3, lean: 4, handF: [-2, 13, 10], handB: [8, -8, 3], weapon: 215, roll: 0, yaw: -10, face: 'stern', hood: 'up', wind: 0.45, lift: 0.3, phase: 0.15 }),
-  pose(PROUD, { y: 2, handF: [1, 3, 9.5], handB: [8, -11, 3], weapon: -50, face: 'stern', hood: 'up', wind: 0.4, lift: 0.3, phase: 0.3 }),
+  pose(PROUD, { y: 2, handF: [1, 3, 9.5], handB: [8, -11, 3], weapon: -50, roll: 40, face: 'stern', hood: 'up', wind: 0.4, lift: 0.3, phase: 0.3 }),
   // The goggles pulled down over his eyes.
   pose(PROUD, { y: 1.5, head: -2, handB: [8, -6, 3], face: 'grit', wind: 0.35, lift: 0.2, phase: 0.45 }),
   // A grin, chin up, the hand dropping to his hip.
