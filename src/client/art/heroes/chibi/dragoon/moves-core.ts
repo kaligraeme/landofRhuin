@@ -1,29 +1,30 @@
 /**
  * The Dragoon's core moves: stances, running and the three-thrust combo. Poses use the chibi
  * pose format (rig.ts, ChibiPose): side-plane points, hands from the base of the neck, the
- * halberd's angle (0 up, 90 forward), its plane's `roll` and `yaw`, both hands' places along the
+ * lance's angle (0 up, 90 forward), its plane's `roll` and `yaw`, both hands' places along the
  * haft (`grip` the right hand's, `grip2` the left's), and the cloth's `wind`/`lift`/`phase`.
  *
- *   idle    8  at ease, weight on his back foot, the halberd resting on his right shoulder and
+ *   idle    8  at ease, weight on his back foot, the lance resting on his right shoulder and
  *              sloping up and back behind him, his left thumb in his belt: a slow breath, a
- *              blink, the scarf and ponytail swaying
+ *              blink, the cape and ponytail swaying
  *   battle  8  a low, bladed spear stance, left foot and left hand leading, the right hand on the
  *              haft by his hip, the point forward and up; a quick, springy bounce on his toes, the
- *              point bobbing, head, scarf and hair a frame behind
- *   move    8  a sprint: long strides, a hard lean, the halberd held near its butt in his right
- *              hand and trailing level behind him, the left arm pumping, the scarf and ponytail
+ *              point bobbing, head, cape and hair a frame behind
+ *   move    8  a sprint: long strides, a hard lean, the lance held near its butt in his right
+ *              hand and trailing level behind him, the left arm pumping, the cape and ponytail
  *              streaming
  *   atk1    7  (1 wind-up) a straight, low thrust: drawn back with the point lifted, driven out
  *              with a stamp of the lead foot, the left hand sliding up the haft
  *   atk2    7  (1 wind-up) an overhand thrust: the haft cocked high by his ear, rear elbow up,
  *              the point angled down, and driven forward and down
  *   atk3    9  (2 wind-up) a deep coil, then a hop in and a long lunge from the butt end of the
- *              haft for the farthest reach: a flash and a burst of wind at the point, dust
+ *              haft for the farthest reach: a flash and a burst of violet energy at the point, dust
  *
- * Thrusts leave a drill of wind spiralling off the point (`drill` below) and streaks of wind along
+ * Thrusts leave a spiral of violet energy off the point (`drill` below) and violet streaks along
  * the path of the point (`streak`), with a white-hot flash at the point as they land (`flash`);
  * each has an anticipation, a strike, a held extension and a recovery into the battle stance
- * (`settle`), with the scarf and ponytail streaming hardest a frame after the strike. The skill and state clips (moves-skills.ts, moves-states.ts) start from the stance
+ * (`settle`), with the cape and ponytail streaming hardest a frame after the strike. Every effect
+ * is painted in the design's aura: violet, a pale lilac edge and a white-hot core. The skill and state clips (moves-skills.ts, moves-states.ts) start from the stance
  * (`fromReady`) and those that hand back to it end in it (`settle`).
  */
 import type { RGB } from '../../paint.js';
@@ -66,7 +67,7 @@ export const READY: ChibiPose = {
 };
 
 /**
- * At ease, weight on his back foot: the halberd resting on his right shoulder and sloping up and
+ * At ease, weight on his back foot: the lance resting on his right shoulder and sloping up and
  * back behind him, its head high over his back, his right hand on the haft at his collarbone, the
  * left thumb hooked in his belt. The haft crosses him at the shoulder, clear of his face in every
  * view.
@@ -102,7 +103,7 @@ export function tipOf(p: ChibiPose): V3 {
 }
 
 /**
- * A pose with a drill of wind spiralling off its point (`fx.swirl`'s spiral, painted through
+ * A pose with a drill of violet energy spiralling off its point (`fx.swirl`'s spiral, painted through
  * `fx.extra`): from a little behind the point to `len` past it, `radius` round and narrowing a
  * little, with a white-hot core along its first stretch; `k` its strength and `spin` how far its
  * streaks have run on (advance it frame by frame). A longer drill turns more times. Toward the
@@ -138,7 +139,7 @@ export function drill(p: ChibiPose, k: number, spin: number, len = 34, radius = 
 
 /**
  * A white-hot flash at the point as a thrust lands (strength k): a starburst, white at its heart,
- * jade at its fringe, with a small ring of wind round it.
+ * violet at its fringe, with a small ring of violet light round it.
  */
 export const flash =
   (k: number) =>
@@ -159,10 +160,10 @@ export const withExtra = (p: ChibiPose, f: (x: FxContext) => void): ChibiPose =>
 };
 
 /**
- * Streaks of wind along the path of the point (`from` to `to`, hero space at turn 0, as `tipOf`
+ * Violet streaks along the path of the point (`from` to `to`, hero space at turn 0, as `tipOf`
  * gives them), `k` their strength: a few thin lines running parallel to the path either side of
- * it, white-hot toward the point, jade behind, fading toward where the point started (each starts
- * at its own seeded place), with a faint jade wash between them. A thrust's smear: a swoosh is an
+ * it, white-hot toward the point, violet behind, fading toward where the point started (each starts
+ * at its own seeded place), with a faint violet wash between them. A thrust's smear: a swoosh is an
  * arc, a thrust is a line. A thrust straight at the viewer or away would shrink to a dot, so its
  * streaks open out on screen to at least half their length, downward for one coming at the viewer
  * (nearer is lower on screen) and upward for one going away.
@@ -217,8 +218,8 @@ export const streak =
   };
 
 /**
- * A gust of wind kicked up round him (k from 0, just kicked up, to 1, blown out and fading):
- * curling streaks low over the floor running out from under him, white at their heads, jade
+ * A gust of violet energy kicked up round him (k from 0, just kicked up, to 1, blown out and fading):
+ * curling streaks low over the floor running out from under him, white at their heads, violet
  * behind, with a few motes of grit. Those behind him go under the figure.
  */
 export const gust =
@@ -265,8 +266,8 @@ export const both =
 
 const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
   // A breath: everything above the knees settles exactly one pixel for the second half of the
-  // loop (a whole pixel, so the hair's clumps do not shimmer), the hands with it, while the scarf
-  // tails and the ponytail sway slowly round, the ribbon stirs and he blinks once.
+  // loop (a whole pixel, so the hair's clumps do not shimmer), the hands with it, while the cape
+  // and the ponytail sway slowly round and he blinks once.
   const out = i >= 4 ? 1 : 0;
   return pose(AT_EASE, {
     y: 1 + out,
@@ -286,8 +287,8 @@ const bounce = (i: number): number => wave(((i % BOUNCE) + BOUNCE) % BOUNCE, BOU
 
 const battle = Array.from({ length: BOUNCE }, (_, i): ChibiPose => {
   // Down on the beat and springing back up, quick and light. The point dips a beat behind the
-  // body, the head nods a frame behind it, and the scarf and hair lift a little as he drops: a
-  // steady breeze keeps the scarf tails out behind him in every frame, so they never pop.
+  // body, the head nods a frame behind it, and the cape and hair lift a little as he drops: a
+  // steady breeze keeps the cape out behind him in every frame, so it never pops.
   const b = bounce(i);
   const lag = b - bounce(i - 1);
   return pose(READY, {
@@ -329,7 +330,7 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     look: -2,
     footF: right ? [k.f[0], k.f[1], 4.2] : [k.b[0], k.b[1], 4.2],
     footB: right ? [k.b[0], k.b[1], 4] : [k.f[0], k.f[1], 4],
-    // The halberd trails low behind him in his right hand, held near the butt; the left arm pumps against the legs.
+    // The lance trails low behind him in his right hand, held near the butt; the left arm pumps against the legs.
     handF: [-5 - swing * 2, 15 - Math.abs(swing), 9],
     handB: [2 + swing * 7, 12 - Math.abs(swing) * 2.5, 8.5],
     weapon: -94 + swing * 4,
@@ -375,7 +376,7 @@ export const headUp = (lean: number, pitch = 3): number => pitch - lean * 0.5;
 // viewer it lifts beside his shoulder, then drives out and down the screen). The struck point
 // ends a little above the line of the stance's guard: toward the viewer that lands it at knee
 // to waist height in front of him with the haft's whole length showing across him, not down by
-// his feet. Each strike frame gets a white-hot flash at the point and a wide drill of wind.
+// his feet. Each strike frame gets a white-hot flash at the point and a wide spiral of violet energy.
 
 // atk1: a straight, low thrust. Drawn back, weight on the rear foot, the point up; then the lead
 // foot stamps forward, the rear hand drives the haft through and the lead hand slides up it.
@@ -414,14 +415,14 @@ const atk2: ChibiPose[] = [
 
 // atk3: a real coil (low, the haft drawn right back, the torso wound round), then a hop in and a
 // long lunge, the right hand sliding to the butt end so the point reaches its farthest; a flash
-// and a burst of wind at the point, a drill of wind, dust.
+// and a burst of violet energy at the point, a spiral of it off the point, dust.
 const A3_COIL = pose(READY, { x: -6, y: 12, lean: 6, twist: 34, head: headUp(6, 4), look: -8, footF: [-15, 0, 5.2], footB: [8, 0, 5.6], handF: [-14, 16, 8], weapon: 50, yaw: -26, grip: -10, grip2: 10, wind: 0.3, sway: 0.3, face: 'grit', fx: { rune: 0.6 } });
 const A3_COIL2 = pose(A3_COIL, { x: -7, y: 13.5, lean: 8, twist: 38, head: headUp(8, 4), handF: [-15, 16.5, 8], weapon: 46, grip2: 9, wind: 0.35, lift: 0.2, phase: 0.1, fx: { rune: 0.9, aura: 0.3 } });
 const A3_LEAP = pose(READY, { x: 6, y: 0, lean: 16, twist: 10, head: headUp(16), look: -4, footF: [-16, -4, 5], footB: [14, -6, 5.4], handF: [0, 13, 6], weapon: 74, yaw: -34, grip: -22, grip2: 6, wind: 0.9, lift: 0.35, phase: 0.25, face: 'shout', fx: { rune: 1, aura: 0.4, speed: 0.6 } });
 const A3_LUNGE = pose(READY, { x: 12, y: 11, lean: 24, twist: 2, head: headUp(24), look: -2, footF: [-12, 0, 5], footB: [23, 0, 5.8], handF: [12, 11, 4], weapon: 80, yaw: -36, grip: -26, grip2: 14, wind: 1.1, phase: 0.4, face: 'shout', fx: { rune: 1, aura: 0.3, dust: 1 } });
 const A3_HOLD = pose(A3_LUNGE, { y: 11.5, lean: 25, head: headUp(25), handF: [12, 11.5, 4], wind: 0.9, lift: 0.2, phase: 0.55, face: 'grit', fx: { rune: 0.8, dust: 0.6 } });
 
-/** A burst of wind thrown out round the point (strength k): white and jade streaks in a ring. */
+/** A burst of violet energy thrown out round the point (strength k): white and violet streaks in a ring. */
 export const burst =
   (k: number) =>
   (x: FxContext): void => {

@@ -6,27 +6,28 @@
  *
  *   special   7  (1 wind-up) Sweeping Strike: wound up to his right with the haft held low and
  *                level, then swung round low and wide through 200 degrees in front of him, a level
- *                arc of wind trailing the head and a gust kicked up off the floor
+ *                violet arc trailing the point and a gust of violet energy kicked up off the floor
  *   q         8  (2 wind-up) Piercing Thrust: drawn far back and low while the point gathers its
- *                glow, then a deep lunge, the front hand sliding up the haft, a long drill of wind
- *                spiralling off the point well past it
- *   e        11  (1 wind-up) Vault Strike: a pole vault. The butt swung down and planted well
- *                ahead of him, the haft slanting back up to his hands at his right side; he swings
- *                up beside it, legs kicking up and over its top (scarf and ponytail streaming),
- *                then pulls the halberd up and flips it point down in a wheel of wind and falls
- *                point first, the wind gathering round the point, to drive it into the floor as he
- *                lands: a burst of wind, a shockwave, dust. The server moves him to his aim at
- *                once, so it plays in place.
+ *                glow, then a deep lunge, the front hand sliding up the haft, a long spiral of
+ *                violet energy off the point well past it
+ *   e        11  (1 wind-up) Vault Strike, the dragoon's jump: a deep crouch with violet light
+ *                gathering at his feet, a launch straight up with a ring on the floor and a beam
+ *                rising under him, out of the top of the frame for two frames (only the beam he
+ *                left and a glint where he turns over high above), then a dive back in point first,
+ *                a violet beam trailing down out of the sky behind him and energy spiralling round
+ *                the point, the cape spread like wings; the point driven into the floor as he
+ *                lands, a burst of rays and a ring, dust. The server moves him to his aim at once,
+ *                so it plays in place.
  *   r        10  (1 wind-up) Whirling Lance: two fast turns with the haft held level at its
- *                middle in both hands, a ring of wind round him that trails the head, the scarf,
- *                ribbon and ponytail flung out
- *   ult      12  (2 wind-up) Skewer: the lance couched low under his arm, a crouch while the wind
- *                gathers, then a charge in long bounding strides with jade afterimages and a cone
- *                of wind opening ahead of the point, a great burst and a ring of wind at the
+ *                middle in both hands, a violet ring round him that trails the point, the cape and
+ *                ponytail flung out
+ *   ult      12  (2 wind-up) Skewer: the lance couched low under his arm, a crouch while the
+ *                energy gathers, then a charge in long bounding strides with violet afterimages
+ *                and a cone of energy opening ahead of the point, a great burst and a ring at the
  *                point, and a skidding stop. The server moves him, so it plays in place.
- *   cast      8  (2 wind-up) role skills (Bloodrush, Second Wind) and the Elixir: the halberd
+ *   cast      8  (2 wind-up) role skills (Bloodrush, Second Wind) and the Elixir: the lance
  *                lifted upright beside his shoulder, spun once level round his hips and planted
- *                upright beside him, a burst of wind round him
+ *                upright beside him, a flare of violet rays behind him and a burst round him
  *
  * The poses build on the battle stance (moves-core.ts READY); each clip starts from it
  * (`fromReady`) and its last frames ease back into it (`settle`), so the loop takes over smoothly.
@@ -35,7 +36,7 @@ import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
 import { DUST, DUST_DARK, glowLine, puff, swirl } from '../fx.js';
 import { add3, type ChibiPose, cross3, type FxContext, norm3, pose, solveRig, type V3, weaponAxes } from '../rig.js';
-import { BUTT, DRAGOON } from './design.js';
+import { DRAGOON } from './design.js';
 import { both, drill, flash, fromReady, gust, headUp, READY, settle, streak, tipOf, withExtra } from './moves-core.js';
 
 const S = READY;
@@ -76,23 +77,7 @@ const skid =
     }
   };
 
-/** A puff of dust where the butt bites the floor (the plant of the vault). */
-const plantDust =
-  (k: number) =>
-  (x: FxContext): void => {
-    const w = x.rig.weapon;
-    if (w.u[1] > -0.2) return;
-    // Where the haft meets the floor, going down from the grip toward the butt.
-    const t = (w.o[1] - 0.5) / -w.u[1];
-    const g = x.proj([w.o[0] + w.u[0] * t, 0, w.o[2] + w.u[2] * t]);
-    for (let i = 0; i < 5; i++) {
-      const dx = (x.hash(i, 121) - 0.5) * 12;
-      const r = 2 + x.hash(i, 122) * 2.5;
-      puff(x.c, g[0] + dx, g[1] - r * 0.6 - x.hash(i, 123) * 3, r * k, i % 2 ? DUST_DARK : DUST, 0.6 * k);
-    }
-  };
-
-/** A burst of wind at the point: white streaks thrown out round it (strength k). */
+/** A burst of violet energy at the point: white streaks thrown out round it (strength k). */
 const burstAt =
   (at: 'tip' | V3, k: number) =>
   (x: FxContext): void => {
@@ -170,75 +155,130 @@ const q: ChibiPose[] = [
   settle(pose(Q_LUNGE, { x: 9, y: 10, lean: 18, head: headUp(18), handF: [5, 14, 6], weapon: 76, grip: -16, grip2: 26 }), 0.9, { wind: 0.78, lift: 0.1, phase: 0.9, face: 'stern', fx: undefined }),
 ];
 
-// ── Vault Strike ─────────────────────────────────────────────────────────────────────────────
+// ── Vault Strike: the dragoon's jump ─────────────────────────────────────────────────────────
 
 /**
- * Sets the haft's angle and the right hand's place along it so that the haft runs through the
- * right hand where the pose puts it (`handF`) with one end at a point: its butt (`end` 'butt', the
- * haft rising from there up through the hand, the left hand a little below it) or its point
- * (`end` 'tip', the point there and the left hand a little above the right). The vault plants the
- * butt ahead of him and swings up beside the haft; the strike drives the point into the floor.
+ * Sets the lance's angle and the right hand's place along it so that the lance runs through the
+ * right hand where the pose puts it (`handF`) with its point at a point in hero space, the left
+ * hand a little above the right: the dive drives the point into the floor this way.
  */
-function through(p: ChibiPose, end: 'butt' | 'tip', at: V3): ChibiPose {
+function pointAt(p: ChibiPose, at: V3): ChibiPose {
   const rig = solveRig(BUILD, p, W.grip2, W.haft);
   const h = rig.armR.end;
-  // u runs from the butt toward the point.
-  const d: V3 = end === 'butt' ? [h[0] - at[0], h[1] - at[1], h[2] - at[2]] : [at[0] - h[0], at[1] - h[1], at[2] - h[2]];
+  const d: V3 = [at[0] - h[0], at[1] - h[1], at[2] - h[2]];
   const len = Math.hypot(d[0], d[1], d[2]);
   const u: V3 = [d[0] / len, d[1] / len, d[2] / len];
   const deg = (r: number): number => (r * 180) / Math.PI;
   const flat = Math.hypot(u[1], u[2]) * (u[1] < 0 ? -1 : 1);
   const weapon = deg(Math.atan2(u[0], flat));
   const roll = u[1] < 0 ? deg(Math.atan2(-u[2], -u[1])) : deg(Math.atan2(u[2], u[1]));
-  const grip = end === 'butt' ? len + BUTT : TIP - len;
-  return { ...p, weapon, roll, yaw: 0, grip, grip2: grip + (end === 'butt' ? -9 : 9) };
+  const grip = TIP - len;
+  return { ...p, weapon, roll, yaw: 0, grip, grip2: grip + 9 };
 }
 
-/** In the air: the cloth and hair streaming, the face set. */
-const air = (y: number, over: Partial<ChibiPose>): ChibiPose => pose(S, { x: 4, y, lean: 4, twist: 4, head: -2, look: -4, footF: [-4, y - 12, 5], footB: [8, y - 15, 5], wind: 0.7, lift: 0.4, face: 'shout', ...over });
+/** Where the point strikes the floor on landing (a little under it: it bites in), and the burst on the floor round it. */
+const STRIKE: V3 = [22, -7, 10];
+const BURST: V3 = [22, 0, 10];
 
-/** Where the butt is planted for the vault: well ahead of him and out to his right, so he swings up beside the haft. */
-const PLANT: V3 = [40, 0, -8];
-/** Where the point strikes the floor on landing. */
-const STRIKE: V3 = [26, -7, 12];
-/** The burst on the floor round it. */
-const BURST: V3 = [26, 0, 12];
+/** Out of the frame: his pelvis this far above the floor is above the top of every view's frame (with his lance), so only the trail he leaves shows. */
+const GONE = -300;
 
 /**
- * The wind round the falling point: a cone opening back up the haft from just past the point,
- * so the swirl leads the point down but never runs on under the floor before it lands.
+ * The energy gathering round the point as he dives: a cone opening back up the lance from just
+ * past the point, so the swirl leads the point down.
  */
-const trail = (p: ChibiPose, k: number, spin: number): ChibiPose => {
+const diveWind = (p: ChibiPose, k: number, spin: number): ChibiPose => {
   const rig = solveRig(BUILD, p, W.grip2, W.haft);
   const w = rig.weapon;
-  return { ...p, fx: { ...p.fx, swirl: { k, spin, from: add3(w.o, w.u, TIP + 2), to: add3(w.o, w.u, TIP - 26), radius: 2, taper: 4.5, turns: 1.4 } } };
+  return { ...p, fx: { ...p.fx, swirl: { k, spin, from: add3(w.o, w.u, TIP + 3), to: add3(w.o, w.u, TIP - 28), radius: 2, taper: 4.5, turns: 1.6 } } };
 };
 
+/**
+ * A beam of his violet light from `a` to `b` (hero space): a point at `a` widening to `w` either
+ * side at `b`, where it is brightest (where he is now), white-hot down its middle, violet out to a
+ * pale lilac fringe, with sparks shed off it either side; `k` its strength. The streak of his
+ * jump: rising from the floor under him, and trailing down out of the sky behind him as he dives.
+ * It goes under the figure, so where it meets him he covers it.
+ */
+const beam =
+  (a: V3, b: V3, k: number, w = 4) =>
+  (x: FxContext): void => {
+    const A = x.proj(a);
+    const B = x.proj(b);
+    const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    if (L < 2 || k <= 0) return;
+    const d: Vec = [(B[0] - A[0]) / L, (B[1] - A[1]) / L];
+    const n: Vec = [-d[1], d[0]];
+    const under = true;
+    for (let s = 0; s <= L; s++) {
+      const t = s / L;
+      const half = 0.6 + w * Math.pow(t, 0.45);
+      for (let o = -Math.ceil(half); o <= Math.ceil(half); o++) {
+        const r = Math.abs(o) / half;
+        if (r > 1) continue;
+        const col: RGB = r < 0.25 ? x.aura.hot : r < 0.7 ? x.aura.core : x.aura.edge;
+        x.c.glow(Math.round(A[0] + d[0] * s + n[0] * o), Math.round(A[1] + d[1] * s + n[1] * o), col, k * (0.2 + 0.8 * t) * (r < 0.25 ? 1 : r < 0.7 ? 0.7 : 0.35), under);
+      }
+    }
+    // Sparks and motes shed off it, drifting out to either side.
+    for (let i = 0; i < 12; i++) {
+      const t = 0.2 + 0.78 * x.hash(i, 171);
+      const side = (x.hash(i, 172) - 0.5) * (w * 2 + 10);
+      const px = A[0] + d[0] * L * t + n[0] * side;
+      const py = A[1] + d[1] * L * t + n[1] * side;
+      const a2 = k * (0.4 + 0.6 * t);
+      x.c.glow(px, py, i % 3 ? x.aura.core : x.aura.hot, a2, under);
+      if (i % 3 === 0) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) x.c.glow(px + dx, py + dy, x.aura.core, a2 * 0.5, under);
+    }
+  };
+
+/** The streak he leaves rising, from the floor straight up to `top` (brightest at its top, where he is), `w` wide there. */
+const rise = (k: number, top: number, w = 4): ((x: FxContext) => void) => beam([2, 2, 0], [2, top, 0], k, w);
+
+/**
+ * A glint high above where he turns over at the top of the jump, out of the frame: a four-pointed
+ * star of white light with a violet halo, `k` its size (1 = rays 9 pixels long).
+ */
+const glintAt =
+  (at: V3, k: number) =>
+  (x: FxContext): void => {
+    const [px, py] = x.proj(at);
+    const r = Math.round(9 * k);
+    for (let i = -r; i <= r; i++) {
+      const a2 = 1 - Math.abs(i) / (r + 1);
+      x.c.glow(px + i, py, x.aura.hot, a2);
+      x.c.glow(px, py + i, x.aura.hot, a2);
+    }
+    for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) if (Math.abs(i) + Math.abs(j) <= 3) x.c.glow(px + i, py + j, x.aura.core, (4 - Math.abs(i) - Math.abs(j)) * 0.2);
+  };
+
+/** Diving, the point leading: tucked over the lance, both hands on it at his chest, the cape and ponytail streaming up behind him. */
+const dive = (y: number, over: Partial<ChibiPose>): ChibiPose =>
+  pose(S, { x: 8, y, lean: 18, twist: 4, head: headUp(18, 2), look: -4, footF: [-6, y - 13, 5], footB: [-12, y - 8, 5], handF: [6, 10, 9], wind: 0.45, lift: 0.5, face: 'shout', ...over });
+
 const e: ChibiPose[] = [
-  // Wind-up: a quick step in, the halberd swung forward and down out at his right side, its butt
-  // dropping toward the floor well ahead of him, his hands sliding up toward its head.
-  fromReady(through(pose(S, { x: 0, y: 8, lean: 10, twist: 6, head: headUp(10, 2), look: -4, footF: [-11, 0, 5], footB: [9, 0, 5.4], handF: [5, 3, 13], wind: 0.5, lift: 0.1, face: 'grit', fx: { rune: 0.5 } }), 'butt', [28, 10, 6]), 0.9),
-  // The plant: the butt bites the floor ahead and the haft slants back up to his hands, raised
-  // high at his right side; he drives off his left foot, the right knee coming up.
-  through(pose(S, { x: 3, y: 9, lean: 4, twist: 4, head: headUp(4, -2), look: -4, footF: [2, -8, 5], footB: [-8, 0, 5.4], handF: [6, -1, 12], wind: 0.5, lift: 0.2, phase: 0.1, face: 'grit', fx: { rune: 0.7, dust: 0.6, extra: plantDust(1) } }), 'butt', PLANT),
-  // The swing: off the floor and hanging from the haft, he rocks back and swings his legs up
-  // and forward beside it, the haft bending him up toward its top.
-  through(pose(S, { x: 12, y: -20, lean: -16, twist: 6, head: headUp(-16, -2), look: -4, footF: [24, -44, 5], footB: [18, -34, 5], handF: [6, 4, 12], wind: 0.7, lift: -0.2, phase: 0.2, face: 'shout', fx: { rune: 0.8, aura: 0.3, speed: 0.3, extra: plantDust(0.5) } }), 'butt', PLANT),
-  // Over the top: the haft upright under his hands, his legs kicked up high over it in a curve,
-  // the scarf and ponytail streaming down below him.
-  through(pose(S, { x: 14, y: -40, lean: -64, twist: 4, head: headUp(-64, -6), look: -4, footF: [22, -94, 5], footB: [14, -90, 5], handF: [7, 4, 12], wind: 0.5, lift: -0.2, phase: 0.3, face: 'shout', fx: { rune: 1, aura: 0.6 } }), 'butt', PLANT),
-  // The flip: he lets the haft go up with him and turns upright at the top of the vault, pulling
-  // the halberd up and over in front of him, point coming down.
-  air(-46, { x: 16, lean: -4, twist: -4, head: -6, footF: [10, -54, 5], footB: [4, -52, 5], handF: [-2, -8, 12], weapon: 100, roll: 10, yaw: 0, grip: 4, grip2: 16, wind: 0.6, lift: 0.4, phase: 0.4, fx: { rune: 1, aura: 0.8, smear: { from: -14, roll: 0, yaw: 0, width: 0.6 } } }),
-  // Falling, the point leading, both hands high on the haft, the wind gathering round the point.
-  trail(through(air(-32, { x: 14, lean: 12, twist: 0, head: headUp(12, 4), footF: [4, -40, 5], footB: [-4, -38, 5], handF: [8, 8, 14], wind: 0.6, lift: 0.5, phase: 0.5, fx: { rune: 1, aura: 1, smear: { from: 100, roll: 10, yaw: 0, width: 0.5, alpha: 0.5 } } }), 'tip', [46, 24, 12]), 0.7, 0.1),
-  trail(through(air(-16, { x: 11, lean: 20, twist: 0, head: headUp(20, 4), footF: [3, -22, 5], footB: [-5, -20, 5], handF: [8, 10, 14], wind: 0.6, lift: 0.5, phase: 0.6, fx: { rune: 1, aura: 1 } }), 'tip', [38, 6, 12]), 1, 0.3),
-  // The strike: the point driven into the floor as he lands, a burst of wind.
-  through(pose(S, { x: 6, y: 13, lean: 30, twist: 2, head: headUp(30, 4), look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [0, 10, 15], wind: 0.8, lift: 0.4, phase: 0.7, face: 'shout', fx: { rune: 1, aura: 0.8, impact: 1.4, impactAt: BURST, shock: 0.06, shockAt: BURST, dust: 1, extra: gust(0.05, 26) } }), 'tip', STRIKE),
-  through(pose(S, { x: 6, y: 12, lean: 28, twist: 2, head: headUp(28, 4), look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [0, 10.5, 15], wind: 0.6, lift: 0.3, phase: 0.8, face: 'grit', fx: { rune: 0.8, aura: 0.4, shock: 0.45, shockAt: BURST, dust: 0.6, extra: gust(0.5, 26) } }), 'tip', STRIKE),
-  // Pulled free, rising toward the stance as the wind blows out.
-  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, head: headUp(20, 4), footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [8, 10, 6], weapon: 120, roll: 0, yaw: -10, grip: -12, grip2: 10 }), 0.45, { wind: 0.5, lift: 0.2, phase: 0.9, face: 'stern', fx: { shock: 0.85, shockAt: BURST, extra: gust(0.9, 26) } }),
-  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, handF: [8, 10, 6], weapon: 120, yaw: -10, grip: -12, grip2: 10 }), 0.88, { phase: 1, fx: undefined }),
+  // Wind-up: a deep crouch, the lance drawn in upright at his right side, violet light gathering
+  // at his feet.
+  fromReady(pose(S, { x: -1, y: 15, lean: 14, twist: 6, head: headUp(14, 0), look: -4, footF: [-9, 0, 6], footB: [8, 0, 6.5], handF: [4, 14, 10], weapon: 8, roll: 12, yaw: 0, grip: -6, grip2: -20, wind: 0.2, lift: 0.3, face: 'grit', fx: { rune: 0.6, aura: 0.6, circle: 0.6, dust: 0.4 } }), 0.9),
+  // The launch: straight up off both feet, body at full stretch, the lance held upright before
+  // him, a burst of dust and a ring on the floor, the streak rising under him.
+  pose(S, { x: 1, y: -54, lean: -4, twist: 4, head: -6, look: -4, footF: [0, -51, 4.5], footB: [-3, -47, 4.5], handF: [5, 4, 9], weapon: 4, roll: 10, yaw: 0, grip: -4, grip2: -18, wind: -0.4, lift: -0.6, phase: 0.1, face: 'shout', fx: { rune: 1, aura: 0.8, dust: 1, shock: 0.12, shockAt: [0, 0, 0], extra: rise(1, 50, 5) } }),
+  // Gone: out of the top of the frame, only the streak he left and the ring rolling out.
+  pose(S, { y: GONE, phase: 0.2, fx: { shock: 0.45, shockAt: [0, 0, 0], dust: 0.5, extra: rise(1, 172, 6) } }),
+  // High above, turning over: the streak fading, a glint where he turns at the top.
+  pose(S, { y: GONE, phase: 0.3, fx: { shock: 0.75, shockAt: [0, 0, 0], extra: both(rise(0.4, 150, 3), glintAt([12, 168, 4], 1)) } }),
+  // The dive: back into the top of the frame point first, a violet streak behind him and the
+  // energy gathering round the point.
+  diveWind(pointAt(dive(-92, { phase: 0.4, fx: { rune: 1, aura: 1, extra: beam([-2, 186, 0], [6, 150, 2], 1, 6) } }), [30, 44, 10]), 0.8, 0.1),
+  diveWind(pointAt(dive(-36, { lean: 24, head: headUp(24, 3), phase: 0.5, fx: { rune: 1, aura: 1, speed: 0.5, extra: beam([-2, 186, 0], [6, 94, 2], 1, 7) } }), [28, 6, 10]), 1.1, 0.35),
+  // The strike: the point driven into the floor as he lands, crouched over it: a violet burst of
+  // rays and a ring on the floor, dust.
+  pointAt(pose(S, { x: 6, y: 13, lean: 30, twist: 2, head: headUp(30, 4), look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [0, 10, 12], wind: 0.4, lift: 0.7, phase: 0.6, face: 'shout', fx: { rune: 1, aura: 0.8, impact: 1.5, impactAt: BURST, rays: { k: 1, at: BURST, n: 10, len: 34 }, shock: 0.06, shockAt: BURST, dust: 1, extra: gust(0.05, 26) } }), STRIKE),
+  pointAt(pose(S, { x: 6, y: 12, lean: 28, twist: 2, head: headUp(28, 4), look: -4, footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [0, 10.5, 12], wind: 0.5, lift: 0.4, phase: 0.7, face: 'grit', fx: { rune: 0.8, aura: 0.4, rays: { k: 0.45, at: BURST, n: 10, len: 40, spin: 10 }, shock: 0.45, shockAt: BURST, dust: 0.6, extra: gust(0.5, 26) } }), STRIKE),
+  // Pulled free, rising toward the stance as the energy blows out.
+  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, head: headUp(20, 4), footF: [-10, 0, 6], footB: [10, 0, 6.5], handF: [8, 10, 6], weapon: 120, roll: 0, yaw: -10, grip: -12, grip2: 10 }), 0.45, { wind: 0.5, lift: 0.2, phase: 0.85, face: 'stern', fx: { shock: 0.85, shockAt: BURST, extra: gust(0.9, 26) } }),
+  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, handF: [8, 10, 6], weapon: 120, yaw: -10, grip: -12, grip2: 10 }), 0.75, { phase: 0.95, fx: undefined }),
+  settle(pose(S, { x: 5, y: 10, lean: 20, twist: 4, handF: [8, 10, 6], weapon: 120, yaw: -10, grip: -12, grip2: 10 }), 0.93, { phase: 1.05, fx: undefined }),
 ];
 
 // ── Whirling Lance ───────────────────────────────────────────────────────────────────────────
@@ -286,7 +326,7 @@ const r: ChibiPose[] = [
   whirl(5),
   whirl(6),
   whirl(7),
-  // The ring closes and the slowing wind rolls out over the floor and blows out, gone before the
+  // The ring closes and the slowing energy rolls out over the floor and blows out, gone before the
   // last frame so the stance takes over cleanly.
   pose(whirl(8), { fx: { ring: { from: (WHIRL[7] as number) + 90 - 320, to: (WHIRL[7] as number) + 90, height: 40 }, rune: 0.8, aura: 0.2, shock: 0.55, shockAt: [0, 0, 0], extra: gust(0.85, 24) } }),
   settle(pose(S, { y: 6, lean: 8, twist: 10, turn: 720, handF: [2, 15, 7], weapon: 70, yaw: -20, flare: 0.5, wind: 0.4 }), 0.85, { turn: 720, flare: 0.3, wind: 0.78, lift: 0.05, fx: undefined }),
@@ -302,10 +342,10 @@ const r: ChibiPose[] = [
 const COUCH: ChibiPose = pose(S, { x: 10, y: 6, lean: 30, twist: 14, head: headUp(30, 1), look: -4, handF: [0, 17, 6], weapon: 94, roll: 0, yaw: -30, grip: -20, grip2: 16, face: 'shout', wind: 1.2, lift: 0.1 });
 
 /**
- * The cone of wind he drives ahead of the point (strength k; `spin` turns its streaks, advance it
- * frame by frame): rings of wind opening out ahead of the point, white at their rims and jade
+ * The cone of energy he drives ahead of the point (strength k; `spin` turns its streaks, advance
+ * it frame by frame): rings opening out ahead of the point, white at their rims and violet
  * within, joined to the point by bright streaks along the cone's edges, a white-hot core at the
- * point and a spiral of wind round the lance's head behind it. Seen end on it opens into rings
+ * point and a spiral of energy round the lance's head behind it. Seen end on it opens into rings
  * round the point.
  */
 const cone =
@@ -323,7 +363,7 @@ const cone =
       [12, 7.5],
       [20, 11],
     ] as const;
-    // A jade wash filling the cone, thickest toward its mouth.
+    // A violet wash filling the cone, thickest toward its mouth.
     for (let d = 2; d <= 20; d += 1.5) {
       const r = 2 + (d / 20) * 9;
       for (let j = 0; j < Math.ceil(r * 5); j++) {
@@ -342,7 +382,7 @@ const cone =
         const th = (j / n) * Math.PI * 2 + spin * Math.PI * 2 * (i % 2 ? -1 : 1);
         const p3 = at(d, r, th);
         const p = x.proj(p3);
-        // A streak of brighter wind runs round each ring.
+        // A brighter streak runs round each ring.
         const run = (((j / n + spin * 1.3 + i * 0.37) % 1) + 1) % 1;
         if (prev) {
           const back = x.depth(p3) < x.depth(add3(tip, u, d));
@@ -369,7 +409,7 @@ const cone =
     swirl(x, add3(tip, u, -2), add3(tip, u, -24), k * 0.8, { radius: 3, taper: 2, turns: 1.4, spin, strands: 3 });
   };
 
-/** A ring of wind thrown out round the point (radius r on screen, strength k), white at its rim. */
+/** A ring of violet energy thrown out round the point (radius r on screen, strength k), white at its rim. */
 const shockAt =
   (r: number, k: number) =>
   (x: FxContext): void => {
@@ -384,7 +424,7 @@ const shockAt =
   };
 
 const ult: ChibiPose[] = [
-  // Couched and crouching, the wind gathering round the point.
+  // Couched and crouching, the energy gathering round the point.
   fromReady(pose(COUCH, { x: -3, y: 11, lean: 22, twist: 22, head: headUp(22, 2), footF: [-15, 0, 5.2], footB: [10, 0, 5.6], handF: [-4, 17, 7], face: 'grit', wind: 0.3, lift: 0.2, fx: { rune: 0.8, aura: 0.6, dust: 0.4 } }), 0.85),
   pose(COUCH, { x: -4, y: 13, lean: 24, twist: 24, head: headUp(24, 2), footF: [-16, 0, 5.2], footB: [10, 0, 5.6], handF: [-4, 17.5, 7], face: 'grit', wind: 0.4, lift: 0.5, phase: 0.1, fx: { rune: 1, aura: 1, dust: 0.6, extra: cone(0.4, 0) } }),
   // Launch: the back leg drives off, the front knee comes through.
@@ -394,7 +434,7 @@ const ult: ChibiPose[] = [
   pose(COUCH, { y: 6, footF: [12, -12, 5], footB: [8, 0, 5], lift: 0.15, phase: 0.4, fx: { rune: 1, aura: 0.45, speed: 1, dust: 0.7, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.4) } }),
   pose(COUCH, { y: 1, footF: [24, -4, 5], footB: [-16, -10, 5], phase: 0.5, fx: { rune: 1, aura: 0.45, speed: 1, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.55) } }),
   pose(COUCH, { y: 6, footF: [8, 0, 5], footB: [12, -12, 5], phase: 0.6, fx: { rune: 1, aura: 0.45, speed: 1, dust: 0.7, ghosts: { k: 1, n: 3 }, extra: cone(1.1, 0.7) } }),
-  // Skewered: a great burst of wind at the point, a white flash and a ring thrown out round it.
+  // Skewered: a great burst of energy at the point, a white flash and a ring thrown out round it.
   pose(COUCH, { y: 2, footF: [-14, -8, 5], footB: [22, -3, 5], phase: 0.7, fx: { rune: 1, aura: 0.6, speed: 0.8, impact: 2, ghosts: { k: 0.8, n: 3 }, extra: both(cone(0.6, 0.85), flash(2.2), burstAt('tip', 1.8), shockAt(22, 1)) } }),
   // The braced, skidding stop: the lead leg thrust out, the body thrown back, the point still up.
   pose(S, { x: 12, y: 12, lean: -4, twist: 10, head: -2, look: -4, footF: [2, 0, 5.6], footB: [26, 0, 6], handF: [-2, 15, 8], weapon: 78, roll: 0, yaw: -30, grip: -16, grip2: 18, face: 'grit', wind: -0.2, lift: 0.5, sway: 0.4, phase: 0.85, fx: { aura: 0.5, dust: 1, speed: 0.3, extra: both(skid(1), burstAt('tip', 0.6), shockAt(30, 0.4)) } }),
@@ -405,31 +445,31 @@ const ult: ChibiPose[] = [
 
 // ── Cast ─────────────────────────────────────────────────────────────────────────────────────
 
-/** Planted upright beside his right foot, his left fist raised, the wind bursting round him. */
+/** Planted upright beside his right foot, his left fist raised, the energy bursting round him. */
 const PLANTED: ChibiPose = pose(S, { x: 0, y: 4, lean: -4, twist: 4, head: -8, look: 4, footF: [-6, 0, 8], footB: [8, 0, 7.5], handF: [-11, 2, 13], handB: [2, -8, 15], weapon: 0, roll: -4, yaw: 0, grip: 10, face: 'shout', wind: 0.6, lift: 0.3, sway: -0.4 });
 
 /**
- * The twirl: gripped at the middle of the haft in his right hand low in front of him, the halberd
+ * The twirl: gripped at the middle of the haft in his right hand low in front of him, the lance
  * spun round level (`roll` 90 lays the haft's plane flat), so it sweeps round his hips and never
  * passes his face; `weapon` is where it points round him (0 his right, 90 ahead, 180 his left).
- * Its trail is a level ring of wind (a ring's angles run the other way: 90 his right, 0 ahead)
+ * Its trail is a level violet ring (a ring's angles run the other way: 90 his right, 0 ahead)
  * from where the head was, `from`.
  */
 const twirl = (weapon: number, from: number, over: Partial<ChibiPose> = {}): ChibiPose =>
   pose(S, { y: 7, lean: 4, twist: 6, head: headUp(4, 2), look: 0, handF: [8, 17, 5], handB: [-2, 13, 12], weapon, roll: 90, yaw: 0, grip: 4, face: 'grit', wind: 0.4, lift: 0.2, flare: 0.5, fx: { rune: 1, aura: 0.6, ring: { from: 90 - from, to: 90 - weapon, height: 20, radius: 58 } }, ...over });
 
 const cast: ChibiPose[] = [
-  // Gather: the halberd lifted upright beside his right shoulder, out past his head.
+  // Gather: the lance lifted upright beside his right shoulder, out past his head.
   fromReady(pose(PLANTED, { y: 7, lean: 4, head: headUp(4, 2), look: 0, handF: [-6, 6, 13], handB: [2, 14, 9], weapon: 8, roll: 10, grip: 2, face: 'grit', wind: 0.3, lift: 0.1, sway: 0, fx: { rune: 0.6, aura: 0.3 } }), 0.85),
   // The spin: once round, level, round his hips.
   twirl(150, 20, { phase: 0.1 }),
   twirl(300, 40, { y: 6, phase: 0.2, sway: -0.3 }),
-  // Planted: the butt struck into the floor, the burst of wind.
-  pose(PLANTED, { phase: 0.3, fx: { rune: 1, aura: 1, circle: 1, impact: 1, impactAt: [-8, 2, 13], shock: 0.08, shockAt: [0, 0, 0], dust: 1, extra: gust(0.1, 24) } }),
-  pose(PLANTED, { y: 4.7, lean: -6, head: -9, phase: 0.45, lift: 0.4, fx: { rune: 1, aura: 1, circle: 0.9, shock: 0.45, shockAt: [0, 0, 0], extra: gust(0.5, 24) } }),
+  // Planted: the butt struck into the floor, a flare of violet rays behind him and a burst round him.
+  pose(PLANTED, { phase: 0.3, fx: { rune: 1, aura: 1, circle: 1, impact: 1, impactAt: [-8, 2, 13], rays: { k: 1, at: 'body', n: 12 }, shock: 0.08, shockAt: [0, 0, 0], dust: 1, extra: gust(0.1, 24) } }),
+  pose(PLANTED, { y: 4.7, lean: -6, head: -9, phase: 0.45, lift: 0.4, fx: { rune: 1, aura: 1, circle: 0.9, rays: { k: 0.5, at: 'body', n: 12, spin: 12 }, shock: 0.45, shockAt: [0, 0, 0], extra: gust(0.5, 24) } }),
   pose(PLANTED, { y: 4, lean: -5, head: -8, phase: 0.6, lift: 0.3, face: 'smirk', fx: { rune: 0.8, aura: 0.6, circle: 0.45, shock: 0.8, shockAt: [0, 0, 0], extra: gust(0.9, 24) } }),
   // Back into the stance: the haft swung down across him, the point out past his lead shoulder
-  // clear of his face, then into the guard, the wind gone.
+  // clear of his face, then into the guard, the energy gone.
   settle(pose(PLANTED, { handB: undefined, handF: [-2, 15, 9], weapon: 64, roll: 0, yaw: -62, grip: -6, grip2: 14, face: 'stern' }), 0.45, { phase: 0.8, fx: { aura: 0.15 } }),
   settle(PLANTED, 0.92, { phase: 1, fx: undefined }),
 ];
