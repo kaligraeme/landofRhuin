@@ -14,18 +14,21 @@ import type { ChibiDesign, FaceStyle, Lock } from '../design.js';
 import { plates, skirt } from '../pieces.js';
 import { flat, type Hit, type Mat, mat4 } from '../raster.js';
 import type { Build } from '../rig.js';
-import { claws, cracks, horns, type ManeFlame, mane, paws, shoulderFlames, tail } from './fire.js';
+import { brow, claws, cracks, type ManeFlame, mane, muzzle, paws, shoulderFlames, tail } from './fire.js';
 
 // ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
 
-/** Charred obsidian hide: nearly black, with a glassy grey-violet highlight. */
-const HIDE = { ...mat4('#6e647a', '#3a3340', '#221d27', '#121016', '#07050a', -0.1), gain: 0.85 };
+/**
+ * Charred obsidian hide: nearly black, its lit edges warm with the light of the fire above it,
+ * a cool grey-violet glint below them.
+ */
+const HIDE = { ...mat4('#8a5646', '#3a3340', '#221d27', '#121016', '#07050a', -0.1), gain: 0.85 };
 /** The face and the muzzle, a step lighter so the features read on it. */
-const FACE = mat4('#7e748a', '#463e4e', '#2a2430', '#17131b', '#07050a', 0);
-/** Obsidian plates: glossier than the hide, parted from it by their own edges. */
-const PLATE = { ...mat4('#8e84a0', '#4c4556', '#2e2836', '#19151e', '#07050a', -0.04), clear: 1.2 };
-/** Horn: darker than the plates, so it stands out black against the flame of the mane. */
-const HORN = { ...mat4('#7a7088', '#3e3746', '#241f2a', '#141118', '#07050a', 0.05), clear: 1.2 };
+const FACE = mat4('#a06a52', '#4a4150', '#2c2632', '#17131b', '#07050a', 0);
+/** The throat and neck: the hide's middle tone, so the head stands apart from the chest. */
+const THROAT = { ...mat4('#8a5646', '#4a4150', '#38303e', '#221d27', '#07050a', 0.1), gain: 0.7 };
+/** Obsidian plates: glossier than the hide, parted from it by their own edges, their tops fire-lit. */
+const PLATE = { ...mat4('#b87656', '#4c4556', '#2e2836', '#19151e', '#07050a', -0.04), clear: 1.2 };
 /** The plates' rims, catching the fire's light. */
 const PLATE_RIM = mat4('#ffd27a', '#e0803a', '#9a4422', '#5a2414', '#1e0a06', 0.1);
 /** Magma in the seams: flat, so it reads as light rather than a lit surface. */
@@ -33,22 +36,27 @@ const SEAM = flat('#ffa236');
 const SEAM_HOT = flat('#ffe48a');
 /** Living flame (the mane, the tail's fire): white-hot, gold, orange and an ember red, parted by a deep ember line. */
 const FLAME = mat4('#fff7cf', '#ffd148', '#ff8f22', '#e04a18', '#7a1a06');
+/**
+ * The mane's mass on the head and its locks: a step deeper than its tongues (orange into ember
+ * red), so the bright tongues licking up off it stand apart from it, darker between them.
+ */
+const MANE_MASS = mat4('#ffd148', '#ff9a2a', '#e8581c', '#a8300e', '#5a1204');
 /** Claws: dark horn with a glowing inside edge and white-hot points, as the Warden's blade glows. */
-const CLAW = mat4('#b4aabe', '#6e6578', '#463e50', '#262030', '#07050a', 0.1);
+const CLAW = mat4('#7a5c50', '#40384a', '#28222e', '#16121a', '#07050a', 0.1);
 const CLAW_EDGE = flat('#ff9a32');
 const CLAW_HOT = flat('#fff1b8');
 /** The scrap of his crimson shirt knotted round its waist, and of his black coat with its ember lining. */
 const CRIMSON = { ...mat4('#ff8a74', '#e84a3c', '#b0221e', '#64100e', '#2a0606', 0.14), gain: 0.7 };
 /** The fold running round the sash. */
 const SASH_FOLD = { ...CRIMSON, bias: -0.25 };
-const COAT = { ...mat4('#6a6672', '#4a4650', '#2c2a32', '#18161c', '#0c0b0f', -0.05), gain: 0.6 };
+const COAT = { ...mat4('#7a6a6e', '#56505c', '#3a3640', '#221f28', '#0c0b0f', 0), gain: 0.6 };
 const LINING = mat4('#ffc070', '#ff9a3c', '#d0601e', '#7a2e0c', '#3a1404');
 
 /** The flame's own colours (fire.ts `burn` darkens them to embers as the fire dies). */
-export const FLAME_TONES = [...FLAME.tones, FLAME.line];
+export const FLAME_TONES = [...FLAME.tones, FLAME.line, ...MANE_MASS.tones, MANE_MASS.line];
 
 /** The colours that glow (fire.ts `burn`): the flame's bright tones, the seams and the claws' edges. */
-export const FIRE_HOT = [FLAME.tones[0], FLAME.tones[1], FLAME.tones[2], SEAM.tones[0], SEAM_HOT.tones[0], CLAW_EDGE.tones[0], CLAW_HOT.tones[0], PLATE_RIM.tones[0], PLATE_RIM.tones[1], hex('#fff6c8'), hex('#ffd25a'), hex('#ff9a1e')];
+export const FIRE_HOT = [FLAME.tones[0], FLAME.tones[1], FLAME.tones[2], MANE_MASS.tones[1], SEAM.tones[0], SEAM_HOT.tones[0], CLAW_EDGE.tones[0], CLAW_HOT.tones[0], PLATE_RIM.tones[0], PLATE_RIM.tones[1], hex('#fff6c8'), hex('#ffd25a'), hex('#ff9a1e')];
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────
 
@@ -74,7 +82,7 @@ const BUILD: Build = {
 
 // ── The head: a broad skull, a heavy muzzle, a mane of flame ─────────────────────────────────
 
-const SHELL = { c: [-4, 2.8, 0] as const, r: [14.2, 13, 14.6] as const };
+const SHELL = { c: [-3.4, 3, 0] as const, r: [13.2, 12.4, 14] as const };
 
 const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], bob?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give: 0.8, belly: 0.3, bob });
 
@@ -102,6 +110,10 @@ const LOCKS: Lock[] = [
   L(-100, -22, [-0.5, -0.45, -1], 10, 4, [-0.3, 0.6, -0.2]),
   L(150, -10, [-1, -0.5, 0.4], 11, 4.4, [-0.2, 0.6, 0]),
   L(-150, -10, [-1, -0.5, -0.4], 11, 4.4, [-0.2, 0.6, 0]),
+  // A ruff of flame under the jaw, parting the head from the chest.
+  L(0, -58, [0.5, -1, 0], 7, 3.6, [0.5, 0.4, 0]),
+  L(34, -52, [0.4, -1, 0.4], 7, 3.4, [0.4, 0.4, 0.2]),
+  L(-34, -52, [0.4, -1, -0.4], 7, 3.4, [0.4, 0.4, -0.2]),
 ];
 
 /** The mane's flickering tongues, round the back and sides of the head. */
@@ -118,38 +130,45 @@ const MANE: ManeFlame[] = [
   { yaw: 130, pitch: 68, len: 17, w: 4.4, back: 0.5 },
   { yaw: -130, pitch: 68, len: 17, w: 4.4, back: 0.5 },
   { yaw: 180, pitch: 78, len: 19, w: 4.8, back: 0.4 },
+  // Streaming up and back off the back of the head and the nape, in separate tongues.
+  { yaw: 158, pitch: 32, len: 21, w: 4.2, back: 1.1 },
+  { yaw: -158, pitch: 32, len: 21, w: 4.2, back: 1.1 },
+  { yaw: 180, pitch: 12, len: 22, w: 4.6, back: 1.4 },
 ];
 
 /**
- * The beast's face: slanted eyes glowing white-gold, ringed in the Warden's amber, under heavy
- * dark brows; its mouths are a fanged muzzle's (a snarl at rest, a roar wide open).
+ * The beast's face: big slanted eyes glowing white-gold, ringed in the Warden's amber, under heavy
+ * dark brows (they glow, fire.ts `burn`, so they read as eyes even at game size); its mouths are
+ * a fanged muzzle's: two upper fangs over the lower lip at rest, and in the snarl and the roar a
+ * maw bared round them that glows red with the fire in its throat (the mouth's inside, `r`, is
+ * relit by `burn`).
  */
 const FACE_BEAST: FaceStyle = {
   eyes: {
-    full: { rows: ['.KKKKK', 'KWWWhW', 'KiIIiK', '.KKKK.'], ax: 2, ay: 1 },
-    mid: { rows: ['KKKKK', 'WWWhW', 'iIIiK', 'KKKK.'], ax: 1, ay: 1 },
-    narrow: { rows: ['KKK', 'WhW', 'iIK'], ax: 1, ay: 1 },
-    closed: { rows: ['KKKKK', '.KKK.'], ax: 2, ay: 0 },
+    full: { rows: ['..KKKK.', '.KWWhiK', 'KiWWWIK', 'KIiiIK.', '.KKK...'], ax: 2, ay: 2 },
+    mid: { rows: ['.KKKK', 'KWWhK', 'iWWIK', 'KIIK.'], ax: 1, ay: 2 },
+    narrow: { rows: ['.KK', 'KWh', 'iIK', 'KK.'], ax: 1, ay: 2 },
+    closed: { rows: ['KKKKK', '.KKKK'], ax: 2, ay: 0 },
     squeeze: { rows: ['..KKK', 'KK...', '..KKK'], ax: 2, ay: 1 },
-    wide: { rows: ['.KKKK', 'KhWWi', 'KWWiI', '.KIIK'], ax: 2, ay: 1 },
+    wide: { rows: ['.KKKKK', 'KhWWWK', 'KWWWiK', 'KIWiIK', '.KIIK.'], ax: 2, ay: 2 },
   },
   brows: {
-    full: { rows: ['...BBB', '.BBBB.', 'BB....'], ax: 2, ay: 1 },
-    mid: { rows: ['..BBB', 'BBBB.', 'B....'], ax: 1, ay: 1 },
+    full: { rows: ['....BBB', '..BBBB.', 'BBBB...'], ax: 2, ay: 1 },
+    mid: { rows: ['...BBB', '.BBBB.', 'BB....'], ax: 1, ay: 1 },
     narrow: { rows: ['.BB', 'BB.'], ax: 1, ay: 1 },
   },
   browsUp: {
-    full: { rows: ['BB....', '.BBBB.', '....BB'], ax: 2, ay: 1 },
+    full: { rows: ['BB.....', '.BBBB..', '....BB.'], ax: 2, ay: 1 },
     mid: { rows: ['BB...', '.BBBB'], ax: 1, ay: 1 },
     narrow: { rows: ['B..', '.BB'], ax: 1, ay: 1 },
   },
   mouths: {
-    stern: { rows: ['MMMMMM', '.T..T.'], ax: 3, ay: 0 },
-    shout: { rows: ['MMMMMM', 'MTrrTM', 'MrrrrM', 'MTrrTM', '.MMMM.'], ax: 3, ay: 0 },
-    grit: { rows: ['MMMMMM', 'MTrrTM', 'MTMMTM', '.M..M.'], ax: 3, ay: 1 },
-    hurt: { rows: ['.MMMM.', 'MrrrrM', '.MMMM.'], ax: 3, ay: 1 },
-    closed: { rows: ['MMMMM'], ax: 2, ay: 0 },
-    smirk: { rows: ['MMMMMM', '....T.'], ax: 3, ay: 0 },
+    stern: { rows: ['MMMMMMM', 'MT...TM', '.T...T.'], ax: 3, ay: 0 },
+    shout: { rows: ['.MMMMM.', 'MTrrrTM', 'MTrrrTM', 'MrrrrrM', 'MrrrrrM', 'MTrrrTM', '.MMMMM.'], ax: 3, ay: 1 },
+    grit: { rows: ['MMMMMMM', 'MTrrrTM', 'MTrrrTM', 'MrrrrrM', '.MTMTM.'], ax: 3, ay: 1 },
+    hurt: { rows: ['.MMMMM.', 'MrrrrrM', 'MrrrrrM', '.MMMMM.'], ax: 3, ay: 1 },
+    closed: { rows: ['MMMMMMM', '.T...T.'], ax: 3, ay: 0 },
+    smirk: { rows: ['MMMMMMM', 'M....TM', '.....T.'], ax: 3, ay: 0 },
   },
 };
 
@@ -157,15 +176,15 @@ const FACE_BEAST: FaceStyle = {
 
 const deg = (h: Hit): number => Math.abs((Math.atan2(h.p[2], h.p[0]) * 180) / Math.PI);
 /** A crack's half-width in frame units: about a pixel across. */
-const SEAM_W = 0.5;
+const SEAM_W = 0.6;
 
 function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   const [, u, r] = h.p;
   const yaw = deg(h);
-  if (where === 'hips') return u > 4.2 ? CRIMSON : HIDE;
-  if (u < 4) return null;
+  if (where === 'hips') return u > 3.4 ? CRIMSON : HIDE;
+  if (u < 3) return null;
   // The sash, knotted round the waist, a fold running round it.
-  if (u < 9.4) return Math.abs(u - 6.8 - r * 0.08) < 0.45 ? SASH_FOLD : CRIMSON;
+  if (u < 11) return Math.abs(u - 7.4 - r * 0.08) < 0.5 ? SASH_FOLD : CRIMSON;
   const ar = Math.abs(r);
   if (yaw < 80) {
     // The chest's two great plates and the belly's, parted by seams.
@@ -193,16 +212,16 @@ const FIREBEAST: ChibiDesign = {
   build: BUILD,
   head: {
     skin: FACE,
-    hair: FLAME,
+    hair: MANE_MASS,
     skull: { c: [0, 0.5, 0], r: [11.4, 11, 12] },
-    jaw: { c: [7, -5.2, 0], r: [9, 6, 7.4] },
+    jaw: { c: [8.4, -6.2, 0], r: [9.8, 7.4, 8.6] },
     ear: { c: [-1, 1, 7], r: [0.5, 0.5, 0.5] },
     shell: SHELL,
-    hairline: { faceYaw: 78, brow: 3.6, temple: -1, nape: -9, ear: -4 },
+    hairline: { faceYaw: 78, brow: 3.6, temple: -1, nape: -2, ear: -4 },
     locks: LOCKS,
     lockLine: hex('#7a1a06'),
     darkHair: true,
-    whorl: { yaw: 180, pitch: 36, reach: 110, clumps: 9, twist: 0.45 },
+    whorl: { yaw: 180, pitch: 40, reach: 70, clumps: 5, twist: 0.6 },
     face: {
       eye: [10.3, 0, 4.7],
       lash: hex('#160606'),
@@ -213,8 +232,8 @@ const FIREBEAST: ChibiDesign = {
       brow: hex('#060407'),
       browUp: 3,
       mouth: hex('#0a0406'),
-      mouthAt: [14.6, -7.4],
-      noseAt: [15.6, -3],
+      mouthAt: [16.6, -7.4],
+      noseAt: [17.4, -2.4],
       style: FACE_BEAST,
       rest: 'stern',
       irisDeep: hex('#c85a10'),
@@ -225,11 +244,11 @@ const FIREBEAST: ChibiDesign = {
     shin: { mat: HIDE, r0: 4.8, r1: 3.6 },
     boot: { mat: HIDE, r: 3.6, top: 0.2, toe: 6.5, heel: -1.5, sole: CLAW, foot: [3, 2.4] },
     knee: { mat: PLATE, r: 4.2 },
-    upperArm: { mat: HIDE, r0: 7, r1: 5.8 },
-    foreArm: { mat: HIDE, r0: 5.4, r1: 6.2 },
-    cuff: { mat: PLATE, r: 7, at: 0.42 },
-    hand: { mat: HIDE, r: 6.2, knuckle: SEAM_HOT },
-    neck: { mat: HIDE, r: 6 },
+    upperArm: { mat: HIDE, r0: 7.2, r1: 6 },
+    // Heavy forearms, thickening down to the fists as an ape's do.
+    foreArm: { mat: HIDE, r0: 5.4, r1: 7.4 },
+    hand: { mat: HIDE, r: 6, knuckle: SEAM_HOT },
+    neck: { mat: THROAT, r: 6.4 },
     hips: [{ c: [0, 3.5, 0], r: [7.4, 6.4, 9.4], id: 1 }],
     chest: [
       { c: [1, 10, 0], r: [9, 7.6, 10.6], id: 1 },
@@ -241,19 +260,8 @@ const FIREBEAST: ChibiDesign = {
   },
   headPieces: [
     mane({ shell: SHELL, flames: MANE, mat: FLAME }),
-    horns({
-      path: [
-        [7, 6.4, 8],
-        [4.4, 9.4, 12.6],
-        [1.4, 12.8, 15.6],
-        [-0.4, 16.6, 16.6],
-        [-0.6, 20.4, 16.4],
-      ],
-      r: [3.6, 1],
-      mat: HORN,
-      seam: SEAM,
-      brow: { c: [9.6, 3.4, 4.4], r: [2.6, 1.5, 3.8] },
-    }),
+    brow({ mat: HIDE, c: [9.4, 4.8, 4.6], r: [2.8, 1.5, 4.2] }),
+    muzzle({ nose: [17.6, -2.4, 0], chin: [16, -12.4, 0], nostril: hex('#050306'), lit: flat('#a06a52'), chinLit: flat('#c07a52') }),
   ],
   outfit: [
     plates({
@@ -294,8 +302,9 @@ const FIREBEAST: ChibiDesign = {
       aline: 0.3,
       fan: 0.8,
       folds: true,
-      // A tatter of his black coat hanging behind, torn ragged.
-      panels: [{ from: 140, to: 220, len: 20, jag: 5, taper: 0.9, kick: 0.3 }],
+      give: 1.8,
+      // A tatter of his black coat hanging behind, torn ragged, its ember lining showing as it flies.
+      panels: [{ from: 135, to: 225, len: 21, jag: 5, taper: 0.95, kick: 0.55 }],
     }),
     skirt({
       outer: CRIMSON,
@@ -304,18 +313,19 @@ const FIREBEAST: ChibiDesign = {
       ring: [7.6, 9.6],
       aline: 0.2,
       folds: false,
-      // The sash's knotted ends at his left hip.
+      give: 1.2,
+      // The sash's knotted ends at his left hip, broad enough to read toward the viewer.
       panels: [
-        { from: -68, to: -48, len: 21, jag: 3, taper: 0.8 },
-        { from: -44, to: -28, len: 15, jag: 2.5, taper: 0.8 },
+        { from: -78, to: -46, len: 22, jag: 3, taper: 0.85 },
+        { from: -46, to: -18, len: 16, jag: 2.5, taper: 0.85 },
       ],
     }),
-    tail({ root: [-6, 4, 0], len: 36, r: [5.6, 2], hide: HIDE, plate: PLATE, seam: SEAM, flame: FLAME }),
-    paws({ hide: HIDE, claw: CLAW, hot: CLAW_HOT, r: 3.6 }),
-    cracks({ seam: SEAM, arms: [6, 5.6], thigh: 6.2 }),
+    tail({ root: [-6, 3, 0], len: 42, r: [6, 2.6], hide: HIDE, plate: PLATE, seam: SEAM, flame: FLAME }),
+    paws({ hide: HIDE, plate: PLATE, claw: CLAW, hot: CLAW_HOT, r: 3.6 }),
+    cracks({ seam: SEAM, hot: SEAM_HOT, arms: [6.4, 6.2], thigh: 6.8 }),
   ],
-  weapon: claws({ len: 14.5, w: 2.8, spread: 3, hook: 4.6, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 16 }),
-  offhand: claws({ len: 14.5, w: 2.8, spread: 3, hook: 4.6, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 16 }),
+  weapon: claws({ len: 14.5, w: 3.4, spread: 4.2, hook: 5, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 16 }),
+  offhand: claws({ len: 14.5, w: 3.4, spread: 4.2, hook: 5, mat: CLAW, edge: CLAW_EDGE, hot: CLAW_HOT, glow: hex('#ffb43c'), reach: [4, 30], tip: 16 }),
   aura: { core: hex('#ff9a26'), edge: hex('#d8401a'), hot: hex('#fff4c8') },
 };
 

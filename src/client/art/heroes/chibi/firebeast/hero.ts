@@ -71,9 +71,9 @@ export const FIREBEAST_HERO: ChibiHero = chibiHero(
   POSES,
   TIMING,
   {
-    side: { w: 216, h: 228, ax: 79, ay: 177 },
-    front: { w: 232, h: 240, ax: 116, ay: 180 },
-    back: { w: 180, h: 194, ax: 90, ay: 161 },
+    side: { w: 204, h: 214, ax: 80, ay: 161 },
+    front: { w: 208, h: 219, ax: 104, ay: 164 },
+    back: { w: 166, h: 176, ax: 84, ay: 145 },
   },
   2.56 / 108,
   108,

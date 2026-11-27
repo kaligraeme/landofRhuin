@@ -21,9 +21,16 @@
  * the start of the swing to where they are, so the whole stroke shows as one great arc of fire
  * that then fades. The fire burns higher as it strikes (`fire`).
  */
+import type { RGB } from '../../paint.js';
+import type { Vec } from '../../skeleton.js';
+import { puff as puffC } from '../fx.js';
 import { add3, type ChibiPose, type FxContext, mix, norm3, rad, solveRig, sub3, type V3, wave } from '../rig.js';
 import { FIREBEAST } from './design.js';
-import { type BeastPose, flare, glowTongue, slash } from './fire.js';
+import { type BeastPose, dither, FIRE_RAMP, flare, lick as lickC, slash } from './fire.js';
+
+/** The fire ramp (the Warden's), hottest first, and the smoke a gout breaks up into. */
+const [W_HOT_C, GOLD_C, FLAME_C, ORANGE_C, RED_C] = FIRE_RAMP;
+const SMOKE_C: RGB = [110, 100, 104];
 
 const BUILD = FIREBEAST.build;
 const REACH = FIREBEAST.weapon.reach[1];
@@ -86,12 +93,12 @@ export const AT_EASE: BeastPose = {
   look: 2,
   footF: [3, 0, 7.4],
   footB: [-7, 0, 6.6],
-  handF: [7, 22, 11],
-  handB: [3, 23, 10],
-  weapon: 168,
-  roll: 6,
-  weaponB: 168,
-  rollB: 6,
+  handF: [10, 20, 14],
+  handB: [7, 21, 13],
+  weapon: 150,
+  roll: 10,
+  weaponB: 150,
+  rollB: 10,
   wind: 0.08,
 };
 
@@ -108,13 +115,13 @@ export const READY: BeastPose = {
   look: -2,
   footF: [9, 0, 8],
   footB: [-9, 0, 7.4],
-  handF: [13, 10, 17],
-  handB: [10, 13, 16],
-  weapon: 18,
-  roll: 46,
+  handF: [16, 3, 12],
+  handB: [14, 5, 11],
+  weapon: 30,
+  roll: 30,
   yaw: 0,
-  weaponB: 24,
-  rollB: 46,
+  weaponB: 34,
+  rollB: 30,
   yawB: 0,
   face: 'grit',
   wind: 0.2,
@@ -133,31 +140,96 @@ export const fromReady = (p: BeastPose, k: number, over: Partial<BeastPose> = {}
 
 // ── Fire from its jaws ───────────────────────────────────────────────────────────────────────
 
+/** Where its mouth is and which way its breath leaves it (hero space). */
+function mouthOf(x: FxContext): { mouth: V3; fwd: V3 } {
+  const h = x.rig.head;
+  return { mouth: add3(add3(h.o, h.f, 15.5), h.u, -8), fwd: norm3(add3(h.f, h.u, -0.15)) };
+}
+
 /**
- * Fire from its jaws, `k` 0 to 1 (a lick of flame on the out-breath; a gout in a roar, `len`
- * long): a cone of flame tongues out of the muzzle along the way it faces, flickering with the
- * pose's phase.
+ * Fire from its jaws, `k` 0 to 1 (`len` long): a billowing gout, narrow and white-hot at the
+ * jaws, widening into rolling puffs of gold and orange with a ragged, flickering red edge, and
+ * breaking up into embers and smoke at its end. Seen side on it pours out ahead of it; coming at
+ * the viewer it is a broad round flare under the face (the mouth white-hot); going away from the
+ * viewer it is behind the head, its glow and tongues spilling out on both sides of it.
  */
 export const jaws =
-  (k: number, len = 10) =>
+  (k: number, len = 30) =>
   (x: FxContext): void => {
-    const { rig, proj } = x;
     if (k <= 0) return;
-    const h = rig.head;
-    const mouth = add3(add3(h.o, h.f, 13.5), h.u, -7.4);
-    const fwd = norm3(add3(h.f, h.u, -0.1));
+    const { c, proj, cam, hash, rig } = x;
+    const { mouth, fwd } = mouthOf(x);
     const ph = (rig.pose.phase ?? 0) * Math.PI * 2;
     const base = proj(mouth);
-    // Seen from behind, the fire pours out beyond the head, behind the beast; seen face on, it
-    // keeps off the eyes.
-    const under = x.behind(add3(mouth, fwd, 6)) && x.behind(h.o);
-    const eyes = proj(add3(h.o, h.f, 9));
-    const skip = x.cam.facing(h.f) > 0.3 ? (px: number, py: number): boolean => py < base[1] - 2 && Math.hypot(px - eyes[0], (py - eyes[1]) * 1.3) < 11 : undefined;
-    for (const [spread, kl, w] of [[-0.3, 0.7, 0.7], [0.3, 0.75, 0.7], [0, 1, 1]] as const) {
-      const tip = proj(add3(mouth, norm3(add3(add3(fwd, h.r, spread), h.u, spread * 0.5)), 10));
-      const flick = 0.85 + 0.15 * Math.sin(ph * 3 + spread * 9);
-      glowTongue(x, base, [tip[0] - base[0], tip[1] - base[1]], len * k * kl * flick, (3 + len * 0.18) * w * (0.6 + 0.4 * k), Math.sin(ph * 2 + spread * 5) * 0.4, Math.min(1, k * 1.3), skip, under);
+    const toward = cam.facing(fwd);
+    const L = len * (0.55 + 0.45 * k);
+    const R = 2.5 + L * 0.25;
+    // Each puff: a ragged disc in bands, its edge licking with the phase.
+    const disc = (cx: number, cy: number, r: number, t: number, a: number, under: boolean): void => {
+      const ring = (d: number, ang: number): number => d / (r * (0.82 + 0.18 * Math.sin(ang * 5 + ph * 3 + t * 7)));
+      for (let dy = -Math.ceil(r * 1.1); dy <= Math.ceil(r * 1.1); dy++) {
+        for (let dx = -Math.ceil(r * 1.1); dx <= Math.ceil(r * 1.1); dx++) {
+          const f = ring(Math.hypot(dx, dy), Math.atan2(dy, dx));
+          if (f > 1) continue;
+          const heat = f * 0.6 + t * 0.7;
+          const col = heat < 0.3 ? W_HOT_C : heat < 0.55 ? GOLD_C : heat < 0.8 ? FLAME_C : heat < 1.05 ? ORANGE_C : RED_C;
+          if (t > 0.75 && dither(Math.floor(cx + dx), Math.floor(cy + dy)) > a * (1.6 - t)) continue;
+          c.glow(cx + dx, cy + dy, col, 1, under);
+        }
+      }
+    };
+    if (toward > 0.55) {
+      // Coming at the viewer: a broad flare under the face, the mouth white-hot at its heart.
+      const r = R * 1.5;
+      disc(base[0], base[1] + r * 0.55, r, 0.15, k, false);
+      for (let i = 0; i < 9; i++) {
+        const th = (i / 9) * Math.PI * 2 + ph;
+        lickC(c, base[0] + Math.cos(th) * r * 0.9, base[1] + r * 0.55 + Math.sin(th) * r * 0.7, 4 + hash(i, 61) * 6 * k, 1.5, Math.cos(th) * 1.5, 0.9, false);
+      }
+      disc(base[0], base[1] + 1, 2.2, 0, 1, false);
+      return;
     }
+    if (toward < -0.55) {
+      // Going away: behind the head, only what spills out round it shows.
+      const r = R * 1.3;
+      const p = proj(add3(mouth, fwd, L * 0.3));
+      for (const s of [-1, 0, 1]) disc(p[0] + s * r * 0.9, p[1] + Math.abs(s) * 2, r, 0.25 + Math.abs(s) * 0.25, k, true);
+      return;
+    }
+    // Side on: puffs along the way it faces, each larger and cooler than the last.
+    const under = x.behind(add3(mouth, fwd, 8)) && x.behind(rig.head.o);
+    const n = 10;
+    for (let i = n; i >= 0; i--) {
+      const t = i / n;
+      const along = proj(add3(mouth, fwd, L * Math.pow(t, 0.9)));
+      const d: Vec = [along[0] - base[0], along[1] - base[1]];
+      const dl = Math.hypot(d[0], d[1]) || 1;
+      const wob = Math.sin(ph * 3 + i * 1.7) * R * 0.35 * t;
+      const r = (1.4 + R * Math.pow(t, 0.8)) * (0.85 + 0.3 * hash(i, 63));
+      disc(along[0] - (d[1] / dl) * wob, along[1] + (d[0] / dl) * wob - t * t * 4, r, t, k, under);
+    }
+    // Embers and smoke where it breaks up.
+    const end = proj(add3(mouth, fwd, L));
+    for (let i = 0; i < 8; i++) {
+      const ex = end[0] + (hash(i, 64) - 0.3) * R * 2.4;
+      const ey = end[1] - hash(i, 65) * R * 2 - 2;
+      if (i % 3 === 0) puffC(c, ex, ey - 3, 2 + hash(i, 66) * 2, SMOKE_C, 0.35 * k, under);
+      else c.glow(ex, ey, i % 2 ? GOLD_C : ORANGE_C, 0.9 * k, under);
+    }
+  };
+
+/** A small puff of flame and smoke at its lips (the idle's out-breath), `k` its strength. */
+export const puff =
+  (k: number) =>
+  (x: FxContext): void => {
+    const { c, proj, rig, cam } = x;
+    const { mouth, fwd } = mouthOf(x);
+    if (cam.facing(fwd) < -0.3) return;
+    const p = proj(add3(mouth, fwd, 2));
+    const ph = (rig.pose.phase ?? 0) * Math.PI * 2;
+    puffC(c, p[0] + 1, p[1], 1.8 * k + 0.6, ORANGE_C, 0.95, false);
+    puffC(c, p[0] + 1, p[1], 1 * k, GOLD_C, 1, false);
+    for (let i = 0; i < 3; i++) puffC(c, p[0] + 2 + Math.sin(ph + i) * 1.5, p[1] - 4 - i * 4 * k, 1.4 + i * 0.8, SMOKE_C, 0.32 * k, false);
   };
 
 /** How far along the claws their points are, from the fist. */
@@ -169,7 +241,7 @@ const CLAW_TIP = 17;
  * the right hand's or the left's (`off`), `k` its strength and `thick` its depth.
  */
 export const swipe =
-  (path: readonly ChibiPose[], k: number, off = false, thick = 15) =>
+  (path: readonly ChibiPose[], k: number, off = false, thick = 15, over = 1.3) =>
   (x: FxContext): void => {
     const last = path[path.length - 1] as ChibiPose;
     const tips = path.map((p) => {
@@ -179,7 +251,7 @@ export const swipe =
     });
     const arm = off ? x.rig.armL : x.rig.armR;
     const head = x.proj(x.rig.head.o);
-    slash(x, arm.root, tips, { k, thick, seed: off ? 7 : 0, skip: (px, py) => Math.hypot(px - head[0], py - head[1]) < 12.5 });
+    slash(x, arm.root, tips, { k, thick, over, seed: off ? 7 : 0, skip: (px, py) => Math.hypot(px - head[0], py - head[1]) < 12.5 });
   };
 
 /** Paints several effects painters in turn. */
@@ -192,21 +264,19 @@ export const both =
 // ── Idle ─────────────────────────────────────────────────────────────────────────────────────
 
 const idle = Array.from({ length: 8 }, (_, i): BeastPose => {
-  // A heaving breath: the shoulders rise a pixel and the head lifts on the in-breath, then sink
-  // as it breathes out a lick of fire.
-  const b = wave(i, 8);
+  // The body holds still between two breaths, the shoulders a pixel higher on the in-breath (the
+  // first four frames) than on the out-breath, which ends in a puff of flame and smoke at its lips;
+  // only its fire flickers every frame.
+  const b = i < 4 ? 1 : 0;
   return beast(AT_EASE, {
-    y: 3 - b * 1,
-    lean: 26 - b * 2,
-    head: -18 - b * 3,
-    handF: [7, 22 + b * 0.6, 11],
-    handB: [3, 23 + b * 0.6, 10],
-    sway: Math.sin((2 * Math.PI * (i + 1)) / 8) * 0.25,
+    y: 4 - b,
+    lean: 26 - b * 1.5,
+    head: -18 - b * 2,
     phase: i / 8,
-    wind: 0.08 + b * 0.06,
+    wind: 0.1,
     face: i === 6 || i === 7 ? 'shout' : 'stern',
-    fire: 1 + b * 0.15,
-    fx: i === 6 || i === 7 ? { extra: jaws(i === 6 ? 1 : 0.55, 16) } : undefined,
+    fire: 1 + b * 0.12,
+    fx: i === 6 || i === 7 ? { extra: puff(i === 6 ? 1 : 0.6) } : undefined,
   });
 });
 
@@ -224,10 +294,10 @@ const battle = Array.from({ length: BOUNCE }, (_, i): BeastPose => {
     y: 6 + b * 3,
     lean: 31 + b * 2,
     head: -25 + bounce(i - 1) * 3,
-    handF: [13, 9 + b * 2, 17],
-    handB: [10, 12 + b * 2, 16],
-    weapon: 16 + b * 8,
-    weaponB: 22 + b * 8,
+    handF: [16, 2 + b * 2, 12],
+    handB: [14, 4 + b * 2, 11],
+    weapon: 28 + b * 8,
+    weaponB: 32 + b * 8,
     wind: 0.2 + Math.max(0, lag) * 0.2,
     lift: lag * 0.8,
     sway: Math.sin((2 * Math.PI * (i - 1)) / BOUNCE) * 0.2,
@@ -322,7 +392,7 @@ const A3_HOLD = beast(A3_SLAM, { y: 13, lean: 50, handF: [22, 26, 9], handB: [22
 /** Both claws' slashes at once, and (`burst`, 0 to 1 as it flies out) fire bursting up where they strike the floor. */
 const maul = (path: readonly BeastPose[], p: BeastPose, k: number, thick: number, burst = 0): BeastPose => ({
   ...p,
-  fx: { ...p.fx, rune: 1, runeB: 1, extra: both(swipe([...path, p], k, false, thick), swipe([...path, p], k, true, thick), struck(burst)) },
+  fx: { ...p.fx, rune: 1, runeB: 1, extra: both(swipe([...path, p], k, false, thick, 1.14), swipe([...path, p], k, true, thick, 1.14), struck(burst)) },
 });
 
 /** Fire bursting up from the floor between its claws as they strike it (fire.ts `flare`), `k` 0 to 1 as it flies out. */

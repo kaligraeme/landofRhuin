@@ -15,10 +15,10 @@
  */
 import type { Canvas, RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
-import { type DrawItem, type Held, type HeadPiece, type HeldItem, type Piece, type PieceContext } from '../design.js';
+import { type DrawItem, GEAR_ID, type Held, type HeadPiece, type HeldItem, type Piece, type PieceContext } from '../design.js';
 import { mainHeld } from '../held.js';
 import { hash } from '../pieces.js';
-import { dim, type Mat, mixc, type Part, scanPoly, toneLight } from '../raster.js';
+import { dim, flat as flatMat, type Mat, mixc, type Part, scanPoly, toneLight } from '../raster.js';
 import { add3, at3, type ChibiPose, clamp, cross3, dirIn, dot3, type FxContext, type Limb, lerp, lerp3, mul3, norm3, rad, sub3, TO_CAMERA, type V3 } from '../rig.js';
 
 /**
@@ -244,11 +244,12 @@ export interface TailSpec {
 }
 
 /**
- * The tail: thick at the root, sweeping back and down from the base of the spine and curling up
- * toward its burning tip, plated along its top with glowing seams between its segments, flames
- * licking off its back and a great flame at its tip. It sways and ripples with the pose (`sway`,
- * `phase`), streams back and up in the wind and rises in an updraft; seen end on (toward or away
- * from the viewer) it curls out to its right, so it still shows its length.
+ * The tail: thick at the root, drooping from the base of the spine and rising again in an S toward
+ * its burning tip, plated along its top with glowing seams between its segments and a mane of
+ * flame running along its last third. A wave runs down it with the pose's `phase`, up and down (so
+ * it whips seen side on) and a little from side to side; how fast it whips is how fast a clip runs
+ * its phase. The wind streams it out nearly level behind (a run), an updraft lifts it, `sway`
+ * swings it; seen end on (toward or away from the viewer) it curls out to its right, past the hip.
  */
 export function tail(spec: TailSpec): Piece {
   return (ctx) => {
@@ -258,6 +259,7 @@ export function tail(spec: TailSpec): Piece {
     const side = norm3([pf.r[0], 0, pf.r[2]]);
     const root = at3(pf, spec.root[0], spec.root[1], spec.root[2]);
     const wind = clamp(pose.wind ?? 0, 0, 1.3);
+    const level = Math.min(1, wind * 1.1);
     const lift = pose.lift ?? 0;
     const ph = Math.PI * 2 * (pose.phase ?? 0);
     // Seen end on, it curls out to its side.
@@ -267,10 +269,12 @@ export function tail(spec: TailSpec): Piece {
     const pts: V3[] = [];
     for (let i = 0; i <= n; i++) {
       const t = i / n;
-      const b = spec.len * t * (1 - wind * 0.08);
-      // Down from the root, then curling up to the tip; the wind and an updraft raise it.
-      const u = -9 * Math.sin(Math.PI * t * 0.85) + 13 * t * t * t + wind * 9 * t + lift * 10 * t * t;
-      const r = (Math.sin(ph - t * 3.2) * 2.6 + (pose.sway ?? 0) * 7 + (pose.flare ?? 0) * 6) * t + endOn * 16 * t * t;
+      const b = spec.len * t * (1 + level * 0.06);
+      // An S: down from the root, then up to the tip; streamed nearly level in the wind.
+      const s0 = -17 * Math.sin(Math.PI * t * 0.7) + 21 * t * t * t;
+      const wave = Math.sin(ph - t * 3.4) * 4.2 * t * (1 - level * 0.4);
+      const u = lerp(s0, -3 * t, level) + wave + lift * 10 * t * t + endOn * 12 * t * t;
+      const r = (Math.sin(ph * 2 - t * 3.2) * 1.4 + (pose.sway ?? 0) * 7 + (pose.flare ?? 0) * 6) * t + endOn * 30 * t * t;
       const p = add3(add3(add3(root, back, b), [0, 1, 0], u), side, r);
       pts.push(p[1] < 2 ? [p[0], 2, p[2]] : p);
     }
@@ -319,19 +323,18 @@ function paintTail(ctx: PieceContext, spec: TailSpec, pts: readonly V3[]): void 
       part.line(proj(p), proj(q), spec.seam, 0, Math.max(depth(p), depth(q)) + 0.5, 3, false);
     }
   }
-  // Flames licking off its back toward the tip, and the great flame at the tip.
+  // A mane of flame along its last third, rising off its top, and a lick of flame at its tip.
   const across = norm3(cross3(norm3(sub3(pts[n] as V3, pts[n - 2] as V3)), [0, 1, 0]));
-  for (const [t, len, w, seed] of [[0.6, 9, 2.4, 3], [0.78, 12, 2.8, 5]] as const) {
+  for (const [t, len, w, seed] of [[0.58, 9, 2.6, 3], [0.68, 11, 2.9, 4], [0.78, 13, 3.1, 5], [0.88, 13, 3, 6]] as const) {
     const f = t * n;
     const i = Math.floor(f);
     const c = lerp3(pts[i] as V3, pts[i + 1] as V3, f - i);
-    const root = add3(c, [0, 1, 0], rAt(t) * 0.6);
-    paintFlame(ctx, part, flamePath(ctx, root, [-0.5, 1, 0], len, across, seed), w, spec.flame, 10 + seed, 1);
+    const root = add3(c, [0, 1, 0], rAt(t) * 0.5);
+    paintFlame(ctx, part, flamePath(ctx, root, add3(norm3(sub3(pts[i + 1] as V3, pts[i] as V3)), [0, 1, 0], 1.6), len, across, seed), w, spec.flame, 10 + seed, 1);
   }
   const tip = pts[n] as V3;
   const out = norm3(sub3(tip, pts[n - 1] as V3));
-  paintFlame(ctx, part, flamePath(ctx, add3(tip, out, -2), add3(out, [0, 1, 0], 0.6), 20, across, 11, 6), 5, spec.flame, 20, 1.5);
-  paintFlame(ctx, part, flamePath(ctx, add3(tip, out, -3), add3(out, [0, 1, 0], 1.5), 14, across, 13), 3.4, spec.flame, 21, 2);
+  paintFlame(ctx, part, flamePath(ctx, add3(tip, out, -1.5), add3(out, [0, 1, 0], 0.8), 13, across, 11, 5), 3.6, spec.flame, 20, 1.5);
   part.commit();
 }
 
@@ -343,7 +346,7 @@ function paintTail(ctx: PieceContext, spec: TailSpec, pts: readonly V3[]): void 
  * this paints the long bone from the hock down to the pad and three clawed toes at its front. Each
  * is sorted just after its own leg, as the painter sorts the leg.
  */
-export function paws(spec: { hide: Mat; claw: Mat; hot: Mat; r: number }): Piece {
+export function paws(spec: { hide: Mat; plate: Mat; claw: Mat; hot: Mat; r: number }): Piece {
   return (ctx) => {
     const { rig, depth } = ctx;
     const torsoTrue = depth(at3(rig.chest, 0, 14, 0));
@@ -359,15 +362,19 @@ export function paws(spec: { hide: Mat; claw: Mat; hot: Mat; r: number }): Piece
   };
 }
 
-function paintPaw(ctx: PieceContext, spec: { hide: Mat; claw: Mat; hot: Mat; r: number }, leg: Limb, toe: V3, far: boolean): void {
+function paintPaw(ctx: PieceContext, spec: { hide: Mat; plate: Mat; claw: Mat; hot: Mat; r: number }, leg: Limb, toe: V3, far: boolean): void {
   const { proj, depth } = ctx;
   const k = (m: Mat): Mat => (far ? dim(m, -0.12) : m);
   const bias = far ? -0.16 : 0;
   const hock = leg.end;
   const drop = ctx.build.ankle - 3.4;
-  const ball = add3(add3(hock, toe, 3), [0, -1, 0], drop);
+  // A long foot sloping down from the hock, well behind the ball of the foot.
+  const ball = add3(add3(hock, toe, 5.5), [0, -1, 0], drop);
   const part = ctx.part();
-  part.capsule(proj(hock), proj(ball), spec.r, spec.r * 0.85, k(spec.hide), bias, depth(hock), depth(ball), 1);
+  part.capsule(proj(hock), proj(ball), spec.r, spec.r * 0.8, k(spec.hide), bias, depth(hock), depth(ball), 1);
+  // A plate on the hock, its point standing back off it.
+  const spur = add3(add3(hock, toe, -3.2), [0, 1, 0], 1.6);
+  part.capsule(proj(add3(hock, toe, 0.6)), proj(spur), spec.r * 0.85, 1, k(spec.plate), bias - 0.05, depth(hock) + 0.4, depth(spur) + 0.4, 5);
   // Three toes, each ending in a claw curving down to the floor.
   const across = norm3(cross3(toe, [0, 1, 0]));
   for (const s of [-1, 0, 1]) {
@@ -442,17 +449,19 @@ export function claws(spec: ClawSpec): HeldItem & { grip2: number } {
         const t1 = (i + 1) / n;
         const za = z0 + zU * (2.5 + len * t0) + 0.3;
         const zb = z0 + zU * (2.5 + len * t1) + 0.3;
-        part.capsule(pts[i] as Vec, pts[i + 1] as Vec, spec.w * (1 - t0 * 0.7), spec.w * (1 - t1 * 0.75), t1 > 0.8 ? spec.edge : spec.mat, 0, za, zb, 1 + c);
+        part.capsule(pts[i] as Vec, pts[i + 1] as Vec, spec.w * (1 - t0 * 0.6), spec.w * (1 - t1 * 0.7), spec.mat, 0, za, zb, 1 + c);
       }
-      // The inside of the hook glows, hotter toward the point, and the point is white-hot.
-      for (let i = 1; i < n; i++) {
+      // The inside of the hook glows near the point, and the point is white-hot.
+      for (let i = 3; i < n; i++) {
         const p = pts[i] as Vec;
         const t = i / n;
         const q: Vec = [p[0] + perp[0] * hookSign * spec.w * (1 - t * 0.7) * 0.7, p[1] + perp[1] * hookSign * spec.w * (1 - t * 0.7) * 0.7];
         part.plot(q[0], q[1], t > 0.6 ? spec.hot : spec.edge, 0, z0 + zU * (2.5 + len * t) + 2, 1 + c, true);
       }
       const tip = pts[n] as Vec;
+      const near = pts[n - 1] as Vec;
       part.plot(tip[0], tip[1], spec.hot, 0, z0 + zU * (2.5 + len) + 2, 1 + c, true);
+      part.plot((tip[0] + near[0] * 2) / 3, (tip[1] + near[1] * 2) / 3, spec.edge, 0, z0 + zU * (2.5 + len) + 2, 1 + c, true);
     }
   };
   return {
@@ -512,6 +521,9 @@ function shimmer(x: FxContext): void {
 }
 
 const EMBER: RGB = [255, 96, 24];
+/** The inside of a mouth as head.ts paints it, and the red glow `burn` relights it in. */
+const MAW_IN: RGB = [70, 16, 20];
+const MAW: RGB = [226, 70, 30];
 const ASH: RGB = [58, 32, 34];
 
 /**
@@ -524,8 +536,10 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
   // Pixels as 32-bit words (alpha, blue, green, red from the top byte down, as the canvas holds
   // them on a little-endian machine): painted pixels are opaque, so a colour is one word.
   const word = (c: RGB): number => (0xff000000 | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
-  const keys = new Set(hot.map(word));
+  const keys = new Set([...hot.map(word), word(MAW)]);
   const flames = new Set(flame.map(word));
+  const mawIn = word(MAW_IN);
+  const maw = word(MAW);
   return (x) => {
     let k = strength;
     const { c, rig } = x;
@@ -546,8 +560,13 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
     for (let y = 0; y < h; y++) {
       for (let xx = 0; xx < w; xx++) {
         const i = y * w + xx;
-        const v = px[i] as number;
+        let v = px[i] as number;
         if (v === 0) continue;
+        // The inside of its mouth glows red with the fire in its throat.
+        if (v === mawIn) {
+          px[i] = maw;
+          v = maw;
+        }
         if (ash > 0 && flames.has(v)) c.glow(xx, y, hash(xx, y * 7 + 3) < 0.16 ? EMBER : ASH, hash(xx, y * 7 + 3) < 0.16 ? ash * 0.6 : ash);
         if (!keys.has(v)) continue;
         near[i] = 1;
@@ -621,6 +640,9 @@ const W_FLAME: RGB = [255, 180, 60];
 const W_ORANGE: RGB = [255, 126, 38];
 const W_RED: RGB = [214, 66, 22];
 
+/** The Warden's fire ramp, hottest first, for the beast's own effects. */
+export const FIRE_RAMP: readonly [RGB, RGB, RGB, RGB, RGB] = [W_HOT, W_GOLD, W_FLAME, W_ORANGE, W_RED];
+
 /** The Warden's fire ramp at `t` (0 its white-hot root, 1 its deep-red tip). */
 const rampAt = (t: number): RGB => (t < 0.18 ? W_HOT : t < 0.4 ? W_GOLD : t < 0.66 ? W_FLAME : t < 0.86 ? W_ORANGE : W_RED);
 
@@ -639,7 +661,7 @@ const SLASH_BANDS = [0.09, 0.14, 0.2, 0.2, 0.15, 0.12, 0.1];
 
 /** A 4x4 ordered dither threshold in [0, 1): a pixel shows where its strength is over it. */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
-const dither = (px: number, py: number): number => BAYER[(py & 3) * 4 + (px & 3)] as number;
+export const dither = (px: number, py: number): number => BAYER[(py & 3) * 4 + (px & 3)] as number;
 
 /**
  * A slash of fire: a great crescent swept round a centre (the striking shoulder, hero space)
@@ -807,93 +829,153 @@ export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: num
 // ── Cracks ───────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Glowing cracks down the limbs: a jagged seam of magma down the side of each upper arm, forearm
- * and thigh that faces the viewer, forking once, each sorted just over its own limb (as the
- * painter sorts the limb), so whatever passes in front of the limb hides it too.
+ * A crack's course down a limb: where along the bone it runs (`from`, `to`), round the limb from
+ * its front-outer face (`at`, a share of its radius across) and how it wanders across it at each of
+ * its points (`zig`), with a branch forking off one of its points toward `fork` across.
  */
-export function cracks(spec: { seam: Mat; arms: readonly [number, number]; thigh: number }): Piece {
+interface CrackPath {
+  from: number;
+  to: number;
+  at: number;
+  zig: readonly number[];
+  branch: { from: number; to: number; across: number };
+}
+
+/** Each limb's own crack, so no two are alike: upper arm, forearm and thigh, right then left. */
+const CRACKS: Record<string, CrackPath> = {
+  upperR: { from: 0.15, to: 0.85, at: 0.1, zig: [0, 0.3, -0.1, 0.35, 0.05, 0.25], branch: { from: 2, to: 0.5, across: -0.45 } },
+  foreR: { from: 0.12, to: 0.9, at: -0.15, zig: [0.1, -0.25, 0.15, -0.3, 0, -0.2], branch: { from: 3, to: 0.95, across: 0.4 } },
+  upperL: { from: 0.2, to: 0.88, at: -0.1, zig: [0.2, -0.1, 0.3, 0, -0.2, 0.1], branch: { from: 3, to: 0.75, across: 0.45 } },
+  foreL: { from: 0.1, to: 0.86, at: 0.2, zig: [-0.1, 0.25, -0.05, 0.3, 0.1, 0.35], branch: { from: 1, to: 0.45, across: -0.4 } },
+  thighR: { from: 0.12, to: 0.82, at: 0.05, zig: [0.25, -0.05, 0.3, -0.15, 0.15, -0.1], branch: { from: 2, to: 0.62, across: -0.5 } },
+  thighL: { from: 0.16, to: 0.8, at: -0.1, zig: [-0.2, 0.1, -0.3, 0.05, -0.15, 0.2], branch: { from: 3, to: 0.7, across: 0.45 } },
+};
+
+/**
+ * Glowing cracks down the limbs: one long, branching seam of magma down the front-outer face of
+ * each upper arm, forearm and thigh, its own course on each (CRACKS), pinned to the limb so it
+ * moves with it and shows only while that face is toward the viewer: a 1-px white-hot core with a
+ * dim orange edge where it meets the hide. Each is sorted just over its own limb (as the painter
+ * sorts the limb), so whatever passes in front of the limb hides it too.
+ */
+export function cracks(spec: { seam: Mat; hot: Mat; arms: readonly [number, number]; thigh: number }): Piece {
   return (ctx) => {
     const { rig, depth } = ctx;
     const torsoTrue = depth(at3(rig.chest, 0, 14, 0));
     const farSide = (p: V3): boolean => depth(p) < torsoTrue - 2;
     const items: DrawItem[] = [];
-    for (const [arm, s] of [[rig.armR, 1], [rig.armL, -1]] as const) {
+    for (const [arm, s, up, fore] of [[rig.armR, 1, 'upperR', 'foreR'], [rig.armL, -1, 'upperL', 'foreL']] as const) {
       const far = farSide(arm.mid) && farSide(arm.end);
       const z = depth(lerp3(arm.mid, arm.end, 0.4)) * 0.6 + depth(arm.root) * 0.4 + (far ? 0 : ctx.upper) + 0.02;
-      items.push({ z, draw: () => crackLimb(ctx, spec.seam, [[arm.root, arm.mid, spec.arms[0]], [arm.mid, arm.end, spec.arms[1]]], 3 + s) });
+      const outward = dirIn(rig.chest, 0.55, 0, 0.85 * s);
+      items.push({ z, draw: () => crackLimb(ctx, spec, outward, [[arm.root, arm.mid, spec.arms[0], CRACKS[up] as CrackPath], [arm.mid, arm.end, spec.arms[1], CRACKS[fore] as CrackPath]]) });
     }
-    for (const [leg, s] of [[rig.legR, 1], [rig.legL, -1]] as const) {
+    for (const [leg, s, key] of [[rig.legR, 1, 'thighR'], [rig.legL, -1, 'thighL']] as const) {
       const z = depth(leg.mid) * 0.7 + depth(leg.root) * 0.3 + 0.005;
-      items.push({ z, draw: () => crackLimb(ctx, spec.seam, [[leg.root, leg.mid, spec.thigh]], 11 + s) });
+      const outward = dirIn(rig.pelvis, 0.75, 0, 0.65 * s);
+      items.push({ z, draw: () => crackLimb(ctx, spec, outward, [[leg.root, leg.mid, spec.thigh, CRACKS[key] as CrackPath]]) });
     }
     return items;
   };
 }
 
-function crackLimb(ctx: PieceContext, seam: Mat, bones: readonly (readonly [V3, V3, number])[], seed: number): void {
+/** A dim orange where a crack's glow meets the hide. */
+const CRACK_EDGE = flatMat([168, 64, 22]);
+
+function crackLimb(ctx: PieceContext, spec: { seam: Mat; hot: Mat }, outward: V3, bones: readonly (readonly [V3, V3, number, CrackPath])[]): void {
   const { proj, cam } = ctx;
-  const view = norm3(cam.local(TO_CAMERA));
   const part = ctx.part();
-  bones.forEach(([a, b, r], k) => {
+  for (const [a, b, r, path] of bones) {
     const axis = norm3(sub3(b, a));
-    // The side of the limb toward the viewer, and across it.
-    let out = sub3(view, mul3(axis, dot3(view, axis)));
-    if (Math.hypot(...out) < 0.2) return;
+    // The limb's front-outer face, pinned to the body, and across it.
+    let out = sub3(outward, mul3(axis, dot3(outward, axis)));
+    if (Math.hypot(...out) < 0.2) continue;
     out = norm3(out);
     const across = norm3(cross3(axis, out));
-    const pts: Vec[] = [];
-    for (let i = 0; i <= 5; i++) {
-      const t = 0.18 + (i / 5) * 0.64;
-      const zig = (i % 2 ? 1 : -1) * 0.32 + (hash(i, seed + k * 7) - 0.5) * 0.3;
-      pts.push(proj(add3(add3(lerp3(a, b, t), out, r * 0.7), across, r * zig)));
+    const facing = cam.facing(out);
+    if (facing < 0.15) continue;
+    const at = (t: number, x: number): V3 => {
+      // On the limb's surface, x across its face (in radii).
+      const th = (path.at + x) * 1.1;
+      return add3(add3(lerp3(a, b, t), out, r * 0.95 * Math.cos(th)), across, r * 0.95 * Math.sin(th));
+    };
+    const m = path.zig.length - 1;
+    const pts: Vec[] = path.zig.map((z, i) => proj(at(lerp(path.from, path.to, i / m), z)));
+    const fi = path.branch.from;
+    const fork: Vec[] = [pts[fi] as Vec, proj(at(lerp(path.from, path.to, Math.min(1, (fi + 1.4) / m)), (path.zig[fi] as number) + path.branch.across * 0.5)), proj(at(lerp(path.from, path.to, Math.min(1, path.branch.to)), path.branch.across))];
+    // The dim edge a pixel below the core, then the core over it, hottest where the crack is widest.
+    for (const line of [pts, fork]) {
+      for (let i = 0; i < line.length - 1; i++) {
+        const p = line[i] as Vec;
+        const q = line[i + 1] as Vec;
+        part.line([p[0], p[1] + 1], [q[0], q[1] + 1], CRACK_EDGE, 0, 99, 1, true);
+      }
     }
-    for (let i = 0; i < pts.length - 1; i++) part.line(pts[i] as Vec, pts[i + 1] as Vec, seam, 0, 100, 1, true);
-    // A fork off its middle.
-    const m = pts[2] as Vec;
-    const f = proj(add3(add3(lerp3(a, b, 0.62), out, r * 0.6), across, -r * 0.55 * Math.sign(hash(seed, k) - 0.5 || 1)));
-    part.line(m, f, seam, 0, 100, 1, true);
-  });
+    for (const [line, hot] of [[pts, true], [fork, false]] as const) {
+      for (let i = 0; i < line.length - 1; i++) {
+        const p = line[i] as Vec;
+        const q = line[i + 1] as Vec;
+        part.line(p, q, hot && i > 0 && i < line.length - 2 ? spec.hot : spec.seam, 0, 100, 2, true);
+      }
+    }
+  }
   part.commit();
 }
 
-// ── Horns and brow ───────────────────────────────────────────────────────────────────────────
+// ── Brow and muzzle ──────────────────────────────────────────────────────────────────────────
 
 /**
- * Heavy brow ridges over the eyes and two horns rising from the temples, out and up through the
- * mane, their points standing clear of it in every view: obsidian, a crack of magma up each horn,
- * painted with the head (in its depth test) as gear over the hair (ids from GEAR_ID, so the drawn
- * brows do not show through them). The horns run through `path` (head space, the right one; the
- * left mirrors it), `r` thick at the root and the tip.
+ * Heavy brow ridges over the eyes, painted with the head (in its depth test) as gear over the
+ * hair (ids from GEAR_ID, so the drawn brows do not show through them), in the hide's own
+ * material.
  */
-export function horns(spec: { path: readonly V3[]; r: readonly [number, number]; mat: Mat; seam: Mat; brow: { c: V3; r: V3 } }): HeadPiece {
+export function brow(spec: { mat: Mat; c: V3; r: V3 }): HeadPiece {
   return {
     blobs: (_ctx, head) => [
       {
         frame: head,
         blobs: [
-          { c: spec.brow.c, r: spec.brow.r, id: 510 },
-          { c: [spec.brow.c[0], spec.brow.c[1], -spec.brow.c[2]], r: spec.brow.r, id: 511 },
+          { c: spec.c, r: spec.r, id: 510 },
+          { c: [spec.c[0], spec.c[1], -spec.c[2]], r: spec.r, id: 511 },
         ],
         shade: (h) => (h.back ? null : { m: spec.mat }),
       },
     ],
+  };
+}
+
+/**
+ * The muzzle's details, painted with the head (in its depth test, so the mane hides them where it
+ * passes in front): a short lit ridge down the snout to two dark nostrils at its tip (one, side
+ * on), and the lit edge of its chin and lower lip under the mouth. `nose` is the tip of the snout
+ * and `chin` the middle of the chin, in head space.
+ */
+export function muzzle(spec: { nose: V3; chin: V3; nostril: RGB; lit: Mat; chinLit: Mat }): HeadPiece {
+  const dark = flatMat(spec.nostril);
+  return {
     paint: (ctx, part, head) => {
-      const { proj, depth } = ctx;
-      const n = spec.path.length - 1;
-      for (const side of [1, -1]) {
-        const pts = spec.path.map((p) => at3(head, p[0], p[1], p[2] * side));
-        for (let i = 0; i < n; i++) {
-          const a = pts[i] as V3;
-          const b = pts[i + 1] as V3;
-          part.capsule(proj(a), proj(b), lerp(spec.r[0], spec.r[1], i / n), lerp(spec.r[0], spec.r[1], (i + 1) / n), spec.mat, 0.1, depth(a), depth(b), 520 + (side > 0 ? 0 : 1));
-        }
-        // A crack of magma up its middle, short of the tip.
-        for (let i = 0; i < n - 1; i++) {
-          const a = proj(pts[i] as V3);
-          const b = proj(pts[i + 1] as V3);
-          const m = depth(lerp3(pts[i] as V3, pts[i + 1] as V3, 0.5));
-          part.line([a[0], a[1] - 0.5], [b[0], b[1] - 0.5], spec.seam, 0, m + 2.6, 520 + (side > 0 ? 0 : 1), false);
-        }
+      const { proj, depth, cam } = ctx;
+      const facing = cam.facing(norm3(dirIn(head, 1, 0, 0)));
+      if (facing < 0.1) return;
+      const n = spec.nose;
+      const z = depth(at3(head, n[0], n[1], n[2])) + 1.5;
+      // The ridge down the snout, lit.
+      const a = proj(at3(head, n[0] - 3.2, n[1] + 3.4, 0));
+      const b = proj(at3(head, n[0] - 0.6, n[1] + 1, 0));
+      part.line(a, b, spec.lit, 0.6, z, GEAR_ID + 40);
+      // The nostrils: two seen face on, the near one side on.
+      for (const s of [1, -1]) {
+        const p3 = at3(head, n[0], n[1], s * 1.5);
+        if (cam.facing(norm3(dirIn(head, 1, 0, s * 0.8))) < 0.25) continue;
+        const p = proj(p3);
+        part.plot(p[0], p[1], dark, 0, depth(p3) + 1.5, GEAR_ID + 41);
+      }
+      // The chin and lower lip, lit from the fire in its jaws.
+      if (facing > 0.45) {
+        const c = spec.chin;
+        const l = proj(at3(head, c[0], c[1], -2.6));
+        const r = proj(at3(head, c[0], c[1], 2.6));
+        part.line(l, r, spec.chinLit, 0.4, depth(at3(head, c[0], c[1], 0)) + 1.5, GEAR_ID + 42);
       }
     },
   };
@@ -986,7 +1068,7 @@ export function column(x: FxContext, k: number, o: { open?: number; seed?: numbe
     c.under.fill(0);
   }
   const half = spec.half * (1 + open * 0.35);
-  const line = bottom - spec.h * Math.min(1, k) - open * 6;
+  const line = bottom - spec.h * Math.min(1, k) + open * 10;
   const dome = Math.max(8, Math.min(30, spec.h * k * 0.6));
   const width = (y: number): number => {
     const top = clamp((y - line) / dome, 0, 1);
@@ -1002,13 +1084,19 @@ export function column(x: FxContext, k: number, o: { open?: number; seed?: numbe
     const i = (y * w + px) * 4;
     return (c.data[i] as number) < 40 && (c.data[i + 1] as number) < 32 && (c.data[i + 2] as number) < 40;
   };
-  // The parts of the beast outside the column burn away as it closes.
+  // The parts of the beast outside the column burn away as it closes: first they turn to flame
+  // (in streaks, as the column is), then they are gone.
   if (engulf > 0 && engulf < 1) {
     for (let y = 0; y < c.h; y++) {
       const hw = y >= line ? width(y) : 0;
       for (let px = 0; px < w; px++) {
         if (!figure(px, y) || Math.abs(px + 0.5 - cx) < hw - 1) continue;
-        c.glow(px, y, hash(px, y * 5 + Math.floor(seed)) < 0.5 ? W_ORANGE : W_RED, 0.35 + engulf * 0.6);
+        if (engulf > 0.6) {
+          c.data[(y * w + px) * 4 + 3] = 0;
+          continue;
+        }
+        const lane = Math.floor((px + 400) / 2);
+        c.glow(px, y, hash(lane, 77) < 0.5 ? W_FLAME : W_ORANGE, 0.5 + engulf * 0.8);
       }
     }
   }
@@ -1056,7 +1144,7 @@ export function column(x: FxContext, k: number, o: { open?: number; seed?: numbe
     const dx = (t - 0.5) * 2 * half * 0.85;
     let by = line;
     while (by < bottom && width(by) < Math.abs(dx) + 1) by++;
-    const h = (8 + hash(i, 183 + seed) * 14) * (1.1 - Math.abs(t - 0.5)) * Math.min(1, k * 1.5) * (1 + open * 0.6);
+    const h = (8 + hash(i, 183 + seed) * 14) * (1.1 - Math.abs(t - 0.5)) * Math.min(1, k * 1.5) * (1 + open * 0.3);
     lick(c, cx + dx, by + 3, h, 2 + hash(i, 184) * 1.8, (t - 0.5) * (1.2 + open * 3) + (hash(i, 185 + seed) - 0.5), 0.95, under);
   }
   for (let i = 0; i < 10 + Math.round(open * 8); i++) {

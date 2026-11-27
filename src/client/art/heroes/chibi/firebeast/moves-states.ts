@@ -31,17 +31,17 @@ const hurt: BeastPose[] = [
  */
 const KNELT: BeastPose = {
   x: 0,
-  y: 16,
-  lean: 54,
+  y: 15,
+  lean: 40,
   twist: 6,
   tilt: 4,
   head: -34,
   look: 6,
-  footF: [10, 0, 8.4],
-  footB: [-12, 0, 7],
+  footF: [13, 0, 9],
+  footB: [-9, 0, 6.6],
   kneel: 'B',
-  handF: [14, 40, 15],
-  handB: [10, 22, 8],
+  handF: [16, 30, 13],
+  handB: [12, 18, 9],
   weapon: 150,
   weaponB: 170,
   face: 'grit',
@@ -52,11 +52,11 @@ const KNELT: BeastPose = {
 const kneel = Array.from({ length: 4 }, (_, i): BeastPose => {
   const b = Math.sin((Math.PI * 2 * i) / 4) * 0.5 + 0.5;
   return beast(KNELT, {
-    y: 16 + b,
-    lean: 54 + b * 4,
-    head: -34 + b * 4,
-    handF: [8 - b * 2, 36 - b * 1.6, 15],
-    handB: [10 - b * 2, 22 - b * 1.4, 8],
+    y: 15 + b,
+    lean: 40 + b * 3,
+    head: -30 + b * 4,
+    handF: [16 - b, 30 - b * 0.6, 13],
+    handB: [12 - b, 18 - b, 9],
     phase: i / 4,
     sway: (b - 0.5) * 0.2,
     face: i === 1 ? 'shout' : 'grit',
@@ -82,8 +82,8 @@ const DOWN: BeastPose = {
   look: 55,
   footF: [-22, 0, 9],
   footB: [-20, -1, 4],
-  handF: [24, 30, 16],
-  handB: [26, 30, 0],
+  handF: [24, 7, 16],
+  handB: [26, 7, 0],
   weapon: 100,
   weaponB: 100,
   face: 'closed',
@@ -117,7 +117,7 @@ const ko: BeastPose[] = [
   // Its legs give: down on both knees, arms hanging, the fire sinking.
   beast(READY, { x: -2, y: 17, lean: 30, twist: 0, head: 4, footF: [-11, 0, 7.4], footB: [-12, 0, 6.6], kneel: 'F', handF: [10, 30, 15], handB: [8, 30, 14], weapon: 170, weaponB: 170, face: 'hurt', wind: 0, phase: 0.25, fire: 0.9 }),
   // Slumping forward, a hand thrown out to catch itself.
-  beast(DOWN, { x: 4, y: 20, lean: 58, turn: -25, head: -20, look: 20, footF: [-16, 0, 8], footB: [-17, 0, 5], handF: [20, 28, 15], handB: [16, 28, 6], face: 'hurt', lift: 0.3, phase: 0.4, fire: 0.6 }),
+  beast(DOWN, { x: 4, y: 20, lean: 58, turn: -25, head: -20, look: 20, footF: [-16, 0, 8], footB: [-17, 0, 5], handF: [20, 22, 15], handB: [16, 22, 6], face: 'hurt', lift: 0.3, phase: 0.4, fire: 0.6 }),
   // Down: embers burst from under it.
   beast(DOWN, { lean: 80, phase: 0.55, lift: 0.2, fire: 0.35, fx: { dust: 0.9, extra: gutter(0.35, 0.4) } }),
   beast(DOWN, { phase: 0.7, fire: 0.22, fx: { extra: gutter(0.75, 0.55) } }),
