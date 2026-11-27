@@ -16,8 +16,9 @@
  *               before him on his right, one hand over the other on it; a ring of his runes pulses
  *               out over the floor from its foot and light rises from it while he bows his head
  *   r       10  (2 wind-up) Meteor: the staff thrust at the sky, a fiery sigil opening above the
- *               orb; then the staff swept down at the aim, the sigil pulled after it to high over
- *               the aim and its fire falling from there onto the floor in a burst, embers falling
+ *               orb; then the staff swept down at the aim, the sigil pulled after it to high ahead
+ *               of him and a ball of fire bursting out of it to dive off ahead and down toward the
+ *               aim, embers drifting down where it passed (the game draws where it lands)
  *   ult     16  (8 wind-up, stretched over the server's 1.5 s) Resurrection: a long chant, the
  *               staff raised high on his right and the left hand lifted open on his left, eyes
  *               closed; a pillar of gold light pours down on him, rings of light climb slowly round
@@ -39,7 +40,7 @@ import type { RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
 import { column, flash, glowLine, motes, rays } from '../fx.js';
 import { add3, type ChibiPose, clamp, type FxContext, lerp3, pose, rad, type V3 } from '../rig.js';
-import { AIM, ARCANE, type Aura, ball, both, type Extra, FIRE, FOOT, fromOrb, fromReady, gather, GOLD_LIGHT, LIFE, orbOf, plant, pool, READY, settle, tinted } from './moves-core.js';
+import { AIM, ARCANE, type Aura, ball, both, dipped, type Extra, FIRE, footAt, fromOrb, fromReady, gather, GOLD_LIGHT, LIFE, orbOf, plant, pool, READY, settle, tinted } from './moves-core.js';
 
 const S = READY;
 
@@ -47,8 +48,6 @@ const S = READY;
 
 /** The middle of the floor under him (hero space). */
 const under = (x: FxContext): V3 => [x.rig.pelvis.o[0], 0, x.rig.pelvis.o[2]];
-/** Where the staff's foot is (hero space). */
-const footOf = (x: FxContext): V3 => add3(x.rig.weapon.o, x.rig.weapon.u, FOOT);
 
 /** A level ring of light round a point (hero space), `r` in radius, `k` its strength; the half behind him passes behind him. */
 function ringAt(x: FxContext, c: V3, r: number, col: RGB, k: number): void {
@@ -162,14 +161,15 @@ const rising =
 /**
  * The Meteor's sigil, opening in the air above the orb: a wheel of fire facing the viewer, `k` how
  * far it has opened (0 a spark, 1 full size) and `spin` turning it: a bright rim with a ring inside
- * it, spokes between them, a ring of small marks round the rim and a hot heart. `t` is how far it
- * has been pulled from over his head to high over the aim (0 to 1).
+ * it, spokes between them, a ring of small marks round the rim and a hot heart. It rides above the
+ * orb as the staff rises; `t` is how far it has since been pulled from over his head to high ahead
+ * of him (0 to 1).
  */
 const sigil =
   (k: number, spin: number, t = 0): Extra =>
   (x) => {
     if (k <= 0) return;
-    const where = lerp3(SIGIL, ABOVE_AIM, t);
+    const where = t > 0 ? lerp3(SIGIL, ABOVE_AIM, t) : add3(x.tip, [0, 1, 0], SIGIL_UP);
     const P = x.proj(where);
     const R = 4 + 10 * k;
     const sq = 0.62;
@@ -204,8 +204,8 @@ const sigil =
 
 /**
  * A streak of fire from `from` to `to` (hero space), `k` its strength: brightest and widest at its
- * head, where a ball of fire is, fading back toward where it started, with embers shed along it;
- * softened where it passes over him.
+ * head, where a ball of fire `r` across is (none at 0), fading back toward where it started, with
+ * embers shed along it; softened where it passes over him.
  */
 const streak =
   (from: V3, to: V3, k: number, r = 3): Extra =>
@@ -221,8 +221,8 @@ const streak =
     for (let i = 0; i <= n; i++) {
       const s = i / n;
       const w = 0.5 + s * 1.5;
-      for (const [o, col, a] of [[0, FIRE.hot, 1], [1, FIRE.core, 0.8], [-1, FIRE.core, 0.8], [2, FIRE.edge, 0.4], [-2, FIRE.edge, 0.4]] as [number, RGB, number][]) {
-        soft(x, A[0] + (B[0] - A[0]) * s + nx * o * w * 0.6, A[1] + (B[1] - A[1]) * s + ny * o * w * 0.6, col, a * k * (0.2 + 0.8 * s), back);
+      for (const [o, col, a] of [[0, FIRE.hot, 1], [1, FIRE.core, 0.85], [-1, FIRE.core, 0.85], [2, FIRE.edge, 0.45], [-2, FIRE.edge, 0.45]] as [number, RGB, number][]) {
+        soft(x, A[0] + (B[0] - A[0]) * s + nx * o * w * 0.8, A[1] + (B[1] - A[1]) * s + ny * o * w * 0.8, col, a * k * (0.15 + 0.85 * s), back);
       }
     }
     for (let i = 0; i < 8; i++) {
@@ -236,24 +236,30 @@ const streak =
 /** The sigil's fire pulled from over his head toward high over the aim, `t` of the way (its head where the sigil now is). */
 const pull = (t: number, k: number): Extra => streak(SIGIL, lerp3(SIGIL, ABOVE_AIM, t), k * 0.8, 2.5);
 
-/** The Meteor's fire falling from the sigil high over the aim down onto the floor there, `t` of the way down, `k` its strength, its ball of fire swelling as it comes. */
-const fall = (t: number, k: number): Extra => streak(ABOVE_AIM, lerp3(ABOVE_AIM, AIM_AT, t), k, 3 + 2 * t);
+/** A point `t` of the way from the sigil high ahead of him to the floor far off along the aim. */
+const onDive = (t: number): V3 => lerp3(ABOVE_AIM, AIM_FAR, t);
 
-/** Embers drifting down round the floor at the aim where the fire came down, `t` how far they have fallen, `k` their strength. */
-const embers =
+/**
+ * The Meteor sent on its way: a ball of fire `r` across bursting out of the sigil and diving off
+ * ahead and down toward the aim, its head `t` of the way (it is gone from his frame by about 0.8)
+ * and its streak burning `tail` back along its path; `k` its strength.
+ */
+const dive = (t: number, tail: number, k: number, r = 3.5): Extra => streak(onDive(Math.max(0, t - tail)), onDive(t), k, r);
+
+/** Embers drifting down from where the Meteor's fire passed, `t` how far they have fallen (0 to 1), `k` their strength. */
+const cinders =
   (t: number, k: number): Extra =>
   (x) => {
     if (k <= 0) return;
-    const g = AIM_AT;
-    for (let i = 0; i < 10; i++) {
-      const th = x.hash(i, 641) * Math.PI * 2;
-      const r = 4 + x.hash(i, 642) * 12 * (0.5 + t);
-      const h = (1 - ((t + x.hash(i, 643)) % 1)) * 20;
-      const p = x.proj([g[0] + Math.cos(th) * r, h, g[2] + Math.sin(th) * r]);
-      x.c.glow(p[0], p[1], i % 3 ? FIRE.core : FIRE.hot, k);
-      x.c.glow(p[0], p[1] - 1, FIRE.edge, k * 0.5);
+    for (let i = 0; i < 12; i++) {
+      const p0 = onDive(0.05 + 0.7 * x.hash(i, 641));
+      const p3: V3 = [p0[0] + (x.hash(i, 642) - 0.5) * 8, p0[1] - t * (8 + 12 * x.hash(i, 643)), p0[2]];
+      const P = x.proj(p3);
+      const back = x.behind(p3);
+      const a = k * (0.5 + 0.5 * x.hash(i, 644));
+      x.c.glow(P[0], P[1], i % 3 ? FIRE.core : FIRE.hot, a, back);
+      x.c.glow(P[0], P[1] - 1, FIRE.edge, a * 0.5, back);
     }
-    pool(() => g, 10 + 6 * t, k * 0.8, FIRE)(x);
   };
 
 /** A small feather of light: [dx, dy, tone], its quill to the lower left. */
@@ -371,8 +377,8 @@ const ORB_PUSH: ChibiPose = pose(S, { x: 4, y: 5.5, lean: 16, twist: 10, head: 3
 const q: ChibiPose[] = [
   fromReady(pose(ORB_BACK, { weapon: -20, handF: [0, 9, 8.5] }), 0.6, { fx: { rune: 0.8, extra: ball(fromOrb(1), 3, 0.9) } }),
   pose(ORB_BACK, { phase: 0.1, fx: { rune: 1, aura: 0.3, extra: both(ball(fromOrb(1), 6, 1), gather(1, 0.3, 12)) } }),
-  pose(ORB_PUSH, { fx: { rune: 1, flash: { k: 1, from: 'main', dir: AIM }, smear: { from: -34, roll: 14, yaw: -4, width: 0.4, alpha: 0.9 }, extra: ball(fromOrb(12), 7, 1) } }),
-  pose(ORB_PUSH, { y: 6, lean: 17, weapon: 66, wind: 0.7, phase: 0.4, face: 'grit', fx: { rune: 0.7, trail: { k: 0.6, from: 'main', dir: AIM, len: 22 }, smear: { from: -34, roll: 14, yaw: -4, width: 0.35, alpha: 0.35 }, extra: ball(fromOrb(30), 6.5, 1) } }),
+  pose(ORB_PUSH, { fx: { rune: 1, flash: { k: 1, from: 'main', dir: AIM }, smear: { from: -34, roll: 14, yaw: -4, width: 0.85, alpha: 1 }, extra: ball(fromOrb(12), 7, 1) } }),
+  pose(ORB_PUSH, { y: 6, lean: 17, weapon: 66, wind: 0.7, phase: 0.4, face: 'grit', fx: { rune: 0.7, trail: { k: 0.6, from: 'main', dir: AIM, len: 22 }, smear: { from: -34, roll: 14, yaw: -4, width: 0.7, alpha: 0.45 }, extra: ball(fromOrb(30), 6.5, 1) } }),
   pose(ORB_PUSH, { y: 5.5, lean: 15, weapon: 62, wind: 0.5, lift: 0.2, phase: 0.55, face: 'stern', fx: { rune: 0.5, trail: { k: 0.35, from: 'main', dir: AIM, len: 44 }, extra: ball(fromOrb(50), 6, 0.75) } }),
   settle(ORB_PUSH, 0.4, { wind: 0.35, lift: 0.2, phase: 0.7, face: 'stern', fx: { rune: 0.4 } }),
   settle(ORB_PUSH, 0.72, { wind: 0.25, lift: 0.1, phase: 0.85, fx: { rune: 0.35 } }),
@@ -388,20 +394,24 @@ const q: ChibiPose[] = [
  */
 const PLANTED: ChibiPose = plant({ ...S, x: 0, y: 4, lean: 12, twist: 20, head: 8, look: -6, footF: [7, 0, 5.4], footB: [-8, 0, 4.8], handF: [16, 3, 6], grip: 0, grip2: 3, weapon: 8, roll: 14, yaw: -4, wind: 0.2, face: 'closed' });
 
+/** Where the staff strikes the floor: the ring and the light come from there, and stay there as he lifts it away. */
+const SPOT: V3 = footAt(PLANTED);
+const spot = (): V3 => SPOT;
+
 const e: ChibiPose[] = [
   // The staff lifted in both hands, its foot off the floor.
   fromReady(pose(PLANTED, { y: 3, lean: 6, head: -2, handF: [15, 0, 6.5], weapon: 7, face: 'grit' }), 0.8, { fx: { rune: 0.6 } }),
   pose(PLANTED, { y: 1.5, lean: 2, head: -4, handF: [15, -2, 6.5], weapon: 8, wind: 0.25, lift: 0.3, phase: 0.1, face: 'grit', fx: { rune: 0.9, extra: gather(0.8, 0.2, 10, LIFE) } }),
   // Struck down: the ring leaps out from its foot.
-  pose(PLANTED, { y: 5, lean: 14, head: 6, wind: 0.45, lift: -0.1, phase: 0.2, face: 'shout', fx: { rune: 1, dust: 0.5, extra: both(runeRing(footOf, 7, 1, 0, LIFE), pool(footOf, 10, 1, LIFE), burst(0.7, LIFE, [0, 1, 0])) } }),
-  pose(PLANTED, { y: 4.5, phase: 0.3, fx: { rune: 1, extra: both(runeRing(footOf, 13, 1, 8, LIFE), pool(footOf, 15, 0.8, LIFE), rising(footOf, 12, 0, 0.8, LIFE)) } }),
-  pose(PLANTED, { phase: 0.4, fx: { rune: 0.9, extra: both(runeRing(footOf, 19, 1, 16, LIFE), runeRing(footOf, 8, 0.7, -10, LIFE), pool(footOf, 20, 0.7, LIFE), rising(footOf, 17, 0.2, 1, LIFE)) } }),
-  pose(PLANTED, { y: 4.5, lean: 13, phase: 0.5, fx: { rune: 0.9, extra: both(runeRing(footOf, 24, 0.95, 24, LIFE), runeRing(footOf, 13, 0.8, -20, LIFE), pool(footOf, 24, 0.6, LIFE), rising(footOf, 21, 0.4, 1, LIFE)) } }),
-  pose(PLANTED, { y: 4, lean: 12, phase: 0.6, fx: { rune: 0.8, extra: both(runeRing(footOf, 27, 0.75, 32, LIFE), runeRing(footOf, 18, 0.7, -30, LIFE), pool(footOf, 26, 0.5, LIFE), rising(footOf, 23, 0.6, 0.8, LIFE)) } }),
-  pose(PLANTED, { y: 4.5, phase: 0.7, face: 'stern', head: 4, fx: { rune: 0.6, extra: both(runeRing(footOf, 29, 0.5, 40, LIFE), runeRing(footOf, 22, 0.5, -40, LIFE), rising(footOf, 24, 0.8, 0.5, LIFE)) } }),
+  pose(PLANTED, { y: 5, lean: 14, head: 6, wind: 0.45, lift: -0.1, phase: 0.2, face: 'shout', fx: { rune: 1, dust: 0.5, extra: both(runeRing(spot, 7, 1, 0, LIFE), pool(spot, 10, 1, LIFE), burst(0.7, LIFE, [0, 1, 0])) } }),
+  pose(PLANTED, { y: 4.5, phase: 0.3, fx: { rune: 1, extra: both(runeRing(spot, 13, 1, 8, LIFE), pool(spot, 15, 0.8, LIFE), rising(spot, 12, 0, 0.8, LIFE)) } }),
+  pose(PLANTED, { phase: 0.4, fx: { rune: 0.9, extra: both(runeRing(spot, 19, 1, 16, LIFE), runeRing(spot, 8, 0.7, -10, LIFE), pool(spot, 20, 0.7, LIFE), rising(spot, 17, 0.2, 1, LIFE)) } }),
+  pose(PLANTED, { y: 4.5, lean: 13, phase: 0.5, fx: { rune: 0.9, extra: both(runeRing(spot, 24, 0.95, 24, LIFE), runeRing(spot, 13, 0.8, -20, LIFE), pool(spot, 24, 0.6, LIFE), rising(spot, 21, 0.4, 1, LIFE)) } }),
+  pose(PLANTED, { y: 4, lean: 12, phase: 0.6, fx: { rune: 0.8, extra: both(runeRing(spot, 27, 0.75, 32, LIFE), runeRing(spot, 18, 0.7, -30, LIFE), pool(spot, 26, 0.5, LIFE), rising(spot, 23, 0.6, 0.8, LIFE)) } }),
+  pose(PLANTED, { y: 4.5, phase: 0.7, face: 'stern', head: 4, fx: { rune: 0.6, extra: both(runeRing(spot, 29, 0.5, 40, LIFE), runeRing(spot, 22, 0.5, -40, LIFE), rising(spot, 24, 0.8, 0.5, LIFE)) } }),
   // Lifted back out into the stance, its head dipped so that toward the viewer it passes under his chin.
-  settle(PLANTED, 0.5, { weapon: 34, wind: 0.2, phase: 0.8, face: 'stern', fx: { rune: 0.45, extra: runeRing(footOf, 30, 0.25, 48, LIFE) } }),
-  settle(PLANTED, 0.88, { wind: 0.16, phase: 0.9, fx: { rune: 0.35 } }),
+  settle(dipped(PLANTED), 0.3, { wind: 0.2, phase: 0.8, face: 'stern', fx: { rune: 0.45, extra: runeRing(spot, 30, 0.25, 48, LIFE) } }),
+  settle(dipped(PLANTED), 0.85, { wind: 0.16, phase: 0.9, fx: { rune: 0.35 } }),
 ];
 
 // ── Meteor ───────────────────────────────────────────────────────────────────────────────────
@@ -409,15 +419,17 @@ const e: ChibiPose[] = [
 /** The staff thrust at the sky in his right hand, out beside his head; the left hand points ahead at the aim. */
 const SKY: ChibiPose = pose(S, { x: -1, y: 3, lean: -6, twist: -6, head: -8, look: 0, handF: [-7, -8, 13], handB: [12, 8, 6], grip: -6, weapon: 4, roll: 10, yaw: 0, wind: 0.3, lift: 0.35, face: 'shout' });
 
-/** Where the sigil opens, in the air above the orb thrust at the sky. */
-const SIGIL: V3 = add3(orbOf(pose(SKY, { y: 2.5, lean: -8, head: -9 })), [0, 1, 0], 14);
+/** How high over the orb the sigil opens. */
+const SIGIL_UP = 14;
+/** Where the sigil is once open, in the air above the orb thrust at the sky. */
+const SIGIL: V3 = add3(orbOf(pose(SKY, { y: 2.5, lean: -8, head: -9 })), [0, 1, 0], SIGIL_UP);
 /**
- * Where the staff sweeping down at the aim pulls it to, high over the floor ahead of him, and where
- * its fire lands: a little to his left, so toward the viewer it falls beside him rather than down
- * his face.
+ * Where the staff sweeping down at the aim pulls it to, high ahead of him, a little to his left (so
+ * that toward the viewer its fire dives down beside him rather than down his face); and where that
+ * fire dives toward, the floor far off along the aim, out of his frame.
  */
 const ABOVE_AIM: V3 = [42, 100, -16];
-const AIM_AT: V3 = [46, 0, -16];
+const AIM_FAR: V3 = [150, 0, -16];
 /** The staff swept down at the aim, the fire following it. */
 const CALL: ChibiPose = pose(S, { x: 3, y: 5, lean: 14, twist: 4, head: 3, look: -2, footF: [11, 0, 5.4], handF: [10, 10, 7], handB: [6, 14, 7], grip: -6, weapon: 66, roll: 4, yaw: -8, wind: 0.5, lift: 0.1, face: 'grit' });
 
@@ -427,11 +439,12 @@ const r: ChibiPose[] = [
   pose(SKY, { y: 2.5, lean: -8, head: -9, phase: 0.2, wind: 0.35, lift: 0.45, fx: { rune: 1, aura: 0.3, extra: both(sigil(1, 30), tinted(FIRE, (x) => rays(x, add3(x.tip, [0, 1, 0], 14), 0.6, { n: 10, len: 26, spin: 10 }))) } }),
   pose(SKY, { y: 2.5, lean: -8, head: -9, phase: 0.3, fx: { rune: 1, extra: both(sigil(1, 45), tinted(FIRE, (x) => rays(x, add3(x.tip, [0, 1, 0], 14), 0.4, { n: 10, len: 22, spin: 20 }))) } }),
   pose(CALL, { phase: 0.4, fx: { rune: 1, extra: both(pull(0.6, 1), sigil(0.9, 60, 0.6)) } }),
-  pose(CALL, { y: 5.5, lean: 15, phase: 0.5, fx: { rune: 0.8, extra: both(sigil(0.7, 75, 1), fall(0.5, 1)) } }),
-  pose(CALL, { y: 5.5, lean: 15, phase: 0.6, face: 'stern', fx: { rune: 0.7, extra: both(sigil(0.35, 90, 1), fall(1, 0.9), tinted(FIRE, (x) => rays(x, AIM_AT, 0.8, { n: 10, len: 20, spin: 8 })), embers(0, 1)) } }),
-  settle(CALL, 0.4, { phase: 0.7, wind: 0.3, face: 'stern', fx: { rune: 0.5, extra: both(tinted(FIRE, (x) => rays(x, AIM_AT, 0.35, { n: 10, len: 16, spin: 16 })), embers(0.3, 1)) } }),
-  settle(CALL, 0.72, { phase: 0.85, wind: 0.22, fx: { rune: 0.4, extra: embers(0.6, 0.7) } }),
-  settle(CALL, 0.92, { phase: 1, wind: 0.16, fx: { rune: 0.35, extra: embers(0.9, 0.35) } }),
+  // The fire bursts out of the sigil and dives off toward the aim.
+  pose(CALL, { y: 5.5, lean: 15, phase: 0.5, fx: { rune: 0.8, extra: both(sigil(0.75, 75, 1), tinted(FIRE, (x) => rays(x, ABOVE_AIM, 0.7, { n: 10, len: 20, spin: 8 })), dive(0.22, 0.22, 1, 5.5)) } }),
+  pose(CALL, { y: 5.5, lean: 15, phase: 0.6, face: 'stern', fx: { rune: 0.7, extra: both(sigil(0.4, 90, 1), dive(0.52, 0.4, 1, 5)) } }),
+  settle(CALL, 0.4, { phase: 0.7, wind: 0.3, face: 'stern', fx: { rune: 0.5, extra: both(sigil(0.15, 105, 1), dive(0.78, 0.35, 0.6, 3.5), cinders(0, 0.9)) } }),
+  settle(CALL, 0.72, { phase: 0.85, wind: 0.22, fx: { rune: 0.4, extra: cinders(0.45, 0.65) } }),
+  settle(CALL, 0.92, { phase: 1, wind: 0.16, fx: { rune: 0.35, extra: cinders(0.9, 0.3) } }),
 ];
 
 // ── Resurrection ─────────────────────────────────────────────────────────────────────────────
@@ -473,7 +486,7 @@ const RAISE: ChibiPose = pose(CHANT, { y: 1, lean: -8, head: -10, handF: [-8, -1
  * On the way back to the stance: the staff lowered and tipped forward on his right, so that toward
  * the viewer its head passes under his chin as it crosses to his left.
  */
-const LOWERED: ChibiPose = pose(CHANT, { handF: [5, 9, 9], handB: [2, 10, 9], weapon: 52, roll: 6 });
+const LOWERED: ChibiPose = pose(dipped(CHANT), { handB: [2, 10, 9] });
 
 const ult: ChibiPose[] = [
   ...Array.from({ length: 8 }, (_, i) => (i === 0 ? fromReady(chant(0), 0.7) : chant(i))),
@@ -504,8 +517,8 @@ const cast: ChibiPose[] = [
   pose(FLARE, { phase: 0.3, fx: { rune: 1, circle: 0.4, extra: both(burst(0.9, ARCANE, [0, 1, 0]), sparkles(0, 1)) } }),
   pose(FLARE, { y: 3, phase: 0.45, fx: { rune: 1, circle: 0.8, extra: both(orbRays(0.5, ARCANE, 15), sparkles(0.15, 1)) } }),
   pose(FLARE, { y: 3, phase: 0.6, face: 'smirk', fx: { rune: 0.8, circle: 1, extra: sparkles(0.3, 0.8) } }),
-  settle(FLARE, 0.5, { phase: 0.75, wind: 0.25, face: 'stern', fx: { rune: 0.5, circle: 0.6, extra: sparkles(0.45, 0.5) } }),
-  settle(FLARE, 0.88, { phase: 0.9, wind: 0.18, fx: { rune: 0.35, circle: 0.2, extra: sparkles(0.6, 0.2) } }),
+  settle(dipped(FLARE), 0.3, { phase: 0.75, wind: 0.25, face: 'stern', fx: { rune: 0.5, circle: 0.6, extra: sparkles(0.45, 0.5) } }),
+  settle(dipped(FLARE), 0.85, { phase: 0.9, wind: 0.18, fx: { rune: 0.35, circle: 0.2, extra: sparkles(0.6, 0.2) } }),
 ];
 
 /** The skill clips' poses, by clip. */

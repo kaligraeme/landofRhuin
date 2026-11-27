@@ -143,13 +143,19 @@ export const release = (p: ChibiPose, flash: number, trail: number, len = 44): C
   fx: { ...p.fx, flash: flash > 0 ? { k: flash, from: 'main', dir: AIM } : undefined, trail: trail > 0 ? { k: trail, from: 'main', dir: AIM, len } : undefined },
 });
 
-/** Where a pose's orb is, in hero space (its `turn` taken into account, as the camera does). */
-export function orbOf(p: ChibiPose): V3 {
+/** A point `along` the staff from his right hand in a pose, in hero space (its `turn` taken into account, as the camera does). */
+function onStaff(p: ChibiPose, along: number): V3 {
   const rig = solveRig(BUILD, p, GRIP2, W.haft);
-  const t = add3(rig.weapon.o, rig.weapon.u, W.tip ?? W.reach[1]);
+  const t = add3(rig.weapon.o, rig.weapon.u, along);
   const a = ((p.turn ?? 0) * Math.PI) / 180;
   return [t[0] * Math.cos(a) - t[2] * Math.sin(a), t[1], t[0] * Math.sin(a) + t[2] * Math.cos(a)];
 }
+
+/** Where a pose's orb is, in hero space. */
+export const orbOf = (p: ChibiPose): V3 => onStaff(p, W.tip ?? W.reach[1]);
+
+/** Where a pose's staff stands on the floor (the end of its butt cap), in hero space. */
+export const footAt = (p: ChibiPose): V3 => onStaff(p, FOOT);
 
 /**
  * Plants the staff: moves the right hand (and with it a left hand on the haft) up or down until the
@@ -327,6 +333,13 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
 export const settle = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}): ChibiPose => pose(mix(p, battle[0] as ChibiPose, k), over);
 
 /**
+ * A pose with the staff tipped forward and down on his right, his hand at his chest. The way back
+ * to the battle stance from a staff held upright on his right goes through it, so that toward the
+ * viewer the orb passes under his chin on its way across to his left, never over his face.
+ */
+export const dipped = (p: ChibiPose): ChibiPose => pose(p, { handF: [12, 10, 8], grip: -4, weapon: 74, roll: 8, yaw: -6 });
+
+/**
  * Out of the battle stance: k of the way from the first battle frame to a pose, then `over` on
  * top. A skill or state clip that the battle loop hands over to starts with it, so its first frame
  * carries the staff on from where the loop holds it. Keep k at 0.5 or more: the hands, face and
@@ -336,7 +349,7 @@ export const fromReady = (p: ChibiPose, k: number, over: Partial<ChibiPose> = {}
 
 // atk1: the staff drawn back upright, then flicked forward at the aim, its head stopping at his
 // brow well ahead of him (a staff, not a spear: it never comes down level).
-const A1_DRAW = pose(READY, { x: -1, y: 3, lean: 0, twist: 24, head: -2, handF: [2, 11, 7], grip: -4, grip2: 9, weapon: 18, roll: -6, yaw: -34, wind: 0.2, face: 'grit', fx: { rune: 0.8, extra: gather(0.8, 0) } });
+const A1_DRAW = pose(READY, { x: -1, y: 3, lean: 0, twist: 24, head: -2, handF: [2, 11, 9], grip: -4, grip2: 9, weapon: 4, roll: 10, yaw: -4, wind: 0.2, face: 'grit', fx: { rune: 0.8, extra: gather(0.8, 0) } });
 const A1_FLICK = pose(READY, { x: 2, y: 4, lean: 13, twist: 12, head: 3, handF: [9, 13, 6], grip: -4, grip2: 9, weapon: 60, roll: -8, yaw: -30, wind: 0.45, phase: 0.2, face: 'shout', fx: { rune: 1 } });
 const A1_HOLD = pose(A1_FLICK, { y: 4.5, lean: 14, handF: [9, 13.5, 6], weapon: 62, wind: 0.55, phase: 0.35, face: 'grit', fx: { rune: 0.7 } });
 

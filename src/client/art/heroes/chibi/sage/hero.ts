@@ -14,10 +14,10 @@ import { STATE_MOVES } from './moves-states.js';
  * His clip timing (frame counts match his moves files). His bolts fly every 0.55 s, so each plays
  * out in about that, its wind-up included. His weapon skills: `special` Mending Light (a 0.4 s
  * wind-up on the server, which its two wind-up frames stretch over), `q` Arcane Orb, `e`
- * Sanctuary, `r` Meteor (which lands 1.1 s after the cast, as the clip's fire reaches the floor),
- * `ult` Resurrection (a 1.5 s chant on the server, which its eight wind-up frames stretch over);
- * `cast` his role skills and the Elixir. The others have no server wind-up, so their wind-up
- * frames take 0.06 s each. He is old: his stances loop slowly.
+ * Sanctuary, `r` Meteor (the game draws it landing at the aim 1.1 s after the cast; the clip
+ * sends its fire off toward the aim), `ult` Resurrection (a 1.5 s chant on the server, which its
+ * eight wind-up frames stretch over); `cast` his role skills and the Elixir. The others have no
+ * server wind-up, so their wind-up frames take 0.06 s each. He is old: his stances loop slowly.
  */
 const TIMING: Record<ChibiClip, ClipTiming> = {
   idle: { frames: 8, seconds: 2.2, windup: 0 },
