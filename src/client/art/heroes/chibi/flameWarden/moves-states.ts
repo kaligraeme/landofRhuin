@@ -6,8 +6,9 @@
  *   kneel    4  (loop) low health: down on his right knee, his weight on the sword planted point
  *               down in front of him, the left hand on his raised knee; heaving, panting, a bead of
  *               sweat, the blade's fire burnt low to a few embers
- *   ko       6  (hold) a stagger, a drop to his knees, and he falls on his side, the coat spread
- *               over the floor behind him, the sword dropped beside him
+ *   ko       6  (hold) a stagger, a drop to his knees, and he falls on his side toward the viewer,
+ *               his face showing, the coat spread over the floor behind him, the sword dropped
+ *               clear of him
  *   victory  8  (hold) the sword flicked out and down, shaking its flames off in a spray of
  *               embers, then rested on his shoulder: a grin, his fist on his hip, the coat streaming
  *
@@ -137,32 +138,33 @@ const kneel = Array.from({ length: 4 }, (_, i): ChibiPose => {
 // ── Knocked out ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Down on his side: fallen back and rolled onto his left side, knees drawn up a little, turned
- * so he lies across the screen in every view, the coat spread over the floor behind him and the
- * sword dropped flat beside his outflung right hand.
+ * Down on his side: fallen back and rolled toward the viewer, knees drawn up a little, turned so
+ * he lies across the screen in every view with his face (eyes shut) turned up to the viewer side
+ * on and front on, the coat-tails spread over the floor behind him with their ember lining
+ * showing, and the sword dropped flat on the floor beyond his outflung right hand, clear of him.
  */
 const DOWN: ChibiPose = pose(S, {
   x: -8,
   y: 22,
   lean: -84,
-  twist: -55,
+  twist: 30,
   tilt: 0,
-  turn: -60,
+  turn: -45,
   head: -10,
-  look: -30,
+  look: 40,
   footF: [14, -2, 4],
   footB: [11, 0, -1],
   handF: [10, 4, 16],
   handB: [-2, 6, 8],
   drop: true,
-  dropAt: [-14, 1.5, 24],
+  dropAt: [-10, 1.5, 31],
   weapon: 90,
   roll: 84,
   yaw: 0,
   face: 'closed',
   wind: -0.2,
   lift: -0.4,
-  flare: 0.8,
+  flare: 0.9,
 });
 
 /** Dust thrown up along him as he lands: puffs beside his hips, his back and his head. */
@@ -203,7 +205,7 @@ const ko: ChibiPose[] = [
   // He sways back and over, turning, the sword slipping from his grip.
   pose(S, { x: -2, y: 15, lean: -12, twist: -20, tilt: -10, turn: -20, head: 2, footF: [-6, -1, 5], footB: [-8, -1, 4.6], kneel: 'F', handF: [6, 18, 14], handB: [2, 18, 11], weapon: 170, roll: -10, yaw: 0, face: 'closed', wind: 0, lift: 0.2 }),
   // Toppling, the coat flying up; the sword has hit the floor.
-  pose(DOWN, { x: -5, y: 17, lean: -48, twist: -35, turn: -45, head: -6, look: -10, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 16], handB: [0, 6, 12], dropAt: [-12, 3, 24], weapon: 84, lift: 0.6, flare: 0.5 }),
+  pose(DOWN, { x: -5, y: 17, lean: -48, twist: 10, turn: -35, head: -6, look: 20, footF: [6, -3, 6], footB: [3, -1, 4], handF: [6, 4, 16], handB: [0, 6, 12], dropAt: [-12, 3, 24], weapon: 84, lift: 0.6, flare: 0.5 }),
   // Down: the thud raises dust and bounces his boots.
   pose(DOWN, { lean: -80, head: -8, footF: [14, -4, 4], footB: [11, -4, -1], lift: 0.2, fx: { dust: 0.9, extra: both(thud, smoulder(0)) } }),
   pose(DOWN, { fx: { extra: smoulder(1) } }),

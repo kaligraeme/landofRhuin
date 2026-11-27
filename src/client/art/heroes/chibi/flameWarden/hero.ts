@@ -6,7 +6,7 @@
 import type { ChibiClip, ChibiHero, ClipTiming, FrameBox } from '../index.js';
 import { chibiHero, paintChibi } from '../painter.js';
 import type { ChibiPose, ChibiView } from '../rig.js';
-import { FLAME_WARDEN, FLAME_WARDEN_HOT } from './design.js';
+import { FLAME_WARDEN, FLAME_WARDEN_LIT } from './design.js';
 import { CORE_MOVES } from './moves-core.js';
 import { SKILL_MOVES } from './moves-skills.js';
 import { STATE_MOVES } from './moves-states.js';
@@ -56,8 +56,19 @@ const FRAMES: Record<ChibiView, FrameBox> = {
 
 const CLIPS: Record<ChibiClip, readonly ChibiPose[]> = { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES };
 
-/** The clips in which his fire lights his hair (a warm sheen on its light tone): his weapon skills. */
-const LIT: ReadonlySet<ChibiClip> = new Set<ChibiClip>(['special', 'q', 'e', 'r', 'ult']);
+/**
+ * How hot his fire lights his hair, frame by frame, in his weapon skills (see FLAME_WARDEN_LIT: 0
+ * cool, 1 and 2 the highlights warming, 3 the light tone too): it warms over the wind-up into the
+ * first active frame and cools over the last two, so the frames that hand back to the battle
+ * stance already show his own black hair. Every other clip is cool throughout.
+ */
+const HEAT: Partial<Record<ChibiClip, readonly number[]>> = {
+  special: [1, 2, 2, 2, 1, 0, 0],
+  q: [1, 2, 2, 2, 2, 1, 0, 0],
+  e: [1, 2, 2, 2, 2, 2, 1, 0, 0],
+  r: [1, 3, 3, 3, 2, 2, 2, 1, 0, 0],
+  ult: [2, 2, 3, 3, 3, 3, 3, 3, 3, 3],
+};
 
 const HERO = chibiHero(FLAME_WARDEN, CLIPS, TIMING, FRAMES, 2.1 / 84, 84);
 
@@ -65,6 +76,8 @@ export const FLAME_WARDEN_HERO: ChibiHero = {
   ...HERO,
   paint: (clip, i, view) => {
     const poses = CLIPS[clip];
-    return paintChibi(LIT.has(clip) ? FLAME_WARDEN_HOT : FLAME_WARDEN, poses[Math.max(0, Math.min(i, poses.length - 1))] as ChibiPose, view, FRAMES[view]);
+    const f = Math.max(0, Math.min(i, poses.length - 1));
+    const design = FLAME_WARDEN_LIT[HEAT[clip]?.[f] ?? 0] ?? FLAME_WARDEN;
+    return paintChibi(design, poses[f] as ChibiPose, view, FRAMES[view]);
   },
 };

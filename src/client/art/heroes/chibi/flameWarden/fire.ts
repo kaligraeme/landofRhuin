@@ -21,7 +21,7 @@
  */
 import type { Canvas, RGB } from '../../paint.js';
 import type { Vec } from '../../skeleton.js';
-import { afterimages, motes, puff, rays } from '../fx.js';
+import { motes, puff, starburst } from '../fx.js';
 import { add3, at3, clamp, cross3, DEPTH, dot3, type FxContext, len3, lerp, norm3, rad, TO_CAMERA, type V3, weaponAxes } from '../rig.js';
 
 /** The fire ramp, hottest first. */
@@ -44,7 +44,7 @@ const GREEN_PALE: RGB = [214, 255, 190];
 const RAMP: readonly RGB[] = [WHITE_HOT, GOLD, FLAME, ORANGE, RED, SMOKE];
 
 /** His sword's working length (design.ts): where a swoosh reaches from and to along it. */
-const REACH: readonly [number, number] = [8, 44.5];
+const REACH: readonly [number, number] = [9, 45.5];
 
 type Extra = (x: FxContext) => void;
 
@@ -64,8 +64,11 @@ export function fireAt(t: number): RGB {
   return RED;
 }
 
-/** Fills a screen polygon on an effects layer, leaving alone the pixels `skip` names. */
-function fill(c: Canvas, q: readonly Vec[], col: RGB, a: number, under = false, skip?: (x: number, y: number) => boolean): void {
+/**
+ * Fills a screen polygon on an effects layer, leaving alone the pixels `skip` names; `veil` (0 to
+ * 1) thins it where it lies over the figure, so he shows through fire passing in front of him.
+ */
+function fill(c: Canvas, q: readonly Vec[], col: RGB, a: number, under = false, skip?: (x: number, y: number) => boolean, veil = 1): void {
   let y0 = Infinity;
   let y1 = -Infinity;
   for (const p of q) {
@@ -82,7 +85,10 @@ function fill(c: Canvas, q: readonly Vec[], col: RGB, a: number, under = false, 
     }
     xs.sort((m, n) => m - n);
     for (let j = 0; j + 1 < xs.length; j += 2) {
-      for (let px = Math.ceil((xs[j] as number) - 0.5); px <= Math.floor((xs[j + 1] as number) - 0.5); px++) if (!skip?.(px, y)) c.glow(px, y, col, clamp(a, 0, 1), under);
+      for (let px = Math.ceil((xs[j] as number) - 0.5); px <= Math.floor((xs[j + 1] as number) - 0.5); px++) {
+        if (skip?.(px, y)) continue;
+        c.glow(px, y, col, clamp(veil < 1 && !under && c.opaque(px, y) ? a * veil : a, 0, 1), under);
+      }
     }
   }
 }
@@ -145,9 +151,10 @@ function faceCamera(x: FxContext, dirs: V3[]): V3[] {
  * Paints a blazing crescent swept round `centre` through the directions `dirs` (tail first), `rOut`
  * out and `thick` deep at its fullest: in bands from its outer (cutting) edge in, white-hot, gold,
  * orange and red, the whole of it cooling toward its tail (the bands shift down the ramp to red and
- * smoke) and fading a little. Parts behind him (`behind`) go under the figure.
+ * smoke) and fading a little. Parts behind him (`behind`) go under the figure; `veil` thins what
+ * passes in front of him.
  */
-function blazeBands(x: FxContext, centre: V3, dirs: readonly V3[], rOut: number, thick: number, alpha: number, behind: (p: V3) => boolean, skip?: (px: number, py: number) => boolean): void {
+function blazeBands(x: FxContext, centre: V3, dirs: readonly V3[], rOut: number, thick: number, alpha: number, behind: (p: V3) => boolean, skip?: (px: number, py: number) => boolean, veil = 1): void {
   const n = dirs.length - 1;
   if (n < 1) return;
   const at = (dir: V3, r: number): Vec => {
@@ -171,7 +178,7 @@ function blazeBands(x: FxContext, centre: V3, dirs: readonly V3[], rOut: number,
       const f0 = edges[b] as number;
       const f1 = edges[b + 1] as number;
       const q = [at(da, rOut - f0 * th(k0)), at(db, rOut - f0 * th(k1)), at(db, rOut - f1 * th(k1)), at(da, rOut - f1 * th(k0))];
-      fill(x.c, q, col, a * (idx === RAMP.length - 1 ? 0.45 : b === 4 ? 0.8 : 1), under, skip);
+      fill(x.c, q, col, a * (idx === RAMP.length - 1 ? 0.45 : b === 4 ? 0.8 : 1), under, skip, veil);
     }
   }
 }
@@ -206,7 +213,10 @@ export const fireArc =
     for (let i = 0; i < 12; i++) {
       const t = hash(i, 131 + seed);
       const d = seen[Math.min(seen.length - 1, Math.round(t * (seen.length - 1)))] as V3;
-      const q = x.proj(add3(x.rig.weapon.o, d, REACH[1] + 3 + hash(i, 132 + seed) * 7));
+      const q3 = add3(x.rig.weapon.o, d, REACH[1] + 3 + hash(i, 132 + seed) * 7);
+      // Nothing is shed below the floor.
+      if (q3[1] < 1) continue;
+      const q = x.proj(q3);
       const drift = hash(i, 133 + seed) * 4;
       if (t < 0.3) {
         puff(c, q[0], q[1] - drift, 1.4 + hash(i, 134) * 1.4, i % 2 ? SMOKE : SMOKE_DARK, 0.5 * alpha * (1 - t));
@@ -238,6 +248,71 @@ export const fireRing =
   };
 
 /**
+ * The finisher's great sweep: a broad blazing band round him from the angle `from` to `to` (as
+ * `fireRing`: degrees in the frame of the pose's turn, its tail at `from` and its hot head at
+ * `to`), `radius` out at `height`, `thick` of the radius deep, its plane tipped `dip` degrees down
+ * on the side toward the viewer (in every view) and `bank` degrees up on his right, so it reads as a tall slanted ellipse rather
+ * than a flat line at his hips. White-hot along its leading (outer) edge, gold and orange through
+ * its body, cooling to red and smoke at its tail; tongues of flame and embers stream off its
+ * trailing (inner) edge, and a ring of embers and scorch smoulders on the floor under it.
+ */
+export const sweep =
+  (from: number, to: number, o: { height?: number; radius?: number; thick?: number; dip?: number; bank?: number; alpha?: number; seed?: number } = {}): Extra =>
+  (x) => {
+    const { c, rig, hash } = x;
+    const turn = rig.pose.turn ?? 0;
+    const radius = o.radius ?? 50;
+    const alpha = o.alpha ?? 1;
+    const seed = o.seed ?? 0;
+    const dip = rad(o.dip ?? 0);
+    const bank = rad(o.bank ?? 0);
+    // Which way the viewer is, level: the band tips down on that side in every view.
+    const cv = x.cam.local(TO_CAMERA);
+    const hl = Math.hypot(cv[0], cv[2]) || 1;
+    const hx = cv[0] / hl;
+    const hz = cv[2] / hl;
+    const tip = (d: V3): V3 => {
+      // Tipped down on the side toward the viewer, then banked up on his right (about his forward axis).
+      const along = d[0] * hx + d[2] * hz;
+      const k = along * (1 - Math.cos(dip));
+      const a: V3 = [d[0] - hx * k, -along * Math.sin(dip), d[2] - hz * k];
+      return [a[0], a[1] * Math.cos(bank) + a[2] * Math.sin(bank), -a[1] * Math.sin(bank) + a[2] * Math.cos(bank)];
+    };
+    const n = Math.max(2, Math.ceil(Math.abs(to - from) / 4));
+    const dirs: V3[] = [];
+    for (let i = 0; i <= n; i++) {
+      const a = rad(lerp(from, to, i / n) - turn);
+      dirs.push(tip([Math.cos(a), 0, Math.sin(a)]));
+    }
+    const centre: V3 = [rig.pelvis.o[0], o.height ?? 34, rig.pelvis.o[2]];
+    const mid = x.depth(centre);
+    const behind = (p: V3): boolean => x.depth(p) < mid - 1;
+    blazeBands(x, centre, dirs, radius, radius * (o.thick ?? 0.7), alpha, behind, headSkip(x), 0.5);
+    // Tongues of flame and embers streaming off the trailing edge, more toward the hot head.
+    const inner = radius * (1 - (o.thick ?? 0.7) * 0.85);
+    for (let i = 0; i < 14; i++) {
+      const t = 0.25 + 0.75 * hash(i, 221 + seed);
+      const d = dirs[Math.round(t * n)] as V3;
+      const p3 = add3(centre, d, inner + hash(i, 222 + seed) * 4);
+      const p = x.proj(p3[1] < 1 ? [p3[0], 1, p3[2]] : p3);
+      tongue(c, p[0], p[1], (4 + hash(i, 223 + seed) * 9) * t * alpha, 1.5 + hash(i, 224 + seed), hash(i, 225 + seed) * 2 - 1, Math.min(1, alpha * 1.2), behind(p3));
+      const q = x.proj(add3(centre, d, radius + 2 + hash(i, 226 + seed) * 6));
+      c.glow(q[0], q[1] - hash(i, 227 + seed) * 3, i % 3 ? GOLD : WHITE_HOT, alpha * t, behind(p3));
+    }
+    // Embers and scorch on the floor where it swept.
+    for (let i = 0; i < 22; i++) {
+      const a = rad(lerp(from, to, hash(i, 228 + seed)) - turn);
+      const r = radius * (0.55 + 0.35 * hash(i, 229 + seed));
+      const g: V3 = [rig.pelvis.o[0] + Math.cos(a) * r, 0, rig.pelvis.o[2] + Math.sin(a) * r];
+      const p = x.proj(g);
+      const under = behind(g);
+      if (i % 3 === 0) puff(c, p[0], p[1], 1.6 + hash(i, 230 + seed), SMOKE_DARK, 0.45 * alpha, true);
+      c.glow(p[0], p[1], i % 2 ? ORANGE : RED, 0.85 * alpha, under);
+      c.glow(p[0] + 1, p[1], i % 4 ? RED : GOLD, 0.6 * alpha, under);
+    }
+  };
+
+/**
  * A tongue of fire `h` pixels tall rising from a screen point, `w` wide at its root and
  * wavering to its tip (`sway` -1 to 1 bends it), coloured hottest at the root.
  */
@@ -257,9 +332,11 @@ export function tongue(c: Canvas, x: number, y: number, h: number, w: number, sw
 }
 
 /**
- * Flames licking up off the blade (strength k): tongues rising from its length (fire rises up the
- * screen whichever way the blade points), taller toward the point, with a soft orange halo under
- * the figure round the blade and embers drifting up off it.
+ * Flames licking up off the blade (strength k): tongues rising from its edge (fire rises up the
+ * screen whichever way the blade points), taller toward the point, and embers drifting up off it.
+ * Ablaze (k over about 0.6, in his moves) a soft orange halo burns under the figure round the
+ * blade and the tongues run its whole length; at rest only a few flicker near the point, so the
+ * dark steel still reads as a sword.
  */
 export const flames =
   (k: number, seed = 0): Extra =>
@@ -267,17 +344,51 @@ export const flames =
     if (k <= 0) return;
     const { c, rig, hash } = x;
     const w = rig.weapon;
-    for (let i = 0; i <= 12; i++) {
-      const p = x.proj(add3(w.o, w.u, 9 + i * 3));
-      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) c.glow(p[0] + dx, p[1] + dy, dx * dx + dy * dy <= 1 ? FLAME : ORANGE, 0.35 * Math.min(1, k), true);
+    const halo = clamp((k - 0.55) * 0.7, 0, 0.32);
+    if (halo > 0) {
+      for (let i = 0; i <= 12; i++) {
+        const p = x.proj(add3(add3(w.o, w.u, 10 + i * 3), w.v, 2));
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) c.glow(p[0] + dx, p[1] + dy, dx * dx + dy * dy <= 1 ? FLAME : ORANGE, halo, true);
+      }
     }
-    for (let i = 0; i < 11; i++) {
-      const along = 10 + i * 3.3 + hash(i, 90 + seed) * 2;
-      const p = x.proj(add3(add3(w.o, w.u, along), w.v, (hash(i, 91 + seed) - 0.3) * 2.5));
+    // At rest the tongues keep to the outer half of the blade.
+    const from = k < 0.6 ? 24 : 11;
+    const n = k < 0.6 ? 6 : 11;
+    for (let i = 0; i < n; i++) {
+      const along = from + i * ((44 - from) / n) + hash(i, 90 + seed) * 2;
+      const p = x.proj(add3(add3(w.o, w.u, along), w.v, 2.2 + hash(i, 91 + seed) * 1.2));
       const h = (3.5 + hash(i, 92 + seed) * 8) * k * (0.55 + 0.45 * (along / 44));
-      tongue(c, p[0], p[1], h, 1.4 + hash(i, 94 + seed) * 1, hash(i, 93 + seed) * 2 - 1, Math.min(1, k * 1.5));
+      // Off a blade held beyond him (seen from behind, raised in front of him) the figure hides
+      // them, but where they lick out past him.
+      tongue(c, p[0], p[1], h, 1.3 + hash(i, 94 + seed) * 1, hash(i, 93 + seed) * 2 - 1, Math.min(1, k * 1.5), x.behind(add3(w.o, w.u, along)));
     }
     embers(Math.min(1, k * 0.9), seed, x.tip, 12)(x);
+  };
+
+/**
+ * The blade's point scraping the floor (strength k): a short curved streak of white-hot and gold
+ * sparks along the floor behind where the point now is (`back` pixels of it, curving up at its
+ * start), and a few sparks thrown up and forward off it.
+ */
+export const scrape =
+  (k: number, back = 16, seed = 0): Extra =>
+  (x) => {
+    if (k <= 0) return;
+    const { c, hash, tip } = x;
+    const g: V3 = [tip[0], Math.max(0.5, tip[1]), tip[2]];
+    const n = Math.ceil(back * 1.5);
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const p3: V3 = [g[0] - t * back, 0.5 + t * t * 6, g[2] + Math.sin(t * 2.2) * 2];
+      const p = x.proj(p3);
+      const a = k * (1 - t * 0.75);
+      c.glow(p[0], p[1], t < 0.3 ? WHITE_HOT : t < 0.6 ? GOLD : ORANGE, a);
+      c.glow(p[0], p[1] + 1, t < 0.5 ? FLAME : RED, a * 0.6);
+    }
+    for (let i = 0; i < 8; i++) {
+      const p = x.proj([g[0] + hash(i, 241 + seed) * 6, 1 + hash(i, 242 + seed) * 9, g[2] + (hash(i, 243 + seed) - 0.5) * 6]);
+      c.glow(p[0], p[1], i % 2 ? GOLD : WHITE_HOT, k);
+    }
   };
 
 /**
@@ -302,110 +413,153 @@ export const embers =
   };
 
 /**
- * Afterimages of him in his fire trailing a dash (strength k): copies of his silhouette behind him
- * on screen, the nearest orange, then red, the farthest a deep ember red, under the figure. Toward
- * or away from the viewer they trail up or down the screen, closer together.
+ * Afterimages of him in his fire trailing a dash (strength k): two or three copies of his outline
+ * spaced out behind him on screen, each an ember edge (gold on the nearest, then orange, then red)
+ * round a dark, see-through inside, each fainter than the one before, under the figure so he stays
+ * clean. Toward or away from the viewer the dash runs along the screen's depth, so two small, faint
+ * copies are set off to one side and a little back, clear of his head, rather than stacked over it.
  */
 export const ghosts =
-  (k: number, gap = 12): Extra =>
+  (k: number, gap = 15): Extra =>
   (x) => {
     if (k <= 0) return;
-    let v = x.cam.vec([-1, 0, 0]);
-    const vl = Math.hypot(v[0], v[1]);
-    const short = clamp(vl / 0.85, 0.5, 1);
-    v = vl > 1e-3 ? [(v[0] / vl) * short, (v[1] / vl) * short] : [0, -short];
-    const list: [RGB, number][] = [
-      [DEEP, 0.45],
-      [RED, 0.5],
-      [ORANGE, 0.55],
-    ];
-    afterimages(
-      x.c,
-      list.map(([colour, a], i) => {
-        const off = gap * (3 - i) * (0.5 + 0.5 * k);
-        return { dx: Math.round(v[0] * off), dy: Math.round(v[1] * off), colour, alpha: a * k };
-      }),
-    );
+    const { c } = x;
+    const { side } = facing(x);
+    const v = x.cam.vec([-1, 0, 0]);
+    const vl = Math.hypot(v[0], v[1]) || 1;
+    // On screen: straight back side on; toward or away from the viewer off to his right and up.
+    const step: Vec = side ? [(v[0] / vl) * gap, (v[1] / vl) * gap] : [gap * 0.62 * (x.cam.vec([0, 0, 1])[0] > 0 ? 1 : -1), -gap * 0.2];
+    const copies: [RGB, RGB, number][] = side
+      ? [
+          [GOLD, ORANGE, 0.9],
+          [ORANGE, RED, 0.62],
+          [RED, DEEP, 0.4],
+        ]
+      : [
+          [GOLD, ORANGE, 0.55],
+          [ORANGE, RED, 0.34],
+        ];
+    // How deep inside the silhouette each pixel lies: 1 on its edge, 2 just inside, 3 deeper.
+    const W = c.w;
+    const H = c.h;
+    const inside = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let px = 0; px < W; px++) if (c.opaque(px, y)) inside[y * W + px] = 3;
+    for (let pass = 1; pass <= 2; pass++) {
+      for (let y = 0; y < H; y++) {
+        for (let px = 0; px < W; px++) {
+          const i = y * W + px;
+          if ((inside[i] as number) < 3) continue;
+          const nb = [px > 0 ? inside[i - 1] : 0, px < W - 1 ? inside[i + 1] : 0, y > 0 ? inside[i - W] : 0, y < H - 1 ? inside[i + W] : 0];
+          if (nb.some((q) => (q as number) < pass)) inside[i] = pass;
+        }
+      }
+    }
+    const inner: RGB = [44, 18, 14];
+    for (let j = copies.length - 1; j >= 0; j--) {
+      const [edge, mid, a] = copies[j] as [RGB, RGB, number];
+      const dx = Math.round(step[0] * (j + 1) * (0.55 + 0.45 * k));
+      const dy = Math.round(step[1] * (j + 1) * (0.55 + 0.45 * k));
+      for (let y = 0; y < H; y++) {
+        for (let px = 0; px < W; px++) {
+          const d = inside[y * W + px] as number;
+          if (!d) continue;
+          const col = d === 1 ? edge : d === 2 ? mid : inner;
+          c.glow(px + dx, y + dy, col, a * k * (d === 1 ? 1 : d === 2 ? 0.7 : 0.32), true);
+        }
+      }
+    }
   };
 
-/** How a view sees his forward axis: side on, toward the viewer or away from them. */
+/** How a view sees his forward axis: side on, toward the viewer or away from them, and which way it runs on screen. */
 function facing(x: FxContext): { side: boolean; away: boolean; dir: Vec } {
   const fv = x.cam.vec([1, 0, 0]);
   const fl = Math.hypot(fv[0], fv[1]);
   const side = fl > 0.45;
-  return { side, away: !side && fv[1] < 0, dir: side ? [fv[0] / fl, fv[1] / fl] : [0, -1] };
+  return { side, away: !side && fv[1] < 0, dir: side ? [fv[0] / fl, fv[1] / fl] : fv[1] < 0 ? [0, -1] : [0, 1] };
 }
 
 /**
- * The Blazing Crescent: a great crescent of flame `d` pixels out ahead of his hips, `k` its
- * strength (1 as it leaves the blade, thinning as it flies on and the game's own crescent takes
- * over). It bows the way it flies: a white-hot leading edge, gold, his orange and a red inner edge,
- * flames licking back off it and embers behind. As a sprite artist would, it is drawn opened out
- * on screen in every view: side on it bows ahead of him at the sword's height; toward the viewer
- * it is an arch over his legs at hip height; away from the viewer a smaller arch beyond his head.
- * It is always painted over him.
+ * The Blazing Crescent just as it leaves the blade, `out` pixels on from where it is born and `k`
+ * its strength (1 as it is born, thinning as it flies on): the game draws the crescent in flight,
+ * so the sprite shows only its birth and first moment. A crescent of flame bowed the way it flies,
+ * a white-hot leading edge, gold, his orange and a red inner edge, flames trailing back off its
+ * inner edge. Drawn as a sprite artist would in each view: side on it stands ahead of him, born
+ * off the end of the rising slash; toward the viewer it is a flat, bright sliver leaving low and
+ * toward them below his feet; away from them a smaller arch flying off beyond his head. It is
+ * always painted over him.
  */
 export const crescent =
-  (d: number, k: number, seed = 0): Extra =>
+  (out: number, k: number, seed = 0): Extra =>
   (x) => {
     if (k <= 0) return;
     const { c, rig, hash } = x;
     const { side, away, dir } = facing(x);
-    const h = side ? 32 : away ? 62 + d * 0.1 : 22 + d * 0.26;
-    const C = x.proj([rig.pelvis.o[0] + d, h, rig.pelvis.o[2]]);
+    const g = rig.pelvis.o;
+    // Where it is centred (hero space), its size, how wide it spreads across and how flat it
+    // lies along its flight on screen (seen end on, a crescent flying at or from the viewer is
+    // foreshortened to a sliver).
+    const C = side ? x.proj([g[0] + 44 + out, 40, g[2]]) : away ? x.proj([g[0] + 12 + out, 86, g[2]]) : x.proj([g[0] + 22 + out, 0, g[2]]);
+    const R = (side ? 25 : away ? 15 : 21) * (0.8 + 0.2 * k);
+    const wide = side ? 1.05 : away ? 1.25 : 1.45;
+    const flatten = side ? 1 : away ? 0.6 : 0.42;
+    const thick = side ? 0.35 + 0.65 * k : 0.22 + 0.4 * k;
     const across: Vec = [-dir[1], dir[0]];
-    const R = (side ? 26 + d * 0.05 : away ? 17 - d * 0.04 : 21 + d * 0.08) * (0.7 + 0.3 * k);
-    const wide = side ? 1.05 : 1.3;
-    const thick = 0.45 + 0.55 * k;
     const at = (t: number, f: number): Vec => {
       const a = rad(lerp(-80, 80, t));
       const r = R * (1 - 0.4 * f * thick);
       const back = R * 0.55 + R * 0.16 * f * thick;
-      const along = Math.cos(a) * r - back;
+      const along = (Math.cos(a) * r - back) * flatten;
       const off = Math.sin(a) * r * wide;
       return [C[0] + dir[0] * along + across[0] * off, C[1] + dir[1] * along + across[1] * off];
     };
     const bands: [number, number, RGB][] = [
-      [0, 0.14, WHITE_HOT],
-      [0.14, 0.34, GOLD],
-      [0.34, 0.62, FLAME],
+      [0, 0.16, WHITE_HOT],
+      [0.16, 0.36, GOLD],
+      [0.36, 0.62, FLAME],
       [0.62, 0.84, ORANGE],
       [0.84, 1, RED],
     ];
     const n = 28;
+    const th = (t: number): number => Math.pow(Math.sin(Math.PI * t), 0.7);
     for (let i = 0; i < n; i++) {
       const t0 = i / n;
       const t1 = (i + 1) / n;
-      const th = (t: number): number => Math.pow(Math.sin(Math.PI * t), 0.7);
-      for (const [f0, f1, col] of bands) fill(c, [at(t0, f0 * th(t0)), at(t1, f0 * th(t1)), at(t1, f1 * th(t1)), at(t0, f1 * th(t0))], col, Math.min(1, 0.45 + k));
+      for (const [f0, f1, col] of bands) fill(c, [at(t0, f0 * th(t0)), at(t1, f0 * th(t1)), at(t1, f1 * th(t1)), at(t0, f1 * th(t0))], col, Math.min(1, 0.5 + k));
     }
-    // Flames licking back off its inner edge, embers trailing behind.
+    // Flames trailing back off its inner edge (shorter seen end on), embers behind them.
+    const trailK = side ? 1 : away ? 0.25 : 0.45;
     for (let i = 0; i < 7; i++) {
-      const t = 0.12 + hash(i, 140 + seed) * 0.76;
-      const p = at(t, Math.pow(Math.sin(Math.PI * t), 0.7) * 0.9);
-      const len = (4 + hash(i, 141 + seed) * 13) * (0.5 + 0.5 * k) * (0.5 + Math.sin(Math.PI * t));
-      const wd = 1.5 + hash(i, 143 + seed) * 2;
-      const tip: Vec = [p[0] - dir[0] * len - across[0] * (t - 0.5) * 6, p[1] - dir[1] * len - across[1] * (t - 0.5) * 6 - hash(i, 142 + seed) * 3];
-      fill(c, [[p[0] - across[0] * wd, p[1] - across[1] * wd], [p[0] + across[0] * wd, p[1] + across[1] * wd], tip], i % 2 ? ORANGE : RED, 0.9 * Math.min(1, k + 0.3));
-      c.glow(tip[0] - dir[0] * 3, tip[1] - 2, GOLD, 0.9 * k);
-      c.glow(tip[0] - dir[0] * 6, tip[1] - 3, ORANGE, 0.7 * k);
+      const t = 0.14 + hash(i, 140 + seed) * 0.72;
+      const p = at(t, th(t) * 0.9);
+      const len = (4 + hash(i, 141 + seed) * 12) * (0.5 + 0.5 * k) * (0.5 + Math.sin(Math.PI * t)) * trailK;
+      const wd = 1.4 + hash(i, 143 + seed) * 1.8;
+      const tip: Vec = [p[0] - dir[0] * len - across[0] * (t - 0.5) * 6, p[1] - dir[1] * len - across[1] * (t - 0.5) * 6 - (side ? hash(i, 142 + seed) * 3 : 0)];
+      fill(c, [[p[0] - across[0] * wd, p[1] - across[1] * wd], [p[0] + across[0] * wd, p[1] + across[1] * wd], tip], i % 2 ? ORANGE : FLAME, 0.9 * Math.min(1, k + 0.3));
+      c.glow(tip[0] - dir[0] * 3, tip[1] - dir[1] * 3 - 1, GOLD, 0.9 * k);
+      c.glow(tip[0] - dir[0] * 5, tip[1] - dir[1] * 5 - 2, ORANGE, 0.7 * k);
     }
   };
 
 /**
- * Inferno Burst's fireball at a point (hero space), `k` how far it has bloomed (0 a spark, 1 full
- * size), `fade` (0 to 1) how far it has burnt out into smoke, `R` its full radius in pixels: a
+ * Inferno Burst's fireball, blooming at the sword's point, `k` how far it has bloomed (0 a spark, 1
+ * full size), `fade` (0 to 1) how far it has burnt out into smoke, `R` its full radius in pixels: a
  * white-hot heart, gold, orange and a ragged red rim of licking flame, a pale violet shock ring
- * flying out round it (`ring` 0 to 1 how far; a ring standing square to his forward axis, so side
- * on it is a tall ellipse and front on a circle), embers and smoke. Behind him (seen from behind)
- * it goes under the figure.
+ * flying out round it (`ring` 0 to 1 how far), embers and smoke. Side on it blooms at `at` (hero
+ * space) ahead of the thrust, its ring standing square to his forward axis (a tall ellipse). The
+ * game draws the great blast at the target itself, so in the other views this is the smaller bloom
+ * at the point, placed where it never covers him: toward the viewer low and just below his feet,
+ * its ring a wide ellipse on the floor; away from them over and beyond his head, painted over him.
  */
 export const fireball =
-  (at: V3, k: number, fade = 0, R = 22, ring = -1): Extra =>
+  (at: V3, k: number, fade = 0, R0 = 22, ring = -1): Extra =>
   (x) => {
-    const { c, hash } = x;
-    const P = x.proj(at);
-    const under = x.behind(at);
+    const { c, hash, rig } = x;
+    const { side, away } = facing(x);
+    const g = rig.pelvis.o;
+    const spot: V3 = side ? at : away ? [g[0] + (at[0] - g[0]) * 0.55, at[1] + 64, at[2]] : [g[0] + (at[0] - g[0]) * 0.72, 7, at[2]];
+    const R = side ? R0 : R0 * 0.62;
+    const P = x.proj(spot);
+    const under = side && x.behind(spot);
     const r = R * (0.35 + 0.65 * clamp(k, 0, 1)) * (1 + fade * 0.25);
     const hot = 1 - fade;
     const reach = Math.ceil(r * 1.35);
@@ -425,22 +579,22 @@ export const fireball =
     }
     const ringK = ring >= 0 ? ring : clamp(k * 0.6 + fade * 0.7, 0, 1);
     if (ringK > 0.05) {
-      const { side } = facing(x);
       const ex = side ? 0.42 : 1;
-      const rr = R * (0.9 + 1.0 * ringK);
+      const ey = side ? 1 : away ? 0.62 : 0.42;
+      const rr = R * (0.9 + 1.0 * ringK) * (side ? 1 : 1.35);
       const ra = 1 - ringK * 0.75;
       const n = Math.ceil(rr * 7);
       for (let i = 0; i < n; i++) {
         const th = (i / n) * Math.PI * 2;
         for (const [dr, col, al] of [[0, VIOLET_PALE, 0.95], [1, VIOLET, 0.7], [-1, WHITE_HOT, 0.5], [2, VIOLET, 0.3]] as [number, RGB, number][]) {
-          c.glow(P[0] + Math.cos(th) * (rr + dr) * ex, P[1] + Math.sin(th) * (rr + dr), col, al * ra, under);
+          c.glow(P[0] + Math.cos(th) * (rr + dr) * ex, P[1] + Math.sin(th) * (rr + dr) * ey, col, al * ra, under);
         }
       }
       // A pale haze inside the ring as the heat flashes out.
       if (fade > 0) {
         for (let dy = -Math.ceil(rr); dy <= Math.ceil(rr); dy++) {
           for (let dx = -Math.ceil(rr); dx <= Math.ceil(rr); dx++) {
-            if (Math.hypot(dx / ex, dy) > rr || Math.hypot(dx, dy) < r * 0.9) continue;
+            if (Math.hypot(dx / ex, dy / ey) > rr || Math.hypot(dx, dy) < r * 0.9) continue;
             if ((dx + dy) % 2 === 0) c.glow(P[0] + dx, P[1] + dy, VIOLET_PALE, 0.16 * ra, under);
           }
         }
@@ -465,9 +619,9 @@ export const fireball =
   };
 
 /**
- * Flashfire's wake (strength k): a lane of fire on the floor behind him (`len` pixels back from
- * his feet, burning lower toward its far end), tongues of flame standing up off it, and embers.
- * What of it is behind him goes under the figure.
+ * Flashfire's wake (strength k): a straight lane of small flames on the floor behind him (`len`
+ * pixels back from his feet, burning lower toward its far end), each standing on a glowing scorch,
+ * now and then a tall one. What of it is behind him goes under the figure.
  */
 export const trailFire =
   (k: number, len = 70, seed = 0): Extra =>
@@ -475,36 +629,60 @@ export const trailFire =
     if (k <= 0) return;
     const { c, rig, hash } = x;
     const g: V3 = [rig.pelvis.o[0] - 4, 0, rig.pelvis.o[2]];
-    const n = Math.ceil(len / 1.5);
+    // Toward or away from the viewer the lane is seen end on: there it is a broader patch of
+    // burning floor, so it never reads as a line trailing from his feet.
+    const { side } = facing(x);
+    const spread = side ? 3 : 13;
+    const n = Math.ceil(len / (side ? 3.5 : 2.5));
     for (let i = 0; i <= n; i++) {
       const t = i / n;
-      const p3: V3 = [g[0] - t * len, 0, g[2] + Math.sin(t * 9 + seed) * 2];
+      const p3: V3 = [g[0] - t * len * (side ? 1 : 0.7), 0, g[2] + (hash(i, 161 + seed) - 0.5) * spread];
       const p = x.proj(p3);
       const under = x.behind(p3);
       const a = Math.min(1, k * (1.1 - t * 0.7));
       const fade = 1 - t * 0.6;
-      for (let w = -2; w <= 2; w++) c.glow(p[0], p[1] + w * 0.7, Math.abs(w) < 1 ? WHITE_HOT : Math.abs(w) < 2 ? GOLD : ORANGE, a * (Math.abs(w) < 2 ? 0.95 : 0.6), under);
-      // A low, rolling band of flame along it, and now and then a tall tongue.
-      const low = (2.5 + 2 * Math.sin(t * 23 + seed * 1.7) + 1.5 * Math.sin(t * 57 - seed)) * fade * Math.min(1, k * 1.2);
-      if (i % 2 === 0) tongue(c, p[0], p[1], Math.max(1, low), 1.3, -0.4, a, under);
-      if (hash(i, 162 + seed) > 0.86) tongue(c, p[0], p[1], (8 + hash(i, 163 + seed) * 11) * fade * Math.min(1, k * 1.2), 1.9, -0.7 + hash(i, 164 + seed) * 0.5, a, under);
+      // A glowing scorch on the floor, and a small flame standing up off it; now and then a tall one.
+      c.glow(p[0], p[1], ORANGE, a * 0.7, under);
+      c.glow(p[0] + 1, p[1], RED, a * 0.5, under);
+      tongue(c, p[0], p[1], (3 + hash(i, 165 + seed) * 4) * fade * Math.min(1, k * 1.2), 1.3, -0.5 + hash(i, 166 + seed) * 0.4, a, under);
+      if (hash(i, 162 + seed) > 0.8) tongue(c, p[0], p[1], (7 + hash(i, 163 + seed) * 9) * fade * Math.min(1, k * 1.2), 1.8, -0.7 + hash(i, 164 + seed) * 0.5, a, under);
     }
   };
 
 /**
- * Kindle (strength k): a gold starburst of rays round him, turned `spin` degrees, embers rising
- * and a ring of fire running round his feet.
+ * Kindle (strength k): a gold starburst round him, `push` (0 to 1) how far its rays have pushed
+ * out from him: ten long, tapering rays of opaque gold alternating with ten short ones, white-hot
+ * near him, turned `spin` degrees and shining out from behind him (so they never cross his face),
+ * a white flash at his chest, a ring of fire running round his feet and embers rising.
  */
 export const kindle =
-  (k: number, spin = 0, seed = 0): Extra =>
+  (k: number, spin = 0, seed = 0, push = 0.5): Extra =>
   (x) => {
     if (k <= 0) return;
-    const gold = { core: [255, 206, 84] as RGB, edge: [255, 150, 40] as RGB, hot: [255, 250, 220] as RGB };
-    const neckY = x.proj(x.rig.neck)[1];
-    const skip = (px: number, py: number): boolean => x.c.opaque(px, py) && py < neckY;
-    rays({ ...x, aura: gold }, at3(x.rig.chest, 0, 14, 0), k, { n: 16, len: 52, spin, behind: true, skip });
-    rays({ ...x, aura: gold }, at3(x.rig.chest, 0, 14, 0), k * 0.5, { n: 8, len: 40, spin: spin + 11, skip });
     const { c, rig, hash } = x;
+    const heart = at3(rig.chest, 0, 14, 0);
+    const P = x.proj(heart);
+    const n = 20;
+    for (let i = 0; i < n; i++) {
+      const long = i % 2 === 0;
+      const ang = rad(spin + (i * 360) / n + (long ? 0 : 4));
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      const r0 = 7 + push * 8;
+      const len = (long ? 40 : 22) * (0.75 + 0.25 * Math.min(1, k)) * (0.85 + 0.3 * push);
+      const w0 = long ? 3.4 : 2.4;
+      for (let t = 0; t <= len; t += 0.5) {
+        const f = t / len;
+        const half = w0 * (1 - f) + 0.3;
+        for (let s2 = -half; s2 <= half; s2 += 0.5) {
+          const edge = Math.abs(s2) > half - 0.9;
+          const col = f < 0.22 && !edge ? WHITE_HOT : edge && f > 0.3 ? FLAME : GOLD;
+          c.glow(P[0] + ca * (r0 + t) - sa * s2, P[1] + sa * (r0 + t) + ca * s2, col, Math.min(1, k) * (1 - 0.3 * f), true);
+        }
+      }
+    }
+    // The flash at his chest.
+    if (x.cam.view !== 'back') starburst(c, P, 0.55 * Math.min(1, k), WHITE_HOT, GOLD, Math.min(1, k));
     const g = rig.pelvis.o;
     for (let i = 0; i < 20; i++) {
       const th = (i / 20) * Math.PI * 2 + rad(spin);
@@ -516,11 +694,14 @@ export const kindle =
   };
 
 /**
- * Firebeast (k 0 to about 1.3): fire rises from the floor up his body, `k` how high it has climbed
- * (1 just over the top of his hair), into a pillar of flame that swallows him: a column of fire
- * behind him as wide as he is, ragged and flickering, and over him the flame thickening the longer
- * it has burnt there, from a veil he shows through to, past k 1, nearly solid flame. Tongues lick
- * up off its top, a ring of fire burns round his feet, embers fly.
+ * Firebeast (k 0 to about 1.3): fire rises from a ring on the floor up his body, `k` how high it
+ * has climbed (1 just over the top of his hair), into a pillar of flame that swallows him. The ring
+ * is a thin ellipse of fire on the floor with flames standing up off it. Below the fire line flames
+ * stream upward round and over him: behind him a column as wide as he is; over him, at first,
+ * separate tongues of orange and gold climbing his body with his dark outline showing between
+ * them, thickening the longer they have burnt there until, past k 1, he is all but lost in the
+ * flame. Every tongue's height changes with `seed` (advance it every frame) so it flickers; the
+ * white-hot heart is a narrow core. Tongues lick up off its top and sides, embers fly.
  */
 export const pillar =
   (k: number, seed = 0): Extra =>
@@ -548,29 +729,50 @@ export const pillar =
     const half = Math.max(16, Math.min(26, (x1 - x0) / 2 + 3));
     const bottom = Math.max(y1, foot[1]) + 1;
     const tall = bottom - y0 + 8;
-    // The fire line: everything below it burns. Over the last 30 pixels below it the pillar
-    // narrows to a rounded, flickering point, as a flame does.
+    // The fire line: everything below it burns. Over the last pixels below it the pillar narrows
+    // to a rounded, flickering point, as a flame does.
     const line = bottom - tall * k;
     const w = (y: number): number => {
       const top = clamp((y - line) / Math.max(8, Math.min(30, tall * k * 0.6)), 0, 1);
       const flick = 0.9 + 0.08 * Math.sin(y * 0.21 + seed * 2.1) + 0.06 * Math.sin(y * 0.53 - seed * 1.3);
-      return half * flick * (0.12 + 0.88 * Math.sqrt(top)) * (y > bottom - 6 ? 1.12 : 1);
+      return half * flick * (0.12 + 0.88 * Math.sqrt(top));
     };
-    for (let y = Math.floor(line); y <= Math.ceil(bottom); y++) {
-      const hw = w(y);
-      const depthIn = clamp((y - line) / 22, 0, 1);
+    // Tongues streaming up: each column of two pixels is a tongue of its own, its tip a
+    // flickering way below the fire line, red-orange at the tip, gold lower down, white only in a
+    // narrow core deep inside a grown pillar. Its tips and gaps change with every frame.
+    const tipOf = (col: number): number => line + hash(col + 300, Math.floor(seed) * 7 + 3) * (8 + 14 * (1.3 - k)) + (k < 0.6 ? 6 : 0);
+    const ink = (px: number, y: number): boolean => {
+      const i = (y * c.w + px) * 4;
+      return (c.data[i] as number) < 40 && (c.data[i + 1] as number) < 32 && (c.data[i + 2] as number) < 40;
+    };
+    const grown = clamp((k - 0.45) / 0.5, 0, 1);
+    for (let y = Math.floor(line); y <= Math.ceil(bottom) - 1; y++) {
+      const hw = w(y) * (0.75 + 0.25 * grown);
       for (let dx = -Math.ceil(hw); dx <= Math.ceil(hw); dx++) {
         const px = Math.round(cx + dx);
-        const flick = hash(Math.floor(px / 2) + 60, Math.floor((y + seed * 5) / 3) + seed * 7);
-        const r = Math.abs(dx + 0.5) / hw + (flick - 0.5) * 0.16;
+        const col = Math.floor((px + 400) / 2);
+        const tip = tipOf(col);
+        if (y < tip) continue;
+        const r = Math.abs(dx + 0.5) / hw;
         if (r > 1) continue;
-        const col = r < 0.22 ? WHITE_HOT : r < 0.45 ? GOLD : r < 0.68 ? FLAME : r < 0.88 ? ORANGE : RED;
+        const into = clamp((y - tip) / (10 + 26 * grown), 0, 1);
+        const core = r < 0.13 + 0.05 * Math.sin(y * 0.3 + seed) && into > 0.7 && k > 0.85;
+        let colr: RGB = core ? WHITE_HOT : into < 0.15 ? RED : into < 0.4 ? ORANGE : into < 0.72 || r > 0.7 ? FLAME : GOLD;
+        // Some tongues burn lower than others, so the pillar is streaked as it streams.
+        const lane = hash(col, Math.floor(seed) * 3 + 11);
+        if (!core && lane < 0.4 && colr === GOLD) colr = FLAME;
         if (c.opaque(px, y)) {
-          // Over him: a veil where it has just caught, thickening to nearly solid flame.
-          const a = clamp(0.25 + depthIn * (k - 0.1) * 0.95 + (flick - 0.5) * 0.2, 0.2, 0.97);
-          c.glow(px, y, col, a);
+          // Over him: separate tongues at first (his dark body and outline between them),
+          // thickening to nearly solid flame once the fire has burnt there a while.
+          const burnt = clamp((k - 0.5) * 1.6, 0, 1) * clamp((y - line) / 30, 0, 1);
+          if (lane < 0.55 - burnt * 0.6) continue;
+          if (ink(px, y) && burnt < 0.7 && k < 0.95) continue;
+          if (burnt < 0.8 && (colr === GOLD || colr === WHITE_HOT)) colr = FLAME;
+          c.glow(px, y, colr, clamp(0.6 + burnt * 0.4, 0, 0.96));
         } else {
-          c.glow(px, y, col, clamp(0.7 + depthIn * 0.3, 0, 1) * Math.min(1, k * 2.5), true);
+          // Behind him the column rises only once the fire has climbed past his waist.
+          if (grown <= 0 || lane < 0.35 - grown * 0.35) continue;
+          c.glow(px, y, colr, clamp(0.75 + into * 0.25, 0, 1) * Math.min(1, grown * 2), true);
         }
       }
     }
@@ -580,27 +782,39 @@ export const pillar =
       const dx = (t - 0.5) * 2 * half * 0.85;
       let by = line;
       while (by < bottom && w(by) < Math.abs(dx) + 1) by++;
-      const h = (8 + hash(i, 183 + seed) * 14) * (1.1 - Math.abs(t - 0.5));
+      const h = (8 + hash(i, 183 + seed) * 14) * (1.1 - Math.abs(t - 0.5)) * Math.min(1, k * 1.5);
       tongue(c, cx + dx, by + 3, h, 2 + hash(i, 184) * 1.8, (t - 0.5) * 1.2 + (hash(i, 185 + seed) - 0.5), 0.95);
     }
     for (let i = 0; i < 10; i++) {
       const side = i % 2 ? 1 : -1;
       const yy = lerp(line + 26, bottom - 4, hash(i, 188 + seed));
+      if (yy > bottom - 4) continue;
       tongue(c, cx + side * (w(yy) - 1), yy, 5 + hash(i, 189 + seed) * 8, 1.6, side * 0.8, 0.9);
     }
-    // The ring of fire on the floor round him where it began.
-    for (let i = 0; i < 18; i++) {
-      const th = (i / 18) * Math.PI * 2;
-      const p3: V3 = [g[0] + Math.cos(th) * (half + 2), 0, g[2] + Math.sin(th) * (half + 2)];
+    // The ring of fire on the floor round him where it began: a thin ellipse of flame, and flames
+    // standing up off it (those behind him under the figure).
+    const R = half + 3;
+    for (let i = 0; i < 72; i++) {
+      const th = (i / 72) * Math.PI * 2;
+      const p3: V3 = [g[0] + Math.cos(th) * R, 0, g[2] + Math.sin(th) * R];
       const p = x.proj(p3);
-      tongue(c, p[0], p[1], (4 + hash(i, 186 + seed) * 8) * Math.min(1, k * 2), 1.6, hash(i, 187 + seed) - 0.5, 0.9, x.behind(p3));
+      const under = x.behind(p3);
+      c.glow(p[0], p[1], i % 2 ? ORANGE : GOLD, 0.9, under);
+      c.glow(p[0], p[1] - 1, RED, 0.5, under);
+    }
+    for (let i = 0; i < 16; i++) {
+      const th = (i / 16) * Math.PI * 2 + hash(i, 190 + seed) * 0.3;
+      const p3: V3 = [g[0] + Math.cos(th) * R, 0, g[2] + Math.sin(th) * R];
+      const p = x.proj(p3);
+      tongue(c, p[0], p[1], (4 + hash(i, 186 + seed) * 8) * Math.min(1, k * 2.5), 1.5, hash(i, 187 + seed) - 0.5, 0.9, x.behind(p3));
     }
     embers(Math.min(1, k), seed, [g[0], 40, g[2]], 46, 16)(x);
   };
 
 /**
- * The cast's flare (k 0 to 1) in his left hand: a burst of warm fire round his fist (Bloodrush),
- * ringed in green light of healing (`green` 0 to 1: Second Wind, the Elixir), with green motes
+ * The cast's flare (k 0 to 1) in his raised left hand: a burst of warm fire round his fist with a
+ * white-hot heart and flames licking up off it (Bloodrush), ringed in a solid ring of green light
+ * of healing with a pale inner edge (`green` 0 to 1: Second Wind, the Elixir), with green motes
  * rising round him (`rise` lifts them: advance it every frame).
  */
 export const flare =
@@ -609,24 +823,28 @@ export const flare =
     if (k <= 0) return;
     const { c, rig, hash } = x;
     const P = x.proj(rig.armL.end);
-    const under = x.behind(rig.armL.end);
-    const r = 3 + 4.5 * Math.min(1, k);
+    const under = x.behind(rig.armL.end) && x.cam.view === 'side';
+    const r = 4 + 6 * Math.min(1, k);
     for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
       for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
         const d = Math.hypot(dx, dy) / r;
         if (d > 1) continue;
-        c.glow(P[0] + dx, P[1] + dy, d < 0.3 ? WHITE_HOT : d < 0.6 ? GOLD : FLAME, (d < 0.6 ? 0.95 : 0.6) * Math.min(1, k * 1.5), under);
+        c.glow(P[0] + dx, P[1] + dy, d < 0.35 ? WHITE_HOT : d < 0.62 ? GOLD : d < 0.85 ? FLAME : ORANGE, (d < 0.62 ? 1 : 0.75) * Math.min(1, k * 1.5), under);
       }
     }
-    for (let i = 0; i < 6; i++) tongue(c, P[0] + (hash(i, 191) - 0.5) * r * 1.4, P[1] - r * 0.4, (5 + hash(i, 192) * 8) * k, 1.4, hash(i, 193) - 0.5, 0.95, under);
+    for (let i = 0; i < 7; i++) tongue(c, P[0] + (hash(i, 191) - 0.5) * r * 1.4, P[1] - r * 0.5, (6 + hash(i, 192) * 9) * k, 1.6, hash(i, 193) - 0.5, 0.95, under);
     if (green > 0) {
-      const rr = r + 3 + 5 * k;
-      for (let i = 0; i < 44; i++) {
-        const th = (i / 44) * Math.PI * 2;
-        const a = green * Math.min(1, k * 1.4);
-        c.glow(P[0] + Math.cos(th) * rr, P[1] + Math.sin(th) * rr, GREEN_PALE, 0.85 * a, under);
-        c.glow(P[0] + Math.cos(th) * (rr + 1), P[1] + Math.sin(th) * (rr + 1), GREEN, 0.55 * a, under);
+      const rr = r + 4 + 4 * k;
+      const a = green * Math.min(1, k * 1.4);
+      const n = Math.ceil(rr * 9);
+      for (let i = 0; i < n; i++) {
+        const th = (i / n) * Math.PI * 2;
+        const cs = Math.cos(th);
+        const sn = Math.sin(th);
+        c.glow(P[0] + cs * (rr - 1), P[1] + sn * (rr - 1), GREEN_PALE, 0.9 * a, under);
+        c.glow(P[0] + cs * rr, P[1] + sn * rr, GREEN, 0.95 * a, under);
+        c.glow(P[0] + cs * (rr + 1), P[1] + sn * (rr + 1), GREEN, 0.8 * a, under);
       }
-      motes({ ...x, aura: { core: GREEN, edge: GREEN, hot: GREEN_PALE } }, green * Math.min(1, k * 1.2), { n: 16, rise });
+      motes({ ...x, aura: { core: GREEN, edge: GREEN, hot: GREEN_PALE } }, green * Math.min(1, k * 1.3), { n: 20, rise });
     }
   };
