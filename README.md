@@ -27,7 +27,7 @@ npm run build
 npm start            # http://127.0.0.1:8787
 ```
 
-Open the address, pick a name, choose a role and weapon, set **AI companions fill empty roles**
+Open the address, pick a name, choose a role and a hero, set **AI companions fill empty roles**
 to **Now**, and press **Join Queue**. Accept the ready check with **Commence**.
 
 To play with friends on your network, start the server with `npm start -- --host 0.0.0.0` and
@@ -82,7 +82,7 @@ hero chooses your weapon. A role starts on its first hero until you pick another
 | Role | Strengths | Heroes |
 | --- | --- | --- |
 | **Tank** | The only hero who can take the monsters' blows: 16,000 health and 55% damage reduction. Builds three times the aggro, holds it, and loses it three times slower. Needs a healer in a long fight. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | **Dark Knight**: a two-handed greatsword · **Guardian**: sword and shield, a paladin with healing light |
-| **Mage** | Offensive and healing spells. | **Sage**: a two-handed branch staff (the healer) · **Spellblade**: a mystic sword and a wand |
+| **Mage** | Offensive and healing spells. | **Sage**: a two-handed staff crowned with an orb (the healer) · **Spellblade**: a mystic sword and a wand |
 | **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | **Arbalest**: a crossbow · **Bowmaster**: a longbow |
 | **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | **Dragoon**: a two-handed lance · **Blademaster**: twin blades · **Flame Warden**: a burning blade, and the Firebeast within |
 
@@ -260,28 +260,43 @@ a boss cannot outrun a buster on them either, and it kills anyone but a braced T
 through it as it lands (or dash through it on a skill that cannot be hurt), the way that keeps it off
 the others.
 
-![The aggro table on an Orc Ravager: the Guardian holds it, the others well behind](docs/screenshots/aggro.jpg)
+![The aggro table on a Fire Drake: the Dark Knight holds it, the others well behind](docs/screenshots/aggro.jpg)
 
 ## Heroes and clans
 
-Every role has its own heroes to choose from in the lobby, each with their own weapon. Three of
-them are big-headed chibis (see [Chibi heroes](#chibi-heroes)): the Dark Knight, a Tank, in
-blackened plate and a long oxblood coat; the Spellblade, a Mage, in a violet robe-coat with long
-silver-white hair; and the Dragoon, a Duelist, in gunmetal armour over a teal tunic, with a long
-red scarf. The Guardian wears polished plate, a white tabard and a blue cape; the Sage embroidered
-robes; the Arbalest and the Bowmaster green cloaks and quivers; and the Blademaster light leathers
-and a red scarf. Weapons are part of each hero's animation, held the way they are meant to be
-held: the Dark Knight's greatsword, the Sage's staff and the Dragoon's lance in both hands, the
-Guardian's sword and kite shield, the Spellblade's sword and wand, the Arbalest's crossbow, the
-Bowmaster's longbow and the Blademaster's twin blades.
+Every role has its own heroes to choose from in the lobby, each with their own weapon, and every
+hero is a big-headed chibi painted in code frame by frame (see [Chibi heroes](#chibi-heroes)):
 
-The Flame Warden, the third Duelist, is painted only as a chibi, and so is the Firebeast he
-becomes (`hero-flame-warden` and `hero-firebeast`). Until his chibi is registered he is drawn as
-the Spellblade, a fellow blade, in the lobby and in the dungeon; until the Firebeast's is, he keeps
-that look through the form, wreathed in firelight and embers either way (`art/heroLook.ts`).
+- **Dark Knight** (Tank): a hard-eyed young knight with long, wild, nearly black hair in jagged
+  spikes swept back from his face, blackened plate, a long open oxblood coat and an oversized black
+  greatsword.
+- **Guardian** (Tank): a paladin in polished silver plate with blue enamel and gold trim, golden
+  hair tied back under a silver circlet, a long cape, an arming sword and a kite shield with a sun
+  rising behind a white tower.
+- **Sage** (Mage): an old healer with a white mane and a full white beard, a deep blue robe with a
+  gold-embroidered stole, and a gnarled staff with a teal orb held in silver claws.
+- **Spellblade** (Mage): a slim young mage with long silver-white hair, a violet robe-coat and a
+  short cape, a slender sword and a crystal wand.
+- **Arbalest** (Ranger): a sturdy crossbowman with short ginger hair and a beard, brass goggles
+  pushed up on his brow, a weathered leather coat, a bandolier of bolts and a heavy crossbow.
+- **Bowmaster** (Ranger): a light-footed archer in a forest-green hood and short hooded cape, with
+  a dark recurve longbow and a quiver of pale-fletched arrows.
+- **Dragoon** (Duelist): a lean lancer in dark violet dragon-scale armour and an open-faced
+  dragon-crest half-helm, a long black ponytail, a violet-black cape lined in crimson and a lance
+  taller than he is.
+- **Blademaster** (Duelist): a quick duelist with a messy dark bob, a black coat lined in crimson
+  with swallowtails to her knees, and two curved sabres.
+- **Flame Warden** (Duelist): a lean swordsman with spiky black hair, a long black coat lined in
+  ember orange over a crimson shirt, and a single-edged sword glowing with heat. His ultimate turns
+  him into the **Firebeast**, a hulking beast of charred obsidian hide cracked with magma, with a
+  mane of living flame.
 
-Heroes turn to face where they are aiming: side on to the left and right, toward you when they
-face down the screen and away from you when they face up it, in every clip.
+Weapons are part of each hero's animation, held the way they are meant to be held: the Dark
+Knight's greatsword, the Sage's staff and the Dragoon's lance in both hands, the Guardian's sword
+and kite shield, the Spellblade's sword and wand, the Arbalest's crossbow shouldered, the
+Bowmaster's longbow drawn to her chin, the Blademaster's twin sabres and the Flame Warden's
+burning blade. Heroes turn to face where they are aiming: side on to the left and right, toward
+you when they face down the screen and away from you when they face up it, in every clip.
 
 ![Every hero toward you, side on and away, through every clip](docs/screenshots/hero-facings.webp)
 
@@ -289,21 +304,18 @@ face down the screen and away from you when they face up it, in every clip.
 
 ### Animation
 
-Every monster and boss, and the five heroes not yet chibi, is animated through five clips (the
-three chibi heroes have sixteen of their own: see [Chibi heroes](#chibi-heroes)):
+Heroes have sixteen clips each (see [Chibi heroes](#chibi-heroes)). Every monster and boss is
+animated through five:
 
-| Clip | When it plays | Heroes |
+| Clip | When it plays | Monsters and bosses |
 | --- | --- | --- |
-| **Idle** | Out of combat | Relaxed, breathing: the Guardian's sword hangs point down, the staff is leaned on |
-| **Battle** | While a fight is on nearby | A low, wide fighting stance, weapon raised and ready (the Guardian's behind her shield), bouncing on the balls of the feet |
-| **Move** | Running | A full sprint: long strides, a hard forward lean, capes, scarves and hair streaming, dust kicked up |
-| **Action** | Basic attacks | A big wind-up, then the weapon's own blow with a motion smear: a cut over the shield's rim, a thrust of the staff, a crossbow shot, a drawn and loosed arrow, a crossing double cut |
-| **Skill** | Skills and spells | Gathering a glow in the role's colour, then the weapon's signature move: a sword raised to gather light and driven into the ground in a burst, a magic circle and a blast of light, a three-bolt volley, arrows loosed at the sky, a storm of blades |
+| **Idle** | Out of combat | Breathing, a robe or a wraith swaying |
+| **Battle** | While they are after someone | A ready stance, bouncing |
+| **Move** | Walking | Legs stepping, the body rising and falling |
+| **Action** | Basic attacks | A wind-up, then a lunge into the blow with a motion smear, and a recovery |
+| **Skill** | Skills and spells | A crouch gathering their clan's glow, then a release with a flash |
 
-Monsters and bosses walk, stand ready, lunge and gather their clan's glow the same way. Dodging
-plays as a dash with after-images.
-
-![The cast cycling through idle, battle, move, action and skill](docs/screenshots/cast-animation.webp)
+![Monsters and bosses cycling through idle, battle, move, action and skill](docs/screenshots/cast-animation.webp)
 
 The server tells every client when anyone attacks or uses a skill, and how long they wind up, so
 everyone sees the same animation in time with the telegraphs. Characters still flash when hit and
@@ -328,69 +340,111 @@ The art lives in `src/client/art/`. Monsters and bosses are transparent pixel sp
 `creatures/`, each with a ground anchor and a display height. Their frames are built as they load
 (`animation.ts`): each gets a rig (`rigs.ts`) of two legs, a robe, four legs, a hovering form, or a
 rigid object such as a totem, and the rig is posed frame by frame, bending the original artwork.
-
-The heroes not yet chibi are painted frame by frame (`heroes/`): a skeleton is posed for every frame
-(`moves.ts` holds the choreography), knees and elbows are solved to reach the feet and hands, and
-the body, robes, capes, hair and weapon are drawn on it as outlined, cel-shaded pixel shapes. Side
-on, each hero's face and hair are cut from their artwork in `creatures/`.
-
-For the front and back (`turned.ts`), the same choreography is lifted into 3D: the body gets its
-breadth, hands and weapons their place to either side, and blows swing on a slant so they sweep
-across the body. The figure is then drawn from in front or behind through the dungeon's tilted
-camera, so whatever is nearer the viewer sits lower on screen. Faces and the backs of heads are
-painted from each hero's hairdo (`heads.ts`): cut, colour, beard and ears. Side-on frames are
-painted first so a hero animates at once; the turned ones follow in the background.
+Heroes have no artwork to bend: they are painted in code (`heroes/chibi/`), and their lobby and
+title portraits are painted from their battle stance.
 
 ### Chibi heroes
 
-Three heroes are chibis (`heroes/chibi/`): the Dark Knight (a Tank), the Spellblade (a Mage) and
-the Dragoon (a Duelist). Each is a big-headed pixel hero 80 to 85
-pixels tall, a third of it head and hair, painted in code frame by frame from a 3D rig. Every
-pose is solved in 3D and painted in three views: side on (a three-quarter view, mirrored to face
-left), toward you and away from you. The other five heroes still use the skeleton painter above.
+Every hero is a chibi (`heroes/chibi/`): a big-headed pixel hero about 80 to 85 pixels tall (two
+to two and a bit tiles in the dungeon), a third of it head and hair, painted in code frame by frame from a 3D rig.
+Every pose is solved in 3D and painted in three views: side on (a three-quarter view, mirrored to
+face left), toward you and away from you. The Firebeast, the form the Flame Warden takes, is one
+too: bigger, 108 pixels and about 2.6 tiles tall.
 
 Each has the same sixteen clips. The server's act event names the skill used (`s`) and the hit of
-the combo (`c`), so everyone sees the right one. The Dark Knight is a stern young knight with a
-shaggy dark-chestnut wolf cut (a big, ragged crown of choppy pieces, a piece-y fringe to his brows,
-short sides and longer pointed layers that fall onto his high collar and flick out at the ends),
-blackened plate with dull silver edges, a long open oxblood coat
-with a high collar and split tails, and an oversized black greatsword with a pale edge, a
-saw-toothed back and a crimson rune that blazes when he fights. His swings leave white-hot arcs
-that fade through crimson, and his skills burn crimson with a violet edge
-(`heroes/chibi/darkKnight/`):
+the combo (`c`), so everyone sees the right one. The weapon-skill clips are named after the
+skill's hotbar slot, so a skill plays the clip of its slot whatever its weapon. When several apply
+(`game/chibiState.ts`), knocked out wins, then an attack or skill playing out, then running or
+dodging, then the victory pose (which holds its last frame), a flinch, kneeling, the battle stance
+and idling. The skill and state clips take the weapon up from where the battle stance holds it,
+and those that give way to the stance end in it. Wind-up frames stretch over the wind-up the
+server times; a ranged hero looses on the first frame after them, with a flash at the tip, when
+the game launches its own projectile.
 
-| Clip | Frames | Played by | The Dark Knight |
-| --- | --- | --- | --- |
-| `idle` | 8 | Out of combat | Breathing, the greatsword on his shoulder, the coat swaying |
-| `battle` | 8 | A fight nearby | A low, wide guard, the blade held forward and across, bouncing |
-| `move` | 8 | Running and dodging | A sprint, the blade trailing low behind him, the coat streaming |
-| `atk1`, `atk2`, `atk3` | 7, 7, 9 | The basic attack's three hits | A diagonal cut, a rising backhand, then a spin, a leap and a slam with a shockwave |
-| `special` | 5 | Parry | The blade up across his body: a clang, sparks, a braced skid |
-| `q` | 8 | Stalwart Charge | A shoulder-first dash with crimson afterimages and a skidding stop |
-| `e` | 10 | Eclipse | A full turn with the blade held out level inside a ring of steel |
-| `r` | 10 | Drain | The blade plunged into the ground, wisps of stolen life drawn into him |
-| `ult` | 16 | Ruination | A mist of blood, a leap, four blows as he falls and a ground slam |
-| `cast` | 8 | Role skills (Challenge, Rallying Bulwark) and the Elixir | A roar, the blade thrown high, an aura burst over a rune circle |
-| `hurt` | 3 | A blow gets through | A flinch, the coat flicked forward |
-| `kneel` | 4 | Below a quarter of his health | Down on one knee, leaning on the planted blade, panting |
-| `ko` | 6 | Knocked out | He staggers, drops to his knees and falls on his back |
-| `victory` | 8 | The dungeon cleared, while he stands still | The blade twirled overhead, then rested on his shoulder with a smirk |
+| Clip | Played by |
+| --- | --- |
+| `idle`, `battle`, `move` | Out of combat; a fight nearby; running and dodging |
+| `atk1`, `atk2`, `atk3` | The basic attack's three hits |
+| `special`, `q`, `e`, `r`, `ult` | The weapon's skills by hotbar slot: RMB, Q, E, R and F |
+| `cast` | Role skills and the Elixir |
+| `hurt`, `kneel`, `ko`, `victory` | A blow that gets through; below a quarter of their health; knocked out; the dungeon cleared |
 
-The weapon-skill clips are named after the skill's hotbar slot, so a skill plays the clip of its
-slot whatever its weapon. When several apply (`game/chibiState.ts`), knocked out wins, then an
-attack or skill playing out, then running or dodging, then the victory pose (which holds its last
-frame), a flinch, kneeling, the battle stance and idling. The skill and state clips take the
-weapon up from where the battle stance holds it, and those that give way to the stance end in it.
+**The Dark Knight**, a Tank, is a hard-eyed young knight about 84 pixels tall. His long, wild,
+nearly black-brown hair is all jagged spikes swept back from his face: three or four spiky bangs
+fall over his brow between his eyes, spikes stick out at his sides behind the ears, and the
+longest fall past his nape onto his upper back and flare out. His face is set and tough: narrow
+red-brown eyes under heavy brows angled down to his nose, and a strong jaw. He wears blackened
+plate with dull silver edges, a long open oxblood coat with a high collar and split tails, and
+carries an oversized black greatsword with a pale edge, a saw-toothed back and a crimson rune that
+blazes when he fights. His swings leave white-hot arcs that fade through crimson, and his skills
+burn crimson with a violet edge (`heroes/chibi/darkKnight/`):
 
-The Spellblade, a Mage, is a slim, quick young mage about 80 pixels tall with a soft,
-fair face: long, straight silver-white hair to the middle of her back, two long locks framing
-her face and a small gold crescent pin in her side-swept fringe, a fitted violet robe-coat with a
-high gold-edged collar, cut away at the front and falling to the knee behind, over a pale
-lavender under-dress, a violet sash with a gold buckle, a short deep-violet cape, dark plum
-leggings and slim pointed boots. She fights with a slender sword with a violet fuller in her
-right hand and a short wand with a violet crystal in her left. Her blows leave white-edged violet
-arcs; her spells are gold runes, violet lightning and green-gold healing light
-(`heroes/chibi/spellblade/`):
+| Clip | Frames | The Dark Knight |
+| --- | --- | --- |
+| `idle` | 8 | Breathing, the greatsword on his shoulder, the coat swaying |
+| `battle` | 8 | A low, wide guard, the blade held forward and across, bouncing |
+| `move` | 8 | A sprint, the blade trailing low behind him, the coat and his spikes streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A diagonal cut, a rising backhand, then a spin, a leap and a slam with a shockwave |
+| `special` | 5 | Parry: the blade up across his body, a clang, sparks, a braced skid |
+| `q` | 8 | Stalwart Charge: a shoulder-first dash with crimson afterimages and a skidding stop |
+| `e` | 10 | Eclipse: a full turn with the blade held out level inside a ring of steel |
+| `r` | 10 | Drain: the blade plunged into the ground, wisps of stolen life drawn into him |
+| `ult` | 16 | Ruination: a mist of blood, a leap, four blows as he falls and a ground slam |
+| `cast` | 8 | A roar, the blade thrown high, an aura burst over a rune circle |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the coat flicked forward; on one knee leaning on the planted blade, panting; a stagger, onto his knees and onto his back; the blade twirled overhead, then rested on his shoulder with a smirk |
+
+**The Guardian**, a Tank, is a paladin about 82 pixels tall, sturdy but lighter than the Dark
+Knight, kind but steely: golden hair swept back and tied low with a blue ribbon under a slim silver
+circlet with a blue gem, polished silver plate with a blue enamel panel edged in gold, rounded
+pauldrons, a short blue tabard and a violet-navy cape lined in crimson. She carries a long arming
+sword with a gold guard, whose fuller glows gold in her skills, and a large kite shield strapped
+to her left forearm: a blue field in a broad gold rim, a sun rising behind a white tower. Her light
+is gold and white with a pale blue edge (`heroes/chibi/guardian/`):
+
+| Clip | Frames | The Guardian |
+| --- | --- | --- |
+| `idle` | 8 | Upright, the sword hanging point down, the shield resting point down by her foot, the cape and her tail swaying |
+| `battle` | 8 | On guard behind the shield, its face to you, the sword cocked high over her shoulder to cut over its rim |
+| `move` | 8 | A sprint, the shield carried forward, the sword trailing low behind her, the cape streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A diagonal cut over the shield's rim; a rising backhand up the same line; the shield driven in with a burst of light, then a heavy chop that rings off the floor with a shockwave |
+| `special` | 6 | Aegis: the shield swung up square before her and set, a gold glint running down its face |
+| `q` | 8 | Flash: a dash shield first in a flash of light, gold afterimages, a skid and a braced stop |
+| `e` | 10 | Mend: the sword raised point up before her face, eyes closed, a column of gold light pouring down on her |
+| `r` | 10 | Shield's Up!: a dome of gold hexagons rises over her and holds, then breaks outward in gold shards |
+| `ult` | 14 | Luminaire: light gathers on the raised sword, then rays of light burst out all round her and flood the floor |
+| `cast` | 8 | The sword's flat struck on the shield's rim with a ring of light, then raised high, rays off its point |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the shield arm flung wide; on one knee behind the shield planted on its point; a stagger and a fall onto her back, the shield flat beside her; the sword wheeled round and raised beside her head with a glint and a smile |
+
+**The Sage**, a Mage and the party's healer, is an old, wise mage about 80 pixels tall (92 to the
+orb of his staff at rest): weathered skin, kind but stern blue-grey eyes under bushy white brows, a white
+mane to his shoulders, a full white beard to the middle of his chest that sways as he moves, a
+full-length deep blue robe with wide sleeves and gold trim, a gold-embroidered stole, a hood lying
+down behind his neck, and a staff taller than he is: gnarled dark wood bound in silver, a glowing
+teal orb held in silver claws. His bolts and wards burn teal, his healing glows gold-green and his
+Meteor fiery orange (`heroes/chibi/sage/`):
+
+| Clip | Frames | The Sage |
+| --- | --- | --- |
+| `idle` | 8 | Stooped a little, leaning on the planted staff, his left hand behind his back, the beard and robe swaying |
+| `battle` | 8 | Straightened, the staff in both hands slanted forward, the orb pulsing at his brow, a slow sway |
+| `move` | 8 | An old man's hurried run, short strides under the robe, beard, hair and robe streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 8 | Arcane Bolts: a flick of the staff, a backhand sweep, then a ball of light swelling in the orb and hurled two-handed |
+| `special` | 7 | Mending Light: the orb turns gold-green and swells, then a soft crescent of healing light leaves it for the aim |
+| `q` | 7 | Arcane Orb: the staff swung back while a great teal orb forms, then swung forward to push it away |
+| `e` | 10 | Sanctuary: the staff struck down upright, a ring of teal runes and soft columns of healing light rising round it |
+| `r` | 10 | Meteor: the staff thrust at the sky, a fiery sigil opening above it, then swept down at the aim as a ball of fire bursts out |
+| `ult` | 16 | Resurrection: a long chant, the staff raised overhead at the top of a pillar of gold light, rings and feathers of light rising, then a burst of warm rays |
+| `cast` | 8 | A quick twirl of the staff in a teal arc, then planted with the orb flaring and a teal circle under him |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the beard and robe flicked forward; on one knee leaning on the staff, a hand to his chest; a crumple onto his back, the beard spilling over his chest; the staff raised high, the orb blazing, chin up and a warm smile |
+
+**The Spellblade**, a Mage, is a slim, quick young mage about 80 pixels tall with a soft, fair
+face: long, straight silver-white hair to the middle of her back, two long locks framing her face
+and a small gold crescent pin in her side-swept fringe, a fitted violet robe-coat with a high
+gold-edged collar, cut away at the front and falling to the knee behind, over a pale lavender
+under-dress, a violet sash with a gold buckle, a short deep-violet cape, dark plum leggings and
+slim pointed boots. She fights with a slender sword with a violet fuller in her right hand and a
+short wand with a violet crystal in her left. Her blows leave white-edged violet arcs; her spells
+are gold runes, violet lightning and green-gold healing light (`heroes/chibi/spellblade/`):
 
 | Clip | Frames | The Spellblade |
 | --- | --- | --- |
@@ -401,54 +455,175 @@ arcs; her spells are gold runes, violet lightning and green-gold healing light
 | `special` | 7 | Runic Ward: the wand raised ahead of her face drawing a circle of light, a ring of her own gold runes spinning up round her and closing over her as a dome |
 | `q` | 8 | Spellblade Rush: coiled low, then a dash with the point thrust ahead, violet afterimages and streaks of speed, a braced skid |
 | `e` | 8 | Arc Lightning: the wand drawn back by her shoulder, then thrust ahead as lightning crackles from its crystal |
-| `r` | 10 | Lifebinding Sigil: the sword driven point down into the floor and she bends over it; a green-gold rosette blooms round her and petals of light spiral up |
-| `ult` | 14 | Astral Cleave: the sword raised high while the wand pours light into it and a great translucent blade grows from its point, then a two-handed cleave that slams it along the floor and a rift of light running on the way she faces |
+| `r` | 10 | Lifebinding Sigil: the sword driven point down into the floor; a green-gold rosette blooms round her and petals of light spiral up |
+| `ult` | 14 | Astral Cleave: the sword raised high while the wand pours light into it and a great translucent blade grows from its point, then a two-handed cleave and a rift of light running on the way she faces |
 | `cast` | 8 | The wand twirled in an arc of light and flung up high in a flourish, a quick spell circle and sparkles spiralling up |
-| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the coat and cape flicked forward; on one knee by the planted sword, the wand hand on her chest, a bead of sweat; a stagger and a crumple onto her back, the hair fanned out over the floor; a twirl with an arc of light, then the sword held out high to her right, a hand on her hip and a wink |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the coat and cape flicked forward; on one knee by the planted sword, the wand hand on her chest; a stagger and a crumple onto her back, the hair fanned out over the floor; the sword held out high to her right, a hand on her hip and a wink |
 
-The Dragoon, a Duelist, is a lean, long-legged young lancer about 85 pixels tall with
-a cocky half-smile: jet-black hair with a blue sheen tied high in a long ponytail with a red cord,
-a long red scarf round his neck and jaw with two tails streaming behind him, light gunmetal armour
-(a breastplate, one layered pauldron on his leading shoulder, vambraces and greaves) over a teal
-tunic with a split skirt, and a halberd-lance longer than he is tall: a dark lacquered haft, a
-leaf-shaped point with a jade channel, an axe blade, a back spike, flared lugs and a teal ribbon.
-His thrusts leave spiralling drills of jade wind, his sweeps and spins rings of it
-(`heroes/chibi/dragoon/`):
+**The Arbalest**, a Ranger, is a compact, sturdy crossbowman about 84 pixels tall with a tanned,
+weathered face, sharp grey-green eyes, short ginger hair swept back and a short ginger beard, brass
+goggles with amber lenses pushed up on his forehead, a weathered brown leather coat belted over a
+slate-blue padded jerkin, a steel pauldron on his leading shoulder and a bandolier of bolts across
+his chest. His heavy crossbow has a walnut stock with brass bands, a steel prod, a cocking lever he
+racks after every shot, and bolts with orange fletching. His shots flash amber with a white core
+and leave pale gold trails (`heroes/chibi/arbalest/`, with his gear and effects in `gear.ts` and
+`effects.ts`):
+
+| Clip | Frames | The Arbalest |
+| --- | --- | --- |
+| `idle` | 8 | At ease, the crossbow at his hip, his thumb hooked in his belt, a glance aside |
+| `battle` | 8 | The crossbow shouldered, feet planted wide and braced, a soldier's steady breathing |
+| `move` | 8 | A heavy run, the crossbow at his hip, the coat tails flicking |
+| `atk1`, `atk2`, `atk3` | 6, 6, 7 | Cheek to the stock, then the string snaps forward with a flash and a trail and the lever is racked; the same from a lower crouch; a heavier shot that kicks him back a step |
+| `special` | 8 | Piercing Bolt: a steadied aim, the bolt's head glowing, a white-hot streak and a strong kick |
+| `q` | 9 | Explosive Bolt: the loaded bolt burning amber, a fiery muzzle burst, a fresh glowing bolt laid in |
+| `e` | 9 | Tumble Shot: a snap shot from a crouch as he springs back into a backward roll, up on one knee |
+| `r` | 8 | Scattershot: braced low, a blast of shrapnel fanning out in a cone of sparks, a skid back |
+| `ult` | 16 | Siege Barrage: feet planted, a rapid string of bolts across a narrow arc, racking between shots, the last the heaviest |
+| `cast` | 8 | The crossbow slung on his back, a bandage bound round his forearm in warm motes, then shouldered again |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the crossbow's nose flung up; on one knee, the crossbow across his thigh; a fall onto his back, the crossbow skidding away; the crossbow propped on his shoulder, goggles pulled down, a grin |
+
+**The Bowmaster**, a Ranger, is a slim, light-footed archer about 80 pixels tall, calm and
+keen-eyed: a forest-green hood worn up over dark brown hair (it falls back in her victory and her
+fall), a short hooded cape to her elbows, a dark leather jerkin laced up the front over cream
+sleeves, bracers and a shooting glove, tan trousers and tall boots. She holds a recurve longbow of
+dark reddish wood with horn tips in her left hand and draws it to her chin with her right, its
+limbs bending and the string running through her fingers, with a quiver of pale-fletched arrows on
+her back. Her effects are a verdant green-gold, her ultimate's dark arrow violet-black
+(`heroes/chibi/bowmaster/`):
+
+| Clip | Frames | The Bowmaster |
+| --- | --- | --- |
+| `idle` | 8 | At ease, the bow upright in her left hand, a glance toward you, the cape swaying |
+| `battle` | 8 | A light, bladed stance, the bow canted low with an arrow nocked, a springy bounce |
+| `move` | 8 | A light, quick run, the bow carried low ahead of her, the cape streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A snap to full draw, loosed with a flash and a streak, then a fresh arrow from the quiver; a snap shot from a low crouch; a skip back and a full draw loosed hard as she lands |
+| `special` | 8 | Charged Shot: a slow full draw as light gathers at the arrowhead, then a huge flash and a long streak that rocks her back |
+| `q` | 9 | Volley: leaning back, three arrows loosed at the sky one after another |
+| `e` | 7 | Snare Trap: a coiled snare unhooked from her belt and tossed underarm toward the aim |
+| `r` | 8 | Fan of Arrows: five arrows on the string, the bow canted flat, loosed in a level fan |
+| `ult` | 12 | Rain of Ruin: a crouch gathering dark power, a leap, a dark arrow loosed skyward in a violet streak, a landing as green sparks fall |
+| `cast` | 8 | A light backflip, the bow kept out to her side, landing in a crouch |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the bow flung out; on one knee, the bow planted on its tip; a fall onto her back on her spread cape, the hood sliding back; the arrow twirled and slid into the quiver, the hood pushed back, a smile and a wink |
+
+**The Dragoon**, a Duelist, has a new look: a lean, long-legged young lancer about 84 pixels tall to
+the top of his helm (93 to the tips of its frills), narrow amber eyes and a cocky half-smile, in light dragon-styled armour
+of dark indigo steel with pale lilac edges. His open-faced dragon-crest half-helm has a brow band
+dipping to a snout point over his nose, overlapping scales on the cheek guards, and a frill of three
+swept-back blades behind each temple like a dragon's folded wing; his jet-black hair, blue in its
+sheen, shows at the fringe and falls from under the back of the helm in a long ponytail. A
+scale-patterned breastplate, layered wing-like pauldrons swept back to points, vambraces ending in
+claws over the knuckles and greaves with a spur at the knee go over a charcoal under-suit, with a
+violet-black cape to below the knee, lined in crimson and cut like a wing's trailing edge. His lance
+is taller than he is: a dark steel shaft with violet wraps, a long leaf point glowing violet and a
+vamplate of spread dragon wings below it. His energy is violet with a pale lilac edge and a
+white-hot core (`heroes/chibi/dragoon/`):
 
 | Clip | Frames | The Dragoon |
 | --- | --- | --- |
-| `idle` | 8 | The lance resting on his shoulder, sloping up behind him, a thumb in his belt, a smirk |
-| `battle` | 8 | A low, bladed spear stance, left side leading, bouncing on his toes |
-| `move` | 8 | A sprint, the lance trailing behind him, scarf and ponytail streaming |
-| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A straight, low thrust; an overhand thrust from high by his ear; then a deep coil, a hop and a lunge from the butt end, each landing with a white-hot flash |
-| `special` | 7 | Sweeping Strike: the haft swung round low and wide, a ring of wind, a gust |
-| `q` | 8 | Piercing Thrust: a deep lunge, the front hand sliding up the haft, a long drill of wind |
-| `e` | 11 | Vault Strike: a pole vault, the butt planted well ahead and his legs swung up and over the haft, a flip and the point driven into the floor |
-| `r` | 10 | Whirling Lance: two fast turns with the haft held level, a ring of wind |
-| `ult` | 12 | Skewer: the lance couched, a charge with jade afterimages behind and a cone of wind ahead of the point, a great burst, a skid |
-| `cast` | 8 | The lance twirled once round his hips and planted, a burst of wind |
-| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted lance; a fall, the lance clattering down; a twirl, then the lance planted beside him, a hip cocked and a grin |
+| `idle` | 8 | The lance shouldered, sloping up and back past his head, a thumb in his belt, sparks drifting off the point |
+| `battle` | 8 | A low, bladed spear stance, left foot and hand leading, the point forward and up, bouncing on his toes |
+| `move` | 8 | A sprint, the lance carried low at his hip with its point trailing, the cape and ponytail streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A quick low jab; a downward stab from high by his ear; a deep coil, a hop and a long lunge from the butt end of the haft with a burst of violet energy |
+| `special` | 7 | Sweeping Strike: the lance swung round low and wide, a level violet arc and a gust |
+| `q` | 8 | Piercing Thrust: drawn far back while the point gathers its glow, then a deep lunge and a long spiral of violet energy |
+| `e` | 11 | Vault Strike, the dragoon's jump: a crouch, a launch straight up and out of the frame, then a dive back point first with the cape spread like wings, landing in a burst of rays and a ring |
+| `r` | 10 | Whirling Lance: two fast turns with the haft held level, a violet ring round him |
+| `ult` | 12 | Skewer: the lance couched, a charge in long bounding strides with violet echoes behind him and a spearhead of light at the point, a great burst and a skidding stop |
+| `cast` | 8 | The lance spun once round his hips and planted upright, a flare of violet rays |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the lance jerked up and back; on one knee leaning on the planted lance; a fall, the lance clattering down and the cape spilling; the lance twirled in a violet wheel and planted, a hip cocked and a grin |
 
-A chibi hero's frames (375 for the Dark Knight, 369 for the Spellblade, 372 for the
-Dragoon, a third of them per view) are painted in the background as a dungeon loads, a few
-milliseconds at a time. Each frame is cropped to what is painted and the crops are shelf-packed
-into one atlas per view (`atlas.ts`), 800 to 1,200 pixels on a side. Side on comes first; the
-views toward and away from you follow once the rest of the party and the monsters have their
-frames; until then the hero is drawn side on whichever way they face.
+**The Blademaster**, a Duelist, is a slim, quick young duelist about 80 pixels tall with pale skin,
+sharp crimson eyes and a confident smirk, a short, messy dark-brown bob with an upright lock on her
+crown that springs as she moves, held back by a small clip shaped like crossed blades, a fitted
+black coat with a high collar, crimson cuffs and swallowtails lined in crimson, a wine-black vest, a
+crimson sash and black boots to the knee. She fights with two curved sabres of dark steel with a
+crimson edge that blazes as she strikes; her cuts leave crimson arcs and her spins a violet-blue
+whirlwind (`heroes/chibi/blademaster/`):
+
+| Clip | Frames | The Blademaster |
+| --- | --- | --- |
+| `idle` | 8 | A hip cocked, one sabre resting on her shoulder and the other held reversed along her forearm |
+| `battle` | 8 | Low and coiled like a cat about to spring, one sabre forward at eye height, the other reversed and low |
+| `move` | 8 | A fast, low sprint, both sabres trailing back from her hips like wings |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | A cut ripped down across her body; the other blade's rising reverse answer; a full turn with both blades out, then both swept flat across in front of her, crossing |
+| `special` | 7 | Rising Slash: a deep crouch, then both sabres ripped up in rising crimson arcs as she springs off the floor |
+| `q` | 10 | Whirlwind: two full turns with both blades level inside bands of violet-blue wind |
+| `e` | 8 | Blademaster's Lunge: a lunge so low her body is nearly level, crimson afterimages behind her, the blades whipped forward in a scissor as she skids to a stop |
+| `r` | 10 | Executioner: both blades crossed high, a hop, then a giant crimson X slammed down through the floor |
+| `ult` | 14 | Cataclysm Blades: a huge violet-blue funnel of wind gathers round her, then a ruinous spin inside it, crimson slash marks cut all round her |
+| `cast` | 8 | The blades crossed under her chin, a crimson flare climbing her body from a sigil on the floor |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, both blades flung out; on one knee, one sabre planted ahead, the other held back ready; a fall onto her back, both sabres clattering down; both blades twirled, then crossed behind her back with a smirk and a wink |
+
+**The Flame Warden**, the third Duelist, is a lean, quick young swordsman about 84 pixels tall with
+tanned skin, sharp amber-orange eyes that glow faintly, and black hair in spikes swept back from his
+face whose ends flick up like flames, warming to a red-orange sheen in his skills. He wears a long
+black coat with a high collar and coat-tails to the calves, lined in ember orange that flashes when
+it streams, a short black hooded cape with the hood down, a crimson shirt under a dark leather
+strap, a blackened-iron pauldron and gauntlet on his sword arm, and armoured boots. His single-edged
+longsword is dark steel whose edge glows with heat from orange to white-hot. His fire is orange with
+a gold edge and a white-hot heart, his blasts ringed in pale violet shock, his buff a gold starburst
+(`heroes/chibi/flameWarden/`, his fire in `fire.ts`):
+
+| Clip | Frames | The Flame Warden |
+| --- | --- | --- |
+| `idle` | 8 | Weight on his back foot, the sword hanging at his side, a fist on his hip and a smirk, embers rising off the blade |
+| `battle` | 8 | A low, forward-leaning crouch, always about to spring, the blade trailing low behind him, its edge glowing |
+| `move` | 8 | A sprint, leaning hard, the blade trailing low, the coat streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | Ember Slash: a rising slash in a blazing arc; a downward diagonal cut; a full turn with the blade out inside a ring of fire, ending in a sweep that bursts into flame |
+| `special` | 7 | Blazing Crescent: a rising slash that throws a crescent of flame off the blade's edge |
+| `q` | 8 | Flashfire: a low dash in place, afterimages in his fire and a lane of fire on the floor, a skid in a spray of embers |
+| `e` | 9 | Inferno Burst: the blade thrust ahead, a fireball blooming at its point with a pale violet shock ring |
+| `r` | 10 | Kindle: fists clenched, then thrown upright in a gold starburst of rays, his hair and coat lifting in the heat |
+| `ult` | 10 | Firebeast: fire rises from a ring at his feet up his body as he roars, engulfing him in a pillar of flame |
+| `cast` | 8 | A hand raised high, a flare of fire in it ringed with green light of healing |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the coat tails flicked forward; on one knee, leaning on the planted sword, its fire burnt low; a fall on his side, the coat spread over the floor; the sword flicked to shake its flames off, then rested on his shoulder with a grin |
+
+**The Firebeast** is the form he takes: an upright, hunched and hulking beast on the same biped rig
+but bigger (about 108 pixels tall), charred obsidian hide and plates cracked with glowing magma
+seams, a great mane of living flame round its head and shoulders, white-gold eyes ringed in the
+Warden's amber, a fanged muzzle whose maw glows red, long dark claws with white-hot points like his
+blade's glow, digitigrade legs, a thick tail with a mane of flame along its end, and a scrap of his
+crimson shirt knotted round its waist with a tatter of his black coat behind. Its fire flickers
+every frame (`heroes/chibi/firebeast/`, its fire in `fire.ts`). The game plays its stances, run,
+claw chain, `ult` and `cast`; the rest exist as every chibi's must:
+
+| Clip | Frames | The Firebeast |
+| --- | --- | --- |
+| `idle`, `battle`, `move` | 8, 8, 8 | Hunched and breathing fire between breaths; a low crouched snarl, both claws up; a loping run on two legs, the mane and tail streaming |
+| `atk1`, `atk2`, `atk3` | 7, 7, 9 | The claw chain: a raking claw down across in front; a rising backhand scooped up from the floor; rearing up, then a lunging maul of both claws into the floor, fire bursting up with a pale violet shock ring |
+| `ult` | 7 | It emerges: the column of fire the Warden's `ult` ended on bursts open round it as it roars, arms flung wide |
+| `cast` | 8 | It collapses back into flame, curling down into the same column, which hides it as the Warden returns |
+| `special`, `q`, `e`, `r` | 6, 8, 8, 8 | A roar breathing a gout of fire; a pounce in fiery afterimages; both fists hammered into the floor; a flexing roar in a gold starburst |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, its fire flaring; down on one knee, its fire burning low; a collapse into embers and smoke; a roar at the sky in a burst of flame |
+
+A chibi hero's frames (339 to 375, a third of them per view) are painted in the background as a
+dungeon loads, a frame at a time in slices of about 12 milliseconds, so the page never stalls (a
+frame takes 4 to 8 milliseconds on average in Node). Each frame is cropped to what is painted and the crops
+are shelf-packed into one atlas per view (`atlas.ts`), 700 to 1,300 pixels on a side. Side on comes
+first; the views toward and away from you follow once the rest of the party and the monsters have
+their frames; until then the hero is drawn side on whichever way they face, and before their side
+view is painted, as a plain figure.
 
 To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 
 - a design file (`ChibiDesign` in `design.ts`): proportions, four-tone materials, aura colours,
   and:
-  - the head (`head.ts`): its locks of hair (a lock with `bob` stands up from the crown and
-    springs as he moves, an ahoge); long hair if it has any (a curtain down the back laid out
-    with `curtain`, locks over the shoulders, a tied ponytail with a `sheen` for glossy dark hair;
-    short layers at the nape, painted with the head, whose ends can `flip` out, as in a layered
-    cut); hair worn up (`buns`: one or two buns, a twist, a high updo); facial hair (a `beard`,
-    laid out full, short or pointed by `beard`, and a `moustache`, which hang from the jaw, sway
-    with the wind, show beside the jaw from behind and leave every expression readable; a beard's
-    tresses pass over or under a held item by which is nearer where they cross); and a face style
-    (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own glyphs) with a resting expression;
+  - the head (`head.ts`): its locks of hair (pointed clumps with their own curl, give and widest
+    point; a lock with `bob` stands up from the crown and springs as he moves, an ahoge; one with
+    `stand` stands straight out as a stiff spike where it is seen end on, so hair swept back reads
+    as a ring of points from in front or behind); the hair's `shell` with any `volume` joined to it
+    (a fuller crown or a lift over the brow, painted as one shape with it), the clumps painted on
+    the back of the shell fanning from a `whorl` (or, with `comb`, shaded as combed hair, gathering
+    at a `sink`), and a `hairline` whose `shadow` says how deep the fringe shades the brow; long
+    hair if it has any (a curtain down the back laid out with `curtain`, locks over the shoulders,
+    a tied ponytail with a `sheen` for glossy dark hair; short layers at the nape, painted with the
+    head, whose ends can `flip` out, as in a layered cut); hair worn up (`buns`: one or two buns,
+    a twist, a high updo); facial hair (a `beard`, laid out full, short or pointed by `beard`, and
+    a `moustache`, which hang from the jaw, sway with the wind, show beside the jaw from behind and
+    leave every expression readable; a beard's tresses pass over or under a held item by which is
+    nearer where they cross); and a face style (`FACE_PLAIN`, `FACE_SOFT`, `FACE_SHARP` or its own
+    glyphs) with a resting expression;
   - head pieces, given the head's frame as painted so they stay on the hair: a hairpin or its
     own, a high collar or a gorget (`collar`, closed and with `lames`), a scarf's wrap, and gear
     from `headgear.ts`: a `hood` worn up over the hair or down on the shoulders (the pose's `hood`
@@ -483,17 +658,18 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
   expression and a wink, the wind, lift, flare and sway that move cloth, hair and a beard, and the
   frame's effects: smears, rings, impacts, lightning, wards (with the hero's own runes if it has
   them), swirls of wind, afterimages, a blow ringing on a shield, a shot's release flash and
-  trail, light rays, a column of light, rising motes and more, from `fx.ts`);
+  trail, light rays, a column of light, rising motes and more, from `fx.ts`, or its own painted
+  through `fx.extra`);
 - a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes, scale
   and height.
 
 Then register it in `CHIBI_HEROES` (`heroes/chibi/index.ts`) under its sprite id: `hero-` and the
-hero's name in kebab case, such as `hero-dragoon` (`heroArt.ts`). A hero painted only as a chibi
-(`CHIBI_ONLY` in `heroArt.ts`, such as the Flame Warden) needs no artwork in `creatures/`: they show
-once their side view is painted, and another hero stands in for them until they are registered.
+hero's name in kebab case, such as `hero-dragoon` (`heroArt.ts`). Every hero must have one: a hero
+is drawn as their own chibi, shows once their side view is painted, and has their lobby and title
+portrait painted from it.
 
 A form a hero takes, the Flame Warden's Firebeast, is a chibi hero of its own with the same sixteen
-clips, registered under its sprite id (`hero-firebeast`; `FORM_ART` in `heroLook.ts`). When the
+clips, registered under its sprite id (`hero-firebeast`; `FORM_ART` in `heroForms.ts`). When the
 form begins, the hero's `ult` clip plays as flames engulf them, then the form's `ult` once as it
 emerges, each in half of the 0.8 seconds the form takes to take shape; the form then stands, runs
 and attacks with its own clips (its combo is its claw chain) and never flinches, kneels or falls.
@@ -610,8 +786,8 @@ src/server/      Node.js server.
   main.ts        HTTP server for the client and the WebSocket at /ws.
 src/client/      Browser client (TypeScript and canvas, no framework).
   ui/            Title screen and lobby.
-  art/           Sprite art: the pixel kit and pixel heroes and weapons, the chibi heroes, the SVG
-                 kit and the clans' monsters and bosses.
+  art/           Sprite art: the chibi heroes, painted in code from a 3D rig (heroes/chibi/), and
+                 the clans' monsters and bosses, animated from their artwork.
   game/          World state, renderer, HUD, effects, input and prediction.
   audio/         The music: a note language, the score, synthesized instruments, the director.
 test/            Unit tests and full dungeon runs.
