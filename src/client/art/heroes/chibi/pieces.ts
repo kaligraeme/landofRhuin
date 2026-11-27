@@ -3,12 +3,14 @@
  * plates, a high open collar (painted with the head), a skirt of cloth panels (a coat's front
  * panels and split tails, a robe, a tabard) that hang from the hips, drape over the legs and stream,
  * ripple, flare and lift with the pose's wind, a cape hung from the shoulders and a scarf wrapped
- * round the neck with tails that stream behind. Cloth and long hair hang as strands (`strand`)
- * that lie over the body rather than passing through it.
+ * round the neck with tails that stream behind, and a cowl (a short hooded cape) draped over the
+ * shoulders and upper arms. Cloth and long hair hang as strands (`strand`) that lie over the body
+ * rather than passing through it.
  */
+import { scaleAt } from './armour.js';
 import type { HeadPiece, Piece, PieceContext } from './design.js';
 import { type Blob, dim, type Hit, type Mat, toneLight } from './raster.js';
-import { add3, at3, type ChibiPose, clamp, cross3, dirIn, dot3, type Frame3, len3, lerp, mul3, norm3, rad, type Rig, rotate, sub3, TO_CAMERA, type V3 } from './rig.js';
+import { add3, at3, type ChibiPose, clamp, cross3, dirIn, dot3, type Frame3, len3, lerp, lerp3, mul3, norm3, rad, type Rig, rotate, sub3, TO_CAMERA, type V3 } from './rig.js';
 import type { Vec } from '../skeleton.js';
 
 // ── Shoulder plates ──────────────────────────────────────────────────────────────────────────
@@ -23,10 +25,19 @@ export interface PlatesSpec {
   rim: Mat;
   /** Below this share of a plate's height (from its centre, -1 to 1) it is cut away. */
   cut?: number;
+  /**
+   * A pattern of overlapping scales over the plates (armour.ts `scaleAt`, for dragon-styled or
+   * scale armour): their size in pixels, the material of their rims and of the gaps under them
+   * (default `rim` and the plates' metal two shades darker).
+   */
+  scales?: { w: number; h: number; rim?: Mat; under?: Mat };
 }
 
 /** Layered plates over a shoulder: they tip outward as the arm rises. */
 export function plates(spec: PlatesSpec): Piece {
+  const sc = spec.scales;
+  const scRim = sc?.rim ?? spec.rim;
+  const scUnder = sc?.under ?? dim(spec.mat, -0.45);
   return (ctx: PieceContext) => {
     const { rig } = ctx;
     const side = spec.side;
@@ -39,6 +50,7 @@ export function plates(spec: PlatesSpec): Piece {
     const fr = rotate(base, swing * -18, rise * 55);
     const cut = spec.cut ?? -0.15;
     const tip = at3(fr, 0, 0, 4);
+
     return [
       {
         z: ctx.depth(tip) + ctx.upper + 0.5,
@@ -51,7 +63,14 @@ export function plates(spec: PlatesSpec): Piece {
               // The inner face toward the body stays hidden.
               if ((h.p[2] - pl.c[2]) / pl.r[2] < -0.55) return null;
               if (h.back) return { m: spec.mat, light: -0.9 };
-              return { m: k < cut + 0.3 ? spec.rim : spec.mat };
+              if (k < cut + 0.3) return { m: spec.rim };
+              if (sc) {
+                // Across the plate round its upright axis, and down it from its top.
+                const x = Math.atan2(h.p[0] - pl.c[0], h.p[2] - pl.c[2]) * (pl.r[0] + pl.r[2]) * 0.5;
+                const part = scaleAt(x + 32, pl.c[1] + pl.r[1] - h.p[1] + i * sc.h * 0.5, sc.w, sc.h);
+                if (part !== 'face') return { m: part === 'rim' ? scRim : scUnder };
+              }
+              return { m: spec.mat };
             });
           });
           part.commit();
@@ -74,11 +93,23 @@ export interface CollarSpec {
   top: { back: number; side: number; front: number };
   /** The opening at the front, in degrees either side of the middle. */
   open: number;
+  /**
+   * Plate lames: its height split into this many overlapping bands, each with a pale rim along
+   * its top and a shadow under the band above. A gorget is a collar closed at the front (`open`
+   * 0) with lames, its ellipsoid's centre at its bottom edge so it narrows up toward the neck.
+   */
+  lames?: number;
 }
 
-/** A high collar, open at the front and lined, painted with the head so they sort pixel by pixel. */
+/** A high collar, open at the front and lined, painted with the head so they sort pixel by pixel; with lames and closed, a gorget. */
 export function collar(spec: CollarSpec): HeadPiece {
   const rim = dim(spec.outer, 0.12);
+  const lame = (u: number, top: number): number => {
+    const n = spec.lames ?? 0;
+    const t = ((u - spec.bottom) / Math.max(0.5, top - spec.bottom)) * n;
+    return t - Math.floor(t);
+  };
+  const lameH = (top: number): number => (top - spec.bottom) / Math.max(1, spec.lames ?? 1);
   return {
     blobs: (ctx) => [
       {
@@ -93,6 +124,12 @@ export function collar(spec: CollarSpec): HeadPiece {
           if (p[1] > top || p[1] < spec.bottom) return null;
           // A pale-edged rim along the top.
           if (h.back) return { m: spec.lining, id: 31 };
+          if (spec.lames) {
+            const f = lame(p[1], top);
+            const hh = lameH(top);
+            if (f > 1 - 1 / hh) return { m: rim };
+            if (f < 0.9 / hh) return { m: spec.outer, light: toneLight(spec.outer, 3) };
+          }
           return { m: p[1] > top - 1.1 ? rim : spec.outer };
         },
       },
@@ -143,6 +180,12 @@ export interface SkirtSpec {
    * How thick the legs are (their radius and a little clearance): with it, cloth in front of the
    * legs stays in front of them and cloth behind stays behind, so a long robe drapes over a
    * striding knee or a kicked-back heel instead of letting the leg through.
+   *
+   * A robe to the ankles that reads as one garment in a walk, a long stride, a spin and a fall:
+   * cover the whole ring with panels (six of 60 degrees from -30, say), each about as long as the
+   * hips are high, with `legs` about the legs' radius plus one, `aline` about 0.35 and `give`
+   * about 0.5 (see test/chibi-body-mannequins.ts ELDER). In a run's full wind it streams back off
+   * the legs, as a robe would.
    */
   legs?: number;
 }
@@ -414,6 +457,8 @@ export interface Obstacle {
   r: V3;
   /** How far clear of it things lie, in place of the strand's own `pad` (hair lies close on the head, further out over the body). */
   pad?: number;
+  /** A capsule instead (a limb): a segment this long from `c` along the frame's u axis, `r[0]` thick; things are pushed straight out from its axis. */
+  len?: number;
 }
 
 /** The torso's ellipsoids (a design's `body.chest` and `body.hips`) as obstacles, in a solved pose. */
@@ -426,6 +471,16 @@ export function pushOut(p: V3, obstacles: readonly Obstacle[], pad: number): V3 
   let q = p;
   for (const o of obstacles) {
     const c = at3(o.fr, o.c[0], o.c[1], o.c[2]);
+    if (o.len !== undefined) {
+      const k = o.pad ?? pad;
+      const t = clamp(dot3(sub3(q, c), o.fr.u), 0, o.len);
+      const a = add3(c, o.fr.u, t);
+      const d = sub3(q, a);
+      const l = len3(d);
+      const r = o.r[0] + k;
+      if (l < r && l > 1e-6) q = add3(a, d, r / l);
+      continue;
+    }
     const d = sub3(q, c);
     const k = o.pad ?? pad;
     const rf = o.r[0] + k;
@@ -638,6 +693,104 @@ export function cape(spec: CapeSpec): Piece {
       return {
         z: ctx.upperZ(ctx.depth(topMid) * 0.4 + ctx.depth(mid) * 0.6),
         draw: () => drawPanel(ctx, look, pn, 20 + pi, grid),
+      };
+    });
+  };
+}
+
+// ── A cowl ───────────────────────────────────────────────────────────────────────────────────
+
+export interface CowlSpec {
+  outer: Mat;
+  inner: Mat;
+  /**
+   * The ring it hangs from round the base of the neck: a height in the chest frame (about the
+   * build's `torso`, where the neck meets the shoulders) and radii [forward, right] (a little
+   * wider than the neck).
+   */
+  top: number;
+  ring: readonly [number, number];
+  /**
+   * Its panels round the ring, as a skirt's (0 the front, 90 his right, 180 the back, 270 his
+   * left), each with its length, hem fork and taper: about 10 to 13 to the chest and the upper
+   * arms; a longer back makes a hooded cape. Cover the whole ring so it wraps the shoulders.
+   */
+  panels: readonly Panel[];
+  /** How far it spreads out over the shoulders as it leaves the ring (default 1). */
+  spread?: number;
+  /** How readily it streams (default 0.8), whether it is pleated, and a band along its hem (see SkirtSpec). */
+  give?: number;
+  folds?: boolean;
+  trim?: Mat;
+  /** What it lies over: the torso (the design's `body.chest` and `body.hips`), the upper arms (their radius, default 2.8) and how far clear (default 0.9). */
+  over: { chest: readonly Blob[]; hips: readonly Blob[]; arms?: number; pad?: number };
+}
+
+/**
+ * The upper arms as obstacles: a capsule along each, `r` thick, from a quarter of the way down
+ * from the shoulder (so cloth hung round the neck is not pushed off a narrow chibi shoulder's top
+ * but drapes over it) to the elbow.
+ */
+export function armObstacles(rig: Rig, r: number): Obstacle[] {
+  return [rig.armR, rig.armL].map((arm) => {
+    const u = norm3(sub3(arm.mid, arm.root));
+    const f = norm3(Math.abs(u[1]) > 0.9 ? cross3(u, [0, 0, 1]) : cross3(u, [0, 1, 0]));
+    const fr: Frame3 = { o: lerp3(arm.root, arm.mid, 0.25), f, u, r: cross3(f, u) };
+    return { fr, c: [0, 0, 0] as V3, r: [r, r, r] as V3, len: len3(sub3(arm.mid, arm.root)) * 0.75 };
+  });
+}
+
+/**
+ * A cowl: a short cape of cloth hung from a ring round the base of the neck, wrapping the
+ * shoulders: its panels spread out over the shoulders, drape over the chest, the back and the
+ * upper arms (lifting with an arm that rises) and stream, ripple, flare and lift with the pose's
+ * cloth fields as a cape does, the back streaming most. Worn with a hood (headgear.ts `hood`) it
+ * makes a hooded cape; its ring hides where the hood meets the shoulders. Each panel is sorted
+ * with the upper body on its own (`PieceContext.upperZ`), so the front lies over the chest, the
+ * back over the back and the sides over the arms.
+ */
+export function cowl(spec: CowlSpec): Piece {
+  const look: SkirtSpec = { outer: spec.outer, inner: spec.inner, waist: spec.top, ring: spec.ring, panels: spec.panels, folds: spec.folds, trim: spec.trim };
+  return (ctx: PieceContext) => {
+    const { rig, pose } = ctx;
+    const cf = rig.chest;
+    const avoid = [...torsoObstacles(rig, spec.over.chest, spec.over.hips), ...armObstacles(rig, spec.over.arms ?? 2.8)];
+    const pad = spec.over.pad ?? 0.9;
+    const view = norm3(ctx.cam.local(TO_CAMERA));
+    // Where the painter sorts each arm (see painter.ts), so a panel over a shoulder lies over its
+    // upper arm, though under the hand.
+    const torsoTrue = ctx.depth(at3(cf, 0, 14, 0));
+    const armZ = (arm: Rig['armR']): number => {
+      const far = ctx.depth(arm.mid) < torsoTrue - 2 && ctx.depth(arm.end) < torsoTrue - 2;
+      return ctx.depth(lerp3(arm.mid, arm.end, 0.4)) * 0.6 + ctx.depth(arm.root) * 0.4 + (far ? 0 : ctx.upper);
+    };
+    return spec.panels.map((pn, pi) => {
+      const grid: V3[][] = [];
+      for (let k = 0; k <= COLS; k++) {
+        const phi = rad(lerp(pn.from, pn.to, k / COLS));
+        const top = at3(cf, Math.cos(phi) * spec.ring[0], spec.top, Math.sin(phi) * spec.ring[1]);
+        const out = dirIn(cf, Math.cos(phi), 0, Math.sin(phi));
+        // At the sides it lies out over the top of the shoulder to its edge (past the arm's
+        // root), then falls over the outside of the upper arm; over the chest and the back it
+        // falls from the ring.
+        const side = Math.abs(Math.sin(phi));
+        const reach = Math.max(0, ctx.build.shoulder + (spec.over.arms ?? 2.8) * 0.7 - spec.ring[1]) * (spec.spread ?? 1) * side * side;
+        const edge = add3(add3(top, out, reach), cf.u, -reach * 0.3);
+        const dir = add3(dirIn(cf, 0, -1, 0), out, (spec.spread ?? 1) * (0.4 + side * 0.3));
+        // Streaming, the back flies higher than the sides (as a cape's middle does).
+        const fan = Math.min(0, -Math.cos(phi) - 0.2) * 0.8;
+        const fall = strand(pose, { root: edge, dir, len: Math.max(2, pn.len - reach), n: ROWS - 1, stiff: 0.25, give: spec.give ?? 0.8, seed: k * 0.8 + pi * 1.7, flick: true, avoid, pad, axis: rig.pelvis.o, view, side: out, fan });
+        grid.push([top, ...fall]);
+      }
+      widen(grid, pn.taper ?? 1);
+      const mid = grid[COLS >> 1]?.[ROWS >> 1] as V3;
+      const topMid = grid[COLS >> 1]?.[0] as V3;
+      let z = ctx.upperZ(ctx.depth(topMid) * 0.3 + ctx.depth(mid) * 0.7);
+      const across = Math.sin(rad((pn.from + pn.to) / 2));
+      if (Math.abs(across) > 0.55) z = Math.max(z, armZ(across > 0 ? rig.armR : rig.armL) + 0.03);
+      return {
+        z,
+        draw: () => drawPanel(ctx, look, pn, 80 + pi, grid),
       };
     });
   };

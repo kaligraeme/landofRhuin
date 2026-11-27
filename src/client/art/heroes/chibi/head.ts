@@ -14,13 +14,18 @@
  * painted as a long clump that grows out of the head's hair without a line between them. Short
  * layers at the nape (`long.nape`) are strands too, but painted with the head in its depth test,
  * so they lie over a high collar and pass behind the jaw as they should.
+ *
+ * Facial hair and hair worn up are painted with the head too: a beard's growth over the jaw and
+ * up the cheeks (its hanging tresses sort with the body, as long hair does), a moustache under the
+ * nose, and buns, twists and updos standing on the hair. Gear over the head (a hood worn up, a
+ * helm: see headgear.ts) can cover hair (`HeadPiece.covers`), which is then not painted.
  */
 import type { RGB } from '../paint.js';
 import type { Vec } from '../skeleton.js';
-import { type BodyDesign, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
+import { type Beard, type BodyDesign, type Bun, type DrawItem, type FaceDesign, type FaceGlyph, type FaceStyle, GEAR_ID, HAIR_TAG, HEAD_TAG, type HeadDesign, type HeadPiece, type Lock, type PieceContext, type Tress } from './design.js';
 import { FLIP_FROM, hash, type Obstacle, strand, torsoObstacles } from './pieces.js';
-import { flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
-import { add3, at3, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, TO_CAMERA, type V3 } from './rig.js';
+import { type Blob, flat, type Hit, type Mat, type Part, shade, toneLight } from './raster.js';
+import { add3, at3, clamp, cross3, dirIn, dot3, type Face, type Frame3, lerp, mul3, norm3, rad, sub3, TO_CAMERA, type V3 } from './rig.js';
 
 /** Shape ids inside the head's part. */
 const SKIN = 1;
@@ -28,6 +33,10 @@ const EAR = 2;
 const SHELL = 3;
 const LOCK0 = 10;
 const NAPE0 = 200;
+/** A beard, a moustache and buns (two ids each: the bun and its tie). The neck, painted into the head's part, is 5. */
+const BEARD = 450;
+const MOUSTACHE = 451;
+const BUN0 = 460;
 /** How far down a nape layer (0 root to 1 tip) the shadow of the hair above it reaches. */
 const NAPE_SHADE = 0.45;
 
@@ -232,7 +241,17 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
     if (d.darkHair) tone = Math.min(3, tone + 1);
     return { m: hair, light: toneLight(hair, tone) };
   });
-  const held = pieces.flatMap((piece) => piece.blobs(ctx, fr));
+  // Hair under gear worn over the head (a hood up, a helm) is not painted.
+  const covered = coverTest(ctx, pieces, fr);
+  // A beard over the jaw and up the cheeks, and hair worn up.
+  const bd = d.beard;
+  const beardMat = bd ? { ...(bd.mat ?? d.hair), line: bd.mat?.line ?? hair.line, clear: 1 } : hair;
+  if (bd) part.blobs(fr, beardShell(d, bd), (h) => beardShade(ctx, d, bd, beardMat, fr, h));
+  d.buns?.forEach((bn, i) => {
+    if (covered(onShell(d, bn.yaw, bn.pitch, 0.9), [0, 1, 0])) return;
+    paintBun(ctx, part, d, fr, bn, hair, BUN0 + i * 2);
+  });
+  const held = pieces.flatMap((piece) => piece.blobs?.(ctx, fr) ?? []);
   for (const b of held) part.blobs(b.frame, b.blobs, b.shade);
   under?.(part);
 
@@ -242,15 +261,26 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   const push = inFrame(fr, mul3([-1, 0.3 + (pose.lift ?? 0) * 0.6, (pose.sway ?? 0) * 0.6], wind * 0.55 + Math.abs(pose.sway ?? 0) * 0.2));
   const lift = inFrame(fr, [0, (pose.lift ?? 0) * 0.4, 0]);
   const centre = ctx.proj(hero(d.shell.c));
-  d.locks.forEach((lk, li) => paintLock(ctx, part, d, fr, lk, LOCK0 + li, add3(push, lift), hair, centre));
+  // A springy lock (`bob`) sways to and fro as the ripple runs (the pose's `phase`).
+  const bob = Math.sin((pose.phase ?? 0) * Math.PI * 2);
+  d.locks.forEach((lk, li) => {
+    if (covered(onShell(d, lk.yaw, lk.pitch, 0.9), lk.dir)) return;
+    const sway: V3 = lk.bob ? add3(add3(push, lift), [0.35 * bob, -0.25 * Math.abs(bob), bob], lk.bob) : add3(push, lift);
+    paintLock(ctx, part, d, fr, lk, LOCK0 + li, sway, hair, centre);
+  });
   // Short layers at the nape: long hair, but painted here in the head's depth test, so they lie
   // over a high collar (see LongHair.nape), by default a tone deeper where they grow out from under
   // the hair above, in its shadow.
   const long = d.long;
   if (long?.nape) {
     const over = held.flatMap((b) => b.blobs.map((o): Obstacle => ({ fr: b.frame, c: o.c, r: o.r, pad: long.lie ?? 1.5 })));
-    long.nape.forEach((t, i) => paintTress(ctx, part, d, hero(d.shell.c), napeStrand(ctx, d, fr, t, i, over), hair, NAPE0 + i, long.napeDeep ?? 1, NAPE_SHADE));
+    long.nape.forEach((t, i) => {
+      if (covered(onShell(d, t.yaw, t.pitch, 0.9), t.dir)) return;
+      paintTress(ctx, part, d, hero(d.shell.c), napeStrand(ctx, d, fr, t, i, over), hair, NAPE0 + i, long.napeDeep ?? 1, NAPE_SHADE);
+    });
   }
+  if (d.moustache) paintMoustache(ctx, part, d, fr, d.moustache.mat ? { ...d.moustache.mat, clear: 1 } : beardMat);
+  for (const piece of pieces) piece.paint?.(ctx, part, fr);
 
   // The fringe casts a shadow on the brow.
   const cx = Math.round(ctx.proj(hero(d.skull.c))[0]);
@@ -266,7 +296,222 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
 
   paintFace(ctx, part, d.face, d.skin, fr, pose.face ?? d.face.rest ?? 'stern', pose.wink);
   part.commit();
-  despeckle(ctx, [...hair.tones, hair.line], cx - 24, cy - 24, cx + 24, cy + 24, HEAD_TAG);
+  const tones = [...hair.tones, hair.line];
+  if (beardMat !== hair) tones.push(...beardMat.tones, beardMat.line);
+  despeckle(ctx, tones, cx - 24, cy - 24, cx + 24, cy + 24, HEAD_TAG);
+}
+
+/** Whether a point on the hair's shell (head space) is under any of the head pieces' gear this frame. */
+function coverTest(ctx: PieceContext, pieces: readonly HeadPiece[], fr: Frame3): (p: V3, dir: V3) => boolean {
+  const tests = pieces.map((piece) => piece.covers?.(ctx, fr) ?? null).filter((t): t is (p: V3, dir: V3) => boolean => t !== null);
+  return tests.length ? (p, dir) => tests.some((t) => t(p, dir)) : () => false;
+}
+
+// ── Facial hair ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The beard's growth: shells `thick` clear of the jaw and a little clear of the skull (which
+ * carries it up the cheeks to the sideburns), cut to where it grows by `beardShade`.
+ */
+function beardShell(d: HeadDesign, b: Beard): Blob[] {
+  const t = b.thick;
+  return [
+    { c: d.jaw.c, r: [d.jaw.r[0] + t, d.jaw.r[1] + t, d.jaw.r[2] + t], id: BEARD },
+    { c: d.skull.c, r: [d.skull.r[0] + t * 0.8, d.skull.r[1] + t * 0.8, d.skull.r[2] + t * 0.8], id: BEARD },
+  ];
+}
+
+const smooth01 = (x: number): number => {
+  const k = clamp(x, 0, 1);
+  return k * k * (3 - 2 * k);
+};
+
+/**
+ * Where the beard grows and how it is lit: below the line from the sideburns to beside the mouth,
+ * within `round` degrees of the chin, not over the lips; lit as the hair's shell is, its underside
+ * in shadow, with a darker parting every few pixels round the jaw and a lit streak beside each.
+ */
+function beardShade(ctx: PieceContext, d: HeadDesign, b: Beard, m: Mat, fr: Frame3, h: Hit): { m: Mat; light: number } | null {
+  if (h.back) return null;
+  const p = h.p;
+  const yawS = (Math.atan2(p[2], p[0] - d.jaw.c[0]) * 180) / Math.PI;
+  const yaw = Math.abs(yawS);
+  if (yaw > (b.round ?? 90)) return null;
+  const top = b.cheek + (b.side - b.cheek) * smooth01((yaw - 30) / 60);
+  if (p[1] > top) return null;
+  const mo = d.face.mouthAt;
+  if (b.mouth[0] > 0 && b.mouth[1] > 0 && p[0] > d.jaw.c[0] && (p[2] / b.mouth[0]) ** 2 + ((p[1] - mo[1]) / b.mouth[1]) ** 2 < 1) return null;
+  const l = ctx.cam.light(dirIn(fr, h.n[0], h.n[1], h.n[2]));
+  let tone = h.n[1] < -0.62 ? 3 : l > 0.45 ? 1 : l > -0.15 ? 2 : 3;
+  // Strands running down it: a parting every 24 degrees or so round the jaw, slanting a little.
+  const k = (((yawS / 24 + p[1] * 0.05) % 1) + 1) % 1;
+  if (k < 0.16) tone = Math.min(3, tone + 1);
+  else if (k < 0.42 && l > 0.3 && h.n[1] > -0.4) tone = Math.max(0, tone - 1);
+  if (d.darkHair) tone = Math.min(3, tone + 1);
+  return { m, light: toneLight(m, tone) };
+}
+
+/**
+ * The moustache: from under the nose out to either side over the corners of the mouth, following
+ * the face round, its tips drooping (or curling up), as a clump each side, in front of the face.
+ */
+function paintMoustache(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, m: Mat): void {
+  const ms = d.moustache;
+  if (!ms) return;
+  const at = ms.at ?? [d.face.noseAt[0] - 0.3, d.face.noseAt[1] - 1.3];
+  const j = d.jaw;
+  const lie = 1 + (ms.w * 0.45) / Math.min(j.r[0], j.r[2]);
+  // On the jaw's surface, standing a little clear of it.
+  const onJaw = (u: number, r: number): V3 => {
+    const q: V3 = [Math.max(0.05, 1 - ((u - j.c[1]) / j.r[1]) ** 2 - (r / j.r[2]) ** 2), (u - j.c[1]) / j.r[1], r / j.r[2]];
+    const f = Math.sqrt(q[0]);
+    return [j.c[0] + f * j.r[0] * lie, j.c[1] + q[1] * j.r[1] * lie, j.c[2] + q[2] * j.r[2] * lie];
+  };
+  const n = 4;
+  for (const s of [1, -1]) {
+    const pts: V3[] = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      pts.push(at3(fr, ...onJaw(at[1] - ms.droop * t * t, s * ms.len * t)));
+    }
+    const P = pts.map((q) => ctx.proj(q));
+    const Z = pts.map((q) => ctx.depth(q) + 1.2);
+    // A side seen from behind the face is hidden by it (its root faces away): skip it.
+    if (ctx.cam.facing(norm3(sub3(pts[n] as V3, at3(fr, j.c[0], j.c[1], j.c[2])))) < -0.35) continue;
+    leaf(
+      part,
+      P,
+      (t) => ms.w * (t < 0.3 ? 0.85 + t * 0.5 : Math.max(0.35, 1 - (t - 0.3) * 0.9)),
+      m,
+      (t, a) => toneLight(m, a > 0.35 && t < 0.6 ? (d.darkHair ? 1 : 0) : t > 0.85 || a < -0.3 ? (d.darkHair ? 3 : 2) : d.darkHair ? 2 : 1),
+      (t) => {
+        const f = t * n;
+        const i = Math.min(n - 1, Math.floor(f));
+        return (Z[i] as number) + ((Z[i + 1] as number) - (Z[i] as number)) * (f - i);
+      },
+      MOUSTACHE,
+    );
+  }
+}
+
+/** A point on the beard's jaw shell (head space) at a yaw and pitch, `k` of the way out. */
+function onBeard(d: HeadDesign, b: Beard, yaw: number, pitch: number, k: number): V3 {
+  const j = d.jaw;
+  const cp = Math.cos(rad(pitch));
+  return [j.c[0] + Math.cos(rad(yaw)) * cp * (j.r[0] + b.thick) * k, j.c[1] + Math.sin(rad(pitch)) * (j.r[1] + b.thick) * k, j.c[2] + Math.sin(rad(yaw)) * cp * (j.r[2] + b.thick) * k];
+}
+
+/**
+ * A beard laid out by kind, for a head about the Dark Knight's size (the mouth about 6.6 under the
+ * head's centre; move `cheek` and `side` with it on another head):
+ *
+ *  - 'full': thick over the jaw and cheeks up to the sideburns, with `count` tresses (default 5)
+ *    hanging from under the chin and the jaw `len` long (default 14: to mid-chest), the middle ones
+ *    longest, flaring out a little at the sides so it shows beside the neck from behind;
+ *  - 'short': close over the jaw and up the cheeks, with short tufts under the chin (`len` default 4);
+ *  - 'pointed': over the chin and along the jaw, narrowing to one point under the chin (`len`
+ *    default 10, a goatee's point jutting a little forward) with two short tufts beside it.
+ *
+ * `w` sets the tresses' half-width (default 2.8), `give` how readily they sway (default 0.35),
+ * `thick` the growth's depth over the jaw, `mouth` the bare patch round the lips (half-sizes,
+ * default [2.4, 1.3]), `cheek` and `side` where it grows up to (see Beard); `seed` varies the
+ * tresses' lengths.
+ */
+export function beard(o: { kind: 'full' | 'short' | 'pointed'; len?: number; w?: number; count?: number; give?: number; thick?: number; mouth?: readonly [number, number]; cheek?: number; side?: number; mat?: Mat; seed?: number }): Beard {
+  const give = o.give ?? 0.35;
+  const w = o.w ?? 2.8;
+  const mouth = o.mouth ?? [2.4, 1.3];
+  if (o.kind === 'short') {
+    const len = o.len ?? 4;
+    return {
+      mat: o.mat,
+      thick: o.thick ?? 1.1,
+      side: o.side ?? -1.5,
+      cheek: o.cheek ?? -5.6,
+      mouth,
+      hang: [-40, 0, 40].map((yaw): Tress => ({ yaw, pitch: yaw ? -50 : -62, dir: [0.35, -1, Math.sin(rad(yaw)) * 0.4], len: len * (yaw ? 0.75 : 1), w: w * 0.9, stiff: 0.3, give, taper: 0.6 })),
+    };
+  }
+  if (o.kind === 'pointed') {
+    const len = o.len ?? 10;
+    return {
+      mat: o.mat,
+      thick: o.thick ?? 1.2,
+      side: o.side ?? -3,
+      cheek: o.cheek ?? -6,
+      round: 80,
+      mouth,
+      hang: [
+        { yaw: -34, pitch: -50, dir: [0.4, -1, -0.25], len: len * 0.45, w: w * 0.8, stiff: 0.4, give, taper: 0.7 },
+        { yaw: 34, pitch: -50, dir: [0.4, -1, 0.25], len: len * 0.45, w: w * 0.8, stiff: 0.4, give, taper: 0.7 },
+        { yaw: 0, pitch: -62, dir: [0.55, -1, 0], len, w: w * 1.05, stiff: 0.55, give, taper: 0.95 },
+      ],
+    };
+  }
+  const len = o.len ?? 14;
+  const n = Math.max(3, Math.round(o.count ?? 5));
+  return {
+    mat: o.mat,
+    thick: o.thick ?? 1.6,
+    side: o.side ?? -1.5,
+    cheek: o.cheek ?? -5.4,
+    mouth,
+    hang: Array.from({ length: n }, (_, i): Tress => {
+      const k = (i / (n - 1)) * 2 - 1;
+      const yaw = k * 72;
+      // The middle ones longest and rooted lowest (under the chin, clear of the mouth).
+      const l = len * (1 - 0.32 * Math.abs(k) - 0.08 * hash(i + 3, o.seed ?? 11));
+      return { yaw, pitch: -62 + Math.abs(k) * 24, dir: [0.25, -1, k * 0.45], len: l, w: w * (1 - 0.15 * Math.abs(k)), stiff: 0.25, give, taper: 0.55 };
+    }),
+  };
+}
+
+// ── Hair worn up ─────────────────────────────────────────────────────────────────────────────
+
+/** How far a bun stands toward the viewer in the head's depth test, over the locks (which are drawn up to 3 proud of the hair). */
+const BUN_LIFT = 3;
+
+/**
+ * A bun (or a twist, or a high updo) standing on the hair: an ellipsoid in its own frame, its u
+ * axis out of the head (leaning as the design says), with clumps of hair wound round it and
+ * twisting toward its top, a parting line between them and a lit band beside it, darker where it
+ * meets the head; and a tie round its root.
+ */
+function paintBun(ctx: PieceContext, part: Part, d: HeadDesign, fr: Frame3, bn: Bun, m: Mat, id: number): void {
+  const s = d.shell;
+  const cp = Math.cos(rad(bn.pitch));
+  const dir: V3 = [Math.cos(rad(bn.yaw)) * cp, Math.sin(rad(bn.pitch)), Math.sin(rad(bn.yaw)) * cp];
+  const base: V3 = [s.c[0] + dir[0] * s.r[0], s.c[1] + dir[1] * s.r[1], s.c[2] + dir[2] * s.r[2]];
+  const nrm = norm3([dir[0] / s.r[0], dir[1] / s.r[1], dir[2] / s.r[2]]);
+  const axis = norm3(add3(nrm, bn.lean ?? [0, 0, 0]));
+  // Its own frame (head space): u out along the axis, f as near the face's way as it can be.
+  let f = sub3([1, 0, 0], mul3(axis, axis[0]));
+  if (Math.hypot(f[0], f[1], f[2]) < 0.2) f = sub3([0, 1, 0], mul3(axis, axis[1]));
+  f = norm3(f);
+  const r = cross3(f, axis);
+  const o = add3(base, axis, bn.r[1] * 0.7);
+  const frame: Frame3 = { o: at3(fr, o[0], o[1], o[2]), f: dirIn(fr, f[0], f[1], f[2]), u: dirIn(fr, axis[0], axis[1], axis[2]), r: dirIn(fr, r[0], r[1], r[2]) };
+  const clumps = bn.clumps ?? 5;
+  const twist = bn.twist ?? 0.3;
+  part.blobs(frame, [{ c: [0, 0, 0], r: bn.r, id }], (h) => {
+    if (h.back) return null;
+    const l = ctx.cam.light(dirIn(frame, h.n[0], h.n[1], h.n[2]));
+    let tone = l > 0.45 ? 1 : l > -0.15 ? 2 : 3;
+    const hu = h.p[1] / bn.r[1];
+    const phi = Math.atan2(h.p[2] / bn.r[2], h.p[0] / bn.r[0]) / (Math.PI * 2);
+    const k = ((((phi + twist * (hu + 1) * 0.5) * clumps) % 1) + 1) % 1;
+    if (k < 0.14) tone = Math.min(3, tone + 1);
+    else if (k < 0.42 && l > 0.15) tone = Math.max(0, tone - 1);
+    // In the shadow where it meets the head.
+    if (hu < -0.55) tone = Math.min(3, tone + 1);
+    if (d.darkHair) tone = Math.min(3, tone + 1);
+    // It sits over the locks drawn up into it, which stand a little proud of the hair.
+    return { m, light: toneLight(m, tone), lift: BUN_LIFT };
+  });
+  if (bn.tie) {
+    const t = bn.tie;
+    part.blobs(frame, [{ c: [0, -bn.r[1] * 0.6, 0], r: [bn.r[0] * 0.72 + t.r, t.r, bn.r[2] * 0.72 + t.r], id: id + 1 }], (h) => (h.back ? null : { m: t.mat, lift: BUN_LIFT + 0.5 }));
+  }
 }
 
 /**
@@ -500,7 +745,7 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
     const brow = (face === 'hurt' ? style.browsUp : style.brows)[kind];
     const lift = face === 'hurt' || face === 'shout' ? 1 : face === 'smirk' && side === 1 ? 1 : 0;
     // Brows show through the fringe, as drawn brows do.
-    stamp(part, brow, p[0], p[1] - f.browUp - lift, dir, browCols, z + 20, (id) => id >= 0 && id !== EAR);
+    stamp(part, brow, p[0], p[1] - f.browUp - lift, dir, browCols, z + 20, (id) => id >= 0 && id !== EAR && id < GEAR_ID);
   }
   // Mouth and nose.
   const mouthN = norm3(dirIn(fr, 1, -0.25, 0));
@@ -509,7 +754,8 @@ function paintFace(ctx: PieceContext, part: Part, f: FaceDesign, skin: Mat, fr: 
     const mp = ctx.proj(hero([f.mouthAt[0], f.mouthAt[1], 0]));
     const glyph = style.mouths[face];
     const shrink = mf < 0.5 && glyph.rows[0]!.length > 2 ? { rows: glyph.rows.map((r) => r.slice(0, -1)), ax: Math.max(0, glyph.ax - 1), ay: glyph.ay } : glyph;
-    stamp(part, shrink, mp[0], mp[1], rightX > 0 ? -1 : 1, { M: m(f.mouth), r: m([70, 16, 20]), T: m([236, 226, 214]) }, ctx.depth(hero([f.mouthAt[0], f.mouthAt[1], 0])) + 0.4, onFace);
+    // The mouth reads through a beard and under a moustache.
+    stamp(part, shrink, mp[0], mp[1], rightX > 0 ? -1 : 1, { M: m(f.mouth), r: m([70, 16, 20]), T: m([236, 226, 214]) }, ctx.depth(hero([f.mouthAt[0], f.mouthAt[1], 0])) + 0.4, (id) => id === SKIN || id === BEARD || id === MOUSTACHE);
   }
   const nose = ctx.proj(hero([f.noseAt[0], f.noseAt[1], 0]));
   if (cam.facing(norm3(dirIn(fr, 1, 0, 0))) > 0.35) stamp(part, { rows: ['n'], ax: 0, ay: 0 }, nose[0], nose[1], 1, { n: m(skin.tones[3]) }, ctx.depth(hero([f.noseAt[0], f.noseAt[1], 0])) + 0.4, onFace);
@@ -671,13 +917,15 @@ function napeStrand(ctx: PieceContext, d: HeadDesign, fr: Frame3, t: Tress, i: n
  * grow out of the hair's shell and lie over the head, the jaw and the torso. The nape layers are
  * not among them: `paintHead` paints those.
  */
-export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr: Frame3): DrawItem[] {
+export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr: Frame3, pieces: readonly HeadPiece[] = []): DrawItem[] {
   const long = d.long;
-  if (!long) return [];
+  if (!long && !d.beard?.hang?.length) return [];
   const { rig, pose } = ctx;
+  // Hair under gear worn over the head (a hood up, a helm) is not painted.
+  const covered = coverTest(ctx, pieces, fr);
   const hero = (p: V3): V3 => at3(fr, p[0], p[1], p[2]);
   const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...torsoObstacles(rig, body.chest, body.hips)];
-  const lie = long.lie ?? 1.5;
+  const lie = long?.lie ?? 1.5;
   const axis = hero(d.shell.c);
   const view = norm3(ctx.cam.local(TO_CAMERA));
   const hair: Mat = { ...d.hair, line: d.lockLine ?? shade(d.hair.tones[3], -0.3), clear: 1 };
@@ -695,7 +943,9 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
   const hr = Math.ceil(Math.max(d.shell.r[0], d.shell.r[1], d.shell.r[2]) + 3);
   // One item: the strands painted into one part (and anything else `more` adds), sorted at the
   // depth of their hanging parts.
-  const item = (strands: HairStrand[], more?: (part: Part) => void): DrawItem => {
+  // A beard's tresses take their own material (and its colours where they grow out of the
+  // head's part) and are lit out from the jaw.
+  const item = (strands: HairStrand[], more?: (part: Part) => void, look: { m: Mat; keys: readonly number[]; axis: V3 } = { m: hair, keys, axis }): DrawItem => {
     let zs = 0;
     let zn = 0;
     for (const s of strands) {
@@ -708,8 +958,8 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
       z: ctx.upperZ(zs / Math.max(1, zn)),
       draw: () => {
         const part = ctx.part(HAIR_TAG);
-        const taken = rootIn(ctx, part, keys, Math.round(hc[0]) - hr, Math.round(hc[1]) - hr, Math.round(hc[0]) + hr, Math.round(hc[1]) + hr);
-        strands.forEach((s, i) => paintTress(ctx, part, d, axis, s, hair, 10 + i));
+        const taken = rootIn(ctx, part, look.keys, Math.round(hc[0]) - hr, Math.round(hc[1]) - hr, Math.round(hc[0]) + hr, Math.round(hc[1]) + hr);
+        strands.forEach((s, i) => paintTress(ctx, part, d, look.axis, s, look.m, 10 + i));
         more?.(part);
         const back = taken.filter((i) => part.idAt(i % ctx.c.w, Math.floor(i / ctx.c.w)) === ROOT);
         part.commit();
@@ -728,15 +978,29 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
             y1 = Math.max(y1, q[1] + s.w + 2);
           }
         }
-        despeckle(ctx, [...hair.tones, hair.line], Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1), HAIR_TAG);
+        despeckle(ctx, [...look.m.tones, look.m.line], Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1), HAIR_TAG);
       },
     };
   };
   const items: DrawItem[] = [];
-  long.back?.forEach((t, i) => items.push(item([solve(t, i * 1.9)])));
-  long.front?.forEach((t, i) => items.push(item([solve(t, 3.1 + i * 2.3)])));
-  const tail = long.tail;
-  if (tail) {
+  const shown = (t: { yaw: number; pitch: number; dir: V3 }): boolean => !covered(onShell(d, t.yaw, t.pitch, 0.9), t.dir);
+  long?.back?.forEach((t, i) => shown(t) && items.push(item([solve(t, i * 1.9)])));
+  long?.front?.forEach((t, i) => shown(t) && items.push(item([solve(t, 3.1 + i * 2.3)])));
+  const bd = d.beard;
+  if (bd?.hang?.length) {
+    // A beard's tresses hang from the jaw's shell and lie over the chest, each sorted on its own.
+    const m: Mat = { ...(bd.mat ?? d.hair), line: bd.mat?.line ?? hair.line, clear: 1 };
+    const look = { m, keys: [...m.tones, m.line].map((t) => t[0] * 65536 + t[1] * 256 + t[2]), axis: hero(d.jaw.c) };
+    const over: Obstacle[] = [{ fr, c: d.jaw.c, r: d.jaw.r, pad: bd.thick * 0.6 }, ...torsoObstacles(rig, body.chest, body.hips), ...pieces.flatMap((pc) => pc.blobs?.(ctx, fr) ?? []).flatMap((b) => b.blobs.map((o): Obstacle => ({ fr: b.frame, c: o.c, r: o.r })))];
+    bd.hang.forEach((t, i) => {
+      const root = hero(onBeard(d, bd, t.yaw, t.pitch, 0.9));
+      const side = dirIn(fr, Math.cos(rad(t.yaw)) * 0.4, 0, Math.sin(rad(t.yaw)));
+      const pts = strand(pose, { root, dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 0.35, seed: 0.5 + i * 2.7, avoid: over, pad: bd.lie ?? 1.2, axis: rig.pelvis.o, view, side, flip: t.flip });
+      items.push(item([{ pts, w: t.w, taper: t.taper ?? 0.5, flip: t.flip }], undefined, look));
+    });
+  }
+  const tail = long?.tail;
+  if (tail && shown(tail)) {
     // The tail: a thick tress from the tie with a thinner one either side of it, and the tie
     // round its root with the cord's loose ends.
     const across = norm3(cross3(dirIn(fr, tail.dir[0], tail.dir[1], tail.dir[2]), fr.u));

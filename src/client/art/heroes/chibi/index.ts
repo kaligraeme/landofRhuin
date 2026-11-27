@@ -10,8 +10,11 @@
  * The engine: rig.ts (the pose format, the 3D skeleton and the camera), raster.ts (the part
  * painter: four-tone shading and coloured inner lines over paint.ts's Canvas), design.ts (what a
  * design file fills in), head.ts (heads, face styles, locks and long hair: curtains, locks over
- * the shoulders, ponytails), pieces.ts (pauldrons, collars, skirts and coats, capes, scarves, and
- * the strands cloth and hair hang as), the held items (blade.ts bladed weapons, pole.ts pole arms,
+ * the shoulders, ponytails; beards, moustaches, buns and updos), headgear.ts (gear worn on the
+ * head: a hood worn up or down, an open-faced helm with cheek guards, scales and fins, a
+ * circlet), pieces.ts (pauldrons, collars and gorgets, skirts, coats and robes, capes, cowls,
+ * scarves, and the strands cloth and hair hang as), back.ts (straps and bandoliers, a quiver,
+ * anything slung on the back), armour.ts (patterns such as scales), the held items (blade.ts bladed weapons, pole.ts pole arms,
  * wand.ts wands, held.ts what they share; a design may also give one for the off hand), fx.ts
  * (effects) and painter.ts (puts a frame together). A hero has a folder of its own: a design file,
  * its moves files and a hero file that puts them together with its timing (see darkKnight/,
