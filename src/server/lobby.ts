@@ -4,11 +4,11 @@
  */
 import { randomBytes, randomUUID } from 'node:crypto';
 import { READY_CHECK_SECONDS, SNAPSHOT_EVERY } from '../shared/constants.js';
-import { DEFAULT_LOOK, HERO_LOOKS, isRole, ROLE_ORDER, weaponFor, type HeroLook, type RoleId } from '../shared/content/classes.js';
+import { HEROES, heroFor, isHero, isRole, ROLE_ORDER, ROLES, WEAPONS, weaponFor, type HeroId, type RoleId } from '../shared/content/classes.js';
 import type { AiFill, ClientMsg, LobbyState, PartyView, QueueView, ReadyCheckView, ServerMsg } from '../shared/protocol.js';
 import { generateDungeon } from './dungeonGen.js';
 import { findMatches, assemble, rolesFree, type QueueEntry } from './matchmaker.js';
-import { Instance, type InstanceOptions, type Seat } from './sim/instance.js';
+import { Instance, seatHero, type InstanceOptions, type Seat } from './sim/instance.js';
 
 export interface Conn {
   send(msg: ServerMsg): void;
@@ -19,10 +19,11 @@ interface LobbyPlayer {
   token: string;
   name: string;
   role: RoleId;
-  /** Unset until the player picks one; the role's default look applies meanwhile. */
-  look?: HeroLook;
-  /** Follows from the role and the look. */
-  weapon: string;
+  /**
+   * Unset until the player picks one of their role's heroes, and again when they change role: the
+   * role's default hero applies meanwhile.
+   */
+  hero?: HeroId;
   partyId: string;
   conn: Conn | null;
   lastSeen: number;
@@ -67,7 +68,8 @@ export function cleanName(raw: unknown): string | null {
   return name.length >= 2 ? name : null;
 }
 
-const lookOf = (p: LobbyPlayer): HeroLook => p.look ?? DEFAULT_LOOK[p.role];
+/** The hero a player plays: their pick if it is one of their role's heroes, else the role's default. */
+const heroOf = (p: LobbyPlayer): HeroId => heroFor(p.role, p.hero);
 
 export class Lobby {
   players = new Map<string, LobbyPlayer>();
@@ -102,7 +104,7 @@ export class Lobby {
       return existing.id;
     }
     const id = randomUUID();
-    const p: LobbyPlayer = { id, token: randomBytes(16).toString('hex'), name, role: 'tank', weapon: weaponFor('tank', DEFAULT_LOOK.tank), partyId: '', conn, lastSeen: now, instanceId: null };
+    const p: LobbyPlayer = { id, token: randomBytes(16).toString('hex'), name, role: 'tank', partyId: '', conn, lastSeen: now, instanceId: null };
     this.players.set(id, p);
     this.newSoloParty(p);
     conn.send({ t: 'welcome', playerId: id, token: p.token, name });
@@ -133,12 +135,12 @@ export class Lobby {
     const run = p.instanceId ? this.instances.get(p.instanceId) : undefined;
     const me = run?.inst.playerByOwner(p.id);
     switch (msg.t) {
-      case 'appearance': {
-        if (msg.look !== 'male' && msg.look !== 'female') return this.error(p, 'Choose a valid appearance.');
+      case 'hero': {
+        if (!isHero(msg.hero)) return this.error(p, 'Choose a valid hero.');
+        if (HEROES[msg.hero].role !== p.role) return this.error(p, `The ${HEROES[msg.hero].name} is not a ${ROLES[p.role].name} hero.`);
         const busy = this.busy(p);
         if (busy) return this.error(p, busy);
-        p.look = msg.look;
-        p.weapon = weaponFor(p.role, msg.look);
+        p.hero = msg.hero;
         return this.broadcastLobby(now);
       }
       case 'loadout':
@@ -218,7 +220,7 @@ export class Lobby {
     const busy = this.busy(p);
     if (busy) return this.error(p, busy);
     p.role = role;
-    p.weapon = weaponFor(role, lookOf(p));
+    p.hero = undefined;
     this.broadcastLobby(now);
   }
 
@@ -325,7 +327,8 @@ export class Lobby {
         for (const id of e.memberIds) {
           const m = this.players.get(id);
           if (m) {
-            seats.push({ ownerId: m.id, name: m.name, role: m.role, weapon: m.weapon, look: lookOf(m) });
+            const hero = heroOf(m);
+            seats.push({ ownerId: m.id, name: m.name, role: m.role, hero, weapon: weaponFor(hero) });
             usedNames.add(m.name);
           }
         }
@@ -333,9 +336,13 @@ export class Lobby {
       for (const role of match.aiRoles) {
         const name = BOT_NAMES.filter((n) => !usedNames.has(n))[Math.floor(Math.random() * 8)] ?? 'Companion';
         usedNames.add(name);
-        // AI Mages are always the Staff-carrying healer, so an AI-filled party has one.
-        const look: HeroLook = role === 'mage' ? 'male' : (HERO_LOOKS[Math.floor(Math.random() * 2)] as HeroLook);
-        seats.push({ ownerId: null, name, role, weapon: weaponFor(role, look), look });
+        // An AI companion plays one of the role's heroes at random, but always a healer where the
+        // role has one (the Mage's Sage), so an AI-filled party has one.
+        const heroes = ROLES[role].heroes;
+        const healers = heroes.filter((h) => WEAPONS[weaponFor(h)]?.healer);
+        const pool = healers.length ? healers : heroes;
+        const hero = pool[Math.floor(Math.random() * pool.length)] as HeroId;
+        seats.push({ ownerId: null, name, role, hero, weapon: weaponFor(hero) });
       }
       seats.sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
       const seed = Math.floor(Math.random() * 2 ** 31);
@@ -426,7 +433,10 @@ export class Lobby {
       members: party.memberIds
         .map((id) => this.players.get(id))
         .filter((m): m is LobbyPlayer => !!m)
-        .map((m) => ({ playerId: m.id, name: m.name, role: m.role, weapon: m.weapon, leader: m.id === party.leaderId, online: !!m.conn })),
+        .map((m) => {
+          const hero = heroOf(m);
+          return { playerId: m.id, name: m.name, role: m.role, hero, weapon: weaponFor(hero), leader: m.id === party.leaderId, online: !!m.conn };
+        }),
     };
   }
 
@@ -446,14 +456,15 @@ export class Lobby {
       id: rc.id,
       deadline: rc.deadline,
       dungeon: rc.dungeon,
-      slots: rc.seats.map((s) => ({ role: s.role, name: s.name, weapon: s.weapon, bot: s.ownerId === null, accepted: s.ownerId ? (rc.accepted.get(s.ownerId) ?? null) : true, you: s.ownerId === playerId })),
+      slots: rc.seats.map((s) => ({ role: s.role, name: s.name, hero: seatHero(s), weapon: s.weapon, bot: s.ownerId === null, accepted: s.ownerId ? (rc.accepted.get(s.ownerId) ?? null) : true, you: s.ownerId === playerId })),
     };
   }
 
   lobbyState(p: LobbyPlayer, now: number): LobbyState {
     const party = this.parties.get(p.partyId) ?? this.newSoloParty(p);
+    const hero = heroOf(p);
     return {
-      you: { id: p.id, name: p.name, role: p.role, weapon: p.weapon, look: lookOf(p) },
+      you: { id: p.id, name: p.name, role: p.role, hero, weapon: weaponFor(hero) },
       party: this.partyView(party),
       queue: this.queueView(party.id),
       readyCheck: this.readyView(p.id),

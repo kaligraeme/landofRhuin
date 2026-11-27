@@ -4,15 +4,15 @@ import { lineOfSight, T_FLOOR, T_WALL, tileAt } from '../src/shared/map.js';
 import { Instance, type Seat } from '../src/server/sim/instance.js';
 import { startAbility } from '../src/server/sim/mechanics.js';
 import type { Monster } from '../src/server/sim/types.js';
-import { DEFAULT_LOOK, hotbarFor, ROLES, SKILLS, WEAPONS, weaponFor } from '../src/shared/content/classes.js';
+import { defaultHero, HEROES, hotbarFor, ROLE_ORDER, ROLES, SKILLS, WEAPONS, weaponFor, type RoleId } from '../src/shared/content/classes.js';
 import { STATUSES } from '../src/shared/content/statuses.js';
 import type { GameEvent } from '../src/shared/protocol.js';
 
 const seats: Seat[] = [
-  { ownerId: 'h1', name: 'Warrior', role: 'tank', weapon: 'tank_greatsword' },
+  { ownerId: 'h1', name: 'Tank', role: 'tank', weapon: 'tank_greatsword' },
   { ownerId: 'h2', name: 'Mage', role: 'mage', weapon: 'staff' },
   { ownerId: 'h3', name: 'Ranger', role: 'ranger', weapon: 'bow' },
-  { ownerId: 'h4', name: 'Duelist', role: 'melee', weapon: 'greatsword' },
+  { ownerId: 'h4', name: 'Duelist', role: 'melee', weapon: 'twin_blades' },
 ];
 
 function setup() {
@@ -34,14 +34,16 @@ const run = (inst: Instance, seconds: number) => {
 };
 
 describe('content', () => {
-  it('matches the role and weapon design', () => {
-    // Each hero carries one weapon: the man's first, then the woman's.
-    expect(ROLES.tank.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Greatsword', 'Sword & Shield']);
-    expect(ROLES.mage.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Staff', 'Mystic Sword & Wand']);
-    expect(ROLES.ranger.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Crossbow', 'Longbow']);
-    expect(ROLES.melee.weapons.map((w) => WEAPONS[w]!.name)).toEqual(['Halberd', 'Twin Blades']);
-    expect(weaponFor('tank', 'female')).toBe('sword_shield');
-    expect(weaponFor('mage', DEFAULT_LOOK.mage)).toBe('staff');
+  it('matches the role, hero and weapon design', () => {
+    // Each role lists its heroes, the default first, and each hero carries one weapon of their own.
+    const roster = (role: RoleId) => ROLES[role].heroes.map((h) => `${HEROES[h].name} · ${WEAPONS[weaponFor(h)]!.name}`);
+    expect(ROLE_ORDER.map((r) => ROLES[r].name)).toEqual(['Tank', 'Mage', 'Ranger', 'Duelist']);
+    expect(roster('tank')).toEqual(['Dark Knight · Greatsword', 'Guardian · Sword & Shield']);
+    expect(roster('mage')).toEqual(['Sage · Staff', 'Spellblade · Mystic Sword & Wand']);
+    expect(roster('ranger')).toEqual(['Arbalest · Crossbow', 'Bowmaster · Longbow']);
+    expect(roster('melee')).toEqual(['Dragoon · Lance', 'Blademaster · Twin Blades']);
+    expect(weaponFor('guardian')).toBe('sword_shield');
+    expect(weaponFor(defaultHero('mage'))).toBe('staff');
     // Tanks are the sturdiest; rangers and melee are glass cannons, melee hitting hardest.
     expect(ROLES.tank.hp).toBeGreaterThan(ROLES.melee.hp);
     expect(ROLES.tank.stamina).toBeGreaterThan(ROLES.melee.stamina);
@@ -55,7 +57,7 @@ describe('content', () => {
 
   it('every weapon has a three-hit chain and five skills, and every reference resolves', () => {
     for (const role of Object.values(ROLES)) {
-      for (const w of role.weapons) {
+      for (const w of role.heroes.map(weaponFor)) {
         const weapon = WEAPONS[w]!;
         expect(weapon.basic.hits).toHaveLength(3);
         expect(weapon.skills).toHaveLength(5);
@@ -187,7 +189,7 @@ describe('action combat', () => {
   it('the Dark Knight charges in, sweeps, drains life and bleeds for Ruination', () => {
     const { inst, tank, dummy } = setup();
     expect(hotbarFor('tank', 'tank_greatsword').slice(1, 6)).toEqual(['parry', 'stalwartCharge', 'eclipse', 'drain', 'ruination']);
-    expect(WEAPONS.tank_greatsword!.style).toBe('Dark Knight');
+    expect(HEROES.darkKnight.weapon).toBe('tank_greatsword');
     // Stalwart Charge: a dash through the foe, a stun, a big lump of aggro and a guard on himself.
     tank.x = dummy.x - 4;
     tank.y = dummy.y;

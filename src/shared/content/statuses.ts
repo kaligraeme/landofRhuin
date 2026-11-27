@@ -55,7 +55,7 @@ const list: StatusDef[] = [
   { id: 'stalwart', name: 'Stalwart', description: 'Charging in: 35% less damage taken.', glyph: '⇶', color: '#b48cff', debuff: false, dmgTaken: -0.35 },
   { id: 'radiantGuard', name: 'Radiant Guard', description: 'Wreathed in light: 35% less damage taken.', glyph: '✧', color: '#fff0a8', debuff: false, dmgTaken: -0.35 },
   { id: 'shieldsUp', name: 'Shield’s Up!', description: 'Blocking all damage; it bursts back at nearby foes when the shield comes down.', glyph: '⛉', color: '#ffd76a', debuff: false, block: true, counter: 0.3, counterRadius: 5 },
-  { id: 'bulwark', name: 'Rallying Bulwark', description: 'Protected by the Warrior’s rally: 20% less damage taken.', glyph: '⛨', color: '#9cc4ff', debuff: false, dmgTaken: -0.2 },
+  { id: 'bulwark', name: 'Rallying Bulwark', description: 'Protected by the Tank’s rally: 20% less damage taken.', glyph: '⛨', color: '#9cc4ff', debuff: false, dmgTaken: -0.2 },
 
   // Mage
   { id: 'sanctuary', name: 'Sanctuary', description: 'Restoring health over time.', glyph: '❀', color: '#8dffb0', debuff: false, hot: true },

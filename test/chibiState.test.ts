@@ -251,7 +251,7 @@ describe('chibi clip priority', () => {
   });
 
   it("works with the painter's own timing for every clip", () => {
-    const hero = CHIBI_HEROES['hero-tank-male'];
+    const hero = CHIBI_HEROES['hero-dark-knight'];
     expect(hero).toBeDefined();
     for (const clip of CHIBI_CLIPS) {
       const t = hero!.timing[clip];

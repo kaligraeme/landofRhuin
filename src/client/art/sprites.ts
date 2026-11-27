@@ -8,11 +8,12 @@
  * away from the viewer wait until every other queued sprite has its frames. Each chibi frame is
  * cropped to the figure and its effects and the crops are shelf-packed, an atlas per view.
  */
-import { DEFAULT_LOOK, HERO_LOOKS, type HeroLook, type RoleId } from '../../shared/content/classes.js';
+import { defaultHero, type HeroId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
 import type { EntitySpawn } from '../../shared/protocol.js';
 import { cropRaster, opaqueBounds, shelfPack } from './atlas.js';
 import { creatureArt, type CreatureArt } from './creature-art.js';
+import { heroArtId } from './heroArt.js';
 import { ACTION_WINDUP, buildFrames, CLIP_LENGTH, CLIPS, rigSprite, SKILL_CHARGE, type Clip, type Raster } from './animation.js';
 import { auraFor, RIG_HINTS } from './rigs.js';
 import { CHIBI_CLIPS, CHIBI_HEROES, CHIBI_VIEWS, type ChibiClip, type ChibiHero, type ChibiView } from './heroes/chibi/index.js';
@@ -317,17 +318,13 @@ function* chibiSteps(sprite: Sprite, hero: ChibiHero, views: readonly ChibiView[
 
 // ── The cast ─────────────────────────────────────────────────────────────────────────────────
 
-export function defaultHeroLook(role: RoleId): HeroLook {
-  return DEFAULT_LOOK[role];
-}
-
-export function heroSprite(role: RoleId, look = defaultHeroLook(role)): Sprite {
-  const id = `hero-${role}-${look}` as const;
+export function heroSprite(hero: HeroId): Sprite {
+  const id = heroArtId(hero);
   return load(id, id);
 }
 
 export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
-  if (spawn.kind === 'player') return heroSprite(spawn.role ?? 'tank', spawn.look);
+  if (spawn.kind === 'player') return heroSprite(spawn.hero ?? defaultHero(spawn.role ?? 'tank'));
   if (spawn.kind === 'boss') {
     const kind = spawn.boss ?? 'juggernaut';
     return load(`boss:${clan}:${kind}`, `${clan}-boss-${kind}`);
@@ -337,8 +334,8 @@ export function spriteFor(spawn: EntitySpawn, clan: ThemeId): Sprite {
 }
 
 /** Starts loading every sprite a dungeon can show: the party's heroes first, then the clan. */
-export function preloadClan(clan: ThemeId, heroes: { role: RoleId; look?: HeroLook }[] = []): void {
-  for (const h of heroes) heroSprite(h.role, h.look);
+export function preloadClan(clan: ThemeId, heroes: HeroId[] = []): void {
+  for (const hero of heroes) heroSprite(hero);
   for (const mob of ['brute', 'skirmisher', 'archer', 'caster', 'elite', 'sentry'] as MobKind[]) spriteFor({ id: 0, kind: 'mob', team: 'enemy', name: '', radius: 1, mob }, clan);
   for (const boss of ['juggernaut', 'hexer', 'beast', 'warden', 'sovereign'] as BossKind[]) spriteFor({ id: 0, kind: 'boss', team: 'enemy', name: '', radius: 1, boss }, clan);
 }
@@ -377,8 +374,8 @@ function portraitOf(f: Raster, groundY: number): string {
  * A hero in their battle stance, weapon in hand, as an image URL for the lobby and title screen.
  * Resolves once painted; `heroImageUrl` gives the plain artwork meanwhile.
  */
-export function heroPortrait(role: RoleId, look: HeroLook = defaultHeroLook(role)): Promise<string> {
-  const id = `hero-${role}-${look}` as const;
+export function heroPortrait(hero: HeroId): Promise<string> {
+  const id = heroArtId(hero);
   let hit = portraits.get(id);
   if (!hit) {
     const chibi = CHIBI_HEROES[id];
@@ -403,21 +400,18 @@ export function heroPortrait(role: RoleId, look: HeroLook = defaultHeroLook(role
 }
 
 /** The hero's plain artwork, shown until their portrait is painted. */
-export function heroImageUrl(role: RoleId, look: HeroLook = defaultHeroLook(role)): string {
-  return creatureArt(`hero-${role}-${look}`).url;
+export function heroImageUrl(hero: HeroId): string {
+  return creatureArt(heroArtId(hero)).url;
 }
 
 /** Sets an image to a hero's portrait, starting with the plain artwork. */
-export function showHero(img: HTMLImageElement, role: RoleId, look: HeroLook = defaultHeroLook(role)): void {
-  const want = `${role}-${look}`;
-  img.dataset.hero = want;
-  if (!img.src) img.src = heroImageUrl(role, look);
-  heroPortrait(role, look).then(
+export function showHero(img: HTMLImageElement, hero: HeroId): void {
+  img.dataset.hero = hero;
+  if (!img.src) img.src = heroImageUrl(hero);
+  heroPortrait(hero).then(
     (url) => {
-      if (img.dataset.hero === want) img.src = url;
+      if (img.dataset.hero === hero) img.src = url;
     },
     () => undefined,
   );
 }
-
-export { HERO_LOOKS };

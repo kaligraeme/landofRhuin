@@ -1,5 +1,5 @@
 /**
- * The Halberdier's states, in the chibi pose format (rig.ts, ChibiPose).
+ * The Dragoon's states, in the chibi pose format (rig.ts, ChibiPose).
  *
  *   hurt     3  a flinch: knocked back and sideways, head jolted back, eyes squeezed shut, the
  *               lead hand torn off the haft and the point knocked down, the scarf tails flicked

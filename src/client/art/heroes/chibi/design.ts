@@ -47,7 +47,7 @@ export interface FaceDesign {
   scar?: { at: V3; colour: RGB };
   /**
    * The glyphs the eyes, brows and mouth are stamped from (default FACE_PLAIN in head.ts: a
-   * young man's level stare). head.ts also has FACE_SOFT (large lashed eyes, soft brows, a small
+   * stern, level stare). head.ts also has FACE_SOFT (large lashed eyes, soft brows, a small
    * mouth) and FACE_SHARP (narrow, sharp eyes under straight brows); a design may draw its own.
    */
   style?: FaceStyle;

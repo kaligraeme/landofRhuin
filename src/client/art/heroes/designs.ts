@@ -3,7 +3,7 @@
  * (`head` gives the crop and the point under the chin that sits on the neck); everything else is
  * painted from these colours and shapes.
  */
-import type { HeroLook, RoleId } from '../../../shared/content/classes.js';
+import type { HeroArtId } from '../heroArt.js';
 import { hex, ramp, type Ramp, type RGB } from './paint.js';
 import type { Hairdo } from './heads.js';
 import type { WeaponKind } from './weapons.js';
@@ -11,7 +11,7 @@ import type { WeaponKind } from './weapons.js';
 export type Moveset = 'greatsword' | 'swordShield' | 'staff' | 'swordWand' | 'crossbow' | 'longbow' | 'halberd' | 'twinBlades';
 
 export interface HeroDesign {
-  id: `hero-${RoleId}-${HeroLook}`;
+  id: HeroArtId;
   moveset: Moveset;
   weapon: WeaponKind;
   /** The off-hand weapon, if any. */
@@ -52,14 +52,14 @@ const DARK_LEATHER = ramp('#6e503a', '#4a3424', '#2a1c12');
 const BOOT = ramp('#5e4434', '#3e2c20', '#22170f');
 const GREEN_CLOAK = ramp('#6e8c4c', '#4a6230', '#2c3c1c');
 
-const WARRIOR_GOLD = hex('#ffd56b');
+const TANK_GOLD = hex('#ffd56b');
 const MAGE_VIOLET = hex('#b98cff');
 const RANGER_GREEN = hex('#8fe36f');
 const DUELIST_RED = hex('#ff6f5e');
 
-export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
-  'hero-tank-male': {
-    id: 'hero-tank-male',
+export const HERO_DESIGNS: Record<HeroArtId, HeroDesign> = {
+  'hero-dark-knight': {
+    id: 'hero-dark-knight',
     moveset: 'greatsword',
     weapon: 'greatsword',
     head: { x0: 32, y0: 1, x1: 48, y1: 14, neckX: 40, neckY: 14 },
@@ -78,11 +78,11 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     skirt: { kind: 'tassets', ramp: ramp('#80848f', '#52555f', '#2f313a') },
     cape: { ramp: CRIMSON, length: 40 },
     hairdo: { style: 'medium', ramp: ramp('#4a4a5c', '#2a2a36', '#16161e') },
-    aura: WARRIOR_GOLD,
+    aura: TANK_GOLD,
   },
   // The Guardian: a paladin in polished plate and a white tabard, sword in hand and shield on arm.
-  'hero-tank-female': {
-    id: 'hero-tank-female',
+  'hero-guardian': {
+    id: 'hero-guardian',
     moveset: 'swordShield',
     weapon: 'knightSword',
     weapon2: 'shield',
@@ -104,8 +104,8 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     hairdo: { style: 'bun', ramp: ramp('#6e4a36', '#462c1e', '#26160e') },
     aura: hex('#fff0a8'),
   },
-  'hero-mage-male': {
-    id: 'hero-mage-male',
+  'hero-sage': {
+    id: 'hero-sage',
     moveset: 'staff',
     weapon: 'branchStaff',
     head: { x0: 25, y0: 1, x1: 39, y1: 15, neckX: 33, neckY: 15 },
@@ -123,8 +123,8 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     hairdo: { style: 'short', ramp: ramp('#e4e4ea', '#acacb6', '#6e6e7a'), beard: 'full' },
     aura: MAGE_VIOLET,
   },
-  'hero-mage-female': {
-    id: 'hero-mage-female',
+  'hero-spellblade': {
+    id: 'hero-spellblade',
     moveset: 'swordWand',
     weapon: 'mysticSword',
     weapon2: 'wand',
@@ -144,8 +144,8 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     hairdo: { style: 'long', ramp: ramp('#f4f2fa', '#c8c4dc', '#8e8aa8'), length: 26 },
     aura: MAGE_VIOLET,
   },
-  'hero-ranger-male': {
-    id: 'hero-ranger-male',
+  'hero-arbalest': {
+    id: 'hero-arbalest',
     moveset: 'crossbow',
     weapon: 'crossbow',
     head: { x0: 24, y0: 1, x1: 42, y1: 13, neckX: 34, neckY: 13 },
@@ -165,8 +165,8 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     hairdo: { style: 'short', ramp: ramp('#ec8a48', '#b85a24', '#743410'), beard: 'short' },
     aura: RANGER_GREEN,
   },
-  'hero-ranger-female': {
-    id: 'hero-ranger-female',
+  'hero-bowmaster': {
+    id: 'hero-bowmaster',
     moveset: 'longbow',
     weapon: 'longbow',
     head: { x0: 20, y0: 1, x1: 40, y1: 13, neckX: 31, neckY: 13 },
@@ -187,8 +187,8 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     hairdo: { style: 'long', ramp: ramp('#ec9254', '#bc5e2c', '#783618'), length: 22, elf: true },
     aura: RANGER_GREEN,
   },
-  'hero-melee-male': {
-    id: 'hero-melee-male',
+  'hero-dragoon': {
+    id: 'hero-dragoon',
     moveset: 'halberd',
     weapon: 'halberd',
     head: { x0: 26, y0: 1, x1: 43, y1: 13, neckX: 35, neckY: 13 },
@@ -207,8 +207,8 @@ export const HERO_DESIGNS: Record<`hero-${RoleId}-${HeroLook}`, HeroDesign> = {
     hairdo: { style: 'messy', ramp: ramp('#946446', '#643e28', '#3c2416') },
     aura: DUELIST_RED,
   },
-  'hero-melee-female': {
-    id: 'hero-melee-female',
+  'hero-blademaster': {
+    id: 'hero-blademaster',
     moveset: 'twinBlades',
     weapon: 'blade',
     weapon2: 'blade',

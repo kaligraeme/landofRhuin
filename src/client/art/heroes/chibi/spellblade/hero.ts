@@ -1,7 +1,7 @@
 /**
  * The Spellblade as a chibi hero: her design (design.ts) and moves (moves-core.ts, moves-skills.ts,
- * moves-states.ts) put together with her clip timing, frame boxes and scale. Registered for the
- * female Mage in ../index.ts.
+ * moves-states.ts) put together with her clip timing, frame boxes and scale. Registered in
+ * ../index.ts.
  */
 import type { ChibiClip, ChibiHero, ClipTiming } from '../index.js';
 import { chibiHero } from '../painter.js';

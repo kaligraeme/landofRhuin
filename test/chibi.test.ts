@@ -194,10 +194,10 @@ describe.each(HEROES.map((h) => [h.id, h] as const))('chibi hero %s', (_id, hero
 });
 
 describe('the chibi Dark Knight', () => {
-  const hero = CHIBI_HEROES['hero-tank-male']!;
+  const hero = CHIBI_HEROES['hero-dark-knight']!;
 
-  it('is registered for the male Warrior, about 2.1 tiles tall', () => {
-    expect(hero.id).toBe('hero-tank-male');
+  it('is registered for the Dark Knight, about 2.1 tiles tall', () => {
+    expect(hero.id).toBe('hero-dark-knight');
     const tall = hero.frame.side.ay - bounds(hero.paint('idle', 0, 'side')).y0 + 1;
     expect(tall).toBeGreaterThan(78);
     expect(tall).toBeLessThan(96);

@@ -546,15 +546,6 @@ select {
   font-size: 14px;
 }
 
-.weapon-card .wstyle {
-  color: var(--gold);
-  font-family: var(--title);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  align-self: center;
-}
-
 .weapon-card .wdesc {
   grid-column: 1 / -1;
   color: var(--muted);
@@ -563,7 +554,7 @@ select {
 }
 
 .weapons {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .hero-card {
@@ -589,10 +580,6 @@ select {
 .hero-card-text {
   display: grid;
   gap: 2px;
-}
-
-.hero-card .wstyle {
-  align-self: start;
 }
 
 .healer-tag {

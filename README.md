@@ -1,6 +1,6 @@
 # Land of Rhuin
 
-A four-player co-op hack-and-slash dungeon RPG that runs in the browser. Form a party of four (Warrior,
+A four-player co-op hack-and-slash dungeon RPG that runs in the browser. Form a party of four (Tank,
 Mage, Ranger and Duelist) and carve through a dungeon generated fresh for every run. Every dungeon
 belongs to one of three monster clans: **Orcs**, **Dragons and their cultists**, or the **Undead**.
 Each run has waves of monsters, then 3 or 4 bosses whose attacks are marked on the ground before
@@ -10,12 +10,12 @@ Combat is aimed and hands-on. Hold the mouse to swing your weapon's combo, fire 
 cursor, and dodge-roll through danger. The dungeon structure takes its cues from big fantasy MMO
 dungeons: a finder queue with a ready check, aggro and taunts, sealed boss arenas, and orange
 telegraphs to step out of. Teamwork is the heart of it: monsters hit far too hard for anyone but the
-Warrior to take, the Warrior needs a healer to last, and the damage dealers have to keep their
-aggro under the Warrior's. All names, art, skills and bosses are original.
+Tank to take, the Tank needs a healer to last, and the damage dealers have to keep their aggro
+under the Tank's. All names, art, skills and bosses are original.
 
 ![Fighting Gnashtusk the War Boar in an Orc stronghold](docs/screenshots/orc-boss.jpg)
 
-![The title screen with the four heroes](docs/screenshots/title.jpg)
+![The title screen with every hero](docs/screenshots/title.jpg)
 
 ## Quick start
 
@@ -58,7 +58,7 @@ http://localhost:5173 (it forwards the game socket to the server).
 | 1, 2 | Role skills |
 | 3 | Elixir (restores 35% HP) |
 | Space | Dodge roll: a short roll during which nothing can hurt you. Costs stamina. |
-| T | Follow the Warrior, or the party member you selected |
+| T | Follow the Tank, or the party member you selected |
 | Tab, F1 – F4 | Select an enemy or a party member to see them in the target frame |
 | Mouse wheel | Zoom |
 | Enter | Chat |
@@ -73,60 +73,59 @@ Every skill is aimed at the cursor:
 
 A few heavy skills have a short wind-up; moving or rolling cancels it.
 
-## Roles and weapons
+## Roles and heroes
 
-Each role has two heroes, a man and a woman, and each hero carries one weapon of their own:
-choosing your hero chooses your weapon.
+Pick a role, then one of its heroes. Each hero carries one weapon of their own, so choosing your
+hero chooses your weapon. A role starts on its first hero until you pick another.
 
-| Role | Strengths | His weapon | Her weapon |
-| --- | --- | --- | --- |
-| **Warrior** (tank) | The only hero who can take the monsters' blows: 16,000 health and 55% damage reduction. Builds three times the aggro, holds it, and loses it three times slower. Needs a healer in a long fight. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | Greatsword, two-handed: the Dark Knight | Sword and shield: the Guardian, a paladin with healing light |
-| **Mage** | Offensive and healing spells. | Branch staff, two-handed (the healer) | Mystic sword and a wand |
-| **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | Crossbow | Longbow |
-| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | Halberd, two-handed | Twin blades |
-
-| Weapon | Style | Special (RMB) · Q · E · R · Ultimate (F) |
+| Role | Strengths | Heroes |
 | --- | --- | --- |
-| Greatsword (Warrior) | Dark Knight | Parry · Stalwart Charge (dash through foes: a 0.5s stun, a great deal of aggro, and 35% less damage taken for 5s) · Eclipse (a full circle swing that slows) · Drain (damage all around; heals you for 60% of it) · Ruination (costs 50% of your maximum health: four massive strikes rain on your aim) |
-| Sword & Shield (Warrior) | Guardian | Aegis (shield up: 60% less damage) · Flash (dash through foes: a 0.5s stun, a great deal of aggro, and 35% less damage taken for 5s) · Mend (heals you for 18% and draws every foe nearby) · Shield's Up! (blocks all damage for 3s, then bursts for 30% of what it absorbed) · Luminaire (massive damage to every enemy in sight) |
+| **Tank** | The only hero who can take the monsters' blows: 16,000 health and 55% damage reduction. Builds three times the aggro, holds it, and loses it three times slower. Needs a healer in a long fight. *Rallying Bulwark* gives the whole party 20% damage reduction and a barrier. | **Dark Knight**: a two-handed greatsword · **Guardian**: sword and shield, a paladin with healing light |
+| **Mage** | Offensive and healing spells. | **Sage**: a two-handed branch staff (the healer) · **Spellblade**: a mystic sword and a wand |
+| **Ranger** | High damage from range. A glass cannon: low health, 15% more damage taken. | **Arbalest**: a crossbow · **Bowmaster**: a longbow |
+| **Duelist** (melee) | The highest damage in the party, and the easiest to fall: low health, 20% more damage taken. | **Dragoon**: a two-handed lance · **Blademaster**: twin blades |
+
+| Weapon | Hero | Special (RMB) · Q · E · R · Ultimate (F) |
+| --- | --- | --- |
+| Greatsword (Tank) | Dark Knight | Parry · Stalwart Charge (dash through foes: a 0.5s stun, a great deal of aggro, and 35% less damage taken for 5s) · Eclipse (a full circle swing that slows) · Drain (damage all around; heals you for 60% of it) · Ruination (costs 50% of your maximum health: four massive strikes rain on your aim) |
+| Sword & Shield (Tank) | Guardian | Aegis (shield up: 60% less damage) · Flash (dash through foes: a 0.5s stun, a great deal of aggro, and 35% less damage taken for 5s) · Mend (heals you for 18% and draws every foe nearby) · Shield's Up! (blocks all damage for 3s, then bursts for 30% of what it absorbed) · Luminaire (massive damage to every enemy in sight) |
 | Staff | Sage (healer) | Mending Light (heal circle) · Arcane Orb · Sanctuary (healing ground) · Meteor · Resurrection |
 | Mystic Sword & Wand | Spellblade | Runic Ward (barriers) · Spellblade Rush · Arc Lightning · Lifebinding Sigil (damage and heal) · Astral Cleave |
-| Crossbow | Arbalist | Piercing Bolt · Explosive Bolt · Tumble Shot · Scattershot · Siege Barrage |
-| Longbow | Marksman | Charged Shot · Volley · Snare Trap · Fan of Arrows · Rain of Ruin |
-| Halberd | Halberdier | Sweeping Strike · Piercing Thrust · Vault Strike · Whirling Halberd · Skewer |
-| Twin Blades | Reaver | Rising Slash · Whirlwind · Reaver's Lunge · Executioner · Cataclysm Blades |
+| Crossbow | Arbalest | Piercing Bolt · Explosive Bolt · Tumble Shot · Scattershot · Siege Barrage |
+| Longbow | Bowmaster | Charged Shot · Volley · Snare Trap · Fan of Arrows · Rain of Ruin |
+| Lance | Dragoon | Sweeping Strike · Piercing Thrust · Vault Strike · Whirling Lance · Skewer |
+| Twin Blades | Blademaster | Rising Slash · Whirlwind · Blademaster's Lunge · Executioner · Cataclysm Blades |
 
-Role skills: the Warrior has **Challenge** (taunt everything nearby) and **Rallying Bulwark**. The
+Role skills: the Tank has **Challenge** (taunt everything nearby) and **Rallying Bulwark**. The
 Mage has **Arcane Blink** and **Mana Font**. The Ranger has **Vault** and **Field Dressing**. The
 Duelist has **Bloodrush** (more damage dealt, more taken) and **Second Wind**.
 
-The Staff is the party's healer. An AI companion filling the Mage slot is always the Staff-carrying
-Mage. A party
-without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
+The Sage's Staff is the party's healer. An AI companion filling the Mage slot is always the Sage;
+the other AI companions play either of their role's heroes. A party without a Staff gets the *Ward of Rhuin*: 15% less damage taken and a slow heal in combat.
 
 In AI-only test runs, Duelists deal about 1,500 damage per second, Rangers about 1,150, Mages
-about 700 and Warriors 550 (Guardian) to 700 (Dark Knight).
+about 700 and Tanks 550 (Guardian) to 700 (Dark Knight).
 
 ## Aggro and teamwork
 
 Every monster keeps its own aggro table: how much each hero has drawn its attention. It attacks
 whoever tops that table.
 
-- **Damage builds aggro**, one point per point of damage. The Warrior builds three times as much.
+- **Damage builds aggro**, one point per point of damage. The Tank builds three times as much.
   Stalwart Charge and Flash build three times as much again, plus a flat 3,000. Eclipse, Drain,
   Ruination and Luminaire build half as much again.
 - **Healing builds aggro** on every monster in the fight within 30 tiles of the healer: 0.6 per
   point actually healed. Overhealing does not count.
 - **First contact** adds a flat 1,500 the first time a hero strikes a monster, twice that for the
-  Warrior, so whoever opens the fight gets its attention. Healing near a monster does not count
+  Tank, so whoever opens the fight gets its attention. Healing near a monster does not count
   as contact.
 - **Unhinged damage builds aggro fast.** A hero's recent damage on a monster runs hot and cools by
   half every 2 seconds. Once it passes about 4,500, every blow counts double, rising to 3.5 times.
   A Duelist who unloads everything on one target pulls it.
 - **Monsters are sticky.** To pull a monster off its target you need 10% more aggro than the
-  target has, or 30% more if the target is the Warrior.
-- **Aggro fades** by 3% a second, the Warrior's by 1%, so a Warrior who keeps working holds what
-  they have taken. **Challenge** puts the Warrior at the top of every table within 9 tiles and
+  target has, or 30% more if the target is the Tank.
+- **Aggro fades** by 3% a second, the Tank's by 1%, so a Tank who keeps working holds what they
+  have taken. **Challenge** puts the Tank at the top of every table within 9 tiles and
   turns those monsters on them at once.
 
 Monsters hit hard. Blows aimed at their aggro target (routine swings and a boss's routine
@@ -138,10 +137,10 @@ matter.
 What that means in a fight:
 
 - Standing still with a pack of three on them, a Duelist, Ranger or Mage falls in 3 to 5 seconds.
-  Fighting back with no Warrior to run to, every one of them falls to a wave of five within 2 to
-  11 seconds. A pack of only three is a fairer fight: the Reaver beats it about half the time,
+  Fighting back with no Tank to run to, every one of them falls to a wave of five within 2 to
+  11 seconds. A pack of only three is a fairer fight: the Blademaster beats it about half the time,
   other damage dealers now and then, and the Sage can hold out for a minute by healing.
-- A Warrior lasts far longer: about 11 seconds standing still, and much longer fighting.
+- A Tank lasts far longer: about 11 seconds standing still, and much longer fighting.
 - Alone against a wave of five, the Dark Knight falls in 19 to 27 seconds and the Guardian in 30
   to 50. A Guardian who outlasts one wave falls to the next. With the Staff healer behind them,
   both clear wave after wave and usually end each one above three-quarters health.
@@ -150,33 +149,33 @@ Reading aggro on screen:
 
 - **The target frame** lists the top four on your target's table, your own row marked. Each is
   a share of the aggro of the hero it is on, who reads 100%. The monster turns at 110%, or 130% if
-  it is on the Warrior. A row close to that line turns orange.
+  it is on the Tank. A row close to that line turns orange.
 - **Over a monster's name:** a pulsing red **!** means it is coming for you. If you are the
-  Warrior, a gold **◆** marks the ones on you and an orange **◇** the ones loose on the party.
+  Tank, a gold **◆** marks the ones on you and an orange **◇** the ones loose on the party.
 - **By the hotbar:** "Pulling aggro: 118% of the tank's (it turns at 130%) — ease off" when you
-  are close to pulling a monster off the Warrior; "You have aggro! … get to the tank" when
-  something has come for you. The Warrior sees "2 loose on the party — grab them!".
+  are close to pulling a monster off the Tank; "You have aggro! … get to the tank" when
+  something has come for you. The Tank sees "2 loose on the party — grab them!".
 - A hit your shield or barrier takes in full shows as **Blocked**; otherwise you see what got
   through.
 
 AI companions play by the same rules. Damage dealers ease off a monster when they come close to
-the Warrior's aggro, and run to the Warrior when something comes for them. An AI Warrior charges
+the Tank's aggro, and run to the Tank when something comes for them. An AI Tank charges
 and taunts whatever gets loose.
 
 ![The aggro table on an Orc Ravager: the Guardian holds it, the others well behind](docs/screenshots/aggro.jpg)
 
 ## Heroes and clans
 
-Every role has a man and a woman to choose from in the lobby, each with their own weapon. Three
-of them are big-headed chibis (see [Chibi heroes](#chibi-heroes)): the Dark Knight (the male
-Warrior) in blackened plate and a long oxblood coat, the Spellblade (the female Mage) in a violet
-robe-coat with long silver-white hair, and the Halberdier (the male Duelist) in gunmetal armour
-over a teal tunic, with a long red scarf. The Guardian wears polished plate, a white tabard and a
-blue cape; the Sage embroidered robes; the Rangers green cloaks and quivers; and the Reaver light
-leathers and a red scarf. Weapons are part of each hero's animation, held the way
-they are meant to be held: the two-handed greatsword, staff and halberd, the Guardian's sword and
-kite shield, the Mage's sword and wand, the Ranger's crossbow and longbow, and the Duelist's
-twin blades.
+Every role has its own heroes to choose from in the lobby, each with their own weapon. Three of
+them are big-headed chibis (see [Chibi heroes](#chibi-heroes)): the Dark Knight, a Tank, in
+blackened plate and a long oxblood coat; the Spellblade, a Mage, in a violet robe-coat with long
+silver-white hair; and the Dragoon, a Duelist, in gunmetal armour over a teal tunic, with a long
+red scarf. The Guardian wears polished plate, a white tabard and a blue cape; the Sage embroidered
+robes; the Arbalest and the Bowmaster green cloaks and quivers; and the Blademaster light leathers
+and a red scarf. Weapons are part of each hero's animation, held the way they are meant to be
+held: the Dark Knight's greatsword, the Sage's staff and the Dragoon's lance in both hands, the
+Guardian's sword and kite shield, the Spellblade's sword and wand, the Arbalest's crossbow, the
+Bowmaster's longbow and the Blademaster's twin blades.
 
 Heroes turn to face where they are aiming: side on to the left and right, toward you when they
 face down the screen and away from you when they face up it, in every clip.
@@ -241,8 +240,8 @@ painted first so a hero animates at once; the turned ones follow in the backgrou
 
 ### Chibi heroes
 
-Three heroes are chibis (`heroes/chibi/`): the Dark Knight (the male Warrior), the Spellblade
-(the female Mage) and the Halberdier (the male Duelist). Each is a big-headed pixel hero 80 to 85
+Three heroes are chibis (`heroes/chibi/`): the Dark Knight (a Tank), the Spellblade (a Mage) and
+the Dragoon (a Duelist). Each is a big-headed pixel hero 80 to 85
 pixels tall, a third of it head and hair, painted in code frame by frame from a 3D rig. Every
 pose is solved in 3D and painted in three views: side on (a three-quarter view, mirrored to face
 left), toward you and away from you. The other five heroes still use the skeleton painter above.
@@ -280,7 +279,7 @@ attack or skill playing out, then running or dodging, then the victory pose (whi
 frame), a flinch, kneeling, the battle stance and idling. The skill and state clips take the
 weapon up from where the battle stance holds it, and those that give way to the stance end in it.
 
-The Spellblade, the female Mage, is a slim, quick young mage about 80 pixels tall with a soft,
+The Spellblade, a Mage, is a slim, quick young mage about 80 pixels tall with a soft,
 fair face: long, straight silver-white hair to the middle of her back, two long locks framing
 her face and a small gold crescent pin in her side-swept fringe, a fitted violet robe-coat with a
 high gold-edged collar, cut away at the front and falling to the knee behind, over a pale
@@ -304,31 +303,31 @@ arcs; her spells are gold runes, violet lightning and green-gold healing light
 | `cast` | 8 | The wand twirled in an arc of light and flung up high in a flourish, a quick spell circle and sparkles spiralling up |
 | `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch, the coat and cape flicked forward; on one knee by the planted sword, the wand hand on her chest, a bead of sweat; a stagger and a crumple onto her back, the hair fanned out over the floor; a twirl with an arc of light, then the sword held out high to her right, a hand on her hip and a wink |
 
-The Halberdier, the male Duelist, is a lean, long-legged young lancer about 85 pixels tall with
+The Dragoon, a Duelist, is a lean, long-legged young lancer about 85 pixels tall with
 a cocky half-smile: jet-black hair with a blue sheen tied high in a long ponytail with a red cord,
 a long red scarf round his neck and jaw with two tails streaming behind him, light gunmetal armour
 (a breastplate, one layered pauldron on his leading shoulder, vambraces and greaves) over a teal
 tunic with a split skirt, and a halberd-lance longer than he is tall: a dark lacquered haft, a
 leaf-shaped point with a jade channel, an axe blade, a back spike, flared lugs and a teal ribbon.
 His thrusts leave spiralling drills of jade wind, his sweeps and spins rings of it
-(`heroes/chibi/halberdier/`):
+(`heroes/chibi/dragoon/`):
 
-| Clip | Frames | The Halberdier |
+| Clip | Frames | The Dragoon |
 | --- | --- | --- |
-| `idle` | 8 | The halberd resting on his shoulder, sloping up behind him, a thumb in his belt, a smirk |
+| `idle` | 8 | The lance resting on his shoulder, sloping up behind him, a thumb in his belt, a smirk |
 | `battle` | 8 | A low, bladed spear stance, left side leading, bouncing on his toes |
-| `move` | 8 | A sprint, the halberd trailing behind him, scarf and ponytail streaming |
+| `move` | 8 | A sprint, the lance trailing behind him, scarf and ponytail streaming |
 | `atk1`, `atk2`, `atk3` | 7, 7, 9 | A straight, low thrust; an overhand thrust from high by his ear; then a deep coil, a hop and a lunge from the butt end, each landing with a white-hot flash |
 | `special` | 7 | Sweeping Strike: the haft swung round low and wide, a ring of wind, a gust |
 | `q` | 8 | Piercing Thrust: a deep lunge, the front hand sliding up the haft, a long drill of wind |
 | `e` | 11 | Vault Strike: a pole vault, the butt planted well ahead and his legs swung up and over the haft, a flip and the point driven into the floor |
-| `r` | 10 | Whirling Halberd: two fast turns with the haft held level, a ring of wind |
+| `r` | 10 | Whirling Lance: two fast turns with the haft held level, a ring of wind |
 | `ult` | 12 | Skewer: the lance couched, a charge with jade afterimages behind and a cone of wind ahead of the point, a great burst, a skid |
-| `cast` | 8 | The halberd twirled once round his hips and planted, a burst of wind |
-| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted halberd; a fall, the halberd clattering down; a twirl, then the halberd planted beside him, a hip cocked and a grin |
+| `cast` | 8 | The lance twirled once round his hips and planted, a burst of wind |
+| `hurt`, `kneel`, `ko`, `victory` | 3, 4, 6, 8 | A flinch; on one knee leaning on the planted lance; a fall, the lance clattering down; a twirl, then the lance planted beside him, a hip cocked and a grin |
 
 A chibi hero's frames (375 for the Dark Knight, 369 for the Spellblade, 372 for the
-Halberdier, a third of them per view) are painted in the background as a dungeon loads, a few
+Dragoon, a third of them per view) are painted in the background as a dungeon loads, a few
 milliseconds at a time. Each frame is cropped to what is painted and the crops are shelf-packed
 into one atlas per view (`atlas.ts`), 800 to 1,200 pixels on a side. Side on comes first; the
 views toward and away from you follow once the rest of the party and the monsters have their
@@ -362,7 +361,8 @@ To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 - a hero file that puts them together with `chibiHero`, with its clip timing, frame sizes, scale
   and height.
 
-Then register it in `CHIBI_HEROES` (`heroes/chibi/index.ts`) under its sprite id.
+Then register it in `CHIBI_HEROES` (`heroes/chibi/index.ts`) under its sprite id: `hero-` and the
+hero's name in kebab case, such as `hero-dragoon` (`heroArt.ts`).
 `npx tsx scripts/chibi-sheet.ts --hero <id>` paints contact sheets of every clip in the three
 views, and `test/chibi.test.ts` checks every registered hero: that every frame paints cleanly
 and the same every time, stands on the ground, fits its frame and changes from frame to frame,
@@ -405,10 +405,10 @@ melody note sits in its key or on its chord.
 
 ## How a run works
 
-1. **Lobby.** Choose a role, then one of its two heroes: each carries their own weapon. Hover a skill
+1. **Lobby.** Choose a role, then one of its heroes: each carries their own weapon. Hover a skill
    to read what it does.
 
-   ![The lobby: role and weapon, party, and the expedition finder](docs/screenshots/lobby.jpg)
+   ![The lobby: role and hero, party, and the expedition finder](docs/screenshots/lobby.jpg)
 
 2. **Party.** Everyone starts in their own party with a 5-letter code. Up to four players can
    join one party, and each member needs a different role to queue.
@@ -421,7 +421,7 @@ melody note sits in its key or on its chord.
    ![The ready check: one player and three AI companions](docs/screenshots/ready-check.jpg)
 
 5. **The dungeon.** A chain of rooms joined by corridors. In front of each boss are one or two
-   rooms you clear in 2 or 3 waves; barrier gates open as you clear them. When the Warrior is an AI
+   rooms you clear in 2 or 3 waves; barrier gates open as you clear them. When the Tank is an AI
    companion, it leads the party between fights and waits for the players. A boss arena seals six
    seconds after the fight starts, and the last boss always has three phases.
 6. **Stagger.** Stuns, knockbacks, pulls and heavy blows fill a boss's stagger bar. When it is
@@ -443,7 +443,7 @@ and casters draw an aim line before they shoot. Step aside or roll through.
 | Faint red arc or line | A monster's routine swing or shot. Dodge it if you can. |
 | Gold circle with arrows pointing in | **Stack**: the damage is shared by everyone inside. Stand together. |
 | Purple circle on each player | **Spread**: each circle also hits anyone else inside it. Spread out. |
-| Red circle and diamond over a head | **Tank buster**: a heavy hit on the target. Warrior: block or parry. Everyone else: stay clear. |
+| Red circle and diamond over a head | **Tank buster**: a heavy hit on the target. Tank: block or parry. Everyone else: stay clear. |
 | Blue arrows around the boss | **Knockback**: everyone is thrown away from the boss. |
 | Red screen edges | **Raid-wide** damage is about to hit everyone. |
 | Blue dashed circle | Your party's own delayed blast (Meteor, Volley, Rain of Ruin). |

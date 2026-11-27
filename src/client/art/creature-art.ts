@@ -1,13 +1,12 @@
-import type { RoleId } from '../../shared/content/classes.js';
 import type { BossKind, MobKind, ThemeId } from '../../shared/content/monsters.js';
-import type { HeroLook } from '../../shared/protocol.js';
+import type { HeroArtId } from './heroArt.js';
 import metrics from './creatures/metrics.json';
 
 const urls = import.meta.glob<string>('./creatures/*.png', {
   eager: true, import: 'default', query: '?url',
 });
 
-type CreatureId = `hero-${RoleId}-${HeroLook}` | `${ThemeId}-${MobKind}` | `${ThemeId}-boss-${BossKind}`;
+type CreatureId = HeroArtId | `${ThemeId}-${MobKind}` | `${ThemeId}-boss-${BossKind}`;
 
 interface SpriteMetrics {
   w: number;
