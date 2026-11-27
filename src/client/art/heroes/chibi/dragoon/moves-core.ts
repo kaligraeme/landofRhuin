@@ -262,6 +262,28 @@ export const both =
     for (const f of fs) f(x);
   };
 
+/**
+ * Sparks shed off the glowing point as it rests or moves (strength k): `n` motes of violet light
+ * that leave the point's channel and drift back along the lance and up, fading as they go, each
+ * a white-hot heart in a violet cross; `phase` (turns: advance it frame by frame) carries them on,
+ * each wrapping back to the point when it fades. The trail the reference's lance leaves.
+ */
+export const sparks =
+  (k: number, phase: number, n = 5) =>
+  (x: FxContext): void => {
+    const { c, aura, hash } = x;
+    for (let i = 0; i < n; i++) {
+      const t = (((hash(i, 181) + phase * (0.8 + 0.4 * hash(i, 182))) % 1) + 1) % 1;
+      const back = 3 + t * 16 + hash(i, 183) * 8;
+      const p3 = add3(add3(x.tip, x.dir, -back), [0, 1, 0], t * 12 + (hash(i, 184) - 0.5) * 5);
+      const q = x.proj([p3[0], p3[1], p3[2] + (hash(i, 185) - 0.5) * 4]);
+      const a = k * Math.min(1, (1 - t) * 1.6) * (0.7 + 0.3 * hash(i, 186));
+      const under = x.behind(p3);
+      c.glow(q[0], q[1], aura.hot, a, under);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) c.glow(q[0] + dx, q[1] + dy, aura.core, a * 0.55, under);
+    }
+  };
+
 // ── Idle ─────────────────────────────────────────────────────────────────────────────────────
 
 const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
@@ -277,6 +299,7 @@ const idle = Array.from({ length: 8 }, (_, i): ChibiPose => {
     phase: i / 8,
     wind: 0.16 + wave(i, 8) * 0.14,
     face: i === 6 ? 'closed' : 'smirk',
+    fx: { rune: 0.25 + wave(i, 8) * 0.2, extra: sparks(0.55, i / 8, 4) },
   });
 });
 
@@ -301,6 +324,7 @@ const battle = Array.from({ length: BOUNCE }, (_, i): ChibiPose => {
     lift: 0.1 + lag * 0.35,
     sway: Math.sin((2 * Math.PI * (i - 1)) / BOUNCE) * 0.2,
     phase: i / BOUNCE,
+    fx: { rune: 0.45 + bounce(i - 2) * 0.3, extra: sparks(0.8, i / BOUNCE) },
   });
 });
 
@@ -340,7 +364,7 @@ const move = Array.from({ length: 8 }, (_, i): ChibiPose => {
     wind: 1.05,
     phase: i / 8,
     sway: swing * 0.2,
-    fx: { speed: 0.8, dust: i % 4 === 0 ? 0.8 : 0 },
+    fx: { speed: 0.8, dust: i % 4 === 0 ? 0.8 : 0, rune: 0.5, extra: sparks(0.8, i / 8) },
   };
 });
 

@@ -234,7 +234,7 @@ const TWIRL: ChibiPose = pose(S, { x: 0, y: 4, lean: -2, twist: 10, tilt: -3, he
  * streams the cape and ponytail out on his left, away from the lance, while the tassets stay
  * round his hips.
  */
-const PROUD: ChibiPose = pose(S, { x: 1.5, y: 1.5, lean: -3, twist: 10, tilt: 7, head: -4, look: 4, footF: [-1, 0, 4.5], footB: [5, -1.2, 8.5], handF: [-9, 0, 14], handB: [2, 16, 10.5], weapon: 0, roll: -4, yaw: 0, grip: 6, face: 'smirk', wind: 0.55, lift: 0.3, sway: -0.5 });
+const PROUD: ChibiPose = pose(S, { x: 1.5, y: 1.5, lean: -3, twist: 10, tilt: 7, head: -4, look: 4, footF: [-1, 0, 4.5], footB: [5, -1.2, 8.5], handF: [-9, 0, 14], handB: [2, 16, 10.5], weapon: 0, roll: -4, yaw: 0, grip: 6, face: 'smirk', wind: 0.8, lift: 0.35, sway: -0.35 });
 
 const victory: ChibiPose[] = [
   // A breath first: the lance lifted out of the stance, upright in his right hand.
@@ -244,11 +244,11 @@ const victory: ChibiPose[] = [
   pose(TWIRL, { weapon: 325, phase: 0.2, wind: 0.6, fx: { smear: { from: 170, roll: 10, width: 0.6 }, rune: 1 } }),
   // ...and is swept down and planted beside him with a glint at the point.
   pose(PROUD, { y: 3, lean: 2, head: -2, handF: [-8, 2, 14], wind: 0.7, lift: 0.55, phase: 0.35, face: 'shout', fx: { rune: 1, dust: 0.6, aura: 0.6, rays: { k: 0.8, at: 'main', n: 8, len: 22 }, extra: glint(1) } }),
-  pose(PROUD, { y: 2, phase: 0.5, wind: 0.65, lift: 0.4, fx: { rune: 0.7, aura: 0.3, motes: { k: 0.8, n: 10, rise: 0.1 }, extra: glint(0.5) } }),
+  pose(PROUD, { y: 2, phase: 0.5, wind: 0.9, lift: 0.45, fx: { rune: 0.7, aura: 0.3, motes: { k: 0.9, n: 12, rise: 0.1 }, extra: glint(0.5) } }),
   // Settled: chin up, a grin, the cape still streaming, motes of violet light drifting up round him.
-  pose(PROUD, { phase: 0.65, wind: 0.6, fx: { rune: 0.5, motes: { k: 0.6, n: 10, rise: 0.2 } } }),
-  pose(PROUD, { phase: 0.82, wind: 0.57, fx: { rune: 0.4, motes: { k: 0.4, n: 10, rise: 0.3 } } }),
-  pose(PROUD, { phase: 0.95, fx: { rune: 0.3, motes: { k: 0.25, n: 10, rise: 0.38 } } }),
+  pose(PROUD, { phase: 0.65, wind: 0.86, fx: { rune: 0.6, motes: { k: 0.9, n: 12, rise: 0.2 } } }),
+  pose(PROUD, { phase: 0.82, wind: 0.83, fx: { rune: 0.5, motes: { k: 0.75, n: 12, rise: 0.3 } } }),
+  pose(PROUD, { phase: 0.95, fx: { rune: 0.45, motes: { k: 0.6, n: 12, rise: 0.38 } } }),
 ];
 
 /** The state clips' poses, by clip. */

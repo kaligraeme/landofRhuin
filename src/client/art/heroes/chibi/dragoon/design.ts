@@ -1,7 +1,8 @@
 /**
  * The Dragoon, as a chibi: a lean, long-legged young lancer with narrow amber eyes and a cocky
  * half-smile, in light dragon-styled armour of dark violet steel with pale lilac edges. He wears an
- * open-faced dragon crest half-helm (a brow band and cheek guards of overlapping scales, two
+ * open-faced dragon crest half-helm (a pale brow band dipping to a point over his nose, a row of
+ * overlapping scales above it and down the cheek guards, a pale ridge over the crown, two
  * swept-back fins like folded dragon wings rising behind each temple), with his jet-black hair,
  * blue in its sheen, showing at the fringe and falling from under the back of the helm in a long
  * ponytail. A scale-patterned breastplate and a gorget, layered wing-like pauldrons swept back to
@@ -58,7 +59,7 @@ const CAPE_IN = { ...mat4('#e04a54', '#a8242e', '#841a24', '#64121a', '#2a060a',
 // edges, and a vamplate of dark violet steel.
 const SHAFT = mat4('#6e6c84', '#44425a', '#2c2a3c', '#191826', '#0a0a10', -0.04);
 const WRAP = mat4('#b096f0', '#7a5ec8', '#54409a', '#32245e', '#140c28', -0.02);
-const POINT_STEEL = mat4('#f2eeff', '#c8c0e4', '#9088b4', '#5a527c', '#221e30', 0.06);
+const POINT_STEEL = mat4('#e4dcfc', '#a89ed0', '#746a9c', '#463e6a', '#1a1628', 0);
 const POINT_EDGE = mat4('#ffffff', '#f4f0ff', '#d4ccf0', '#a096c8', '#2a2440', 0.12);
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
   // round to the sides; plain plate across the back, under the cape.
   if (u < 9.4) return EDGE;
   if (yaw > 100) return ARMOUR;
-  const part = scaleAt(Math.atan2(h.p[2], h.p[0]) * 6.6 + 40, 25 - u, 6.4, 4.4);
+  const part = scaleAt(Math.atan2(h.p[2], h.p[0]) * 6.6 + 40, 25 - u, 7.6, 5.2);
   return part === 'face' ? ARMOUR : part === 'rim' ? SCALE : UNDER;
 }
 
@@ -240,7 +241,7 @@ const BODY: BodyDesign = {
   shin: { mat: ARMOUR, r0: 3, r1: 2.7 },
   boot: { mat: ARMOUR, r: 3.5, top: 0.5, toe: 6.2, heel: 2.4, sole: SOLE, cap: PLATE_EDGE },
   knee: { mat: PLATE_EDGE, r: 2.5 },
-  // Charcoal sleeves, violet vambraces with a pale cuff, dark gloves with lilac plates over the knuckles.
+  // Charcoal sleeves, violet vambraces flaring to a lilac cuff, dark gloves with violet plates over the knuckles (and claws: see `spurs`).
   upperArm: { mat: SUIT, r0: 2.8, r1: 2.5 },
   foreArm: { mat: ARMOUR, r0: 2.7, r1: 2.5 },
   cuff: { mat: ARMOUR, r: 3.1, at: 0.12, rim: PLATE_EDGE },
@@ -440,7 +441,7 @@ const LANCE: PoleSpec = {
   edge: POINT_EDGE,
   socket: { from: 40, to: 46, r: 1.8 },
   point: { from: 45.5, len: 21, w: 2.9, belly: 0.26 },
-  rune: { from: 47.5, to: 63, rest: hex('#6a46b4'), colour: hex('#b48cff'), glow: hex('#e8dcff'), marks: [51, 56] },
+  rune: { from: 47.5, to: 63, rest: hex('#7a4ed0'), colour: hex('#b07cff'), glow: hex('#c8a8ff'), marks: [51, 56] },
   grip2: 12,
   reach: [37, 66.5],
 };

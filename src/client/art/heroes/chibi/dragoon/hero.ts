@@ -51,9 +51,9 @@ export const DRAGOON_HERO: ChibiHero = chibiHero(
   { ...CORE_MOVES, ...SKILL_MOVES, ...STATE_MOVES },
   TIMING,
   {
-    side: { w: 384, h: 256, ax: 160, ay: 196 },
-    front: { w: 256, h: 256, ax: 128, ay: 188 },
-    back: { w: 256, h: 256, ax: 128, ay: 188 },
+    side: { w: 292, h: 238, ax: 98, ay: 192 },
+    front: { w: 184, h: 238, ax: 92, ay: 193 },
+    back: { w: 184, h: 238, ax: 92, ay: 193 },
   },
   2.1 / 84,
   87,
