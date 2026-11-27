@@ -1,13 +1,15 @@
 /**
  * The Firebeast, as a chibi: the form the Flame Warden takes for his ultimate. An upright, hunched
  * and hulking beast on the same biped rig as the heroes but bigger (about 108 px tall): charred
- * obsidian hide and plates cracked with glowing magma seams, a great mane of living flame round
- * its head and shoulders (licking up off its crown), two obsidian horns sweeping out and up
- * through it (black against the flame), glowing white-gold eyes ringed in the Warden's amber,
- * fangs, long claws on both hands that glow like his blade, digitigrade legs on clawed feet, a
- * thick flaming tail, and a scrap of his crimson shirt knotted round its waist as a sash with a
- * tatter of his black coat hanging behind. Everything here is data for the chibi engine and the beast's own pieces
- * (fire.ts); its moves are in the moves-*.ts files beside it, and hero.ts puts it together.
+ * obsidian hide and plates lit warm by its own fire and cracked with glowing magma seams, a great
+ * mane of living flame round its head and shoulders (tongues of flame licking up off a deeper
+ * orange mass, a ruff of it under the jaw), heavy brows over big eyes glowing white-gold, ringed
+ * in the Warden's amber, a heavy fanged muzzle whose maw glows red, long dark claws on both hands
+ * with white-hot points like his blade's glow, digitigrade legs with plated hocks on clawed feet,
+ * a thick tail with a mane of flame along its end, and a scrap of his crimson shirt knotted round
+ * its waist as a sash with a tatter of his black coat hanging behind. Everything here is data for
+ * the chibi engine and the beast's own pieces (fire.ts); its moves are in the moves-*.ts files
+ * beside it, and hero.ts puts it together.
  */
 import { hex } from '../../paint.js';
 import type { ChibiDesign, FaceStyle, Lock } from '../design.js';
@@ -120,20 +122,18 @@ const LOCKS: Lock[] = [
 const MANE: ManeFlame[] = [
   { yaw: 100, pitch: 30, len: 14, w: 4, back: 1 },
   { yaw: -100, pitch: 30, len: 14, w: 4, back: 1 },
-  { yaw: 125, pitch: 55, len: 15, w: 4.6, back: 1.4 },
-  { yaw: -125, pitch: 55, len: 15, w: 4.6, back: 1.4 },
-  { yaw: 180, pitch: 50, len: 16, w: 5, back: 1.8 },
-  { yaw: 140, pitch: 5, len: 16, w: 4.6, back: 1.6 },
-  { yaw: -140, pitch: 5, len: 16, w: 4.6, back: 1.6 },
-  { yaw: 180, pitch: 0, len: 15, w: 5, back: 2 },
+  { yaw: 125, pitch: 55, len: 15, w: 4, back: 1.4 },
+  { yaw: -125, pitch: 55, len: 15, w: 4, back: 1.4 },
+  { yaw: 135, pitch: 5, len: 17, w: 3.8, back: 1.6 },
+  { yaw: -135, pitch: 5, len: 17, w: 3.8, back: 1.6 },
   // Licking up off the crown, so the mane's outline burns upward seen from behind too.
   { yaw: 130, pitch: 68, len: 17, w: 4.4, back: 0.5 },
   { yaw: -130, pitch: 68, len: 17, w: 4.4, back: 0.5 },
   { yaw: 180, pitch: 78, len: 19, w: 4.8, back: 0.4 },
   // Streaming up and back off the back of the head and the nape, in separate tongues.
-  { yaw: 158, pitch: 32, len: 21, w: 4.2, back: 1.1 },
-  { yaw: -158, pitch: 32, len: 21, w: 4.2, back: 1.1 },
-  { yaw: 180, pitch: 12, len: 22, w: 4.6, back: 1.4 },
+  { yaw: 160, pitch: 34, len: 22, w: 3.8, back: 1.1 },
+  { yaw: -160, pitch: 34, len: 22, w: 3.8, back: 1.1 },
+  { yaw: 180, pitch: 8, len: 22, w: 4, back: 1.4 },
 ];
 
 /**
@@ -304,7 +304,7 @@ const FIREBEAST: ChibiDesign = {
       folds: true,
       give: 1.8,
       // A tatter of his black coat hanging behind, torn ragged, its ember lining showing as it flies.
-      panels: [{ from: 135, to: 225, len: 21, jag: 5, taper: 0.95, kick: 0.55 }],
+      panels: [{ from: 125, to: 235, len: 25, jag: 6, taper: 1, kick: 0.8 }],
     }),
     skirt({
       outer: CRIMSON,

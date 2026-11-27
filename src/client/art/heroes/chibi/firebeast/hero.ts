@@ -16,7 +16,9 @@ import { STATE_MOVES } from './moves-states.js';
 /**
  * Its clip timing (frame counts match its moves files). The strikes suit the claw chain's 0.45 s
  * between hits: each is over (or into its last frames of recovery) by then. `ult` plays once as
- * the form begins (it emerges from the fire) and `cast` once as it ends (it collapses into it).
+ * the form begins (it emerges from the fire) and `cast` once as it ends (it collapses into it);
+ * the game plays them in its own time (game/chibiState.ts `formShow`: half of the form's emerge,
+ * 0.4 s, and FORM_COLLAPSE, 0.45 s), which their `seconds` match.
  */
 const TIMING: Record<ChibiClip, ClipTiming> = {
   idle: { frames: 8, seconds: 1.4, windup: 0 },
@@ -60,11 +62,12 @@ for (const clip of Object.keys(TIMING) as ChibiClip[]) POSES[clip] = lit(MOVES[c
 /**
  * Frames, each fitted round everything any of its clips paints with at least five pixels to spare
  * (the canvas is painted whole for every frame, so a tight one paints faster): side on there is
- * room ahead of it for its slashes and the gout of fire from its jaws and behind for its tail and
- * the pillar of fire bursting open round it; toward the viewer, room to its right for the tail
- * curling out and its fall, and below for the shockwaves rolling toward the viewer; all are tall
- * enough for that pillar (about 120 px above the ground) and the rays round its roars. It stands
- * about 108 px tall to the tips of its mane: 2.56 tiles in game, a head taller than the heroes.
+ * room ahead of it for its slashes and the gout of fire from its jaws and behind for its tail;
+ * toward the viewer, room either side for the crescents of its strikes opened round its body and
+ * below for the shockwaves rolling toward the viewer; all are tall enough for the column of fire
+ * it emerges from and collapses into (as tall in tiles as the one the Warden's `ult` ends on, about
+ * 3.6 tiles side on and toward the viewer, 3.2 away). It stands about 108 px tall to the tips of
+ * its mane: 2.56 tiles in game, a head taller than the heroes.
  */
 export const FIREBEAST_HERO: ChibiHero = chibiHero(
   FIREBEAST,

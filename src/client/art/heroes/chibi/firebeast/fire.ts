@@ -1,11 +1,12 @@
 /**
  * The Firebeast's own pieces, built on the chibi engine: tongues of living flame (the mane round
- * its head and shoulders, the fire on its tail), its horns and brow ridges, its thick tail, its
- * digitigrade feet with their claws, glowing cracks down its limbs, the long claws on both hands
- * (held items, so the engine's impacts leave from them) and the glow its fire, its magma seams
- * and its eyes throw over everything near them, with embers rising off it and heat shimmer over
- * its flames. And its own effects: slashes of fire for its strikes, a pillar of fire to emerge
- * from and collapse into, bursts of flame, and smoke as its fire dies.
+ * its head and shoulders, the fire on its tail), its brow ridges and the details of its muzzle, its
+ * thick tail, its digitigrade feet with their claws, glowing cracks down its limbs, the long claws
+ * on both hands (held items, so the engine's impacts leave from them) and the glow its fire, its
+ * magma seams and its eyes throw over everything near them, with embers rising off it and heat
+ * shimmer over its flames. And its own effects: crescent slashes of fire for its strikes, the
+ * column of fire it emerges from and collapses into (the Warden's own), a ring of fire round its
+ * feet, bursts of flame with a pale violet shock ring, and smoke as its fire dies.
  *
  * How high the fire burns is the pose's `fire` (`BeastPose`): the flames grow and shrink with it,
  * and below `EMBERS` the mane's locks die back and its flame chars to embers.
@@ -528,9 +529,11 @@ const ASH: RGB = [58, 32, 34];
 
 /**
  * The glow of the beast's fire: every pixel painted in one of the `hot` colours (its flames, its
- * magma seams, its eyes) throws a soft halo over the pixels round it (two pixels out, in `core`,
- * strength `k`), so the ink line round its flames burns orange and the seams bloom; and embers
- * rise off it, looping with the pose's `phase`. Painted from a pose's `fx.extra`.
+ * magma seams, its eyes: bright, warm colours, every one with red at 0xc0 or more) throws a soft
+ * halo over the pixels round it (two pixels out, in `core`, strength `k`), so the ink line round
+ * its flames burns orange and the seams bloom; the inside of its mouth is relit red, as if fire
+ * burned in its throat; and embers rise off it, looping with the pose's `phase`. Painted from a
+ * pose's `fx.extra`.
  */
 export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flame: readonly RGB[], strength = 1): (x: FxContext) => void {
   // Pixels as 32-bit words (alpha, blue, green, red from the top byte down, as the canvas holds
@@ -568,7 +571,8 @@ export function burn(hot: readonly RGB[], core: RGB, ember: readonly RGB[], flam
           v = maw;
         }
         if (ash > 0 && flames.has(v)) c.glow(xx, y, hash(xx, y * 7 + 3) < 0.16 ? EMBER : ASH, hash(xx, y * 7 + 3) < 0.16 ? ash * 0.6 : ash);
-        if (!keys.has(v)) continue;
+        // Every colour that glows is a bright, warm one: most pixels are ruled out by their red alone.
+        if ((v & 0xff) < 0xc0 || !keys.has(v)) continue;
         near[i] = 1;
         if (xx < x0) x0 = xx;
         if (xx > x1) x1 = xx;
@@ -1090,11 +1094,16 @@ export function column(x: FxContext, k: number, o: { open?: number; seed?: numbe
     for (let y = 0; y < c.h; y++) {
       const hw = y >= line ? width(y) : 0;
       for (let px = 0; px < w; px++) {
-        if (!figure(px, y) || Math.abs(px + 0.5 - cx) < hw - 1) continue;
+        if (Math.abs(px + 0.5 - cx) < hw - 1) continue;
         if (engulf > 0.6) {
-          c.data[(y * w + px) * 4 + 3] = 0;
+          // Gone, with the glow it threw.
+          const i = (y * w + px) * 4 + 3;
+          c.data[i] = 0;
+          c.fx[i] = 0;
+          c.under[i] = 0;
           continue;
         }
+        if (!figure(px, y)) continue;
         const lane = Math.floor((px + 400) / 2);
         c.glow(px, y, hash(lane, 77) < 0.5 ? W_FLAME : W_ORANGE, 0.5 + engulf * 0.8);
       }
@@ -1126,7 +1135,7 @@ export function column(x: FxContext, k: number, o: { open?: number; seed?: numbe
         // Over it: separate tongues at first (its dark shape between them), thickening to solid
         // flame as the fire takes it.
         const burnt = Math.max(engulf, clamp((k - 0.5) * 1.6, 0, 1) * clamp((y - line) / 30, 0, 1));
-        if (streak < 0.55 - burnt * 0.6) continue;
+        if (streak < 0.55 - burnt * 0.75) continue;
         if (ink(px, y) && burnt < 0.7) continue;
         if (burnt < 0.8 && (col === W_GOLD || col === W_HOT)) col = W_FLAME;
         c.glow(px, y, col, clamp(0.6 + burnt * 0.4, 0, 1));

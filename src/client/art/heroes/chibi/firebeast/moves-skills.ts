@@ -11,13 +11,15 @@
  *               with a shockwave
  *   r        8  (1 wind-up) a flexing roar: arms bent up and out, the fire blazing high and a gold
  *               starburst of rays round it
- *   ult     12  it emerges: a pillar of fire (where the Warden's own `ult` left him) bursts open on
- *               the beast rising out of it, arms flung wide in a roar, flames flung out round it
- *               and a shockwave; then down into its battle stance
- *   cast     8  it collapses back into flame: it hunches, curls down, and fire rises round it into
- *               a pillar that hides nearly all of it (the game then swaps the Warden back in)
+ *   ult      7  it emerges, in the 0.4 s the game gives it: the column of fire the Warden's own
+ *               `ult` ended on, then the column bursting open round the beast, which roars with
+ *               its arms flung wide, flames flung out round it and a shockwave round its feet;
+ *               then one frame toward its battle stance
+ *   cast     8  it collapses back into flame, in the 0.45 s the game gives it: flames rising off a
+ *               ring round its feet, climbing it as it curls down, into that same column, which
+ *               hides all of it (the game then swaps the Warden back in)
  *
- * The effects painters are fire.ts's (`pillar`, `flare`, `slash`) and the jaws' fire (moves-core.ts
+ * The effects painters are fire.ts's (`column`, `flare`, `slash`) and the jaws' fire (moves-core.ts
  * `jaws`); the fire's level (`fire`) rises with every roar.
  */
 import type { FxContext } from '../rig.js';

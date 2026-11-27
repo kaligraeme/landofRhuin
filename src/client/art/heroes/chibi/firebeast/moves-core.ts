@@ -5,15 +5,20 @@
  * neck, the claws' angle (`weapon` for the right hand's, `weaponB` for the left's: 0 up, 90
  * forward, 180 down), and the fire, cloth and tail's `wind`/`lift`/`phase`.
  *
- *   idle    8  hunched and hulking, arms hanging, claws loose: a slow heaving breath that lifts its
- *              shoulders, and on the out-breath a lick of fire from its jaws; the mane flickers
- *   battle  8  a low crouched snarl, both claws up and spread ahead of it, bouncing on its hocks
+ *   idle    8  hunched and hulking, arms hanging, claws loose: the body held still between two
+ *              breaths (the shoulders a pixel higher on the in-breath), a puff of flame and smoke at
+ *              its lips on the out-breath; only its fire flickers every frame
+ *   battle  8  a low crouched snarl, both claws up at its chest either side of the snarl, bouncing
+ *              on its hocks
  *   move    8  a loping run on two legs, the body pitched forward, the arms swinging long, the mane
  *              and tail streaming
- *   atk1    7  (1 wind-up) the right claw reared back high, then raked down across in front
- *   atk2    7  (1 wind-up) the left claw swept up from low on its right, a backhand rake
- *   atk3    9  (2 wind-up) up on its haunches, both claws raised, then a lunging maul: both
- *              claws driven down together, a burst of fire and a shockwave
+ *   atk1    7  (1 wind-up) the right claw reared back high, then raked down across in front: a
+ *              falling crescent over it
+ *   atk2    7  (1 wind-up) a rising backhand with the left claw, scooped from low behind its hip
+ *              along the floor and up ahead of it: a crescent under and ahead of it, rising
+ *   atk3    9  (2 wind-up) rearing up and back, both arms high over its head, then a lunging maul:
+ *              both claws raked down from above its shoulders into the floor, fire bursting up
+ *              there with a pale violet shock ring
  *
  * Each strike has an anticipation, a smear frame, an impact frame and a recovery into the battle
  * stance's first frame, short enough that the chain can run a strike every 0.45 s. Its slash of
