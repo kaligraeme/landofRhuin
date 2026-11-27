@@ -16,13 +16,14 @@
  *              claws driven down together, a burst of fire and a shockwave
  *
  * Each strike has an anticipation, a smear frame, an impact frame and a recovery into the battle
- * stance, short enough that the chain can run a strike every 0.45 s. Its blazing arc starts where
- * the claws were (`trail`), so the whole stroke shows as one arc of fire, and fire claws three
- * burning furrows through it (`rake`). The fire burns higher as it strikes (`fire`).
+ * stance's first frame, short enough that the chain can run a strike every 0.45 s. Its slash of
+ * fire (`swipe`, fire.ts `slash`) sweeps round the striking shoulder from where the claws were at
+ * the start of the swing to where they are, so the whole stroke shows as one great arc of fire
+ * that then fades. The fire burns higher as it strikes (`fire`).
  */
 import { add3, type ChibiPose, type FxContext, mix, norm3, rad, solveRig, sub3, type V3, wave } from '../rig.js';
 import { FIREBEAST } from './design.js';
-import { type BeastPose, glowTongue, slash } from './fire.js';
+import { type BeastPose, flare, glowTongue, slash } from './fire.js';
 
 const BUILD = FIREBEAST.build;
 const REACH = FIREBEAST.weapon.reach[1];
@@ -315,16 +316,29 @@ const A3_DIVE = beast(READY, { x: 6, y: 5, lean: 34, twist: 0, head: -24, footF:
 const A3_SLAM = beast(READY, { x: 10, y: 12, lean: 48, twist: 0, head: -34, footF: [18, 0, 8.6], footB: [-12, 0, 7.4], handF: [22, 24, 9], handB: [22, 24, 9], weapon: 150, roll: 10, yaw: 0, weaponB: 150, rollB: 10, yawB: 0, wind: 0.9, lift: 0.4, phase: 0.45, face: 'shout', fire: 1.6, fx: { impact: 1.5, shock: 0.05, dust: 1 } });
 const A3_HOLD = beast(A3_SLAM, { y: 13, lean: 50, handF: [22, 26, 9], handB: [22, 26, 9], weapon: 156, weaponB: 156, wind: 0.6, lift: 0.2, phase: 0.6, face: 'grit', fire: 1.4, fx: { shock: 0.45, dust: 0.7 } });
 
-/** Both claws' slashes at once. */
-const maul = (path: readonly BeastPose[], p: BeastPose, k: number, thick: number): BeastPose => ({ ...p, fx: { ...p.fx, rune: 1, runeB: 1, extra: both(swipe([...path, p], k, false, thick), swipe([...path, p], k, true, thick)) } });
+/** Both claws' slashes at once, and (`burst`, 0 to 1 as it flies out) fire bursting up where they strike the floor. */
+const maul = (path: readonly BeastPose[], p: BeastPose, k: number, thick: number, burst = 0): BeastPose => ({
+  ...p,
+  fx: { ...p.fx, rune: 1, runeB: 1, extra: both(swipe([...path, p], k, false, thick), swipe([...path, p], k, true, thick), struck(burst)) },
+});
+
+/** Fire bursting up from the floor between its claws as they strike it (fire.ts `flare`), `k` 0 to 1 as it flies out. */
+const struck =
+  (k: number) =>
+  (x: FxContext): void => {
+    if (k <= 0) return;
+    const { armR, armL } = x.rig;
+    const head = x.proj(x.rig.head.o);
+    flare(x, [(armR.end[0] + armL.end[0]) / 2 + 4, 3, (armR.end[2] + armL.end[2]) / 2], k, { n: 12, len: 44, skip: (px, py) => Math.hypot(px - head[0], py - head[1]) < 12 });
+  };
 
 const atk3: BeastPose[] = [
   A3_REAR,
   A3_TOP,
   maul([A3_TOP], A3_DIVE, 0.9, 12),
-  maul([A3_TOP, A3_DIVE], A3_SLAM, 1, 18),
-  maul([A3_TOP, A3_DIVE, A3_SLAM], A3_HOLD, 0.45, 15),
-  beast(A3_HOLD, { y: 12, lean: 46, phase: 0.75, face: 'grit', fire: 1.3, fx: { shock: 0.85, dust: 0.3 } }),
+  maul([A3_TOP, A3_DIVE], A3_SLAM, 1, 18, 0.12),
+  maul([A3_TOP, A3_DIVE, A3_SLAM], A3_HOLD, 0.45, 15, 0.42),
+  beast(A3_HOLD, { y: 12, lean: 46, phase: 0.75, face: 'grit', fire: 1.3, fx: { shock: 0.85, dust: 0.3, extra: struck(0.75) } }),
   settle(A3_HOLD, 0.45, { phase: 0.85, wind: 0.35, lift: 0.2, fx: undefined }),
   settle(A3_HOLD, 0.75, { phase: 0.95, wind: 0.28, lift: 0.1, fx: undefined }),
   settle(A3_HOLD, 0.92, { phase: 1.05, wind: 0.22, fx: undefined }),

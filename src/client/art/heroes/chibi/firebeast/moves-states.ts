@@ -135,7 +135,7 @@ const PROUD = beast(AT_EASE, { x: 0, y: 2, lean: 14, twist: 6, head: -24, look: 
 const ring =
   (k: number) =>
   (x: FxContext): void =>
-    pillar(x, k, { open: 1, height: 90 });
+    pillar(x, k, { open: 1, height: 90, feet: true });
 
 const victory: BeastPose[] = [
   fromReady(beast(READY, { y: 10, lean: 40, head: -30, handF: [8, 20, 14], handB: [6, 20, 13], weapon: 170, weaponB: 170 }), 0.6, { phase: 0.05, face: 'grit' }),

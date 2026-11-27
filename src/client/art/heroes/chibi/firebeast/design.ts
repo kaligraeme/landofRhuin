@@ -2,10 +2,11 @@
  * The Firebeast, as a chibi: the form the Flame Warden takes for his ultimate. An upright, hunched
  * and hulking beast on the same biped rig as the heroes but bigger (about 108 px tall): charred
  * obsidian hide and plates cracked with glowing magma seams, a great mane of living flame round
- * its head and shoulders, glowing white-gold eyes ringed in the Warden's amber, fangs, long claws
- * on both hands that glow like his blade, digitigrade legs on clawed feet, a thick flaming tail,
- * and a scrap of his crimson shirt knotted round its waist as a sash with a tatter of his black
- * coat hanging behind. Everything here is data for the chibi engine and the beast's own pieces
+ * its head and shoulders (licking up off its crown), two obsidian horns sweeping out and up
+ * through it (black against the flame), glowing white-gold eyes ringed in the Warden's amber,
+ * fangs, long claws on both hands that glow like his blade, digitigrade legs on clawed feet, a
+ * thick flaming tail, and a scrap of his crimson shirt knotted round its waist as a sash with a
+ * tatter of his black coat hanging behind. Everything here is data for the chibi engine and the beast's own pieces
  * (fire.ts); its moves are in the moves-*.ts files beside it, and hero.ts puts it together.
  */
 import { hex } from '../../paint.js';
@@ -23,6 +24,8 @@ const HIDE = { ...mat4('#6e647a', '#3a3340', '#221d27', '#121016', '#07050a', -0
 const FACE = mat4('#7e748a', '#463e4e', '#2a2430', '#17131b', '#07050a', 0);
 /** Obsidian plates: glossier than the hide, parted from it by their own edges. */
 const PLATE = { ...mat4('#8e84a0', '#4c4556', '#2e2836', '#19151e', '#07050a', -0.04), clear: 1.2 };
+/** Horn: darker than the plates, so it stands out black against the flame of the mane. */
+const HORN = { ...mat4('#7a7088', '#3e3746', '#241f2a', '#141118', '#07050a', 0.05), clear: 1.2 };
 /** The plates' rims, catching the fire's light. */
 const PLATE_RIM = mat4('#ffd27a', '#e0803a', '#9a4422', '#5a2414', '#1e0a06', 0.1);
 /** Magma in the seams: flat, so it reads as light rather than a lit surface. */
@@ -111,6 +114,10 @@ const MANE: ManeFlame[] = [
   { yaw: 140, pitch: 5, len: 16, w: 4.6, back: 1.6 },
   { yaw: -140, pitch: 5, len: 16, w: 4.6, back: 1.6 },
   { yaw: 180, pitch: 0, len: 15, w: 5, back: 2 },
+  // Licking up off the crown, so the mane's outline burns upward seen from behind too.
+  { yaw: 130, pitch: 68, len: 17, w: 4.4, back: 0.5 },
+  { yaw: -130, pitch: 68, len: 17, w: 4.4, back: 0.5 },
+  { yaw: 180, pitch: 78, len: 19, w: 4.8, back: 0.4 },
 ];
 
 /**
@@ -236,14 +243,14 @@ const FIREBEAST: ChibiDesign = {
     mane({ shell: SHELL, flames: MANE, mat: FLAME }),
     horns({
       path: [
-        [8.4, 5.4, 6.6],
-        [5.6, 9.6, 10.6],
-        [0.4, 12.6, 13],
-        [-6, 14.6, 15.2],
-        [-11, 14.4, 16.4],
+        [7, 6.4, 8],
+        [4.4, 9.4, 12.6],
+        [1.4, 12.8, 15.6],
+        [-0.4, 16.6, 16.6],
+        [-0.6, 20.4, 16.4],
       ],
-      r: [2.8, 0.7],
-      mat: PLATE,
+      r: [3.6, 1],
+      mat: HORN,
       seam: SEAM,
       brow: { c: [9.6, 3.4, 4.4], r: [2.6, 1.5, 3.8] },
     }),

@@ -64,11 +64,15 @@ const CROUCH = beast(READY, { x: -3, y: 14, lean: 42, twist: 0, head: -34, footF
 const LEAP = beast(READY, { x: 6, y: -6, lean: 34, twist: 0, head: -30, footF: [-4, -9, 7], footB: [-12, -6, 7], handF: [22, 6, 12], handB: [20, 8, 11], weapon: 80, weaponB: 80, roll: 0, rollB: 0, yaw: 0, yawB: 0, face: 'shout', wind: 1, lift: 0.3, fire: 1.5 });
 const LAND = beast(READY, { x: 10, y: 13, lean: 46, twist: 0, head: -36, footF: [16, 0, 8.6], footB: [-10, 0, 7.6], handF: [22, 26, 12], handB: [20, 26, 11], weapon: 160, weaponB: 160, face: 'shout', wind: 0.9, lift: 0.3, fire: 1.4 });
 
+/** The top of the leap, and the landing that rakes both claws down from there into the floor. */
+const FLIGHT = beast(LEAP, { x: 8, y: -6, phase: 0.35 });
+const RAKED = beast(LAND, { phase: 0.5 });
+
 const q: BeastPose[] = [
   fromReady(CROUCH, 0.75, { phase: 0.05 }),
   beast(LEAP, { y: -2, phase: 0.2, fx: { ghosts: { k: 0.9, n: 3, gap: 9 }, speed: 1 } }),
-  beast(LEAP, { x: 8, y: -6, phase: 0.35, fx: { ghosts: { k: 0.8, n: 3, gap: 10 }, speed: 1 } }),
-  beast(LAND, { phase: 0.5, fx: { dust: 1, impact: 1, extra: both(swipe([LEAP], 0.9, false, 14), swipe([LEAP], 0.9, true, 14)) } }),
+  beast(FLIGHT, { fx: { ghosts: { k: 0.8, n: 3, gap: 10 }, speed: 1 } }),
+  beast(RAKED, { fx: { dust: 1, impact: 1, extra: both(swipe([FLIGHT, RAKED], 0.9, false, 14), swipe([FLIGHT, RAKED], 0.9, true, 14)) } }),
   beast(LAND, { x: 6, y: 12, phase: 0.65, wind: 0.6, fx: { dust: 0.8, ghosts: { k: 0.3, n: 1 } } }),
   settle(LAND, 0.4, { phase: 0.8, fx: { dust: 0.4 } }),
   settle(LAND, 0.72, { phase: 0.95 }),

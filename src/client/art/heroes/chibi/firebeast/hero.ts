@@ -58,21 +58,21 @@ const POSES = {} as Record<ChibiClip, readonly ChibiPose[]>;
 for (const clip of Object.keys(TIMING) as ChibiClip[]) POSES[clip] = lit(MOVES[clip]);
 
 /**
- * Frames, each fitted round everything any of its clips paints with a dozen pixels to spare (the
- * canvas is painted whole for every frame, so a tight one paints faster): side on there is room
- * ahead of it for its slashes and the gout of fire from its jaws and behind for its tail; toward
- * the viewer, room to its right for the tail curling out and its fall, and below for the
- * shockwaves rolling toward the viewer; all are tall enough for the pillar of fire it emerges from
- * and collapses into (about 118 px above the ground). It stands about 108 px tall: 2.56 tiles in
- * game, a head taller than the heroes.
+ * Frames, each fitted round everything any of its clips paints with at least five pixels to spare
+ * (the canvas is painted whole for every frame, so a tight one paints faster): side on there is
+ * room ahead of it for its slashes and the gout of fire from its jaws and behind for its tail and
+ * the pillar of fire bursting open round it; toward the viewer, room to its right for the tail
+ * curling out and its fall, and below for the shockwaves rolling toward the viewer; all are tall
+ * enough for that pillar (about 120 px above the ground) and the rays round its roars. It stands
+ * about 108 px tall to the tips of its mane: 2.56 tiles in game, a head taller than the heroes.
  */
 export const FIREBEAST_HERO: ChibiHero = chibiHero(
   FIREBEAST,
   POSES,
   TIMING,
   {
-    side: { w: 172, h: 184, ax: 73, ay: 130 },
-    front: { w: 164, h: 192, ax: 92, ay: 131 },
+    side: { w: 172, h: 184, ax: 76, ay: 134 },
+    front: { w: 164, h: 196, ax: 90, ay: 139 },
     back: { w: 164, h: 168, ax: 73, ay: 130 },
   },
   2.56 / 108,

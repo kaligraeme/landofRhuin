@@ -1,10 +1,14 @@
 /**
  * The Firebeast's own pieces, built on the chibi engine: tongues of living flame (the mane round
- * its head and shoulders, the fire on its tail), its thick tail, its digitigrade feet with their
- * claws, the long claws on both hands (held items, so the engine's smears and impacts leave from
- * them) and the glow its fire, its magma seams and its eyes throw over everything near them,
- * with embers rising off it.
+ * its head and shoulders, the fire on its tail), its horns and brow ridges, its thick tail, its
+ * digitigrade feet with their claws, glowing cracks down its limbs, the long claws on both hands
+ * (held items, so the engine's impacts leave from them) and the glow its fire, its magma seams
+ * and its eyes throw over everything near them, with embers rising off it and heat shimmer over
+ * its flames. And its own effects: slashes of fire for its strikes, a pillar of fire to emerge
+ * from and collapse into, bursts of flame, and smoke as its fire dies.
  *
+ * How high the fire burns is the pose's `fire` (`BeastPose`): the flames grow and shrink with it,
+ * and below `EMBERS` the mane's locks die back and its flame chars to embers.
  * Every flame flickers with the pose's `phase`: a flame's length and sway are periodic in it (a
  * whole number of flickers a turn), so a loop that runs `phase` from 0 to 1 loops cleanly, and a
  * clip that advances it every frame never shows the same fire twice.
@@ -612,15 +616,20 @@ function buffer(n: number): Uint8Array {
 
 const WHITE: RGB = [255, 255, 255];
 const GOLD: RGB = [255, 228, 120];
+const AMBER: RGB = [255, 172, 44];
+const ORANGE: RGB = [255, 140, 34];
+const RED: RGB = [216, 64, 26];
 const SMOKE: RGB = [140, 118, 112];
 
 /**
  * A slash of fire: a great crescent swept round a centre (the striking shoulder, hero space)
  * through the points the claws passed (`tips`, from where the swing began to where the claws are
- * now), standing a little beyond them. White-hot along its leading edge, through gold and orange
- * to a ragged inner edge licking into flame, its tail cooling to smoke, with sparks thrown off
- * it; `k` its strength, `thick` its depth at its head. Seen edge on it is opened up on screen, as
- * sprite artists draw a swing toward the viewer, and it never covers the head (`skip`).
+ * now), standing a little beyond them. In crisp bands as the Warden's own arcs of fire are:
+ * white-hot along its leading edge, through gold, amber and orange to an ember-red inner edge
+ * licking into flame, solid at its head and fading toward its tail, which cools to smoke, with
+ * sparks thrown off it; `k` its strength, `thick` its depth at its head. Seen edge on it is opened
+ * up on screen into a round crescent, as sprite artists draw a swing toward the viewer, and it
+ * never covers the head (`skip`).
  */
 export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: number; thick: number; over?: number; seed?: number; skip?: (px: number, py: number) => boolean }): void {
   const { c, proj, aura } = x;
@@ -654,7 +663,7 @@ export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: num
     const ny = (B[0] - A[0]) / chord;
     const mid = P[n >> 1] as Vec;
     let sag = (mid[0] - (A[0] + B[0]) / 2) * nx + (mid[1] - (A[1] + B[1]) / 2) * ny;
-    const want = chord * 0.22;
+    const want = chord * 0.34;
     if (Math.abs(sag) < want) {
       // Away from the centre it swings round.
       const side = Math.abs(sag) > 0.5 ? Math.sign(sag) : Math.sign(((A[0] + B[0]) / 2 - C[0]) * nx + ((A[1] + B[1]) / 2 - C[1]) * ny) || 1;
@@ -681,27 +690,28 @@ export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: num
     return [nx, ny];
   };
   const seed = o.seed ?? 0;
-  const depthAt = (i: number): number => o.thick * Math.pow(Math.sin((Math.min(1, (i / n) * 1.1) * Math.PI) / 2), 0.8) * (1 + 0.22 * Math.sin(i * 2.1 + seed));
-  const bands: [number, number, RGB][] = [
-    [0, 0.1, WHITE],
-    [0.1, 0.28, GOLD],
-    [0.28, 0.56, mixc(GOLD, aura.core, 0.6)],
-    [0.56, 0.8, aura.core],
-    [0.8, 1, aura.edge],
+  const depthAt = (i: number): number => o.thick * Math.pow(Math.sin((Math.min(1, (i / n) * 1.1) * Math.PI) / 2), 0.8) * (1 + 0.1 * Math.sin(i * 2.1 + seed));
+  // White-hot, gold, amber, orange and an ember red at the inner edge, the outer ones solid.
+  const bands: [number, number, RGB, number][] = [
+    [0, 0.08, WHITE, 1],
+    [0.08, 0.22, GOLD, 1],
+    [0.22, 0.45, AMBER, 1],
+    [0.45, 0.72, ORANGE, 0.95],
+    [0.72, 1, aura.edge, 0.75],
   ];
   const inn = P.map((_, i) => inward(i));
   for (let i = 0; i < n; i++) {
     const t0 = i / n;
     const t1 = (i + 1) / n;
-    const fade = Math.min(1, o.k * (0.2 + 0.95 * Math.pow(t1, 0.9)));
-    const cool = clamp((0.3 - t1) / 0.3, 0, 1);
+    const fade = Math.min(1, o.k * (0.3 + 0.85 * t1));
+    const cool = clamp((0.22 - t1) / 0.22, 0, 1);
     const pa = P[i] as Vec;
     const pb = P[i + 1] as Vec;
     const na = inn[i] as Vec;
     const nb = inn[i + 1] as Vec;
     const da = depthAt(i);
     const db = depthAt(i + 1);
-    for (const [f0, f1, col] of bands) {
+    for (const [f0, f1, col, alpha] of bands) {
       const quad: Vec[] = [
         [pa[0] + na[0] * da * f0, pa[1] + na[1] * da * f0],
         [pb[0] + nb[0] * db * f0, pb[1] + nb[1] * db * f0],
@@ -709,7 +719,7 @@ export function slash(x: FxContext, centre: V3, tips: readonly V3[], o: { k: num
         [pa[0] + na[0] * da * f1, pa[1] + na[1] * da * f1],
       ];
       const colour = mixc(col, SMOKE, cool * (0.4 + f1 * 0.6));
-      const a = fade * (f1 > 0.85 ? 0.7 : 1) * (1 - cool * 0.4) * (t0 < 0.05 ? 0.5 : 1);
+      const a = fade * alpha * (1 - cool * 0.7) * (t0 < 0.05 ? 0.5 : 1);
       scanPoly(quad, c.w, c.h, (px, py) => {
         if (!o.skip?.(px, py)) c.glow(px, py, colour, a);
       });
@@ -798,10 +808,11 @@ function crackLimb(ctx: PieceContext, seam: Mat, bones: readonly (readonly [V3, 
 // ── Horns and brow ───────────────────────────────────────────────────────────────────────────
 
 /**
- * Heavy brow ridges over the eyes and two horns swept back from them through the mane: obsidian,
- * a crack of magma up each horn, painted with the head (in its depth test) as gear over the hair
- * (ids from GEAR_ID, so the drawn brows do not show through them). The horns run through `path`
- * (head space, the right one; the left mirrors it), `r` thick at the root and the tip.
+ * Heavy brow ridges over the eyes and two horns rising from the temples, out and up through the
+ * mane, their points standing clear of it in every view: obsidian, a crack of magma up each horn,
+ * painted with the head (in its depth test) as gear over the hair (ids from GEAR_ID, so the drawn
+ * brows do not show through them). The horns run through `path` (head space, the right one; the
+ * left mirrors it), `r` thick at the root and the tip.
  */
 export function horns(spec: { path: readonly V3[]; r: readonly [number, number]; mat: Mat; seam: Mat; brow: { c: V3; r: V3 } }): HeadPiece {
   return {
@@ -839,9 +850,6 @@ export function horns(spec: { path: readonly V3[]; r: readonly [number, number];
 
 // ── Pillars and bursts of flame ──────────────────────────────────────────────────────────────
 
-const RED: RGB = [216, 64, 26];
-const ORANGE: RGB = [255, 140, 34];
-
 /** One tongue of flame on the effects layer: a filled outline from its base along `dir` (screen), `w` wide, in nested bands (red, orange, gold, white at its heart), `a` its strength. */
 export function glowTongue(x: FxContext, base: Vec, dir: Vec, len: number, w: number, sway: number, a: number, skip?: (px: number, py: number) => boolean, under = false): void {
   const { c } = x;
@@ -871,13 +879,23 @@ export function glowTongue(x: FxContext, base: Vec, dir: Vec, len: number, w: nu
 /**
  * A pillar of fire engulfing the beast where it stands: tongues of flame rising from the floor
  * round it, `k` from 0 (licking round its feet) to 1 (towering over it, hiding nearly all of it),
- * flickering with the pose's phase. `open` (0 to 1) bursts it outward: its tongues lean out and
- * part down the middle, so the figure shows through as it breaks.
+ * flickering with the pose's phase. It stands under the middle of the beast, from its head back
+ * to the end of its tail, and is as wide as that on screen, so a hunched beast is all inside it
+ * (`feet` stands it round its feet instead). `open` (0 to 1) bursts it outward: its tongues lean
+ * out and part down the middle, so the figure shows through as it breaks.
  */
-export function pillar(x: FxContext, k: number, o: { open?: number; height?: number } = {}): void {
+export function pillar(x: FxContext, k: number, o: { open?: number; height?: number; feet?: boolean } = {}): void {
   if (k <= 0) return;
   const { rig, proj, hash } = x;
-  const g = proj([rig.pelvis.o[0], 0, rig.pelvis.o[2]]);
+  const p = rig.pelvis;
+  const back = norm3([-p.f[0], 0, -p.f[2]]);
+  const head = rig.head.o;
+  const tail = add3(p.o, back, 30);
+  const a = proj([head[0], 0, head[2]]);
+  const b = proj([tail[0], 0, tail[2]]);
+  const g = o.feet ? proj([p.o[0], 0, p.o[2]]) : proj([(head[0] + tail[0]) / 2, 0, (head[2] + tail[2]) / 2]);
+  const half = o.feet ? 20 : Math.max(20, Math.abs(a[0] - b[0]) / 2 + 9);
+  const wide = Math.sqrt(half / 20);
   const H = (o.height ?? 132) * k;
   const open = o.open ?? 0;
   const ph = (rig.pose.phase ?? 0) * Math.PI * 2;
@@ -890,9 +908,9 @@ export function pillar(x: FxContext, k: number, o: { open?: number; height?: num
       if ((pass === 0) !== (Math.abs(s) > 0.5)) continue;
       const fl = Math.sin(ph * 3 + j * 1.9) * 0.5 + Math.sin(ph * 5 + j) * 0.25;
       const len = H * (1 - Math.abs(s) * 0.45) * (0.82 + 0.14 * fl + 0.1 * hash(j, 401)) * (1 - open * 0.45);
-      const base: Vec = [g[0] + s * (20 + open * 16), g[1] + 7 - Math.abs(s) * 3];
+      const base: Vec = [g[0] + s * (half + open * 16), g[1] + 7 - Math.abs(s) * 3];
       const lean = s * (0.18 + open * 0.9);
-      glowTongue(x, base, [lean, -1], len, 9 + 5 * (1 - Math.abs(s)) * (1 - open * 0.3), fl * 0.6, Math.min(1, k * 1.2) * (1 - open * 0.35));
+      glowTongue(x, base, [lean, -1], len, (9 + 5 * (1 - Math.abs(s)) * (1 - open * 0.3)) * wide, fl * 0.6, Math.min(1, k * 1.2) * (1 - open * 0.35));
     }
   }
 }
