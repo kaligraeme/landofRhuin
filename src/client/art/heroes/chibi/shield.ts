@@ -21,7 +21,7 @@ import type { RGB, Vec } from '../paint.js';
 import { type Held, type HeldItem, type PieceContext, WEAPON_TAG } from './design.js';
 import { heldAxes, mainHeld } from './held.js';
 import { dim, type Mat, mixc, type Part, type Ramp4, scanPoly } from './raster.js';
-import { add3, clamp, mul3, norm3, sub3, type V3 } from './rig.js';
+import { add3, clamp, mul3, norm3, sub3 } from './rig.js';
 
 /** A shape in a shield's plane, [u, v] (u up toward its top, v across it), its points in order round it. */
 export type Outline = readonly (readonly [number, number])[];

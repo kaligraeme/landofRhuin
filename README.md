@@ -11,7 +11,9 @@ cursor, and dodge-roll through danger. The dungeon structure takes its cues from
 dungeons: a finder queue with a ready check, aggro and taunts, sealed boss arenas, and orange
 telegraphs to step out of. Teamwork is the heart of it: monsters hit far too hard for anyone but the
 Tank to take, the Tank needs a healer to last, and the damage dealers have to keep their aggro
-under the Tank's. All names, art, skills and bosses are original.
+under the Tank's. The names, art, skills and bosses are the game's own; a few heroes borrow the
+colours and feel of familiar fantasy archetypes (the Dragoon's dark violet dragon armour and
+leaping lance, for one) without copying any particular character.
 
 ![Fighting Gnashtusk the War Boar in an Orc stronghold](docs/screenshots/orc-boss.jpg)
 
@@ -600,10 +602,13 @@ claw chain, `ult` and `cast`; the rest exist as every chibi's must:
 A chibi hero's frames (339 to 375, a third of them per view) are painted in the background as a
 dungeon loads, a frame at a time in slices of about 12 milliseconds, so the page never stalls (a
 frame takes 4 to 8 milliseconds on average in Node). Each frame is cropped to what is painted and the crops
-are shelf-packed into one atlas per view (`atlas.ts`), 700 to 1,300 pixels on a side. Side on comes
-first; the views toward and away from you follow once the rest of the party and the monsters have
-their frames; until then the hero is drawn side on whichever way they face, and before their side
-view is painted, as a plain figure.
+are shelf-packed into one atlas per view (`atlas.ts`), 700 to 1,300 pixels on a side. Your own
+hero comes first, then the rest of the party, then the forms they take (the Firebeast), then the
+clan's monsters. Side on comes first; the views toward and away from you follow once the rest of
+the party and the monsters have their frames; until then the hero is drawn side on whichever way
+they face, and before their side view is painted, as a plain figure. A form is painted only in
+the nine clips the game can show of it (`FORM_CLIPS` in `game/chibiState.ts`: no skills, flinch,
+kneel or fall), 70 frames a view rather than 113.
 
 To add a chibi hero, give it a folder like `heroes/chibi/darkKnight/`:
 
@@ -748,8 +753,8 @@ melody note sits in its key or on its chord.
 7. **Wipes.** If the whole party falls, everyone returns to the last checkpoint and the encounter
    resets. Each wipe adds a stack of *Echo of Rhuin* (up to 3): 10% more damage dealt and 10%
    less damage taken per stack.
-8. **Results.** When the final boss falls you get the clear time and each hero's damage,
-   healing and knockouts.
+8. **Results.** When the final boss falls you get the clear time and, for each player, the hero
+   they played and their damage, healing and knockouts.
 
 Monsters wind up their attacks too. Brutes flash a short red arc before they swing, and archers
 and casters draw an aim line before they shoot. Step aside or roll through.
@@ -793,7 +798,9 @@ src/client/      Browser client (TypeScript and canvas, no framework).
   game/          World state, renderer, HUD, effects, input and prediction.
   audio/         The music: a note language, the score, synthesized instruments, the director.
 test/            Unit tests and full dungeon runs.
-e2e/             Browser test with two players.
+e2e/             Browser tests: two players clear a room together, a party with an AI Flame
+                 Warden, a Flame Warden player taking the Firebeast form, and the title screen
+                 at narrow window widths.
 ```
 
 - **Server-authoritative.** The server simulates every dungeon at 20 ticks per second and sends
@@ -840,7 +847,9 @@ prints how often each hero pulled a monster off the tank and what killed them.
 
 - Gear and rewards from bosses, and character progression between runs.
 - Accounts and saved characters (players are currently kept in memory by the server).
-- Sound and music, and frame-by-frame animation for the sprites.
+- Sound effects for blows, skills and the interface (the game has music, but no other sound).
+- Frame-by-frame art for the monsters and bosses, as the heroes have (they are animated by
+  bending their artwork).
 - Gamepad support.
 - More clans, bosses and mechanics (towers to soak, tethers, line stacks, gaze attacks).
 - A harder difficulty and a timed leaderboard.

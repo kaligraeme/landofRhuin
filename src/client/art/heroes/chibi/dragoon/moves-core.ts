@@ -337,7 +337,7 @@ export const both =
  * off it, clear of the lance's own glowing head, fading as they go: each a white-hot heart in a
  * violet cross, the fresh ones a little larger. `phase` (turns: advance it frame by frame) carries
  * them on, each wrapping back to the tip when it fades, and curls the wisp. Where the figure
- * stands nearer the viewer than they are, it hides them. The trail the reference's lance leaves.
+ * stands nearer the viewer than they are, it hides them: the trail a glowing lance leaves.
  */
 export const sparks =
   (k: number, phase: number, n = 7) =>
