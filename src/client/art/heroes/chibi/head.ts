@@ -1,8 +1,9 @@
 /**
- * Chibi heads: a skull and jaw under a shell of hair, ray-cast through the camera so they turn
- * smoothly through every angle, with locks of hair (clumps raked over the head, a fringe, locks at
- * the nape) laid over the shell as leaf-shaped clumps, clumps painted onto the back of the shell
- * fanning from the crown, and the face's features stamped on as small pixel glyphs chosen by how
+ * Chibi heads: a skull and jaw under a shell of hair (with any volume joined to it: a pompadour's
+ * lift, a fuller crown), ray-cast through the camera so they turn smoothly through every angle,
+ * with locks of hair (clumps raked over the head, a fringe, locks at the nape) laid over the
+ * shell as leaf-shaped clumps, clumps painted onto the back of the shell fanning from the crown,
+ * and the face's features stamped on as small pixel glyphs chosen by how
  * squarely each one faces the viewer, from the design's face style (FACE_PLAIN, FACE_SOFT,
  * FACE_SHARP or its own). Everything is drawn into one part with a depth test, so locks pass in
  * front of and behind the head as they should, and a coloured line parts each clump from the hair
@@ -194,11 +195,14 @@ function lockPath(d: HeadDesign, lk: Lock, push: V3): V3[] {
   const n = 6;
   for (let i = 1; i <= n; i++) {
     const t = i / n;
-    const p = add3(add3(root, dir, lk.len * t), curl, lk.len * t * t);
-    const q: V3 = [(p[0] - s.c[0]) / s.r[0], (p[1] - s.c[1]) / s.r[1], (p[2] - s.c[2]) / s.r[2]];
-    const ql = Math.hypot(q[0], q[1], q[2]);
-    const k = ql < 1 + LIE ? (1 + LIE) / Math.max(1e-3, ql) : 1;
-    pts.push([s.c[0] + q[0] * k * s.r[0], s.c[1] + q[1] * k * s.r[1], s.c[2] + q[2] * k * s.r[2]]);
+    let p = add3(add3(root, dir, lk.len * t), curl, lk.len * t * t);
+    for (const e of [s, ...(d.volume ?? [])]) {
+      const q: V3 = [(p[0] - e.c[0]) / e.r[0], (p[1] - e.c[1]) / e.r[1], (p[2] - e.c[2]) / e.r[2]];
+      const ql = Math.hypot(q[0], q[1], q[2]);
+      const k = ql < 1 + LIE ? (1 + LIE) / Math.max(1e-3, ql) : 1;
+      p = [e.c[0] + q[0] * k * e.r[0], e.c[1] + q[1] * k * e.r[1], e.c[2] + q[2] * k * e.r[2]];
+    }
+    pts.push(p);
   }
   return pts;
 }
@@ -212,14 +216,15 @@ export function paintHead(ctx: PieceContext, d: HeadDesign, fr: Frame3, pieces: 
   const part = ctx.part(HEAD_TAG);
   const hero = (p: V3): V3 => at3(fr, p[0], p[1], p[2]);
 
-  // Skull, jaw, ears and the shell of hair: the mass under the locks, a tone darker than them so
-  // the gaps between clumps read as recesses, and darkest on its underside at the nape. The shell
-  // and the locks share one material, parted by the hair's coloured line.
+  // Skull, jaw, ears and the shell of hair (any volume joined to it as one shape with it): the
+  // mass under the locks, a tone darker than them so the gaps between clumps read as recesses, and
+  // darkest on its underside at the nape. The shell and the locks share one material, parted by
+  // the hair's coloured line.
   const hair: Mat = { ...d.hair, line: d.lockLine ?? shade(d.hair.tones[3], -0.3), clear: 1 };
   part.blobs(fr, [{ c: d.skull.c, r: d.skull.r, id: SKIN }, { c: d.jaw.c, r: d.jaw.r, id: SKIN }], () => ({ m: d.skin }));
   part.blobs(fr, [{ c: d.ear.c, r: d.ear.r, id: EAR }, { c: [d.ear.c[0], d.ear.c[1], -d.ear.c[2]], r: d.ear.r, id: EAR }], () => ({ m: d.skin, light: -0.05 }));
   const whorl = d.whorl ? norm3(dirIn(HEAD_AXES, Math.cos(rad(d.whorl.yaw)) * Math.cos(rad(d.whorl.pitch)), Math.sin(rad(d.whorl.pitch)), Math.sin(rad(d.whorl.yaw)) * Math.cos(rad(d.whorl.pitch)))) : null;
-  part.blobs(fr, [{ c: d.shell.c, r: d.shell.r, id: SHELL }], (h: Hit) => {
+  part.blobs(fr, [{ c: d.shell.c, r: d.shell.r, id: SHELL }, ...(d.volume ?? []).map((v) => ({ c: v.c, r: v.r, id: SHELL }))], (h: Hit) => {
     if (h.back) return { m: hair, light: toneLight(hair, 3) };
     if (bare(d, h.p)) return null;
     const l = cam.light(dirIn(fr, h.n[0], h.n[1], h.n[2]));
@@ -650,13 +655,16 @@ function paintTress(ctx: PieceContext, part: Part, d: HeadDesign, axis: V3, s: H
   );
 }
 
+/** The hair's shell and any volume joined to it, as obstacles long hair lies over. */
+const hairMass = (d: HeadDesign, fr: Frame3): Obstacle[] => [d.shell, ...(d.volume ?? [])].map((e) => ({ fr, c: e.c, r: e.r, pad: 0.4 }));
+
 /**
  * A layer at the nape (`long.nape`) in a pose: a strand that grows out of the hair's shell as a
  * tress does and lies over the head, the jaw and `over` (the head's pieces: a high collar). `fr`
  * is the head's frame as painted.
  */
 function napeStrand(ctx: PieceContext, d: HeadDesign, fr: Frame3, t: Tress, i: number, over: readonly Obstacle[]): HairStrand {
-  const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...over];
+  const avoid: Obstacle[] = [...hairMass(d, fr), { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...over];
   const root = at3(fr, ...onShell(d, t.yaw, t.pitch, 0.9));
   const side = dirIn(fr, Math.cos(rad(t.yaw)), 0, Math.sin(rad(t.yaw)));
   const spec = { root, dir: dirIn(fr, t.dir[0], t.dir[1], t.dir[2]), len: t.len, n: segments(t.len), stiff: t.stiff ?? 0.3, give: t.give ?? 1, seed: 0.7 + i * 1.9, avoid, axis: ctx.rig.pelvis.o, view: norm3(ctx.cam.local(TO_CAMERA)), side, flip: t.flip };
@@ -676,7 +684,7 @@ export function hairItems(ctx: PieceContext, d: HeadDesign, body: BodyDesign, fr
   if (!long) return [];
   const { rig, pose } = ctx;
   const hero = (p: V3): V3 => at3(fr, p[0], p[1], p[2]);
-  const avoid: Obstacle[] = [{ fr, c: d.shell.c, r: d.shell.r, pad: 0.4 }, { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...torsoObstacles(rig, body.chest, body.hips)];
+  const avoid: Obstacle[] = [...hairMass(d, fr), { fr, c: d.jaw.c, r: d.jaw.r, pad: 1 }, ...torsoObstacles(rig, body.chest, body.hips)];
   const lie = long.lie ?? 1.5;
   const axis = hero(d.shell.c);
   const view = norm3(ctx.cam.local(TO_CAMERA));

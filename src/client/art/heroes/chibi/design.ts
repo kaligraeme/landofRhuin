@@ -193,6 +193,13 @@ export interface HeadDesign {
   /** The hair's shell over the skull. */
   shell: { c: V3; r: V3 };
   /**
+   * More hair joined to the shell, for volume one ellipsoid cannot give (a pompadour's lift over
+   * the brow, a fuller crown): ellipsoids in head space painted as the shell is, with its
+   * hairline, whorl and shading and no line where they meet it. Locks and long hair lie over them
+   * as over the shell; roots and the whorl's clumps still go by the shell. None by default.
+   */
+  volume?: readonly { c: V3; r: V3 }[];
+  /**
    * Where the face shows through the shell: within `faceYaw` degrees of the front and below the
    * fringe, whose height (head space u) runs from `brow` at the middle to `temple` at the face's
    * sides; and the sides and back are bare below `nape` (and around the ears, below `ear`).
