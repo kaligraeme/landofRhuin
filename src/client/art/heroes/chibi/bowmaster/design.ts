@@ -1,0 +1,438 @@
+/**
+ * The Bowmaster, as a chibi: a slim, light-footed woodland archer, calm and keen-eyed. A forest-green
+ * hood worn up over dark brown hair (a side fringe and two strands framing her face inside it, a
+ * low tail tied at the nape that shows when the hood falls back), a short hooded cape of the same
+ * green to the waist at the front and down to the backs of her knees behind, a fitted dark brown
+ * leather jerkin laced up the front, leather bracers over moss-green sleeves and a shooting glove,
+ * a belt with a brass buckle and a pouch, tan trousers and tall brown boots with turned cuffs. She
+ * carries a wooden recurve longbow of dark reddish wood with a leather grip and horn tips in her
+ * left hand and draws it with her right, and a quiver of pale-fletched arrows on her back. Her
+ * effects are a verdant green-gold. Everything here is data for the chibi engine (and a few small
+ * pieces of her own: the boots' cuffs, the pouch, the five-arrow fan, the snare and the dark arrow
+ * of her ultimate); her moves are in the moves-*.ts files beside it, and hero.ts puts her together.
+ */
+import { hex } from '../../paint.js';
+import { quiver } from '../back.js';
+import { arrow, arrowHeads, type ArrowSpec, bow, type BowSpec, flatShaft, nocked, paintArrow } from '../bow.js';
+import { type BodyDesign, type ChibiDesign, type DrawItem, type Held, type HeldItem, type Lock, type Piece, type PieceContext, WEAPON_TAG, type WeaponDesign } from '../design.js';
+import { FACE_SOFT } from '../head.js';
+import { hood } from '../headgear.js';
+import { mainHeld } from '../held.js';
+import { cowl } from '../pieces.js';
+import { dim, flat, type Hit, type Mat, mat4, type Part } from '../raster.js';
+import { add3, at3, cross3, type Limb, lerp3, norm3, rad, sub3, type V3 } from '../rig.js';
+
+// ── Palette (highlight, light, base, shadow, line) ───────────────────────────────────────────
+
+// Fair skin, for the neck; the face is lit flatter and brighter so it reads clean at game size,
+// with a soft warm outline, so the line under her chin reads as a crease.
+const SKIN = mat4('#fff0e0', '#f6cfab', '#d8a27c', '#a26c4e', '#6e3c2c', 0.3);
+const FACE_SKIN: Mat = { ...SKIN, line: hex('#a8705a'), gain: 0.3, bias: 0.6 };
+const NECK: Mat = { ...mat4('#fff0e0', '#f6cfab', '#ecbc96', '#e0ae88', '#b47c62', 0.2), gain: 0.4 };
+// Dark brown hair.
+const HAIR = mat4('#8e6448', '#6e4a36', '#4a2e20', '#2a1a10', '#160c06', -0.05);
+// The hood and cape: forest green, its base tone over most of it and the light tone on the folds.
+const GREEN = { ...mat4('#8cc866', '#62a046', '#4a8436', '#2a5422', '#132a12', -0.12), gain: 0.6 };
+const GREEN_IN = mat4('#3a6a2e', '#2e5a26', '#1f4019', '#132a10', '#081208');
+// The band round the hood's opening, a shade lighter.
+const GREEN_RIM = { ...mat4('#b4e48c', '#8cc866', '#6aa84c', '#3e6e30', '#173016', 0.05), gain: 0.65 };
+// The jerkin: fitted dark brown leather.
+const JERKIN = { ...mat4('#b07a52', '#8a5a3a', '#5c3a24', '#36220f', '#1a1008', -0.02), gain: 0.8 };
+// Its lacing, a pale cord over the dark gap of the shirt beneath.
+const LACE = flat(hex('#e8d2a4'));
+const LACE_GAP = flat(hex('#2a1a10'));
+// Cream linen shirt sleeves under the bracers.
+const SLEEVE = { ...mat4('#fff8e8', '#eadcc0', '#c4b08c', '#8a7656', '#3e3222', 0), gain: 0.75 };
+// Bracers and the belt: a deeper, redder leather than the jerkin, so they read apart from it.
+const BRACER = mat4('#a86a46', '#7e4a2e', '#56301c', '#341b0e', '#180a04', -0.02);
+const BRACER_RIM = mat4('#e0b07a', '#c08c58', '#966438', '#5e3c1e', '#2a180a', 0.05);
+// The shooting glove.
+const GLOVE = mat4('#b07a52', '#8a5a3a', '#6a4228', '#40260f', '#1e1006', 0);
+const BELT = mat4('#8a5a3a', '#6a4228', '#4a2c18', '#2c190c', '#140a04', -0.05);
+const BRASS = mat4('#fff2c4', '#e8c86a', '#b08a3a', '#6e5220', '#382808', 0.05);
+// Tan trousers.
+const TROUSERS = { ...mat4('#ecd6a8', '#d8bc8a', '#b0925e', '#7a6038', '#3e2e18', 0), gain: 0.8 };
+// Tall brown boots, their turned cuffs a lighter suede.
+const BOOT = mat4('#9a6448', '#76482f', '#52301e', '#321c11', '#180c07', -0.05);
+const CUFF = mat4('#d2a074', '#b07e54', '#8a5a36', '#5a3820', '#24140a', 0.05);
+const SOLE = mat4('#2a2026', '#1e171c', '#151014', '#0c090b', '#08060a');
+// The quiver: tooled leather with brass bands.
+const QUIVER = mat4('#c07a4c', '#9a5834', '#6c3a20', '#40200f', '#200e06', -0.02);
+// The bow: dark reddish wood, a leather grip, horn tips, a pale string.
+const BOW_WOOD = mat4('#d0805a', '#a8543a', '#743222', '#421a10', '#200a06', 0);
+const BOW_GRIP = mat4('#a87a58', '#7c5236', '#583822', '#341f12', '#1a0e06', 0);
+const HORN = mat4('#fff6e0', '#e8dcc0', '#b4a486', '#7a6c52', '#3a3224', 0.1);
+const STRING = flat(hex('#f4ecd8'));
+// Arrows: pale ash shafts, steel heads, pale fletching.
+const SHAFT = mat4('#f2e2c0', '#e0c896', '#c4a874', '#8a7048', '#3a2e1a');
+const STEEL = mat4('#ffffff', '#dfe4ee', '#a8b0c2', '#6c7488', '#2a2e3a', 0.08);
+const FLETCH = mat4('#ffffff', '#f4f0e4', '#d6d0bc', '#a09680', '#4e463a', 0.1);
+// The dark arrow of her ultimate: a black shaft, a violet head, black fletching.
+const DARK_SHAFT = mat4('#4a3a5a', '#2e2238', '#1e1626', '#120c18', '#08040c');
+const DARK_HEAD = mat4('#e4c8ff', '#a878e0', '#6a3aa8', '#3a1a66', '#140626', 0.05);
+const DARK_FLETCH = mat4('#5a4a6a', '#3a2c48', '#261c30', '#160e1e', '#08040c');
+// The snare: a coil of tarred cord with an iron jaw.
+const CORD = mat4('#f4e2b0', '#d8c08a', '#a8905e', '#6e5a34', '#2a1e0c', 0.05);
+const IRON = mat4('#c8ccd8', '#9096a6', '#62687a', '#3c404e', '#16181e', 0.05);
+
+// ── Build ────────────────────────────────────────────────────────────────────────────────────
+
+/** Slim and light: narrow shoulders, long legs for her size; about 80 px tall with the hood. */
+const BUILD = { hip: 27.4, thigh: 12.3, shin: 12.1, ankle: 4, torso: 22, neck: 2, shoulder: 7, hipWidth: 3.6, shoulderDrop: 3.2, upperArm: 8.2, foreArm: 8, headUp: 11.6 };
+
+// ── Hair: a side fringe, two strands framing the face, a low tail ────────────────────────────
+
+const L = (yaw: number, pitch: number, dir: [number, number, number], len: number, w: number, curl?: [number, number, number], give?: number, belly?: number): Lock => ({ yaw, pitch, dir, len, w, curl, give, belly });
+
+const LOCKS: Lock[] = [
+  // A side fringe swept across to her left, under the hood's edge.
+  L(30, 46, [0.35, -0.8, -0.85], 6.5, 3.2, [0.1, -0.15, -0.3], 0.3, 0.3),
+  L(6, 50, [0.4, -0.9, -0.8], 8.5, 3.4, [0.1, -0.2, -0.3], 0.3, 0.3),
+  L(-20, 46, [0.45, -1, -0.55], 9, 3.3, [0.15, -0.1, -0.2], 0.3, 0.3),
+  L(-46, 32, [0.3, -1, -0.3], 8.5, 2.8, [0.1, 0, -0.1], 0.3),
+  // Two strands framing her face inside the hood, to her jaw.
+  L(66, 14, [0.2, -1, 0.12], 11, 2.3, [0.08, 0, 0.05], 0.4, 0.3),
+  L(-66, 14, [0.2, -1, -0.12], 11, 2.3, [0.08, 0, -0.05], 0.4, 0.3),
+];
+
+const SHELL = { c: [-1.4, 1.2, 0] as V3, r: [11, 10.2, 10.9] as V3 };
+
+/** The hood: worn up over her hair, its opening's band a shade lighter, a soft point at its crown. */
+const HOOD = hood({ outer: GREEN, inner: GREEN_IN, rim: GREEN_RIM, shell: SHELL, opening: { top: 6.4, bottom: -12.5, side: 8.4 }, peak: { pitch: 34, size: 4.4 }, folds: true });
+
+// ── The torso: a laced jerkin and a belt ─────────────────────────────────────────────────────
+
+const deg = (h: Hit): number => Math.abs((Math.atan2(h.p[2], h.p[0]) * 180) / Math.PI);
+
+function torso(h: Hit, where: 'hips' | 'chest'): Mat | null {
+  const u = h.p[1];
+  const yaw = deg(h);
+  // The jerkin's skirt over the top of the hips, then her trousers.
+  if (where === 'hips') return u > 3.4 ? JERKIN : TROUSERS;
+  if (u < 5) return null;
+  // The belt, with a brass buckle at the front.
+  if (u < 7.4) {
+    if (yaw < 9 && u > 5.3 && u < 7.2) return yaw < 5 && u > 5.9 && u < 6.6 ? BELT : BRASS;
+    return BELT;
+  }
+  // Laced up the front: a dark gap crossed by a pale cord in a zigzag.
+  if (yaw < 3.6 && u > 8.6 && u < 19.5) {
+    const k = (((u - 8.6) / 2.6) % 1 + 1) % 1;
+    const across = Math.abs(k * 2 - 1);
+    if (Math.abs(yaw / 3.6 - across) < 0.28) return LACE;
+    if (yaw < 1.1) return LACE_GAP;
+  }
+  return JERKIN;
+}
+
+const BODY: BodyDesign = {
+  thigh: { mat: TROUSERS, r0: 3.3, r1: 2.8 },
+  shin: { mat: TROUSERS, r0: 2.6, r1: 2.4 },
+  // Tall boots to just under the knee.
+  boot: { mat: BOOT, r: 2.9, top: 0.72, toe: 5.4, heel: 2, sole: SOLE, foot: [2.5, 2.1] },
+  upperArm: { mat: SLEEVE, r0: 2.7, r1: 2.4 },
+  foreArm: { mat: SLEEVE, r0: 2.4, r1: 2.3 },
+  // A leather bracer over the forearm, a pale rim at its elbow end.
+  cuff: { mat: BRACER, r: 2.75, at: 0.22, rim: BRACER_RIM },
+  hand: { mat: GLOVE, r: 2.4 },
+  neck: { mat: NECK, r: 2 },
+  hips: [{ c: [0, 3, 0], r: [4.6, 5, 6], id: 1 }],
+  chest: [
+    { c: [0, 8, 0], r: [4.1, 4.6, 5.5], id: 1 },
+    { c: [0.3, 14, 0], r: [4.8, 8, 6.8], id: 1 },
+  ],
+  torso,
+};
+
+// ── Pieces of her own: the boots' cuffs and the belt pouch ───────────────────────────────────
+
+/**
+ * The turned cuff at the top of each tall boot: a band of lighter suede three pixels deep, a
+ * little wider than the boot, sorted just over its leg (a step darker on the far leg, as the
+ * painter dims a far leg).
+ */
+const bootCuffs: Piece = (ctx: PieceContext): DrawItem[] => {
+  const { rig, depth, proj } = ctx;
+  const torsoTrue = depth(at3(rig.chest, 0, 14, 0));
+  const item = (leg: Limb): DrawItem => {
+    const far = depth(leg.mid) < torsoTrue - 2;
+    const z = depth(leg.mid) * 0.7 + depth(leg.root) * 0.3 + 0.02;
+    return {
+      z,
+      draw: () => {
+        const part = ctx.part();
+        const top = lerp3(leg.end, leg.mid, BODY.boot.top + 0.04);
+        const a = proj(top);
+        const b = proj(lerp3(leg.end, leg.mid, BODY.boot.top - 0.14));
+        // Across the shin on screen, a little wider than the boot; three pixels down it.
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const dl = Math.hypot(dx, dy) || 1;
+        const ux = (dx / dl) * 3;
+        const uy = (dy / dl) * 3;
+        const w = BODY.boot.r * 1.18;
+        const nx = (-dy / dl) * w;
+        const ny = (dx / dl) * w;
+        const m = far ? dim(CUFF, -0.12) : CUFF;
+        const zz = depth(top) + 0.6;
+        part.poly(
+          [
+            [a[0] + nx - ux * 0.15, a[1] + ny - uy * 0.15],
+            [a[0] - nx - ux * 0.15, a[1] - ny - uy * 0.15],
+            [a[0] - nx * 0.92 + ux, a[1] - ny * 0.92 + uy],
+            [a[0] + nx * 0.92 + ux, a[1] + ny * 0.92 + uy],
+          ],
+          m,
+          (x) => (far ? 0.2 : 0.5) - ((x - a[0]) / w) * 0.3,
+          zz,
+          1,
+        );
+        part.commit();
+      },
+    };
+  };
+  return [item(rig.legR), item(rig.legL)];
+};
+
+/** The pouch on her belt at her right hip: a small leather bag with a flap and a brass stud. */
+const POUCH = { at: [0.4, 4.4, 5.8] as V3, r: [2.4, 2.5, 1.6] as V3 };
+
+const pouch: Piece = (ctx: PieceContext): DrawItem[] => {
+  const { rig, depth } = ctx;
+  const c = at3(rig.pelvis, POUCH.at[0], POUCH.at[1], POUCH.at[2]);
+  return [
+    {
+      z: ctx.upperZ(depth(c)),
+      draw: () => {
+        const part = ctx.part();
+        part.blobs(rig.pelvis, [{ c: POUCH.at, r: POUCH.r, id: 1 }], (h) => {
+          if (h.back) return null;
+          const dy = h.p[1] - POUCH.at[1];
+          // A flap over the top, a brass stud at its point.
+          if (dy > 0.2 && Math.abs(h.p[0] - POUCH.at[0]) < 0.7 && h.p[2] > POUCH.at[2]) return { m: BRASS, id: 3 };
+          return { m: dy > 0.6 ? BRACER : BELT, id: dy > 0.6 ? 2 : 1 };
+        });
+        part.commit();
+      },
+    },
+  ];
+};
+
+// ── The bow, the arrows and the quiver ───────────────────────────────────────────────────────
+
+/** Her arrows: about 26 px, pale ash shafts, steel heads that glow green-gold when charged, pale fletching. */
+export const ARROW: ArrowSpec = {
+  len: 26,
+  shaft: SHAFT,
+  head: { len: 4, w: 1.8, mat: STEEL, glow: hex('#d8ffa0') },
+  fletch: { len: 4.5, w: 1.6, mat: FLETCH },
+};
+
+/** The dark arrow of Rain of Ruin: black, its head ablaze in violet. */
+export const DARK_ARROW: ArrowSpec = {
+  len: 27,
+  shaft: DARK_SHAFT,
+  head: { len: 4.5, w: 2.1, mat: DARK_HEAD, glow: hex('#e8c0ff') },
+  fletch: { len: 5, w: 1.8, mat: DARK_FLETCH },
+};
+
+/** A recurve longbow about 64 px tip to tip: dark reddish wood curling forward at the tips, a leather grip, horn caps. */
+const BOW_SPEC: BowSpec = {
+  limb: { len: 28.5, w0: 1.7, w1: 0.85, mat: BOW_WOOD },
+  grip: { len: 7, r: 1.7, mat: BOW_GRIP },
+  brace: 4.5,
+  bend: 7,
+  recurve: 3.5,
+  tips: HORN,
+  string: STRING,
+  arrow: ARROW,
+};
+const LONGBOW = bow(BOW_SPEC);
+
+/**
+ * The arrow in her drawing hand (bow.ts `arrow`, which hides itself while one is on the string):
+ * dropped (`drop`) with nowhere to lie (no `dropAt`), it is not painted at all, so a pose can
+ * leave the hand empty (at ease, running, reaching for the quiver).
+ */
+function heldArrow(spec: ArrowSpec): WeaponDesign {
+  const a = arrow(spec);
+  return {
+    ...a,
+    paint: (ctx, part, held) => {
+      if (ctx.pose.drop && !ctx.pose.dropAt) return;
+      a.paint(ctx, part, held);
+    },
+  };
+}
+
+/**
+ * Fan of Arrows: the bow with five arrows on its string, fanned out in the bow's own plane (canted
+ * flat, a level fan of 50 degrees) round the one the bow nocks itself.
+ */
+function fanBow(spec: BowSpec, spread = 50): HeldItem {
+  const base = bow(spec);
+  const A = flatShaft(spec.arrow);
+  const heads = arrowHeads(A);
+  return {
+    ...base,
+    items: (ctx: PieceContext, held: Held): DrawItem[] => {
+      const out = base.items ? base.items(ctx, held) : [];
+      // Only a full draw carries the fan: nocked at rest, it is a single arrow.
+      if (ctx.pose.slingB || ctx.pose.dropB || !nocked(ctx.pose) || (ctx.pose.draw ?? 0) < 0.6 || !base.aim) return out;
+      const { tip, dir } = base.aim(ctx, held);
+      const nock = add3(tip, dir, -A.len);
+      // Across the fan: the bow's own length, squared to the arrow.
+      const u = held.grip.u;
+      const side = norm3(sub3(u, [dir[0] * (u[0] * dir[0] + u[1] * dir[1] + u[2] * dir[2]), dir[1] * (u[0] * dir[0] + u[1] * dir[1] + u[2] * dir[2]), dir[2] * (u[0] * dir[0] + u[1] * dir[1] + u[2] * dir[2])]));
+      for (const k of [-1, -0.5, 0.5, 1]) {
+        const th = rad((spread / 2) * k);
+        const d = norm3(add3([dir[0] * Math.cos(th), dir[1] * Math.cos(th), dir[2] * Math.cos(th)], side, Math.sin(th)));
+        out.push({
+          z: ctx.upperZ(ctx.depth(add3(nock, d, A.len * 0.5))) + 0.04,
+          draw: () => {
+            const part = ctx.part(3);
+            paintArrow(ctx, part, A, heads, nock, d, held.blaze, (ctx.pose.draw ?? 0) > 0 ? 1.5 : 0);
+            part.commit();
+          },
+        });
+      }
+      return out;
+    },
+  };
+}
+
+/**
+ * The coiled snare she tosses (Snare Trap): a ring of cord about 10 px across with an iron jaw
+ * along one side, its teeth pointing in, held at its edge. As a main weapon it is in her right
+ * hand, or flies where the pose drops it (`dropAt`); dropped with nowhere to lie, it is gone.
+ */
+export const SNARE: WeaponDesign = {
+  grip2: 0,
+  reach: [0, 11],
+  tip: 5.4,
+  paint: (ctx: PieceContext, part: Part, held: Held = mainHeld(ctx)) => {
+    if (held.tag === WEAPON_TAG && ctx.pose.drop && !ctx.pose.dropAt) return;
+    const { o, u, v } = held.grip;
+    const n = norm3(cross3(u, v));
+    const R = 5;
+    const centre = add3(o, u, R + 0.4);
+    // The ring of cord, a little tilted out of the hand's plane so it shows as a loop in every view.
+    const ring = (th: number, r: number): V3 => add3(add3(centre, u, Math.cos(th) * r), add3(v, n, 0.45), Math.sin(th) * r * 0.9);
+    const N = 16;
+    for (let i = 0; i < N; i++) {
+      const a = ring((i / N) * Math.PI * 2, R);
+      const b = ring(((i + 1) / N) * Math.PI * 2, R);
+      part.capsule(ctx.proj(a), ctx.proj(b), 1.1, 1.1, CORD, 0.1, ctx.depth(a), ctx.depth(b), 1);
+    }
+    // A second, smaller turn of the coil inside it.
+    for (let i = 0; i < N; i += 2) {
+      const a = ring((i / N) * Math.PI * 2 + 0.5, R * 0.6);
+      const b = ring(((i + 2) / N) * Math.PI * 2 + 0.5, R * 0.6);
+      part.capsule(ctx.proj(a), ctx.proj(b), 0.8, 0.8, CORD, -0.1, ctx.depth(a) - 0.1, ctx.depth(b) - 0.1, 2);
+    }
+    // The iron jaw: an arc of iron along the far side of the ring, its teeth pointing in.
+    for (let i = -3; i < 3; i++) {
+      const a = ring((i / 7) * Math.PI, R + 0.3);
+      const b = ring(((i + 1) / 7) * Math.PI, R + 0.3);
+      part.capsule(ctx.proj(a), ctx.proj(b), 1.25, 1.25, IRON, 0.15, ctx.depth(a) + 0.4, ctx.depth(b) + 0.4, 3);
+    }
+    for (let i = -2; i <= 2; i++) {
+      const a = ring((i / 7) * Math.PI, R);
+      const b = ring((i / 7) * Math.PI, R - 2);
+      part.capsule(ctx.proj(a), ctx.proj(b), 0.7, 0.4, IRON, 0.3, ctx.depth(a) + 0.5, ctx.depth(b) + 0.5, 3);
+    }
+  },
+};
+
+/** The quiver on her back: its mouth up behind her right shoulder, raised so the fletchings show over the hood's drape. */
+const QUIVER_PIECE = quiver({
+  mouth: [-6.6, 23.5, 3.8],
+  foot: [-6, 6, -3.6],
+  r: [2.6, 2.1],
+  mat: QUIVER,
+  band: BRASS,
+  arrows: { n: 5, out: 7, shaft: flat(hex('#d8b080')), fletch: FLETCH, len: 3.5 },
+  strap: { mat: BELT, side: 1, w: 1, over: { chest: BODY.chest, hips: BODY.hips } },
+});
+
+/**
+ * The hooded cape: to the waist at the front, over the shoulders and upper arms, and down to the
+ * backs of her knees behind, its hem cut in points.
+ */
+const CAPE = cowl({
+  outer: GREEN,
+  inner: GREEN_IN,
+  top: 21.4,
+  ring: [3.6, 4.2],
+  folds: true,
+  panels: [
+    { from: -32, to: 32, len: 7, jag: 2 },
+    { from: 32, to: 100, len: 12.5, jag: 2 },
+    { from: 100, to: 145, len: 25, jag: 3, taper: 1.1 },
+    { from: 145, to: 215, len: 31, jag: 3.5, taper: 1.1 },
+    { from: 215, to: 260, len: 25, jag: 3, taper: 1.1 },
+    { from: 260, to: 328, len: 12.5, jag: 2 },
+  ],
+  over: { chest: BODY.chest, hips: BODY.hips },
+});
+
+/** Verdant green-gold: a green core, a pale gold edge, a white heart. */
+const AURA = { core: hex('#9ef08a'), edge: hex('#fff0a0'), hot: hex('#ffffff') };
+
+const BOWMASTER: ChibiDesign = {
+  id: 'hero-bowmaster',
+  build: BUILD,
+  head: {
+    skin: FACE_SKIN,
+    hair: HAIR,
+    skull: { c: [0, 0.5, 0], r: [8.8, 9.3, 9.8] },
+    jaw: { c: [1.5, -4, 0], r: [7.4, 6.4, 7.6] },
+    ear: { c: [-0.6, -3.2, 9.4], r: [1.8, 2.6, 1.5] },
+    shell: SHELL,
+    hairline: { faceYaw: 72, brow: 3.6, temple: 0, nape: -9, ear: -2 },
+    locks: LOCKS,
+    whorl: { yaw: 180, pitch: 58, reach: 82, clumps: 6, twist: 0.2 },
+    long: {
+      // A low tail tied at the nape with a leather cord, hidden under the hood while it is up.
+      tail: { yaw: 180, pitch: -4, dir: [-0.5, -1, 0], stiff: 0.2, len: 18, w: 2.8, tie: { mat: BELT, r: 1.8, ends: 4 }, sheen: 0.3 },
+      lie: 1.8,
+    },
+    face: {
+      eye: [8.3, -1.8, 4.2],
+      lash: hex('#2a1a16'),
+      iris: hex('#2e7a3a'),
+      irisLight: hex('#7ad07a'),
+      irisDeep: hex('#1a4a22'),
+      white: hex('#f6f2f6'),
+      shine: hex('#ffffff'),
+      brow: hex('#4a2e20'),
+      browUp: 3.6,
+      mouth: hex('#a04a50'),
+      mouthAt: [9.1, -6.6],
+      noseAt: [9.7, -4],
+      style: FACE_SOFT,
+    },
+  },
+  body: BODY,
+  headPieces: [HOOD.up],
+  outfit: [HOOD.down, CAPE, QUIVER_PIECE, pouch, bootCuffs],
+  weapon: heldArrow(ARROW),
+  offhand: LONGBOW,
+  aura: AURA,
+};
+
+/** Fan of Arrows: five arrows on the string. */
+const BOWMASTER_FAN: ChibiDesign = { ...BOWMASTER, offhand: fanBow(BOW_SPEC) };
+
+/** Snare Trap: the coiled snare in her right hand in place of an arrow. */
+const BOWMASTER_SNARE: ChibiDesign = { ...BOWMASTER, weapon: SNARE };
+
+/** Rain of Ruin: a single dark arrow, and her effects turned violet-black with green sparks. */
+const BOWMASTER_RUIN: ChibiDesign = {
+  ...BOWMASTER,
+  weapon: heldArrow(DARK_ARROW),
+  offhand: bow({ ...BOW_SPEC, arrow: DARK_ARROW }),
+  aura: { core: hex('#9a46f0'), edge: hex('#3c0e6a'), hot: hex('#d4ffb4') },
+};
+
+export { BOWMASTER, BOWMASTER_FAN, BOWMASTER_RUIN, BOWMASTER_SNARE };
