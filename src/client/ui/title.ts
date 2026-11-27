@@ -29,7 +29,7 @@ export function titleScreen(onEnter: (name: string) => void): HTMLElement {
       h('div', { class: 'logo-pre' }, 'Land of'),
       h('h1', { class: 'logo' }, 'RHUIN'),
       h('div', { class: 'logo-rule' }),
-      h('div', { class: 'tagline' }, 'Four heroes · Endless ruin'),
+      h('div', { class: 'tagline' }, 'Four roles · Endless ruin'),
       h(
         'div',
         { class: 'hero-line' },

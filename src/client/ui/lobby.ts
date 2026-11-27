@@ -92,7 +92,7 @@ export class LobbyView {
         h(
           'section',
           { class: 'panel' },
-          h('div', { class: 'panel-title' }, 'Party', h('span', { class: 'sub' }, 'Up to four heroes')),
+          h('div', { class: 'panel-title' }, 'Party', h('span', { class: 'sub' }, 'Up to four players')),
           h(
             'div',
             { class: 'section stack' },
@@ -110,7 +110,7 @@ export class LobbyView {
             'div',
             { class: 'section stack' },
             h('div', { class: 'duty-art' }, h('div', { class: 'dname' }, 'Random Dungeon Expedition')),
-            h('div', { class: 'duty-facts' }, h('div', null, h('b', null, '3–4'), h('span', null, 'Bosses')), h('div', null, h('b', null, '4'), h('span', null, 'Heroes')), h('div', null, h('b', null, '∞'), h('span', null, 'Layouts'))),
+            h('div', { class: 'duty-facts' }, h('div', null, h('b', null, '3–4'), h('span', null, 'Bosses')), h('div', null, h('b', null, '4'), h('span', null, 'Roles')), h('div', null, h('b', null, '∞'), h('span', null, 'Layouts'))),
             h('p', { class: 'hint' }, 'Each run is a freshly generated dungeon held by one of three clans: the Orcs of the Bloodtusk Stronghold, the Dragons and their cult in the Cinder Sanctum, or the Undead of the Barrow of Sorrows. Hack through waves of monsters, then face bosses whose attacks are marked on the ground before they land.'),
             h('div', null, h('div', { class: 'label' }, 'AI companions fill empty roles'), this.fillEl),
             this.queueBtn,
